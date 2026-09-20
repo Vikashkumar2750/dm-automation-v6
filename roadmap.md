@@ -19,7 +19,7 @@ Real Meta + YouTube credentials are available when we reach OAuth phases.
 - [x] Team management (invites, roles, remove) — Phase 2 leftover
 - [x] Publishing upgrade — multi-account publish in one go, media upload (image/video/carousel), reel + story formats
 - [ ] Phase 12 — YouTube (blocked: Google Client ID + Secret needed)
-- [ ] Phase 13 — AI layer
+- [x] Phase 13 — AI layer (caption writer, reply drafts, automation rule suggestions)
 - [ ] Phase 14 — Analytics & ROI
 - [ ] Phase 15 — Super admin / operations
 - [ ] Phase 16 — Agency / white label
