@@ -132,7 +132,7 @@ export type AuditRow = {
   action: string;
   target_type: string | null;
   target_id: string | null;
-  detail: Record<string, unknown>;
+  detail: string;
   created_at: string;
 };
 
@@ -169,7 +169,7 @@ async function audit(
     action,
     target_type: target.type ?? null,
     target_id: target.id ?? null,
-    detail: target.detail ?? {},
+    detail: (target.detail ?? {}) as never,
   });
 }
 
@@ -714,5 +714,13 @@ export const listAuditLog = createServerFn({ method: "GET" })
       .order("created_at", { ascending: false })
       .limit(100);
     if (error) throw new Error(error.message);
-    return (data ?? []) as AuditRow[];
+    return (data ?? []).map((r) => ({
+      id: r.id,
+      actor_email: r.actor_email,
+      action: r.action,
+      target_type: r.target_type,
+      target_id: r.target_id,
+      detail: r.detail ? JSON.stringify(r.detail) : "",
+      created_at: r.created_at,
+    }));
   });
