@@ -79,6 +79,7 @@ type Draft = {
   keywords: string;
   action: Action;
   responseText: string;
+  responseVariations: string;
   setStatus: "open" | "pending" | "resolved";
   cooldownSeconds: number;
   dailyLimit: number;
@@ -94,6 +95,7 @@ const emptyDraft: Draft = {
   keywords: "price, cost",
   action: "reply_dm",
   responseText: "",
+  responseVariations: "",
   setStatus: "pending",
   cooldownSeconds: 60,
   dailyLimit: 200,
@@ -140,6 +142,7 @@ function toDraft(rule: AutomationRule): Draft {
     keywords: (rule.keywords ?? []).join(", "),
     action: rule.action,
     responseText: rule.response_text ?? "",
+    responseVariations: (rule.response_variations ?? []).join("\n"),
     setStatus: rule.set_status ?? "pending",
     cooldownSeconds: rule.cooldown_seconds,
     dailyLimit: rule.daily_limit,
@@ -192,6 +195,10 @@ function AutomationsPage() {
           .filter(Boolean),
         action: value.action,
         responseText: value.responseText.trim() ? value.responseText.trim() : null,
+        responseVariations: value.responseVariations
+          .split("\n")
+          .map((t) => t.trim())
+          .filter(Boolean),
         setStatus: value.action === "set_status" ? value.setStatus : null,
         cooldownSeconds: Number(value.cooldownSeconds) || 0,
         dailyLimit: Number(value.dailyLimit) || 1,
