@@ -145,7 +145,6 @@ function AnalyticsPage() {
 
       <Panel
         title="Activity"
-        description={`Messages received, replies sent and automated replies over the last ${rangeDays} days.`}
       >
         <div className="h-[280px] w-full min-w-0">
           {isLoading ? (
@@ -261,7 +260,7 @@ function AnalyticsPage() {
           )}
         </Panel>
 
-        <Panel title="Top automations" description={`Most used rules in the last ${rangeDays} days.`}>
+        <Panel title="Top automations">
           {(data?.topRules.length ?? 0) === 0 ? (
             <EmptyState
               icon={MessageSquare}
