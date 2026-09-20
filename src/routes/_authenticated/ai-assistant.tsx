@@ -178,7 +178,6 @@ function ReplyTab() {
   return (
     <Panel
       title="Reply drafts"
-      description="Paste a customer message and pick the answer you like."
     >
       <div className="space-y-4">
         <div className="space-y-2">
@@ -264,7 +263,6 @@ function AutomationTab() {
   return (
     <Panel
       title="Automation ideas"
-      description="Describe what should happen — get a rule you can copy into Automations."
     >
       <div className="space-y-4">
         <div className="space-y-2">
