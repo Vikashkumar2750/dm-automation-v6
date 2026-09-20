@@ -20,6 +20,7 @@ export type AutomationRule = {
     | "hide_comment"
     | "set_status";
   response_text: string | null;
+  response_variations: string[];
   set_status: "open" | "pending" | "resolved" | null;
   cooldown_seconds: number;
   daily_limit: number;
