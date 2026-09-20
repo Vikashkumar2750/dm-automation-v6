@@ -118,6 +118,42 @@ function InboxPage() {
     },
   });
 
+  function commentError(error: unknown) {
+    const message = error instanceof Error ? error.message : "";
+    if (message.includes("window_expired")) {
+      toast.error("This comment is older than Meta's reply window.");
+    } else if (message.includes("not_allowed")) {
+      toast.error("You need agent access or higher to reply.");
+    } else if (message.includes("no_comment_id")) {
+      toast.error("We don't have the original comment id for this thread yet.");
+    } else {
+      toast.error("Could not complete the action. Check the account connection.");
+    }
+  }
+
+  const commentReply = useMutation({
+    mutationFn: (body: string) =>
+      replyToCommentFn({
+        data: { conversationId: selected!.id, body, mode: commentMode },
+      }),
+    onSuccess: () => {
+      setDraft("");
+      toast.success(
+        commentMode === "public" ? "Public reply posted." : "Private DM sent.",
+      );
+      queryClient.invalidateQueries({ queryKey: ["messages", selected?.id] });
+      queryClient.invalidateQueries({ queryKey: ["conversations", orgId] });
+    },
+    onError: commentError,
+  });
+
+  const hideComment = useMutation({
+    mutationFn: (hidden: boolean) =>
+      setCommentHiddenFn({ data: { conversationId: selected!.id, hidden } }),
+    onSuccess: () => toast.success("Comment hidden on the post."),
+    onError: commentError,
+  });
+
   function openConversation(id: string) {
     setSelectedId(id);
     markReadFn({ data: { conversationId: id } }).then(() =>
