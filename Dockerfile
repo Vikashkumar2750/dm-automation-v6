@@ -3,7 +3,7 @@ FROM oven/bun:1.2 AS build
 WORKDIR /app
 
 # Nitro must emit a plain Node server for Railway (default target is Cloudflare)
-ENV NITRO_PRESET=node_server
+ENV NITRO_PRESET=node-server
 ENV NODE_ENV=production
 
 COPY package.json bun.lock ./
@@ -27,11 +27,11 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3000
 
-COPY --from=build /app/.output ./.output
+COPY --from=build /app/dist ./dist
 COPY --from=build /app/drizzle ./drizzle
 COPY --from=build /app/scripts ./scripts
 COPY --from=build /app/package.json ./package.json
 COPY --from=build /app/node_modules/postgres ./node_modules/postgres
 
 EXPOSE 3000
-CMD ["sh", "-c", "bun run scripts/migrate.mjs && bun .output/server/index.mjs"]
+CMD ["sh", "-c", "bun run scripts/migrate.mjs && bun dist/server/index.mjs"]

@@ -1,7 +1,7 @@
 # Deploying to Railway
 
 This app is a TanStack Start (React 19 + Vite) full-stack app. The server build is
-produced by Nitro; for Railway it is built with the `node_server` preset so it runs
+produced by Nitro; for Railway it is built with the `node-server` preset so it runs
 as a normal Node/Bun HTTP server on `$PORT`.
 
 ## 1. What runs where
@@ -77,6 +77,6 @@ To run it by hand: `DATABASE_URL=postgres://... bun run scripts/migrate.mjs`.
 ## 6. Local production check
 
 ```bash
-NITRO_PRESET=node_server bun run build
-PORT=3000 bun .output/server/index.mjs
+NITRO_PRESET=node-server bun run build
+PORT=3000 bun dist/server/index.mjs
 ```
