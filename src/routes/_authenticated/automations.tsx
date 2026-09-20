@@ -621,8 +621,14 @@ function SafetyPanel({ orgId }: { orgId: string | undefined }) {
           quietHoursStart: Number(value.quiet_hours_start) || 0,
           quietHoursEnd: Number(value.quiet_hours_end) || 0,
           timezoneOffsetMinutes: Number(value.timezone_offset_minutes) || 0,
+          hourlySendLimit: Number(value.hourly_send_limit) || 120,
+          dailySendLimit: Number(value.daily_send_limit) || 1000,
+          viralGuardEnabled: value.viral_guard_enabled,
+          viralThresholdPerMinute: Number(value.viral_threshold_per_minute) || 30,
+          viralCooldownMinutes: Number(value.viral_cooldown_minutes) || 15,
         },
       }),
+
     onSuccess: () => {
       toast.success("Safety settings saved");
       void queryClient.invalidateQueries({ queryKey: ["automation-settings", orgId] });
