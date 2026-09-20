@@ -51,10 +51,11 @@ async function isSuperAdmin(context: { supabase: any; userId: string }) {
 export const getMyPlatformRole = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { data } = await context.supabase.rpc("has_platform_role", {
+    const { data, error } = await context.supabase.rpc("has_platform_role", {
       _user_id: context.userId,
       _role: "super_admin",
     });
+    if (error) throw new Error(error.message);
     return { isSuperAdmin: Boolean(data) };
   });
 
