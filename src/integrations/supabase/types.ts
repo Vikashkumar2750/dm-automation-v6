@@ -14,6 +14,41 @@ export type Database = {
   }
   public: {
     Tables: {
+      automation_opt_outs: {
+        Row: {
+          created_at: string
+          external_user_id: string
+          id: string
+          organization_id: string
+          platform: Database["public"]["Enums"]["social_platform"]
+          reason: string | null
+        }
+        Insert: {
+          created_at?: string
+          external_user_id: string
+          id?: string
+          organization_id: string
+          platform: Database["public"]["Enums"]["social_platform"]
+          reason?: string | null
+        }
+        Update: {
+          created_at?: string
+          external_user_id?: string
+          id?: string
+          organization_id?: string
+          platform?: Database["public"]["Enums"]["social_platform"]
+          reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_opt_outs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       automation_rules: {
         Row: {
           action: Database["public"]["Enums"]["automation_action"]
@@ -30,6 +65,7 @@ export type Database = {
           platform: Database["public"]["Enums"]["social_platform"] | null
           priority: number
           response_text: string | null
+          response_variations: string[]
           set_status: Database["public"]["Enums"]["conversation_status"] | null
           trigger: Database["public"]["Enums"]["automation_trigger"]
           updated_at: string
@@ -49,6 +85,7 @@ export type Database = {
           platform?: Database["public"]["Enums"]["social_platform"] | null
           priority?: number
           response_text?: string | null
+          response_variations?: string[]
           set_status?: Database["public"]["Enums"]["conversation_status"] | null
           trigger: Database["public"]["Enums"]["automation_trigger"]
           updated_at?: string
@@ -68,6 +105,7 @@ export type Database = {
           platform?: Database["public"]["Enums"]["social_platform"] | null
           priority?: number
           response_text?: string | null
+          response_variations?: string[]
           set_status?: Database["public"]["Enums"]["conversation_status"] | null
           trigger?: Database["public"]["Enums"]["automation_trigger"]
           updated_at?: string
@@ -133,6 +171,56 @@ export type Database = {
             columns: ["rule_id"]
             isOneToOne: false
             referencedRelation: "automation_rules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      automation_settings: {
+        Row: {
+          blocked_keywords: string[]
+          created_at: string
+          is_paused: boolean
+          opt_out_keywords: string[]
+          organization_id: string
+          per_contact_daily_limit: number
+          quiet_hours_enabled: boolean
+          quiet_hours_end: number
+          quiet_hours_start: number
+          timezone_offset_minutes: number
+          updated_at: string
+        }
+        Insert: {
+          blocked_keywords?: string[]
+          created_at?: string
+          is_paused?: boolean
+          opt_out_keywords?: string[]
+          organization_id: string
+          per_contact_daily_limit?: number
+          quiet_hours_enabled?: boolean
+          quiet_hours_end?: number
+          quiet_hours_start?: number
+          timezone_offset_minutes?: number
+          updated_at?: string
+        }
+        Update: {
+          blocked_keywords?: string[]
+          created_at?: string
+          is_paused?: boolean
+          opt_out_keywords?: string[]
+          organization_id?: string
+          per_contact_daily_limit?: number
+          quiet_hours_enabled?: boolean
+          quiet_hours_end?: number
+          quiet_hours_start?: number
+          timezone_offset_minutes?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_settings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]

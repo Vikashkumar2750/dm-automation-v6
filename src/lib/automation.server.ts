@@ -30,10 +30,59 @@ type Rule = {
   keywords: string[];
   action: string;
   response_text: string | null;
+  response_variations: string[] | null;
   set_status: string | null;
   cooldown_seconds: number;
   daily_limit: number;
 };
+
+type Settings = {
+  is_paused: boolean;
+  blocked_keywords: string[];
+  opt_out_keywords: string[];
+  per_contact_daily_limit: number;
+  quiet_hours_enabled: boolean;
+  quiet_hours_start: number;
+  quiet_hours_end: number;
+  timezone_offset_minutes: number;
+};
+
+const DEFAULT_SETTINGS: Settings = {
+  is_paused: false,
+  blocked_keywords: [],
+  opt_out_keywords: ["stop", "unsubscribe", "stop messaging"],
+  per_contact_daily_limit: 5,
+  quiet_hours_enabled: false,
+  quiet_hours_start: 22,
+  quiet_hours_end: 7,
+  timezone_offset_minutes: 330,
+};
+
+function inQuietHours(s: Settings, now = new Date()) {
+  if (!s.quiet_hours_enabled) return false;
+  const local = new Date(now.getTime() + s.timezone_offset_minutes * 60 * 1000);
+  const hour = local.getUTCHours();
+  const { quiet_hours_start: start, quiet_hours_end: end } = s;
+  if (start === end) return false;
+  return start < end ? hour >= start && hour < end : hour >= start || hour < end;
+}
+
+function hitsKeyword(list: string[] | null | undefined, body: string) {
+  const text = body.toLowerCase();
+  return (list ?? [])
+    .map((k) => k.trim().toLowerCase())
+    .filter(Boolean)
+    .find((k) => text.includes(k));
+}
+
+/** Rotate deterministically-random across the available response texts. */
+function pickResponse(rule: Rule) {
+  const options = [rule.response_text, ...(rule.response_variations ?? [])]
+    .map((t) => (t ?? "").trim())
+    .filter(Boolean);
+  if (options.length === 0) return null;
+  return options[Math.floor(Math.random() * options.length)]!;
+}
 
 function matches(rule: Rule, body: string) {
   if (rule.match_type === "any") return true;
@@ -46,6 +95,7 @@ function matches(rule: Rule, body: string) {
     return text.includes(k);
   });
 }
+
 
 async function log(
   admin: AdminClient,
@@ -66,10 +116,84 @@ async function log(
 export async function runAutomations(admin: AdminClient, ctx: AutomationContext) {
   const trigger = ctx.channel === "comment" ? "comment_received" : "dm_received";
 
+  const { data: settingsRow } = await admin
+    .from("automation_settings")
+    .select(
+      "is_paused, blocked_keywords, opt_out_keywords, per_contact_daily_limit, quiet_hours_enabled, quiet_hours_start, quiet_hours_end, timezone_offset_minutes",
+    )
+    .eq("organization_id", ctx.organizationId)
+    .maybeSingle();
+  const settings: Settings = { ...DEFAULT_SETTINGS, ...(settingsRow ?? {}) } as Settings;
+
+  // Safety: org kill switch.
+  if (settings.is_paused) {
+    await log(admin, ctx, null, "skipped", "automation_paused");
+    return;
+  }
+
+  // Safety: contact asked to stop -> record opt-out and never auto-reply again.
+  const optOutHit = hitsKeyword(settings.opt_out_keywords, ctx.body);
+  if (optOutHit) {
+    await admin.from("automation_opt_outs").upsert(
+      {
+        organization_id: ctx.organizationId,
+        platform: ctx.platform,
+        external_user_id: ctx.externalUserId,
+        reason: `keyword:${optOutHit}`,
+      },
+      { onConflict: "organization_id,platform,external_user_id" },
+    );
+    await log(admin, ctx, null, "skipped", `opt_out:${optOutHit}`);
+    return;
+  }
+
+  const { data: optedOut } = await admin
+    .from("automation_opt_outs")
+    .select("id")
+    .eq("organization_id", ctx.organizationId)
+    .eq("platform", ctx.platform)
+    .eq("external_user_id", ctx.externalUserId)
+    .maybeSingle();
+  if (optedOut) {
+    await log(admin, ctx, null, "skipped", "contact_opted_out");
+    return;
+  }
+
+  // Safety: sensitive/blocked words go to a human instead of an auto-reply.
+  const blockedHit = hitsKeyword(settings.blocked_keywords, ctx.body);
+  if (blockedHit) {
+    await admin
+      .from("conversations")
+      .update({ status: "open" })
+      .eq("id", ctx.conversationId);
+    await log(admin, ctx, null, "skipped", `blocked_keyword:${blockedHit}`);
+    return;
+  }
+
+  // Safety: quiet hours.
+  if (inQuietHours(settings)) {
+    await log(admin, ctx, null, "skipped", "quiet_hours");
+    return;
+  }
+
+  // Safety: per-contact daily cap across all rules.
+  const contactSince = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const { count: contactSends } = await admin
+    .from("automation_runs")
+    .select("id", { count: "exact", head: true })
+    .eq("organization_id", ctx.organizationId)
+    .eq("conversation_id", ctx.conversationId)
+    .eq("status", "sent")
+    .gte("created_at", contactSince);
+  if ((contactSends ?? 0) >= settings.per_contact_daily_limit) {
+    await log(admin, ctx, null, "skipped", "per_contact_limit");
+    return;
+  }
+
   const { data: rules } = await admin
     .from("automation_rules")
     .select(
-      "id, name, platform, trigger, match_type, keywords, action, response_text, set_status, cooldown_seconds, daily_limit",
+      "id, name, platform, trigger, match_type, keywords, action, response_text, response_variations, set_status, cooldown_seconds, daily_limit",
     )
     .eq("organization_id", ctx.organizationId)
     .eq("is_active", true)
@@ -80,6 +204,7 @@ export async function runAutomations(admin: AdminClient, ctx: AutomationContext)
     (r) => (!r.platform || r.platform === ctx.platform) && matches(r, ctx.body),
   );
   if (candidates.length === 0) return;
+
 
   // Only the highest-priority matching rule fires (anti-spam).
   const rule = candidates[0]!;
@@ -143,7 +268,7 @@ export async function runAutomations(admin: AdminClient, ctx: AutomationContext)
       return;
     }
 
-    const text = rule.response_text?.trim();
+    const text = pickResponse(rule);
 
     if (rule.action === "hide_comment") {
       if (!ctx.externalId) {

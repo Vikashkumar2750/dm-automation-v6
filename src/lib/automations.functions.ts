@@ -20,6 +20,7 @@ export type AutomationRule = {
     | "hide_comment"
     | "set_status";
   response_text: string | null;
+  response_variations: string[];
   set_status: "open" | "pending" | "resolved" | null;
   cooldown_seconds: number;
   daily_limit: number;
@@ -36,7 +37,7 @@ export type AutomationRun = {
 };
 
 const SELECT =
-  "id, organization_id, name, is_active, priority, platform, trigger, match_type, keywords, action, response_text, set_status, cooldown_seconds, daily_limit, created_at";
+  "id, organization_id, name, is_active, priority, platform, trigger, match_type, keywords, action, response_text, response_variations, set_status, cooldown_seconds, daily_limit, created_at";
 
 const ruleInput = z.object({
   name: z.string().trim().min(1).max(80),
@@ -54,6 +55,7 @@ const ruleInput = z.object({
     "set_status",
   ]),
   responseText: z.string().trim().max(1000).nullable(),
+  responseVariations: z.array(z.string().trim().min(1).max(1000)).max(10),
   setStatus: z.enum(["open", "pending", "resolved"]).nullable(),
   cooldownSeconds: z.number().int().min(0).max(86400),
   dailyLimit: z.number().int().min(1).max(5000),
@@ -70,6 +72,7 @@ function toRow(input: z.infer<typeof ruleInput>) {
     keywords: input.keywords,
     action: input.action,
     response_text: input.responseText,
+    response_variations: input.responseVariations,
     set_status: input.setStatus,
     cooldown_seconds: input.cooldownSeconds,
     daily_limit: input.dailyLimit,
@@ -125,6 +128,8 @@ export const updateAutomationRule = createServerFn({ method: "POST" })
     if (rest.keywords !== undefined) patch.keywords = rest.keywords;
     if (rest.action !== undefined) patch.action = rest.action;
     if (rest.responseText !== undefined) patch.response_text = rest.responseText;
+    if (rest.responseVariations !== undefined)
+      patch.response_variations = rest.responseVariations;
     if (rest.setStatus !== undefined) patch.set_status = rest.setStatus;
     if (rest.cooldownSeconds !== undefined) patch.cooldown_seconds = rest.cooldownSeconds;
     if (rest.dailyLimit !== undefined) patch.daily_limit = rest.dailyLimit;
@@ -163,4 +168,118 @@ export const listAutomationRuns = createServerFn({ method: "GET" })
       .limit(40);
     if (error) throw new Error(error.message);
     return (rows ?? []) as AutomationRun[];
+  });
+
+// ---------------------------------------------------------------- safety
+
+export type AutomationSettings = {
+  organization_id: string;
+  is_paused: boolean;
+  blocked_keywords: string[];
+  opt_out_keywords: string[];
+  per_contact_daily_limit: number;
+  quiet_hours_enabled: boolean;
+  quiet_hours_start: number;
+  quiet_hours_end: number;
+  timezone_offset_minutes: number;
+};
+
+export type AutomationOptOut = {
+  id: string;
+  platform: "instagram" | "facebook" | "youtube";
+  external_user_id: string;
+  reason: string | null;
+  created_at: string;
+};
+
+const SETTINGS_SELECT =
+  "organization_id, is_paused, blocked_keywords, opt_out_keywords, per_contact_daily_limit, quiet_hours_enabled, quiet_hours_start, quiet_hours_end, timezone_offset_minutes";
+
+export const getAutomationSettings = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) =>
+    z.object({ organizationId: z.string().uuid() }).parse(data),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: row, error } = await context.supabase
+      .from("automation_settings")
+      .select(SETTINGS_SELECT)
+      .eq("organization_id", data.organizationId)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    return (row ?? {
+      organization_id: data.organizationId,
+      is_paused: false,
+      blocked_keywords: [],
+      opt_out_keywords: ["stop", "unsubscribe", "stop messaging"],
+      per_contact_daily_limit: 5,
+      quiet_hours_enabled: false,
+      quiet_hours_start: 22,
+      quiet_hours_end: 7,
+      timezone_offset_minutes: 330,
+    }) as AutomationSettings;
+  });
+
+export const saveAutomationSettings = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) =>
+    z
+      .object({
+        organizationId: z.string().uuid(),
+        isPaused: z.boolean(),
+        blockedKeywords: z.array(z.string().trim().min(1).max(60)).max(50),
+        optOutKeywords: z.array(z.string().trim().min(1).max(60)).max(20),
+        perContactDailyLimit: z.number().int().min(1).max(100),
+        quietHoursEnabled: z.boolean(),
+        quietHoursStart: z.number().int().min(0).max(23),
+        quietHoursEnd: z.number().int().min(0).max(23),
+        timezoneOffsetMinutes: z.number().int().min(-720).max(840),
+      })
+      .parse(data),
+  )
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase.from("automation_settings").upsert(
+      {
+        organization_id: data.organizationId,
+        is_paused: data.isPaused,
+        blocked_keywords: data.blockedKeywords,
+        opt_out_keywords: data.optOutKeywords,
+        per_contact_daily_limit: data.perContactDailyLimit,
+        quiet_hours_enabled: data.quietHoursEnabled,
+        quiet_hours_start: data.quietHoursStart,
+        quiet_hours_end: data.quietHoursEnd,
+        timezone_offset_minutes: data.timezoneOffsetMinutes,
+      },
+      { onConflict: "organization_id" },
+    );
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const listOptOuts = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) =>
+    z.object({ organizationId: z.string().uuid() }).parse(data),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: rows, error } = await context.supabase
+      .from("automation_opt_outs")
+      .select("id, platform, external_user_id, reason, created_at")
+      .eq("organization_id", data.organizationId)
+      .order("created_at", { ascending: false })
+      .limit(50);
+    if (error) throw new Error(error.message);
+    return (rows ?? []) as AutomationOptOut[];
+  });
+
+export const removeOptOut = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => z.object({ id: z.string().uuid() }).parse(data))
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase
+      .from("automation_opt_outs")
+      .delete()
+      .eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
   });
