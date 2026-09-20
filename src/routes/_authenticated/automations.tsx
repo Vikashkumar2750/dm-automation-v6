@@ -902,6 +902,92 @@ function SafetyPanel({ orgId }: { orgId: string | undefined }) {
           </ul>
         )}
       </Panel>
+      </div>
     </div>
   );
 }
+
+function UsagePanel({ orgId }: { orgId: string | undefined }) {
+  const queryClient = useQueryClient();
+  const fetchUsage = useServerFn(getAutomationUsage);
+  const resumeFn = useServerFn(resumeAutomations);
+
+  const usageQuery = useQuery({
+    queryKey: ["automation-usage", orgId],
+    enabled: Boolean(orgId),
+    refetchInterval: 20000,
+    queryFn: () => fetchUsage({ data: { organizationId: orgId! } }),
+  });
+
+  const resumeMutation = useMutation({
+    mutationFn: () => resumeFn({ data: { organizationId: orgId! } }),
+    onSuccess: () => {
+      toast.success("Automation resumed");
+      void queryClient.invalidateQueries({ queryKey: ["automation-usage", orgId] });
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
+  const usage = usageQuery.data;
+  const paused =
+    usage?.autoPausedUntil && new Date(usage.autoPausedUntil) > new Date()
+      ? usage
+      : null;
+
+  return (
+    <Panel title="Usage today">
+      {!usage ? (
+        <div className="flex items-center justify-center py-8 text-muted-foreground">
+          <Loader2 className="size-5 animate-spin" />
+        </div>
+      ) : (
+        <div className="grid gap-4">
+          {paused && (
+            <div className="rounded-lg border border-destructive/40 bg-destructive/5 p-3">
+              <p className="text-sm font-medium">Automation paused automatically</p>
+              <p className="text-xs text-muted-foreground">
+                {paused.autoPauseReason ?? "Traffic spike"} · resumes{" "}
+                {new Date(paused.autoPausedUntil!).toLocaleTimeString()}
+              </p>
+              <Button
+                size="sm"
+                variant="outline"
+                className="mt-2"
+                onClick={() => resumeMutation.mutate()}
+                disabled={resumeMutation.isPending}
+              >
+                Resume now
+              </Button>
+            </div>
+          )}
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Stat
+              label="Sent this hour"
+              value={`${usage.sentLastHour} / ${usage.hourlyLimit}`}
+            />
+            <Stat
+              label="Sent today"
+              value={`${usage.sentLastDay} / ${usage.dailyLimit}`}
+            />
+            <Stat label="Incoming events / hour" value={String(usage.inboundLastHour)} />
+            <Stat
+              label="Skipped · failed today"
+              value={`${usage.skippedLastDay} · ${usage.failedLastDay}`}
+            />
+          </div>
+        </div>
+      )}
+    </Panel>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg border px-4 py-3">
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className="num mt-1 text-lg font-semibold">{value}</p>
+    </div>
+  );
+}
+
