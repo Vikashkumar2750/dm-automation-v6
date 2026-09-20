@@ -23,6 +23,7 @@ export type MessageRow = {
   conversation_id: string;
   direction: "inbound" | "outbound";
   body: string;
+  external_id: string | null;
   sender_name: string | null;
   sent_at: string;
 };
@@ -64,7 +65,7 @@ export const listMessages = createServerFn({ method: "GET" })
   .handler(async ({ data, context }) => {
     const { data: rows, error } = await context.supabase
       .from("messages")
-      .select("id, conversation_id, direction, body, sender_name, sent_at")
+      .select("id, conversation_id, direction, body, external_id, sender_name, sent_at")
       .eq("conversation_id", data.conversationId)
       .order("sent_at", { ascending: true })
       .limit(200);
