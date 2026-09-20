@@ -14,6 +14,113 @@ export type Database = {
   }
   public: {
     Tables: {
+      conversations: {
+        Row: {
+          channel: string
+          created_at: string
+          external_user_id: string
+          external_user_name: string | null
+          id: string
+          last_message_at: string
+          last_message_preview: string | null
+          organization_id: string
+          platform: Database["public"]["Enums"]["social_platform"]
+          social_account_id: string | null
+          status: Database["public"]["Enums"]["conversation_status"]
+          unread_count: number
+          updated_at: string
+        }
+        Insert: {
+          channel?: string
+          created_at?: string
+          external_user_id: string
+          external_user_name?: string | null
+          id?: string
+          last_message_at?: string
+          last_message_preview?: string | null
+          organization_id: string
+          platform: Database["public"]["Enums"]["social_platform"]
+          social_account_id?: string | null
+          status?: Database["public"]["Enums"]["conversation_status"]
+          unread_count?: number
+          updated_at?: string
+        }
+        Update: {
+          channel?: string
+          created_at?: string
+          external_user_id?: string
+          external_user_name?: string | null
+          id?: string
+          last_message_at?: string
+          last_message_preview?: string | null
+          organization_id?: string
+          platform?: Database["public"]["Enums"]["social_platform"]
+          social_account_id?: string | null
+          status?: Database["public"]["Enums"]["conversation_status"]
+          unread_count?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversations_social_account_id_fkey"
+            columns: ["social_account_id"]
+            isOneToOne: false
+            referencedRelation: "social_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      messages: {
+        Row: {
+          body: string
+          conversation_id: string
+          created_at: string
+          direction: Database["public"]["Enums"]["message_direction"]
+          external_id: string | null
+          id: string
+          sender_name: string | null
+          sent_at: string
+          sent_by: string | null
+        }
+        Insert: {
+          body: string
+          conversation_id: string
+          created_at?: string
+          direction: Database["public"]["Enums"]["message_direction"]
+          external_id?: string | null
+          id?: string
+          sender_name?: string | null
+          sent_at?: string
+          sent_by?: string | null
+        }
+        Update: {
+          body?: string
+          conversation_id?: string
+          created_at?: string
+          direction?: Database["public"]["Enums"]["message_direction"]
+          external_id?: string | null
+          id?: string
+          sender_name?: string | null
+          sent_at?: string
+          sent_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       oauth_states: {
         Row: {
           code_verifier: string | null
@@ -351,12 +458,18 @@ export type Database = {
         }
         Returns: boolean
       }
+      increment_unread: {
+        Args: { p_conversation_id: string }
+        Returns: undefined
+      }
       is_org_member: {
         Args: { _org_id: string; _user_id: string }
         Returns: boolean
       }
     }
     Enums: {
+      conversation_status: "open" | "pending" | "resolved"
+      message_direction: "inbound" | "outbound"
       org_role: "owner" | "admin" | "manager" | "agent" | "viewer"
       platform_role: "super_admin" | "support"
       social_account_status: "connected" | "attention" | "disconnected"
@@ -489,6 +602,8 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      conversation_status: ["open", "pending", "resolved"],
+      message_direction: ["inbound", "outbound"],
       org_role: ["owner", "admin", "manager", "agent", "viewer"],
       platform_role: ["super_admin", "support"],
       social_account_status: ["connected", "attention", "disconnected"],
