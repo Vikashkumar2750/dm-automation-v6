@@ -3,7 +3,7 @@ import { CalendarDays } from "lucide-react";
 
 import { PlaceholderPage } from "@/components/app/PlaceholderPage";
 
-export const Route = createFileRoute("/calendar")({
+export const Route = createFileRoute("/_authenticated/calendar")({
   head: () => ({
     meta: [
       { title: "Content Calendar — DM FB-IG-YT by Techaasvik" },

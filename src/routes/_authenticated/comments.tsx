@@ -3,7 +3,7 @@ import { MessageSquare } from "lucide-react";
 
 import { PlaceholderPage } from "@/components/app/PlaceholderPage";
 
-export const Route = createFileRoute("/comments")({
+export const Route = createFileRoute("/_authenticated/comments")({
   head: () => ({
     meta: [
       { title: "Comments — DM FB-IG-YT by Techaasvik" },

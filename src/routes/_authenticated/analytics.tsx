@@ -3,7 +3,7 @@ import { BarChart3 } from "lucide-react";
 
 import { PlaceholderPage } from "@/components/app/PlaceholderPage";
 
-export const Route = createFileRoute("/analytics")({
+export const Route = createFileRoute("/_authenticated/analytics")({
   head: () => ({
     meta: [
       { title: "Analytics — DM FB-IG-YT by Techaasvik" },

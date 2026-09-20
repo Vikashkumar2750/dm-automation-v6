@@ -3,7 +3,7 @@ import { Shield } from "lucide-react";
 
 import { PlaceholderPage } from "@/components/app/PlaceholderPage";
 
-export const Route = createFileRoute("/admin")({
+export const Route = createFileRoute("/_authenticated/admin")({
   head: () => ({
     meta: [
       { title: "Platform Overview — DM FB-IG-YT by Techaasvik" },

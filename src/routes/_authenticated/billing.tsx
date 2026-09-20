@@ -3,7 +3,7 @@ import { CreditCard } from "lucide-react";
 
 import { PlaceholderPage } from "@/components/app/PlaceholderPage";
 
-export const Route = createFileRoute("/billing")({
+export const Route = createFileRoute("/_authenticated/billing")({
   head: () => ({
     meta: [
       { title: "Billing — DM FB-IG-YT by Techaasvik" },

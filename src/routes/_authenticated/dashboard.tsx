@@ -44,7 +44,7 @@ import {
   usageMeters,
 } from "@/lib/demo-data";
 
-export const Route = createFileRoute("/")({
+export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
     meta: [
       { title: "Dashboard — DM FB-IG-YT by Techaasvik" },

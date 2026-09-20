@@ -3,7 +3,7 @@ import { Share2 } from "lucide-react";
 
 import { PlaceholderPage } from "@/components/app/PlaceholderPage";
 
-export const Route = createFileRoute("/social-accounts")({
+export const Route = createFileRoute("/_authenticated/social-accounts")({
   head: () => ({
     meta: [
       { title: "Social Accounts — DM FB-IG-YT by Techaasvik" },

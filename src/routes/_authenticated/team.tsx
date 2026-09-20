@@ -3,7 +3,7 @@ import { UsersRound } from "lucide-react";
 
 import { PlaceholderPage } from "@/components/app/PlaceholderPage";
 
-export const Route = createFileRoute("/team")({
+export const Route = createFileRoute("/_authenticated/team")({
   head: () => ({
     meta: [
       { title: "Team — DM FB-IG-YT by Techaasvik" },
