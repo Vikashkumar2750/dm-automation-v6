@@ -1,9 +1,11 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
+import { getMyPlatformRole } from "@/lib/admin.functions";
 
 export const Route = createFileRoute("/auth")({
   ssr: false,
@@ -20,6 +22,8 @@ export const Route = createFileRoute("/auth")({
         property: "og:description",
         content: "Access your social automation workspace.",
       },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: AuthPage,
@@ -27,6 +31,8 @@ export const Route = createFileRoute("/auth")({
 
 function AuthPage() {
   const navigate = useNavigate();
+  const fetchPlatformRole = useServerFn(getMyPlatformRole);
+  const redirectingRef = useRef(false);
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -35,17 +41,33 @@ function AuthPage() {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
+  const navigateAfterSignIn = useCallback(async () => {
+    if (redirectingRef.current) return;
+    redirectingRef.current = true;
+
+    try {
+      const role = await fetchPlatformRole();
+      await navigate({
+        to: role.isSuperAdmin ? "/admin" : "/dashboard",
+        replace: true,
+      });
+    } catch {
+      redirectingRef.current = false;
+      setError("Signed in, but we could not verify your access. Please try again.");
+    }
+  }, [fetchPlatformRole, navigate]);
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
-      if (data.session) navigate({ to: "/dashboard", replace: true });
+      if (data.session) void navigateAfterSignIn();
     });
     const { data } = supabase.auth.onAuthStateChange((event, session) => {
       if (session && (event === "SIGNED_IN" || event === "INITIAL_SESSION")) {
-        navigate({ to: "/dashboard", replace: true });
+        window.setTimeout(() => void navigateAfterSignIn(), 0);
       }
     });
     return () => data.subscription.unsubscribe();
-  }, [navigate]);
+  }, [navigateAfterSignIn]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -66,8 +88,9 @@ function AuthPage() {
       else if (!data.session)
         setNotice("Check your email to confirm your address, then sign in.");
     } else {
-      const { error: err } = await supabase.auth.signInWithPassword({ email, password });
+      const { data, error: err } = await supabase.auth.signInWithPassword({ email, password });
       if (err) setError(err.message);
+      else if (data.session) await navigateAfterSignIn();
     }
     setBusy(false);
   }
@@ -82,7 +105,7 @@ function AuthPage() {
       return;
     }
     if (result.redirected) return;
-    navigate({ to: "/dashboard", replace: true });
+    await navigateAfterSignIn();
   }
 
   return (
