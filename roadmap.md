@@ -9,7 +9,6 @@ Real Meta + YouTube credentials are available when we reach OAuth phases.
 - [x] Phase 2 — Multi-tenant core + auth + security (orgs, roles, RLS, login/signup, protected routes)
 - [x] Phase 3 — Social OAuth & Account Center (Meta credentials live; YouTube pending Google credentials)
 - [x] Phase 4 — Webhook / event gateway (Meta callback, signature check, event feed)
-- [ ] Phase 4 — Webhook / event gateway
 - [ ] Phase 5 — Instagram messaging foundation
 - [ ] Phase 6 — Facebook messaging & comment automation
 - [ ] Phase 7 — Unified inbox + comments
