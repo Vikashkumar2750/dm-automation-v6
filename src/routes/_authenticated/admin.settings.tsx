@@ -48,7 +48,11 @@ function SystemSettingsPage() {
   }, [data?.incident_banner]);
 
   const mutation = useMutation({
-    mutationFn: (vars: Parameters<typeof save>[0]["data"]) => save({ data: vars }),
+    mutationFn: (vars: {
+      globalSendPaused?: boolean;
+      incidentBanner?: string | null;
+      featureFlags?: Record<string, boolean>;
+    }) => save({ data: vars }),
     onSuccess: () => {
       toast.success("Settings saved");
       void queryClient.invalidateQueries({ queryKey: ["platform-settings"] });
