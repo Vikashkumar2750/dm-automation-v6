@@ -529,6 +529,39 @@ export type Database = {
           },
         ]
       }
+      platform_audit_log: {
+        Row: {
+          action: string
+          actor_email: string | null
+          actor_user_id: string | null
+          created_at: string
+          detail: Json
+          id: string
+          target_id: string | null
+          target_type: string | null
+        }
+        Insert: {
+          action: string
+          actor_email?: string | null
+          actor_user_id?: string | null
+          created_at?: string
+          detail?: Json
+          id?: string
+          target_id?: string | null
+          target_type?: string | null
+        }
+        Update: {
+          action?: string
+          actor_email?: string | null
+          actor_user_id?: string | null
+          created_at?: string
+          detail?: Json
+          id?: string
+          target_id?: string | null
+          target_type?: string | null
+        }
+        Relationships: []
+      }
       platform_roles: {
         Row: {
           created_at: string
@@ -547,6 +580,30 @@ export type Database = {
           id?: string
           role?: Database["public"]["Enums"]["platform_role"]
           user_id?: string
+        }
+        Relationships: []
+      }
+      platform_settings: {
+        Row: {
+          feature_flags: Json
+          global_send_paused: boolean
+          id: boolean
+          incident_banner: string | null
+          updated_at: string
+        }
+        Insert: {
+          feature_flags?: Json
+          global_send_paused?: boolean
+          id?: boolean
+          incident_banner?: string | null
+          updated_at?: string
+        }
+        Update: {
+          feature_flags?: Json
+          global_send_paused?: boolean
+          id?: boolean
+          incident_banner?: string | null
+          updated_at?: string
         }
         Relationships: []
       }
