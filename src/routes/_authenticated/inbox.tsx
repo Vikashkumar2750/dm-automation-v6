@@ -68,6 +68,11 @@ function InboxPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
   const [commentMode, setCommentMode] = useState<"public" | "private">("public");
+  const [platform, setPlatform] = useState<Platform | "all">("all");
+  const [channel, setChannel] = useState<Channel | "all">("all");
+  const [status, setStatus] = useState<Status | "all">("all");
+  const [unreadOnly, setUnreadOnly] = useState(false);
+  const [search, setSearch] = useState("");
 
   const fetchConversations = useServerFn(listConversations);
   const fetchMessages = useServerFn(listMessages);
@@ -75,12 +80,22 @@ function InboxPage() {
   const sendReplyFn = useServerFn(sendReply);
   const replyToCommentFn = useServerFn(replyToComment);
   const setCommentHiddenFn = useServerFn(setCommentHidden);
+  const setStatusFn = useServerFn(setConversationStatus);
+
+  const filters = {
+    ...(platform !== "all" ? { platform } : {}),
+    ...(channel !== "all" ? { channel } : {}),
+    ...(status !== "all" ? { status } : {}),
+    ...(unreadOnly ? { unreadOnly: true } : {}),
+    ...(search.trim() ? { search: search.trim() } : {}),
+  };
 
   const conversationsQuery = useQuery({
-    queryKey: ["conversations", orgId],
+    queryKey: ["conversations", orgId, filters],
     enabled: Boolean(orgId),
     refetchInterval: 15_000,
-    queryFn: () => fetchConversations({ data: { organizationId: orgId! } }),
+    queryFn: () =>
+      fetchConversations({ data: { organizationId: orgId!, ...filters } }),
   });
 
   const conversations = conversationsQuery.data ?? [];
