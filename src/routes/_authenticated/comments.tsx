@@ -1,29 +1,140 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { MessageSquare } from "lucide-react";
+import { useState } from "react";
 
-import { PlaceholderPage } from "@/components/app/PlaceholderPage";
+import { AppShell } from "@/components/app/AppShell";
+import {
+  EmptyState,
+  PageHeader,
+  Panel,
+  PlatformBadge,
+  StatusBadge,
+} from "@/components/app/primitives";
+import { Button } from "@/components/ui/button";
+import { useTenant } from "@/hooks/useTenant";
+import { listConversations } from "@/lib/inbox.functions";
 
 export const Route = createFileRoute("/_authenticated/comments")({
   head: () => ({
     meta: [
       { title: "Comments — DM FB-IG-YT by Techaasvik" },
-      { name: "description", content: "Moderate, reply to and automate comments across all platforms." },
-      { property: "og:title", content: "Comments — DM FB-IG-YT by Techaasvik" },
-      { property: "og:description", content: "Moderate, reply to and automate comments across all platforms." },
+      {
+        name: "description",
+        content: "All Instagram and Facebook comment threads, with unread and status filters.",
+      },
+      { property: "og:title", content: "Comments" },
+      {
+        property: "og:description",
+        content: "Review and answer comments from your connected pages and profiles.",
+      },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: CommentsPage,
 });
 
+const FILTERS = [
+  { key: "all", label: "All" },
+  { key: "open", label: "Open" },
+  { key: "pending", label: "Pending" },
+  { key: "resolved", label: "Resolved" },
+] as const;
+
 function CommentsPage() {
+  const { activeOrg } = useTenant();
+  const orgId = activeOrg?.id ?? null;
+  const [filter, setFilter] = useState<(typeof FILTERS)[number]["key"]>("all");
+
+  const fetchConversations = useServerFn(listConversations);
+  const threads = useQuery({
+    queryKey: ["conversations", orgId, "comments", filter],
+    enabled: !!orgId,
+    refetchInterval: 30_000,
+    queryFn: () =>
+      fetchConversations({
+        data: {
+          organizationId: orgId!,
+          channel: "comment",
+          ...(filter === "all" ? {} : { status: filter }),
+        },
+      }),
+  });
+
+  const rows = threads.data ?? [];
+
   return (
-    <PlaceholderPage
-      title="Comments"
-      description="Moderate, reply to and automate comments across all platforms."
-      icon={MessageSquare}
-      emptyTitle="Comments inbox coming next"
-      emptyDescription="Comment stream with filters, bulk moderation and private-reply eligibility."
-      phase="Phase 7"
-    />
+    <AppShell>
+      <PageHeader
+        title="Comments"
+        description="Comment threads from Instagram and Facebook. Reply publicly or privately from the inbox."
+        actions={
+          <Button asChild>
+            <Link to="/inbox">Open inbox</Link>
+          </Button>
+        }
+      />
+
+      <Panel
+        title={`Comment threads (${rows.length})`}
+        action={
+          <div className="flex flex-wrap gap-1">
+            {FILTERS.map((f) => (
+              <Button
+                key={f.key}
+                size="sm"
+                variant={filter === f.key ? "default" : "outline"}
+                onClick={() => setFilter(f.key)}
+              >
+                {f.label}
+              </Button>
+            ))}
+          </div>
+        }
+      >
+        {rows.length === 0 ? (
+          <EmptyState
+            icon={MessageSquare}
+            title="No comments yet"
+            description="Comments on your posts appear here as soon as an account is connected."
+          />
+        ) : (
+          <div className="space-y-2">
+            {rows.map((c) => (
+              <Link
+                key={c.id}
+                to="/inbox"
+                className="flex flex-wrap items-center gap-3 rounded-xl border px-4 py-3 transition-colors hover:bg-surface-secondary"
+              >
+                <PlatformBadge platform={c.platform} size="sm" />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium">
+                    {c.external_user_name || c.external_user_id}
+                  </p>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {c.last_message_preview ?? "No preview"}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  {c.unread_count > 0 && <StatusBadge tone="info">{c.unread_count} new</StatusBadge>}
+                  <StatusBadge
+                    tone={
+                      c.status === "open" ? "warning" : c.status === "pending" ? "info" : "success"
+                    }
+                  >
+                    {c.status}
+                  </StatusBadge>
+                  <span className="text-xs text-muted-foreground">
+                    {new Date(c.last_message_at).toLocaleString()}
+                  </span>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
+      </Panel>
+    </AppShell>
   );
 }
