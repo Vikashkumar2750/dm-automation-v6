@@ -30,10 +30,59 @@ type Rule = {
   keywords: string[];
   action: string;
   response_text: string | null;
+  response_variations: string[] | null;
   set_status: string | null;
   cooldown_seconds: number;
   daily_limit: number;
 };
+
+type Settings = {
+  is_paused: boolean;
+  blocked_keywords: string[];
+  opt_out_keywords: string[];
+  per_contact_daily_limit: number;
+  quiet_hours_enabled: boolean;
+  quiet_hours_start: number;
+  quiet_hours_end: number;
+  timezone_offset_minutes: number;
+};
+
+const DEFAULT_SETTINGS: Settings = {
+  is_paused: false,
+  blocked_keywords: [],
+  opt_out_keywords: ["stop", "unsubscribe", "stop messaging"],
+  per_contact_daily_limit: 5,
+  quiet_hours_enabled: false,
+  quiet_hours_start: 22,
+  quiet_hours_end: 7,
+  timezone_offset_minutes: 330,
+};
+
+function inQuietHours(s: Settings, now = new Date()) {
+  if (!s.quiet_hours_enabled) return false;
+  const local = new Date(now.getTime() + s.timezone_offset_minutes * 60 * 1000);
+  const hour = local.getUTCHours();
+  const { quiet_hours_start: start, quiet_hours_end: end } = s;
+  if (start === end) return false;
+  return start < end ? hour >= start && hour < end : hour >= start || hour < end;
+}
+
+function hitsKeyword(list: string[] | null | undefined, body: string) {
+  const text = body.toLowerCase();
+  return (list ?? [])
+    .map((k) => k.trim().toLowerCase())
+    .filter(Boolean)
+    .find((k) => text.includes(k));
+}
+
+/** Rotate deterministically-random across the available response texts. */
+function pickResponse(rule: Rule) {
+  const options = [rule.response_text, ...(rule.response_variations ?? [])]
+    .map((t) => (t ?? "").trim())
+    .filter(Boolean);
+  if (options.length === 0) return null;
+  return options[Math.floor(Math.random() * options.length)]!;
+}
 
 function matches(rule: Rule, body: string) {
   if (rule.match_type === "any") return true;
@@ -46,6 +95,7 @@ function matches(rule: Rule, body: string) {
     return text.includes(k);
   });
 }
+
 
 async function log(
   admin: AdminClient,
