@@ -221,11 +221,62 @@ function InboxPage() {
       <div className="grid gap-4 lg:grid-cols-[340px_1fr]">
         {/* Conversation list */}
         <Panel bodyClassName="p-0" className="min-h-[480px]">
-          <div className="border-b px-4 py-3">
-            <p className="text-sm font-semibold">Conversations</p>
-            <p className="text-xs text-muted-foreground">
-              Refreshes automatically every 15 seconds.
-            </p>
+          <div className="space-y-2 border-b px-4 py-3">
+            <div>
+              <p className="text-sm font-semibold">Conversations</p>
+              <p className="text-xs text-muted-foreground">
+                Refreshes automatically every 15 seconds.
+              </p>
+            </div>
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search name or message…"
+              className="h-8 w-full rounded-md border bg-background px-2.5 text-xs outline-none focus:ring-2 focus:ring-ring"
+            />
+            <FilterChips
+              value={platform}
+              onChange={setPlatform}
+              options={[
+                { value: "all", label: "All platforms" },
+                { value: "instagram", label: "Instagram" },
+                { value: "facebook", label: "Facebook" },
+                { value: "youtube", label: "YouTube" },
+              ]}
+            />
+            <FilterChips
+              value={channel}
+              onChange={setChannel}
+              options={[
+                { value: "all", label: "All types" },
+                { value: "dm", label: "DMs" },
+                { value: "comment", label: "Comments" },
+              ]}
+            />
+            <div className="flex flex-wrap items-center gap-1">
+              <FilterChips
+                value={status}
+                onChange={setStatus}
+                options={[
+                  { value: "all", label: "Any status" },
+                  { value: "open", label: "Open" },
+                  { value: "pending", label: "Pending" },
+                  { value: "resolved", label: "Resolved" },
+                ]}
+              />
+              <button
+                type="button"
+                onClick={() => setUnreadOnly((v) => !v)}
+                className={cn(
+                  "rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors",
+                  unreadOnly
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                Unread only
+              </button>
+            </div>
           </div>
           {conversationsQuery.isLoading ? (
             <div className="flex items-center justify-center py-16 text-sm text-muted-foreground">
