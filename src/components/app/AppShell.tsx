@@ -1,4 +1,5 @@
-import { Link, useRouterState } from "@tanstack/react-router";
+import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   Bell,
   Search,
@@ -34,12 +35,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-import { currentUser, workspaces } from "@/lib/demo-data";
+import { useTenant } from "@/hooks/useTenant";
+import { supabase } from "@/integrations/supabase/client";
 
 type NavItem = { label: string; to: string; icon: LucideIcon; badge?: number };
 
 const primaryNav: NavItem[] = [
-  { label: "Dashboard", to: "/", icon: LayoutDashboard },
+  { label: "Dashboard", to: "/dashboard", icon: LayoutDashboard },
   { label: "Create Post", to: "/create-post", icon: PenSquare },
   { label: "Calendar", to: "/calendar", icon: CalendarDays },
   { label: "Inbox", to: "/inbox", icon: Inbox, badge: 12 },
@@ -98,11 +100,7 @@ function Sidebar({ pathname }: { pathname: string }) {
       <nav className="flex-1 overflow-y-auto px-3 py-4">
         <div className="space-y-1">
           {primaryNav.map((item) => (
-            <NavLink
-              key={item.to}
-              item={item}
-              active={item.to === "/" ? pathname === "/" : pathname.startsWith(item.to)}
-            />
+            <NavLink key={item.to} item={item} active={pathname.startsWith(item.to)} />
           ))}
         </div>
         <div className="my-4 border-t" />
@@ -134,7 +132,16 @@ function Sidebar({ pathname }: { pathname: string }) {
 }
 
 function TopBar({ onMenu }: { onMenu: () => void }) {
-  const [workspace, setWorkspace] = useState(workspaces[0]!);
+  const { profile, organizations, activeOrg, switchOrg } = useTenant();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+
+  async function handleSignOut() {
+    await queryClient.cancelQueries();
+    queryClient.clear();
+    await supabase.auth.signOut();
+    navigate({ to: "/auth", replace: true });
+  }
 
   return (
     <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b bg-surface px-4 lg:px-6">
@@ -146,21 +153,28 @@ function TopBar({ onMenu }: { onMenu: () => void }) {
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="outline" className="gap-2">
-            <span className="max-w-40 truncate">{workspace.name}</span>
+            <span className="max-w-40 truncate">
+              {activeOrg?.name ?? "Loading workspace..."}
+            </span>
             <ChevronDown className="size-4 text-muted-foreground" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="w-64">
           <DropdownMenuLabel>Workspaces</DropdownMenuLabel>
           <DropdownMenuSeparator />
-          {workspaces.map((ws) => (
-            <DropdownMenuItem key={ws.id} onSelect={() => setWorkspace(ws)}>
+          {organizations.map((ws) => (
+            <DropdownMenuItem key={ws.id} onSelect={() => switchOrg(ws.id)}>
               <div>
                 <p className="text-sm font-medium">{ws.name}</p>
-                <p className="text-xs text-muted-foreground">{ws.plan}</p>
+                <p className="text-xs text-muted-foreground">
+                  {ws.plan} · {ws.role}
+                </p>
               </div>
             </DropdownMenuItem>
           ))}
+          {organizations.length === 0 && (
+            <DropdownMenuItem disabled>No workspaces yet</DropdownMenuItem>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
 
@@ -183,12 +197,12 @@ function TopBar({ onMenu }: { onMenu: () => void }) {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="gap-2 px-2">
               <span className="inline-flex size-8 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
-                {currentUser.initials}
+                {profile.initials}
               </span>
               <span className="hidden text-left sm:block">
-                <span className="block text-sm font-medium">{currentUser.name}</span>
+                <span className="block text-sm font-medium">{profile.name}</span>
                 <span className="block text-xs text-muted-foreground">
-                  {currentUser.plan}
+                  {activeOrg?.plan ?? ""}
                 </span>
               </span>
               <ChevronDown className="size-4 text-muted-foreground" />
@@ -196,10 +210,8 @@ function TopBar({ onMenu }: { onMenu: () => void }) {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuLabel>
-              <p className="text-sm font-medium">{currentUser.name}</p>
-              <p className="text-xs font-normal text-muted-foreground">
-                {currentUser.email}
-              </p>
+              <p className="text-sm font-medium">{profile.name}</p>
+              <p className="text-xs font-normal text-muted-foreground">{profile.email}</p>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
@@ -208,6 +220,8 @@ function TopBar({ onMenu }: { onMenu: () => void }) {
             <DropdownMenuItem asChild>
               <Link to="/billing">Billing</Link>
             </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onSelect={handleSignOut}>Sign out</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
