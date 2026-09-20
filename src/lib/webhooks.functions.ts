@@ -10,6 +10,7 @@ export type WebhookEventRow = {
   event_type: string;
   status: "received" | "processed" | "failed" | "ignored";
   error: string | null;
+  signature_valid: boolean;
   received_at: string;
 };
 
@@ -21,7 +22,7 @@ export const listWebhookEvents = createServerFn({ method: "GET" })
   .handler(async ({ data, context }) => {
     const { data: rows, error } = await context.supabase
       .from("webhook_events")
-      .select("id, provider, platform, event_type, status, error, received_at")
+      .select("id, provider, platform, event_type, status, error, signature_valid, received_at")
       .eq("organization_id", data.organizationId)
       .order("received_at", { ascending: false })
       .limit(20);
