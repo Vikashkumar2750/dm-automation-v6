@@ -62,6 +62,21 @@ function SocialAccountsPage() {
     queryFn: () => fetchReadiness(),
   });
 
+  const fetchEvents = useServerFn(listWebhookEvents);
+  const fetchWebhookConfig = useServerFn(getWebhookConfig);
+
+  const eventsQuery = useQuery({
+    queryKey: ["webhook-events", orgId],
+    enabled: Boolean(orgId),
+    refetchInterval: 30_000,
+    queryFn: () => fetchEvents({ data: { organizationId: orgId! } }),
+  });
+
+  const webhookConfigQuery = useQuery({
+    queryKey: ["webhook-config"],
+    queryFn: () => fetchWebhookConfig(),
+  });
+
   const disconnect = useMutation({
     mutationFn: (id: string) => disconnectFn({ data: { id } }),
     onSuccess: () => {
