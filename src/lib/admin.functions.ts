@@ -39,13 +39,13 @@ export type PlatformOverview = {
   }[];
 };
 
-async function assertSuperAdmin(context: { supabase: any; userId: string }) {
+async function isSuperAdmin(context: { supabase: any; userId: string }) {
   const { data, error } = await context.supabase.rpc("has_platform_role", {
     _user_id: context.userId,
     _role: "super_admin",
   });
   if (error) throw new Error(error.message);
-  if (!data) throw new Error("forbidden");
+  return Boolean(data);
 }
 
 export const getMyPlatformRole = createServerFn({ method: "GET" })
@@ -60,8 +60,8 @@ export const getMyPlatformRole = createServerFn({ method: "GET" })
 
 export const getPlatformOverview = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }): Promise<PlatformOverview> => {
-    await assertSuperAdmin(context);
+  .handler(async ({ context }): Promise<PlatformOverview | null> => {
+    if (!(await isSuperAdmin(context))) return null;
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
