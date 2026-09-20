@@ -354,6 +354,9 @@ function AutomationsPage() {
         </Panel>
       </div>
 
+      <SafetyPanel orgId={orgId} />
+
+
       <Dialog open={Boolean(draft)} onOpenChange={(open) => !open && setDraft(null)}>
         <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
           <DialogHeader>
