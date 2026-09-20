@@ -29,17 +29,32 @@ export type TeamInvite = {
 const roles = ["owner", "admin", "manager", "agent", "viewer"] as const;
 const orgInput = z.object({ organizationId: z.string().uuid() });
 
+type Db = Awaited<
+  ReturnType<typeof import("@/integrations/supabase/auth-middleware").requireSupabaseAuth extends never ? never : never>
+>;
+
 async function requireManager(
-  supabase: { rpc: (fn: string, args: Record<string, unknown>) => Promise<{ data: unknown }> },
+  supabase: {
+    from: (table: "organization_members") => {
+      select: (cols: string) => {
+        eq: (col: string, val: string) => {
+          eq: (col: string, val: string) => {
+            maybeSingle: () => Promise<{ data: { role: string } | null }>;
+          };
+        };
+      };
+    };
+  },
   organizationId: string,
   userId: string,
 ) {
-  const { data } = await supabase.rpc("has_org_role", {
-    _org_id: organizationId,
-    _user_id: userId,
-    _roles: ["owner", "admin"],
-  });
-  if (data !== true) throw new Error("not_allowed");
+  const { data } = await supabase
+    .from("organization_members")
+    .select("role")
+    .eq("organization_id", organizationId)
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (!data || !["owner", "admin"].includes(data.role)) throw new Error("not_allowed");
 }
 
 export const listTeam = createServerFn({ method: "GET" })
