@@ -3,7 +3,7 @@ import { Sparkles } from "lucide-react";
 
 import { PlaceholderPage } from "@/components/app/PlaceholderPage";
 
-export const Route = createFileRoute("/ai-assistant")({
+export const Route = createFileRoute("/_authenticated/ai-assistant")({
   head: () => ({
     meta: [
       { title: "AI Assistant — DM FB-IG-YT by Techaasvik" },

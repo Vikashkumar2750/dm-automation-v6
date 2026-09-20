@@ -1,369 +1,111 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import {
-  MessageSquare,
-  MessagesSquare,
-  Send,
-  UserCheck,
-  CalendarCheck,
-  TrendingUp,
-  ArrowRight,
-  Sparkles,
-  Plus,
-  Inbox as InboxIcon,
-  CheckCircle2,
-  Circle,
-} from "lucide-react";
-import {
-  Area,
-  AreaChart,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { BarChart3, Inbox, Workflow } from "lucide-react";
+import { useEffect } from "react";
 
-import { AppShell } from "@/components/app/AppShell";
-import {
-  Panel,
-  PageHeader,
-  PlatformBadge,
-  StatCard,
-  StatusBadge,
-  UsageMeter,
-} from "@/components/app/primitives";
 import { Button } from "@/components/ui/button";
-import {
-  connectedAccounts,
-  conversations,
-  currentUser,
-  engagementSeries,
-  kpis,
-  topAutomations,
-  upcomingPosts,
-  usageMeters,
-} from "@/lib/demo-data";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Dashboard — DM FB-IG-YT by Techaasvik" },
+      { title: "DM FB-IG-YT by Techaasvik — Social automation made simple" },
       {
         name: "description",
         content:
-          "Publish to Instagram, Facebook and YouTube, manage comments and conversations, and automate eligible replies from one workspace.",
+          "Publish, reply and automate across Instagram, Facebook and YouTube from one workspace.",
       },
-      { property: "og:title", content: "Dashboard — DM FB-IG-YT by Techaasvik" },
+      {
+        property: "og:title",
+        content: "DM FB-IG-YT by Techaasvik — Social automation made simple",
+      },
       {
         property: "og:description",
         content:
-          "Social publishing, unified engagement and conversation automation for creators, MSMEs and agencies.",
+          "One inbox, smart automations and analytics for Instagram, Facebook and YouTube.",
       },
     ],
   }),
-  component: Dashboard,
+  component: LandingPage,
 });
 
-const kpiIcons = [
-  MessagesSquare,
-  MessageSquare,
-  Send,
-  UserCheck,
-  CalendarCheck,
-  TrendingUp,
+const features = [
+  {
+    icon: Inbox,
+    title: "Unified inbox",
+    body: "Every DM and comment from Instagram, Facebook and YouTube in one thread view.",
+  },
+  {
+    icon: Workflow,
+    title: "Automations",
+    body: "Keyword triggers, comment-to-DM flows and safe auto-replies that follow platform rules.",
+  },
+  {
+    icon: BarChart3,
+    title: "Analytics",
+    body: "Track conversations, automation runs, qualified leads and conversion in real time.",
+  },
 ];
 
-function Dashboard() {
+function LandingPage() {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session) navigate({ to: "/dashboard", replace: true });
+    });
+  }, [navigate]);
+
   return (
-    <AppShell>
-      <PageHeader
-        title={`Good morning, ${currentUser.name.split(" ")[0]}`}
-        description="Here's what's happening with your social media today."
-        actions={
-          <>
-            <Button variant="outline">Last 7 days</Button>
-            <Button asChild>
-              <Link to="/create-post">
-                <Plus className="size-4" />
-                Create Post
-              </Link>
-            </Button>
-          </>
-        }
-      />
-
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
-        {kpis.map((kpi, i) => (
-          <StatCard
-            key={kpi.label}
-            icon={kpiIcons[i] ?? MessageSquare}
-            label={kpi.label}
-            value={kpi.value}
-            delta={kpi.delta}
-            sub={kpi.sub}
-          />
-        ))}
-      </div>
-
-      <div className="mt-4 grid gap-4 xl:grid-cols-3">
-        <Panel
-          className="xl:col-span-2"
-          title="Connected Accounts"
-          action={
-            <Link
-              to="/social-accounts"
-              className="inline-flex items-center gap-1 text-sm font-medium text-primary"
-            >
-              Manage all <ArrowRight className="size-4" />
-            </Link>
-          }
-        >
-          <div className="grid gap-4 md:grid-cols-3">
-            {connectedAccounts.map((account) => (
-              <div key={account.platform} className="rounded-xl border p-4">
-                <div className="flex items-center justify-between">
-                  <PlatformBadge
-                    platform={account.platform}
-                    withLabel={account.handle}
-                  />
-                  <StatusBadge tone="success">Connected</StatusBadge>
-                </div>
-                <p className="num mt-4 text-xl font-semibold">{account.metric}</p>
-                <p className="text-xs text-muted-foreground">{account.metricLabel}</p>
-                <ul className="mt-4 space-y-1.5">
-                  {account.capabilities.map((cap) => (
-                    <li
-                      key={cap.name}
-                      className="flex items-center gap-2 text-sm text-muted-foreground"
-                    >
-                      {cap.enabled ? (
-                        <CheckCircle2 className="size-4 text-success" />
-                      ) : (
-                        <Circle className="size-4 text-subtle-foreground" />
-                      )}
-                      {cap.name}
-                    </li>
-                  ))}
-                </ul>
-                <Button variant="outline" size="sm" className="mt-4 w-full">
-                  Manage
-                </Button>
-              </div>
-            ))}
+    <div className="min-h-screen bg-background">
+      <header className="flex items-center justify-between border-b px-6 py-4">
+        <div className="flex items-center gap-3">
+          <span className="inline-flex size-9 items-center justify-center rounded-xl bg-primary text-base font-bold text-primary-foreground">
+            W
+          </span>
+          <div>
+            <p className="text-sm font-bold">DM FB-IG-YT</p>
+            <p className="text-xs text-subtle-foreground">by Techaasvik</p>
           </div>
-        </Panel>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button asChild variant="ghost">
+            <Link to="/auth">Sign in</Link>
+          </Button>
+          <Button asChild>
+            <Link to="/auth">Get started</Link>
+          </Button>
+        </div>
+      </header>
 
-        <Panel title="Engagement Overview" bodyClassName="p-4">
-          <div className="h-64 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={engagementSeries}>
-                <defs>
-                  {(["instagram", "facebook", "youtube"] as const).map((k, i) => (
-                    <linearGradient key={k} id={`fill-${k}`} x1="0" y1="0" x2="0" y2="1">
-                      <stop
-                        offset="5%"
-                        stopColor={`var(--chart-${i + 1})`}
-                        stopOpacity={0.25}
-                      />
-                      <stop
-                        offset="95%"
-                        stopColor={`var(--chart-${i + 1})`}
-                        stopOpacity={0}
-                      />
-                    </linearGradient>
-                  ))}
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-                <XAxis
-                  dataKey="day"
-                  tickLine={false}
-                  axisLine={false}
-                  fontSize={12}
-                  stroke="var(--muted-foreground)"
-                />
-                <YAxis
-                  tickLine={false}
-                  axisLine={false}
-                  fontSize={12}
-                  width={32}
-                  stroke="var(--muted-foreground)"
-                />
-                <Tooltip
-                  contentStyle={{
-                    borderRadius: 10,
-                    border: "1px solid var(--border)",
-                    fontSize: 12,
-                  }}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="instagram"
-                  stroke="var(--chart-1)"
-                  fill="url(#fill-instagram)"
-                  strokeWidth={2}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="facebook"
-                  stroke="var(--chart-2)"
-                  fill="url(#fill-facebook)"
-                  strokeWidth={2}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="youtube"
-                  stroke="var(--chart-3)"
-                  fill="url(#fill-youtube)"
-                  strokeWidth={2}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </Panel>
-      </div>
-
-      <div className="mt-4 grid gap-4 xl:grid-cols-3">
-        <Panel
-          title="Recent Conversations"
-          action={
-            <Link
-              to="/inbox"
-              className="inline-flex items-center gap-1 text-sm font-medium text-primary"
-            >
-              View all <ArrowRight className="size-4" />
-            </Link>
-          }
-          bodyClassName="p-2"
-        >
-          <ul>
-            {conversations.map((c) => (
-              <li
-                key={c.name}
-                className="flex items-center gap-3 rounded-lg px-3 py-2.5 hover:bg-surface-secondary"
-              >
-                <PlatformBadge platform={c.platform} size="sm" />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium">{c.name}</p>
-                  <p className="truncate text-xs text-muted-foreground">{c.preview}</p>
-                </div>
-                <span className="text-xs text-subtle-foreground">{c.time}</span>
-                <StatusBadge tone={c.state === "Pending" ? "warning" : "success"}>
-                  {c.state}
-                </StatusBadge>
-              </li>
-            ))}
-          </ul>
-        </Panel>
-
-        <Panel
-          title="Top Automations"
-          action={
-            <Link
-              to="/automations"
-              className="inline-flex items-center gap-1 text-sm font-medium text-primary"
-            >
-              View all <ArrowRight className="size-4" />
-            </Link>
-          }
-        >
-          <ol className="space-y-4">
-            {topAutomations.map((a, i) => (
-              <li key={a.name}>
-                <div className="flex items-center justify-between gap-3">
-                  <span className="truncate text-sm font-medium">
-                    {i + 1}. {a.name}
-                  </span>
-                  <span className="num shrink-0 text-sm">
-                    {a.runs.toLocaleString("en-IN")}
-                    <span className="ml-2 text-xs text-success">{a.delta}</span>
-                  </span>
-                </div>
-                <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-surface-secondary">
-                  <div
-                    className="h-full rounded-full bg-primary"
-                    style={{ width: `${a.share}%` }}
-                  />
-                </div>
-              </li>
-            ))}
-          </ol>
-        </Panel>
-
-        <Panel
-          title="Upcoming Posts"
-          action={
-            <Link
-              to="/calendar"
-              className="inline-flex items-center gap-1 text-sm font-medium text-primary"
-            >
-              View all <ArrowRight className="size-4" />
-            </Link>
-          }
-          bodyClassName="p-2"
-        >
-          <ul>
-            {upcomingPosts.map((p) => (
-              <li
-                key={p.title}
-                className="flex items-center gap-3 rounded-lg px-3 py-2.5 hover:bg-surface-secondary"
-              >
-                <PlatformBadge platform={p.platform} size="sm" />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium">{p.title}</p>
-                  <p className="truncate text-xs text-muted-foreground">{p.when}</p>
-                </div>
-                <StatusBadge tone="info">{p.status}</StatusBadge>
-              </li>
-            ))}
-          </ul>
-        </Panel>
-      </div>
-
-      <div className="mt-4 grid gap-4 xl:grid-cols-3">
-        <Panel
-          className="xl:col-span-2"
-          title="Usage & Limits"
-          action={
-            <Link
-              to="/usage"
-              className="inline-flex items-center gap-1 text-sm font-medium text-primary"
-            >
-              View all <ArrowRight className="size-4" />
-            </Link>
-          }
-        >
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {usageMeters.map((m) => (
-              <UsageMeter key={m.label} {...m} />
-            ))}
-          </div>
-        </Panel>
-
-        <Panel title="Quick Actions">
-          <div className="grid grid-cols-2 gap-2">
-            <Button variant="outline" asChild className="justify-start">
-              <Link to="/create-post">
-                <Plus className="size-4" /> Create Post
-              </Link>
+      <main className="mx-auto max-w-5xl px-6 py-20">
+        <div className="max-w-2xl">
+          <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
+            Social automation without the complexity
+          </h1>
+          <p className="mt-4 text-lg text-muted-foreground">
+            Manage Instagram, Facebook and YouTube conversations, comments and publishing
+            from a single workspace built for teams and agencies.
+          </p>
+          <div className="mt-8 flex flex-wrap gap-3">
+            <Button asChild size="lg">
+              <Link to="/auth">Create your workspace</Link>
             </Button>
-            <Button variant="outline" asChild className="justify-start">
-              <Link to="/automations">
-                <Sparkles className="size-4" /> New Automation
-              </Link>
-            </Button>
-            <Button variant="outline" asChild className="justify-start">
-              <Link to="/inbox">
-                <InboxIcon className="size-4" /> View Inbox
-              </Link>
-            </Button>
-            <Button variant="outline" asChild className="justify-start">
-              <Link to="/social-accounts">
-                <Plus className="size-4" /> Add Account
-              </Link>
+            <Button asChild size="lg" variant="outline">
+              <Link to="/auth">Sign in</Link>
             </Button>
           </div>
-        </Panel>
-      </div>
-    </AppShell>
+        </div>
+
+        <div className="mt-16 grid gap-4 sm:grid-cols-3">
+          {features.map((f) => (
+            <div key={f.title} className="panel p-5">
+              <f.icon className="size-5 text-primary" />
+              <p className="mt-3 text-sm font-semibold">{f.title}</p>
+              <p className="mt-1 text-sm text-muted-foreground">{f.body}</p>
+            </div>
+          ))}
+        </div>
+      </main>
+    </div>
   );
 }

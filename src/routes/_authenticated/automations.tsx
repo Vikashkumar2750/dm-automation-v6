@@ -3,7 +3,7 @@ import { Workflow } from "lucide-react";
 
 import { PlaceholderPage } from "@/components/app/PlaceholderPage";
 
-export const Route = createFileRoute("/automations")({
+export const Route = createFileRoute("/_authenticated/automations")({
   head: () => ({
     meta: [
       { title: "Automations — DM FB-IG-YT by Techaasvik" },

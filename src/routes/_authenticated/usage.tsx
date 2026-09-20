@@ -3,7 +3,7 @@ import { Gauge } from "lucide-react";
 
 import { PlaceholderPage } from "@/components/app/PlaceholderPage";
 
-export const Route = createFileRoute("/usage")({
+export const Route = createFileRoute("/_authenticated/usage")({
   head: () => ({
     meta: [
       { title: "Usage & Limits — DM FB-IG-YT by Techaasvik" },

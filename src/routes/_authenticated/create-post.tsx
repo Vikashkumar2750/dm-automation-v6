@@ -3,7 +3,7 @@ import { PenSquare } from "lucide-react";
 
 import { PlaceholderPage } from "@/components/app/PlaceholderPage";
 
-export const Route = createFileRoute("/create-post")({
+export const Route = createFileRoute("/_authenticated/create-post")({
   head: () => ({
     meta: [
       { title: "Create Post — DM FB-IG-YT by Techaasvik" },

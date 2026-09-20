@@ -3,7 +3,7 @@ import { ShieldCheck } from "lucide-react";
 
 import { PlaceholderPage } from "@/components/app/PlaceholderPage";
 
-export const Route = createFileRoute("/account-health")({
+export const Route = createFileRoute("/_authenticated/account-health")({
   head: () => ({
     meta: [
       { title: "Account Health — DM FB-IG-YT by Techaasvik" },

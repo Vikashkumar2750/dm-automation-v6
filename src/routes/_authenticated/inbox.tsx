@@ -3,7 +3,7 @@ import { Inbox } from "lucide-react";
 
 import { PlaceholderPage } from "@/components/app/PlaceholderPage";
 
-export const Route = createFileRoute("/inbox")({
+export const Route = createFileRoute("/_authenticated/inbox")({
   head: () => ({
     meta: [
       { title: "Unified Inbox — DM FB-IG-YT by Techaasvik" },

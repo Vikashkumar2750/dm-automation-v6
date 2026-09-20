@@ -3,7 +3,7 @@ import { Users } from "lucide-react";
 
 import { PlaceholderPage } from "@/components/app/PlaceholderPage";
 
-export const Route = createFileRoute("/contacts")({
+export const Route = createFileRoute("/_authenticated/contacts")({
   head: () => ({
     meta: [
       { title: "Contacts — DM FB-IG-YT by Techaasvik" },
