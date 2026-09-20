@@ -58,8 +58,8 @@ function AuthPage() {
   }, [fetchPlatformRole, navigate]);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) void navigateAfterSignIn();
+    supabase.auth.getUser().then(({ data }) => {
+      if (data.user) void navigateAfterSignIn();
     });
     const { data } = supabase.auth.onAuthStateChange((event, session) => {
       if (session && (event === "SIGNED_IN" || event === "INITIAL_SESSION")) {
