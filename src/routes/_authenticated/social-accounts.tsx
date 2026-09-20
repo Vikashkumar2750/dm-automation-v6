@@ -138,7 +138,7 @@ function SocialAccountsPage() {
             meta.provider === "meta" ? readiness?.meta : readiness?.google;
           const count = accounts.filter((a) => a.platform === platform).length;
           return (
-            <Panel key={platform} className="p-5">
+            <Panel key={platform}>
               <div className="flex items-start justify-between gap-3">
                 <PlatformBadge platform={platform} withLabel={meta.label} />
                 {count > 0 ? (
@@ -179,7 +179,7 @@ function SocialAccountsPage() {
         })}
       </div>
 
-      <Panel className="mt-6">
+      <Panel className="mt-6" bodyClassName="p-0">
         <div className="flex items-center justify-between border-b px-5 py-4">
           <div>
             <p className="text-sm font-semibold">Connected accounts</p>
