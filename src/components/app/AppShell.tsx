@@ -110,6 +110,8 @@ function Sidebar({ pathname }: { pathname: string }) {
           {secondaryNav.map((item) => (
             <NavLink key={item.to} item={item} active={pathname.startsWith(item.to)} />
           ))}
+        </div>
+      </nav>
 
       <div className="border-t p-3">
         <div className="rounded-xl border bg-surface-secondary p-4">
