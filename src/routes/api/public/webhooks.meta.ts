@@ -144,7 +144,7 @@ async function ingestIntoInbox(
   if (msgError && msgError.code !== "23505") return;
   if (msgError) return;
 
-  await admin.rpc("increment_unread", { p_conversation_id: conversation.id }).maybeSingle?.();
+  await admin.rpc("increment_unread", { p_conversation_id: conversation.id });
 }
 
 export const Route = createFileRoute("/api/public/webhooks/meta")({
