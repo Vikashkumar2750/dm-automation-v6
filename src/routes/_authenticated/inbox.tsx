@@ -250,7 +250,69 @@ function InboxPage() {
                 )}
               </div>
 
-              {selected.channel === "dm" && selected.platform !== "youtube" ? (
+              {selected.channel === "comment" && selected.platform !== "youtube" ? (
+                <form
+                  className="space-y-2 border-t px-4 py-3"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    const body = draft.trim();
+                    if (body && !commentReply.isPending) commentReply.mutate(body);
+                  }}
+                >
+                  <input
+                    value={draft}
+                    onChange={(e) => setDraft(e.target.value)}
+                    placeholder={
+                      commentMode === "public"
+                        ? "Reply publicly under this comment…"
+                        : "Send a private DM to this commenter…"
+                    }
+                    className="h-9 w-full rounded-md border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
+                    maxLength={1000}
+                  />
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className="flex rounded-md border p-0.5">
+                      {(["public", "private"] as const).map((mode) => (
+                        <button
+                          key={mode}
+                          type="button"
+                          onClick={() => setCommentMode(mode)}
+                          className={cn(
+                            "rounded px-2.5 py-1 text-xs font-medium transition-colors",
+                            commentMode === mode
+                              ? "bg-primary text-primary-foreground"
+                              : "text-muted-foreground hover:text-foreground",
+                          )}
+                        >
+                          {mode === "public" ? "Public reply" : "Private DM"}
+                        </button>
+                      ))}
+                    </div>
+                    <Button
+                      type="submit"
+                      size="sm"
+                      disabled={!draft.trim() || commentReply.isPending}
+                    >
+                      {commentReply.isPending ? (
+                        <Loader2 className="size-4 animate-spin" />
+                      ) : (
+                        <Send className="size-4" />
+                      )}
+                      Send
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={hideComment.isPending}
+                      onClick={() => hideComment.mutate(true)}
+                    >
+                      <EyeOff className="size-4" />
+                      Hide comment
+                    </Button>
+                  </div>
+                </form>
+              ) : selected.channel === "dm" && selected.platform !== "youtube" ? (
                 <form
                   className="flex items-center gap-2 border-t px-4 py-3"
                   onSubmit={(e) => {
