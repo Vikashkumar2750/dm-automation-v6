@@ -225,6 +225,13 @@ export const getAutomationSettings = createServerFn({ method: "GET" })
       quiet_hours_start: 22,
       quiet_hours_end: 7,
       timezone_offset_minutes: 330,
+      hourly_send_limit: 120,
+      daily_send_limit: 1000,
+      viral_guard_enabled: true,
+      viral_threshold_per_minute: 30,
+      viral_cooldown_minutes: 15,
+      auto_paused_until: null,
+      auto_pause_reason: null,
     }) as AutomationSettings;
   });
 
@@ -242,6 +249,11 @@ export const saveAutomationSettings = createServerFn({ method: "POST" })
         quietHoursStart: z.number().int().min(0).max(23),
         quietHoursEnd: z.number().int().min(0).max(23),
         timezoneOffsetMinutes: z.number().int().min(-720).max(840),
+        hourlySendLimit: z.number().int().min(1).max(10000),
+        dailySendLimit: z.number().int().min(1).max(100000),
+        viralGuardEnabled: z.boolean(),
+        viralThresholdPerMinute: z.number().int().min(5).max(1000),
+        viralCooldownMinutes: z.number().int().min(1).max(720),
       })
       .parse(data),
   )
@@ -257,12 +269,92 @@ export const saveAutomationSettings = createServerFn({ method: "POST" })
         quiet_hours_start: data.quietHoursStart,
         quiet_hours_end: data.quietHoursEnd,
         timezone_offset_minutes: data.timezoneOffsetMinutes,
+        hourly_send_limit: data.hourlySendLimit,
+        daily_send_limit: data.dailySendLimit,
+        viral_guard_enabled: data.viralGuardEnabled,
+        viral_threshold_per_minute: data.viralThresholdPerMinute,
+        viral_cooldown_minutes: data.viralCooldownMinutes,
       },
       { onConflict: "organization_id" },
     );
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+export type AutomationUsage = {
+  sentLastHour: number;
+  sentLastDay: number;
+  skippedLastDay: number;
+  failedLastDay: number;
+  inboundLastHour: number;
+  hourlyLimit: number;
+  dailyLimit: number;
+  autoPausedUntil: string | null;
+  autoPauseReason: string | null;
+};
+
+export const getAutomationUsage = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) =>
+    z.object({ organizationId: z.string().uuid() }).parse(data),
+  )
+  .handler(async ({ data, context }) => {
+    const org = data.organizationId;
+    const hourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+
+    const runCount = (status: string, since: string) =>
+      context.supabase
+        .from("automation_runs")
+        .select("id", { count: "exact", head: true })
+        .eq("organization_id", org)
+        .eq("status", status)
+        .gte("created_at", since);
+
+    const [hour, day, skipped, failed, inbound, settings] = await Promise.all([
+      runCount("sent", hourAgo),
+      runCount("sent", dayAgo),
+      runCount("skipped", dayAgo),
+      runCount("failed", dayAgo),
+      context.supabase
+        .from("webhook_events")
+        .select("id", { count: "exact", head: true })
+        .eq("organization_id", org)
+        .gte("received_at", hourAgo),
+      context.supabase
+        .from("automation_settings")
+        .select("hourly_send_limit, daily_send_limit, auto_paused_until, auto_pause_reason")
+        .eq("organization_id", org)
+        .maybeSingle(),
+    ]);
+
+    return {
+      sentLastHour: hour.count ?? 0,
+      sentLastDay: day.count ?? 0,
+      skippedLastDay: skipped.count ?? 0,
+      failedLastDay: failed.count ?? 0,
+      inboundLastHour: inbound.count ?? 0,
+      hourlyLimit: settings.data?.hourly_send_limit ?? 120,
+      dailyLimit: settings.data?.daily_send_limit ?? 1000,
+      autoPausedUntil: settings.data?.auto_paused_until ?? null,
+      autoPauseReason: settings.data?.auto_pause_reason ?? null,
+    } satisfies AutomationUsage;
+  });
+
+export const resumeAutomations = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) =>
+    z.object({ organizationId: z.string().uuid() }).parse(data),
+  )
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase
+      .from("automation_settings")
+      .update({ auto_paused_until: null, auto_pause_reason: null })
+      .eq("organization_id", data.organizationId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
 
 export const listOptOuts = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
