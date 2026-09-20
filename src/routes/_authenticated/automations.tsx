@@ -30,10 +30,15 @@ import { useTenant } from "@/hooks/useTenant";
 import {
   createAutomationRule,
   deleteAutomationRule,
+  getAutomationSettings,
   listAutomationRules,
   listAutomationRuns,
+  listOptOuts,
+  removeOptOut,
+  saveAutomationSettings,
   updateAutomationRule,
   type AutomationRule,
+  type AutomationSettings,
 } from "@/lib/automations.functions";
 
 export const Route = createFileRoute("/_authenticated/automations")({
