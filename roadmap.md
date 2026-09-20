@@ -7,7 +7,7 @@ Real Meta + YouTube credentials are available when we reach OAuth phases.
 - [x] Phase 0 — Product foundation (PRD supplied by user, tokens + IA derived)
 - [x] Phase 1 — Design system + app shell (sidebar, topbar, switchers, primitives, dashboard shell)
 - [x] Phase 2 — Multi-tenant core + auth + security (orgs, roles, RLS, login/signup, protected routes)
-- [ ] Phase 3 — Social OAuth & Account Center (Meta + YouTube)
+- [~] Phase 3 — Social OAuth & Account Center (built; awaiting Meta + Google credentials)
 - [ ] Phase 4 — Webhook / event gateway
 - [ ] Phase 5 — Instagram messaging foundation
 - [ ] Phase 6 — Facebook messaging & comment automation
