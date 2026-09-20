@@ -38,6 +38,9 @@ export const listConversations = createServerFn({ method: "GET" })
         organizationId: z.string().uuid(),
         platform: z.enum(["instagram", "facebook", "youtube"]).optional(),
         channel: z.enum(["dm", "comment"]).optional(),
+        status: z.enum(["open", "pending", "resolved"]).optional(),
+        unreadOnly: z.boolean().optional(),
+        search: z.string().trim().max(120).optional(),
       })
       .parse(data),
   )
