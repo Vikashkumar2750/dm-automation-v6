@@ -21,6 +21,6 @@ Real Meta + YouTube credentials are available when we reach OAuth phases.
 - [ ] Phase 12 — YouTube (blocked: Google Client ID + Secret needed)
 - [x] Phase 13 — AI layer (caption writer, reply drafts, automation rule suggestions)
 - [x] Phase 14 — Analytics & ROI (engagement, reply speed, automation share, publishing results)
-- [x] Phase 15 — Super admin / operations (workspaces, plans, platform stats, event health)
+- [x] Phase 15 — Super admin / operations console (own shell: overview, organizations + tenant detail, users, accounts, automations, messages, jobs/queue, webhooks, API health, plans, security & audit, system settings with global pause + incident banner + feature flags)
 - [x] Phase 16 — Agency / white label (workspace branding, logo, brand colour, support email, client workspaces)
 - [x] Phase 17 — Export pack for Railway (Dockerfile, .dockerignore, railway.json, .env.example, scripts/migrate.mjs, DEPLOY-RAILWAY.md)
