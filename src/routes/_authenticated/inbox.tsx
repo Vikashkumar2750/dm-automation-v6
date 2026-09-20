@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import {
   CheckCheck,
+  EyeOff,
   Inbox as InboxIcon,
   Loader2,
   MessageSquareText,
@@ -25,7 +26,9 @@ import {
   listConversations,
   listMessages,
   markConversationRead,
+  replyToComment,
   sendReply,
+  setCommentHidden,
   type ConversationRow,
 } from "@/lib/inbox.functions";
 import { cn } from "@/lib/utils";
