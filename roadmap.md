@@ -20,7 +20,7 @@ Real Meta + YouTube credentials are available when we reach OAuth phases.
 - [x] Publishing upgrade — multi-account publish in one go, media upload (image/video/carousel), reel + story formats
 - [ ] Phase 12 — YouTube (blocked: Google Client ID + Secret needed)
 - [x] Phase 13 — AI layer (caption writer, reply drafts, automation rule suggestions)
-- [ ] Phase 14 — Analytics & ROI
+- [x] Phase 14 — Analytics & ROI (engagement, reply speed, automation share, publishing results)
 - [ ] Phase 15 — Super admin / operations
 - [ ] Phase 16 — Agency / white label
 - [ ] Export pack for Railway (Dockerfile, env template, migration runner)
