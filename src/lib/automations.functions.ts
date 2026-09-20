@@ -115,19 +115,19 @@ export const updateAutomationRule = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { id, ...rest } = data;
-    const patch: Record<string, unknown> = {};
-    if (rest.name !== undefined) patch["name"] = rest.name;
-    if (rest.isActive !== undefined) patch["is_active"] = rest.isActive;
-    if (rest.priority !== undefined) patch["priority"] = rest.priority;
-    if (rest.platform !== undefined) patch["platform"] = rest.platform;
-    if (rest.trigger !== undefined) patch["trigger"] = rest.trigger;
-    if (rest.matchType !== undefined) patch["match_type"] = rest.matchType;
-    if (rest.keywords !== undefined) patch["keywords"] = rest.keywords;
-    if (rest.action !== undefined) patch["action"] = rest.action;
-    if (rest.responseText !== undefined) patch["response_text"] = rest.responseText;
-    if (rest.setStatus !== undefined) patch["set_status"] = rest.setStatus;
-    if (rest.cooldownSeconds !== undefined) patch["cooldown_seconds"] = rest.cooldownSeconds;
-    if (rest.dailyLimit !== undefined) patch["daily_limit"] = rest.dailyLimit;
+    const patch: Partial<ReturnType<typeof toRow>> = {};
+    if (rest.name !== undefined) patch.name = rest.name;
+    if (rest.isActive !== undefined) patch.is_active = rest.isActive;
+    if (rest.priority !== undefined) patch.priority = rest.priority;
+    if (rest.platform !== undefined) patch.platform = rest.platform;
+    if (rest.trigger !== undefined) patch.trigger = rest.trigger;
+    if (rest.matchType !== undefined) patch.match_type = rest.matchType;
+    if (rest.keywords !== undefined) patch.keywords = rest.keywords;
+    if (rest.action !== undefined) patch.action = rest.action;
+    if (rest.responseText !== undefined) patch.response_text = rest.responseText;
+    if (rest.setStatus !== undefined) patch.set_status = rest.setStatus;
+    if (rest.cooldownSeconds !== undefined) patch.cooldown_seconds = rest.cooldownSeconds;
+    if (rest.dailyLimit !== undefined) patch.daily_limit = rest.dailyLimit;
 
     const { error } = await context.supabase
       .from("automation_rules")
