@@ -475,33 +475,59 @@ export type Database = {
       }
       organizations: {
         Row: {
+          brand_color: string | null
+          brand_name: string | null
           created_at: string
           id: string
+          logo_url: string | null
           name: string
           owner_id: string
+          parent_organization_id: string | null
           plan: string
           slug: string
+          support_email: string | null
+          timezone: string
           updated_at: string
         }
         Insert: {
+          brand_color?: string | null
+          brand_name?: string | null
           created_at?: string
           id?: string
+          logo_url?: string | null
           name: string
           owner_id: string
+          parent_organization_id?: string | null
           plan?: string
           slug: string
+          support_email?: string | null
+          timezone?: string
           updated_at?: string
         }
         Update: {
+          brand_color?: string | null
+          brand_name?: string | null
           created_at?: string
           id?: string
+          logo_url?: string | null
           name?: string
           owner_id?: string
+          parent_organization_id?: string | null
           plan?: string
           slug?: string
+          support_email?: string | null
+          timezone?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "organizations_parent_organization_id_fkey"
+            columns: ["parent_organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       platform_roles: {
         Row: {
