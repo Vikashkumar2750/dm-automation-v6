@@ -93,7 +93,7 @@ function CaptionTab() {
   });
 
   return (
-    <Panel title="Caption writer" description="Three ready-to-post captions per idea.">
+    <Panel title="Caption writer">
       <div className="space-y-4">
         <div className="space-y-2">
           <Label htmlFor="topic">What is the post about?</Label>
