@@ -204,6 +204,14 @@ function InboxPage() {
     onError: commentError,
   });
 
+  const changeStatus = useMutation({
+    mutationFn: (next: Status) =>
+      setStatusFn({ data: { conversationId: selected!.id, status: next } }),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ["conversations", orgId] }),
+    onError: () => toast.error("Could not update the status."),
+  });
+
   function openConversation(id: string) {
     setSelectedId(id);
     markReadFn({ data: { conversationId: id } }).then(() =>
