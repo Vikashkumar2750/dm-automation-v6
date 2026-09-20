@@ -59,7 +59,7 @@ function AdminPage() {
     onError: () => toast.error("Could not update the plan"),
   });
 
-  const forbidden = Boolean(error);
+  const forbidden = Boolean(error) || (!isLoading && !data);
   const t = data?.totals;
 
   return (

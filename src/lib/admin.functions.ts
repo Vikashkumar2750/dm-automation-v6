@@ -158,7 +158,7 @@ export const setOrganizationPlan = createServerFn({ method: "POST" })
       .parse(data),
   )
   .handler(async ({ data, context }) => {
-    await assertSuperAdmin(context);
+    if (!(await isSuperAdmin(context))) throw new Error("forbidden");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { error } = await supabaseAdmin
       .from("organizations")
