@@ -131,6 +131,19 @@ async function log(
 export async function runAutomations(admin: AdminClient, ctx: AutomationContext) {
   const trigger = ctx.channel === "comment" ? "comment_received" : "dm_received";
 
+  // Platform-wide kill switch controlled from the operations console.
+  const { data: platform } = await admin
+    .from("platform_settings")
+    .select("global_send_paused")
+    .eq("id", true)
+    .maybeSingle();
+  if (platform?.global_send_paused) {
+    await log(admin, ctx, null, "skipped", "platform_send_paused");
+    return;
+  }
+
+
+
   const { data: settingsRow } = await admin
     .from("automation_settings")
     .select(
