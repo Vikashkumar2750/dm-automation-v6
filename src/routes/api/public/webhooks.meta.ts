@@ -46,6 +46,109 @@ function platformFor(object: string | undefined) {
   return null;
 }
 
+type AdminClient = Awaited<
+  ReturnType<typeof import("@/integrations/supabase/client.server")>
+>["supabaseAdmin"];
+
+type MessagingEvent = {
+  sender?: { id?: string };
+  recipient?: { id?: string };
+  timestamp?: number;
+  message?: { mid?: string; text?: string; is_echo?: boolean };
+};
+
+type CommentValue = {
+  item?: string;
+  comment_id?: string;
+  id?: string;
+  text?: string;
+  message?: string;
+  from?: { id?: string; username?: string; name?: string };
+};
+
+/**
+ * Mirror a webhook item into the inbox (conversations + messages).
+ * DM events come from entry.messaging; comments arrive as changes.
+ */
+async function ingestIntoInbox(
+  admin: AdminClient,
+  args: {
+    organizationId: string;
+    socialAccountId: string | null;
+    platform: "instagram" | "facebook";
+    accountExternalId: string | null;
+    type: string;
+    value: unknown;
+  },
+) {
+  const { organizationId, socialAccountId, platform, type, value } = args;
+
+  let externalUserId: string | null = null;
+  let externalUserName: string | null = null;
+  let body: string | null = null;
+  let externalId: string | null = null;
+  let channel = "dm";
+  let sentAt = new Date();
+
+  if (type.endsWith(".message")) {
+    const m = value as MessagingEvent;
+    if (m.message?.is_echo) return; // our own outbound echo
+    externalUserId = m.sender?.id ?? null;
+    if (!externalUserId || externalUserId === args.accountExternalId) return;
+    body = m.message?.text ?? null;
+    externalId = m.message?.mid ?? null;
+    if (m.timestamp) sentAt = new Date(m.timestamp);
+  } else if (type.endsWith(".comments") || type.endsWith(".feed")) {
+    const c = (value as { value?: CommentValue }).value ?? (value as CommentValue);
+    if (c.item && c.item !== "comment") return;
+    externalUserId = c.from?.id ?? null;
+    if (!externalUserId) return;
+    externalUserName = c.from?.username ?? c.from?.name ?? null;
+    body = c.text ?? c.message ?? null;
+    externalId = c.comment_id ?? c.id ?? null;
+    channel = "comment";
+  } else {
+    return;
+  }
+
+  if (!body) return;
+
+  const { data: conversation } = await admin
+    .from("conversations")
+    .upsert(
+      {
+        organization_id: organizationId,
+        social_account_id: socialAccountId,
+        platform,
+        external_user_id: externalUserId,
+        external_user_name: externalUserName,
+        channel,
+        status: "open",
+        last_message_at: sentAt.toISOString(),
+        last_message_preview: body.slice(0, 140),
+      },
+      { onConflict: "organization_id,platform,external_user_id,channel" },
+    )
+    .select("id")
+    .single();
+
+  if (!conversation) return;
+
+  const { error: msgError } = await admin.from("messages").insert({
+    conversation_id: conversation.id,
+    direction: "inbound",
+    body,
+    external_id: externalId,
+    sender_name: externalUserName,
+    sent_at: sentAt.toISOString(),
+  });
+  // Duplicate external_id — already ingested.
+  if (msgError && msgError.code !== "23505") return;
+  if (msgError) return;
+
+  await admin.rpc("increment_unread", { p_conversation_id: conversation.id }).maybeSingle?.();
+}
+
 export const Route = createFileRoute("/api/public/webhooks/meta")({
   server: {
     handlers: {
