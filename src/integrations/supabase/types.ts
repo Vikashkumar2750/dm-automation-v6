@@ -14,6 +14,129 @@ export type Database = {
   }
   public: {
     Tables: {
+      automation_rules: {
+        Row: {
+          action: Database["public"]["Enums"]["automation_action"]
+          cooldown_seconds: number
+          created_at: string
+          created_by: string | null
+          daily_limit: number
+          id: string
+          is_active: boolean
+          keywords: string[]
+          match_type: Database["public"]["Enums"]["automation_match"]
+          name: string
+          organization_id: string
+          platform: Database["public"]["Enums"]["social_platform"] | null
+          priority: number
+          response_text: string | null
+          set_status: Database["public"]["Enums"]["conversation_status"] | null
+          trigger: Database["public"]["Enums"]["automation_trigger"]
+          updated_at: string
+        }
+        Insert: {
+          action: Database["public"]["Enums"]["automation_action"]
+          cooldown_seconds?: number
+          created_at?: string
+          created_by?: string | null
+          daily_limit?: number
+          id?: string
+          is_active?: boolean
+          keywords?: string[]
+          match_type?: Database["public"]["Enums"]["automation_match"]
+          name: string
+          organization_id: string
+          platform?: Database["public"]["Enums"]["social_platform"] | null
+          priority?: number
+          response_text?: string | null
+          set_status?: Database["public"]["Enums"]["conversation_status"] | null
+          trigger: Database["public"]["Enums"]["automation_trigger"]
+          updated_at?: string
+        }
+        Update: {
+          action?: Database["public"]["Enums"]["automation_action"]
+          cooldown_seconds?: number
+          created_at?: string
+          created_by?: string | null
+          daily_limit?: number
+          id?: string
+          is_active?: boolean
+          keywords?: string[]
+          match_type?: Database["public"]["Enums"]["automation_match"]
+          name?: string
+          organization_id?: string
+          platform?: Database["public"]["Enums"]["social_platform"] | null
+          priority?: number
+          response_text?: string | null
+          set_status?: Database["public"]["Enums"]["conversation_status"] | null
+          trigger?: Database["public"]["Enums"]["automation_trigger"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_rules_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      automation_runs: {
+        Row: {
+          conversation_id: string | null
+          created_at: string
+          detail: string | null
+          id: string
+          message_id: string | null
+          organization_id: string
+          rule_id: string | null
+          status: Database["public"]["Enums"]["automation_run_status"]
+        }
+        Insert: {
+          conversation_id?: string | null
+          created_at?: string
+          detail?: string | null
+          id?: string
+          message_id?: string | null
+          organization_id: string
+          rule_id?: string | null
+          status?: Database["public"]["Enums"]["automation_run_status"]
+        }
+        Update: {
+          conversation_id?: string | null
+          created_at?: string
+          detail?: string | null
+          id?: string
+          message_id?: string | null
+          organization_id?: string
+          rule_id?: string | null
+          status?: Database["public"]["Enums"]["automation_run_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_runs_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "automation_runs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "automation_runs_rule_id_fkey"
+            columns: ["rule_id"]
+            isOneToOne: false
+            referencedRelation: "automation_rules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       conversations: {
         Row: {
           channel: string
@@ -468,6 +591,15 @@ export type Database = {
       }
     }
     Enums: {
+      automation_action:
+        | "reply_dm"
+        | "comment_public_reply"
+        | "comment_private_reply"
+        | "hide_comment"
+        | "set_status"
+      automation_match: "any" | "contains" | "exact" | "starts_with"
+      automation_run_status: "matched" | "sent" | "skipped" | "failed"
+      automation_trigger: "dm_received" | "comment_received"
       conversation_status: "open" | "pending" | "resolved"
       message_direction: "inbound" | "outbound"
       org_role: "owner" | "admin" | "manager" | "agent" | "viewer"
@@ -602,6 +734,16 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      automation_action: [
+        "reply_dm",
+        "comment_public_reply",
+        "comment_private_reply",
+        "hide_comment",
+        "set_status",
+      ],
+      automation_match: ["any", "contains", "exact", "starts_with"],
+      automation_run_status: ["matched", "sent", "skipped", "failed"],
+      automation_trigger: ["dm_received", "comment_received"],
       conversation_status: ["open", "pending", "resolved"],
       message_direction: ["inbound", "outbound"],
       org_role: ["owner", "admin", "manager", "agent", "viewer"],
