@@ -28,6 +28,7 @@ import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedSocialAccountsRouteImport } from './routes/_authenticated/social-accounts'
 import { Route as AuthenticatedTeamRouteImport } from './routes/_authenticated/team'
 import { Route as AuthenticatedUsageRouteImport } from './routes/_authenticated/usage'
+import { Route as AuthenticatedInviteTokenRouteImport } from './routes/_authenticated/invite.$token'
 import { Route as ApiPublicCronPublishDueRouteImport } from './routes/api/public/cron.publish-due'
 import { Route as ApiPublicWebhooksMetaRouteImport } from './routes/api/public/webhooks.meta'
 import { Route as ApiPublicOauthProviderCallbackRouteImport } from './routes/api/public/oauth.$provider.callback'
@@ -130,6 +131,12 @@ const AuthenticatedUsageRoute = AuthenticatedUsageRouteImport.update({
   path: '/usage',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedInviteTokenRoute =
+  AuthenticatedInviteTokenRouteImport.update({
+    id: '/invite/$token',
+    path: '/invite/$token',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const ApiPublicCronPublishDueRoute = ApiPublicCronPublishDueRouteImport.update({
   id: '/api/public/cron/publish-due',
   path: '/api/public/cron/publish-due',
@@ -166,6 +173,7 @@ export interface FileRoutesByFullPath {
   '/social-accounts': typeof AuthenticatedSocialAccountsRoute
   '/team': typeof AuthenticatedTeamRoute
   '/usage': typeof AuthenticatedUsageRoute
+  '/invite/$token': typeof AuthenticatedInviteTokenRoute
   '/api/public/cron/publish-due': typeof ApiPublicCronPublishDueRoute
   '/api/public/webhooks/meta': typeof ApiPublicWebhooksMetaRoute
   '/api/public/oauth/$provider/callback': typeof ApiPublicOauthProviderCallbackRoute
@@ -189,6 +197,7 @@ export interface FileRoutesByTo {
   '/social-accounts': typeof AuthenticatedSocialAccountsRoute
   '/team': typeof AuthenticatedTeamRoute
   '/usage': typeof AuthenticatedUsageRoute
+  '/invite/$token': typeof AuthenticatedInviteTokenRoute
   '/api/public/cron/publish-due': typeof ApiPublicCronPublishDueRoute
   '/api/public/webhooks/meta': typeof ApiPublicWebhooksMetaRoute
   '/api/public/oauth/$provider/callback': typeof ApiPublicOauthProviderCallbackRoute
@@ -214,6 +223,7 @@ export interface FileRoutesById {
   '/_authenticated/social-accounts': typeof AuthenticatedSocialAccountsRoute
   '/_authenticated/team': typeof AuthenticatedTeamRoute
   '/_authenticated/usage': typeof AuthenticatedUsageRoute
+  '/_authenticated/invite/$token': typeof AuthenticatedInviteTokenRoute
   '/api/public/cron/publish-due': typeof ApiPublicCronPublishDueRoute
   '/api/public/webhooks/meta': typeof ApiPublicWebhooksMetaRoute
   '/api/public/oauth/$provider/callback': typeof ApiPublicOauthProviderCallbackRoute
@@ -239,6 +249,7 @@ export interface FileRouteTypes {
     | '/social-accounts'
     | '/team'
     | '/usage'
+    | '/invite/$token'
     | '/api/public/cron/publish-due'
     | '/api/public/webhooks/meta'
     | '/api/public/oauth/$provider/callback'
@@ -262,6 +273,7 @@ export interface FileRouteTypes {
     | '/social-accounts'
     | '/team'
     | '/usage'
+    | '/invite/$token'
     | '/api/public/cron/publish-due'
     | '/api/public/webhooks/meta'
     | '/api/public/oauth/$provider/callback'
@@ -286,6 +298,7 @@ export interface FileRouteTypes {
     | '/_authenticated/social-accounts'
     | '/_authenticated/team'
     | '/_authenticated/usage'
+    | '/_authenticated/invite/$token'
     | '/api/public/cron/publish-due'
     | '/api/public/webhooks/meta'
     | '/api/public/oauth/$provider/callback'
@@ -435,6 +448,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedUsageRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/invite/$token': {
+      id: '/_authenticated/invite/$token'
+      path: '/invite/$token'
+      fullPath: '/invite/$token'
+      preLoaderRoute: typeof AuthenticatedInviteTokenRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/api/public/cron/publish-due': {
       id: '/api/public/cron/publish-due'
       path: '/api/public/cron/publish-due'
@@ -476,6 +496,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedSocialAccountsRoute: typeof AuthenticatedSocialAccountsRoute
   AuthenticatedTeamRoute: typeof AuthenticatedTeamRoute
   AuthenticatedUsageRoute: typeof AuthenticatedUsageRoute
+  AuthenticatedInviteTokenRoute: typeof AuthenticatedInviteTokenRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -495,6 +516,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedSocialAccountsRoute: AuthenticatedSocialAccountsRoute,
   AuthenticatedTeamRoute: AuthenticatedTeamRoute,
   AuthenticatedUsageRoute: AuthenticatedUsageRoute,
+  AuthenticatedInviteTokenRoute: AuthenticatedInviteTokenRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
