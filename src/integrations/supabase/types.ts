@@ -531,12 +531,15 @@ export type Database = {
           created_by: string | null
           error: string | null
           external_post_id: string | null
+          group_id: string | null
           id: string
           media_type: string
           media_url: string | null
+          media_urls: string[]
           organization_id: string
           permalink: string | null
           platform: Database["public"]["Enums"]["social_platform"]
+          post_format: string
           published_at: string | null
           scheduled_at: string | null
           social_account_id: string | null
@@ -549,12 +552,15 @@ export type Database = {
           created_by?: string | null
           error?: string | null
           external_post_id?: string | null
+          group_id?: string | null
           id?: string
           media_type?: string
           media_url?: string | null
+          media_urls?: string[]
           organization_id: string
           permalink?: string | null
           platform: Database["public"]["Enums"]["social_platform"]
+          post_format?: string
           published_at?: string | null
           scheduled_at?: string | null
           social_account_id?: string | null
@@ -567,12 +573,15 @@ export type Database = {
           created_by?: string | null
           error?: string | null
           external_post_id?: string | null
+          group_id?: string | null
           id?: string
           media_type?: string
           media_url?: string | null
+          media_urls?: string[]
           organization_id?: string
           permalink?: string | null
           platform?: Database["public"]["Enums"]["social_platform"]
+          post_format?: string
           published_at?: string | null
           scheduled_at?: string | null
           social_account_id?: string | null

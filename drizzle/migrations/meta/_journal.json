@@ -64,6 +64,20 @@
       "when": 1789932821285,
       "tag": "0008_team_invitations",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1789933345081,
+      "tag": "0009_posts_multi_platform_media",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1789933378868,
+      "tag": "0010_post_media_storage_policies",
+      "breakpoints": true
     }
   ]
 }

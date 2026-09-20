@@ -12,6 +12,9 @@ export type Post = {
   platform: "instagram" | "facebook" | "youtube";
   caption: string;
   media_url: string | null;
+  media_urls: string[] | null;
+  post_format: string;
+  group_id: string | null;
   media_type: string;
   scheduled_at: string | null;
   status: "draft" | "scheduled" | "publishing" | "published" | "failed";
@@ -23,7 +26,7 @@ export type Post = {
 };
 
 const SELECT =
-  "id, organization_id, social_account_id, platform, caption, media_url, media_type, scheduled_at, status, external_post_id, permalink, error, published_at, created_at";
+  "id, organization_id, social_account_id, platform, caption, media_url, media_urls, post_format, group_id, media_type, scheduled_at, status, external_post_id, permalink, error, published_at, created_at";
 
 async function assertWriter(
   supabase: import("@supabase/supabase-js").SupabaseClient,
@@ -54,14 +57,23 @@ export const listPosts = createServerFn({ method: "POST" })
     return (rows ?? []) as Post[];
   });
 
+const mediaRef = z
+  .string()
+  .trim()
+  .max(1000)
+  .refine((value) => value.startsWith("storage:") || /^https?:\/\//.test(value), {
+    message: "Media must be an uploaded file or a public link",
+  });
+
 const postInput = z.object({
   id: z.string().uuid().optional(),
   organizationId: z.string().uuid(),
-  socialAccountId: z.string().uuid().nullable(),
-  platform: z.enum(["instagram", "facebook", "youtube"]),
+  /** One post is created per selected account — publish everywhere at once. */
+  socialAccountIds: z.array(z.string().uuid()).min(1).max(20),
   caption: z.string().trim().max(2200),
-  mediaUrl: z.string().trim().url().max(1000).nullable(),
+  media: z.array(mediaRef).max(10),
   mediaType: z.enum(["image", "video"]),
+  postFormat: z.enum(["feed", "reel", "story", "carousel"]),
   scheduledAt: z.string().datetime().nullable(),
   status: z.enum(["draft", "scheduled"]),
 });
@@ -74,38 +86,65 @@ export const savePost = createServerFn({ method: "POST" })
     if (data.status === "scheduled" && !data.scheduledAt) {
       throw new Error("A scheduled post needs a date and time");
     }
-    if (!data.caption.trim() && !data.mediaUrl) {
-      throw new Error("Add a caption or a media link");
+    if (!data.caption.trim() && data.media.length === 0) {
+      throw new Error("Add a caption or some media");
+    }
+    if (data.postFormat === "carousel" && data.media.length < 2) {
+      throw new Error("A carousel needs at least 2 photos");
+    }
+    if ((data.postFormat === "reel" || data.postFormat === "story") && data.media.length === 0) {
+      throw new Error("Reels and stories need a video or photo");
     }
 
-    const row = {
+    const { data: accounts, error: accountError } = await context.supabase
+      .from("social_accounts")
+      .select("id, platform")
+      .eq("organization_id", data.organizationId)
+      .in("id", data.socialAccountIds);
+    if (accountError) throw new Error(accountError.message);
+    const targets = (accounts ?? []) as {
+      id: string;
+      platform: "instagram" | "facebook" | "youtube";
+    }[];
+    if (targets.length === 0) throw new Error("Pick at least one connected account");
+
+    const base = {
       organization_id: data.organizationId,
-      social_account_id: data.socialAccountId,
-      platform: data.platform,
       caption: data.caption,
-      media_url: data.mediaUrl,
+      media_url: data.media[0] ?? null,
+      media_urls: data.media,
       media_type: data.mediaType,
+      post_format: data.postFormat,
       scheduled_at: data.scheduledAt,
       status: data.status,
       error: null,
     };
 
     if (data.id) {
+      const first = targets[0]!;
       const { error } = await context.supabase
         .from("posts")
-        .update(row)
+        .update({ ...base, social_account_id: first.id, platform: first.platform })
         .eq("id", data.id);
       if (error) throw new Error(error.message);
-      return { id: data.id };
+      return { ids: [data.id] };
     }
+
+    const groupId = crypto.randomUUID();
+    const rows = targets.map((account) => ({
+      ...base,
+      social_account_id: account.id,
+      platform: account.platform,
+      group_id: targets.length > 1 ? groupId : null,
+      created_by: context.userId,
+    }));
 
     const { data: created, error } = await context.supabase
       .from("posts")
-      .insert({ ...row, created_by: context.userId })
-      .select("id")
-      .single();
+      .insert(rows)
+      .select("id");
     if (error) throw new Error(error.message);
-    return { id: (created as { id: string }).id };
+    return { ids: ((created ?? []) as { id: string }[]).map((row) => row.id) };
   });
 
 export const deletePost = createServerFn({ method: "POST" })
