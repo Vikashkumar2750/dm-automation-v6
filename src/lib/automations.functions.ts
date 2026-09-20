@@ -37,7 +37,7 @@ export type AutomationRun = {
 };
 
 const SELECT =
-  "id, organization_id, name, is_active, priority, platform, trigger, match_type, keywords, action, response_text, set_status, cooldown_seconds, daily_limit, created_at";
+  "id, organization_id, name, is_active, priority, platform, trigger, match_type, keywords, action, response_text, response_variations, set_status, cooldown_seconds, daily_limit, created_at";
 
 const ruleInput = z.object({
   name: z.string().trim().min(1).max(80),
