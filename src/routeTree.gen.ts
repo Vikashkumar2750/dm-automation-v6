@@ -10,33 +10,232 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AccountHealthRouteImport } from './routes/account-health'
+import { Route as AdminRouteImport } from './routes/admin'
+import { Route as AiAssistantRouteImport } from './routes/ai-assistant'
+import { Route as AnalyticsRouteImport } from './routes/analytics'
+import { Route as AutomationsRouteImport } from './routes/automations'
+import { Route as BillingRouteImport } from './routes/billing'
+import { Route as CalendarRouteImport } from './routes/calendar'
+import { Route as CommentsRouteImport } from './routes/comments'
+import { Route as ContactsRouteImport } from './routes/contacts'
+import { Route as CreatePostRouteImport } from './routes/create-post'
+import { Route as InboxRouteImport } from './routes/inbox'
+import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as SocialAccountsRouteImport } from './routes/social-accounts'
+import { Route as TeamRouteImport } from './routes/team'
+import { Route as UsageRouteImport } from './routes/usage'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AccountHealthRoute = AccountHealthRouteImport.update({
+  id: '/account-health',
+  path: '/account-health',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AiAssistantRoute = AiAssistantRouteImport.update({
+  id: '/ai-assistant',
+  path: '/ai-assistant',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AnalyticsRoute = AnalyticsRouteImport.update({
+  id: '/analytics',
+  path: '/analytics',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AutomationsRoute = AutomationsRouteImport.update({
+  id: '/automations',
+  path: '/automations',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BillingRoute = BillingRouteImport.update({
+  id: '/billing',
+  path: '/billing',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CalendarRoute = CalendarRouteImport.update({
+  id: '/calendar',
+  path: '/calendar',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CommentsRoute = CommentsRouteImport.update({
+  id: '/comments',
+  path: '/comments',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ContactsRoute = ContactsRouteImport.update({
+  id: '/contacts',
+  path: '/contacts',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CreatePostRoute = CreatePostRouteImport.update({
+  id: '/create-post',
+  path: '/create-post',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InboxRoute = InboxRouteImport.update({
+  id: '/inbox',
+  path: '/inbox',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SocialAccountsRoute = SocialAccountsRouteImport.update({
+  id: '/social-accounts',
+  path: '/social-accounts',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TeamRoute = TeamRouteImport.update({
+  id: '/team',
+  path: '/team',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const UsageRoute = UsageRouteImport.update({
+  id: '/usage',
+  path: '/usage',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/account-health': typeof AccountHealthRoute
+  '/admin': typeof AdminRoute
+  '/ai-assistant': typeof AiAssistantRoute
+  '/analytics': typeof AnalyticsRoute
+  '/automations': typeof AutomationsRoute
+  '/billing': typeof BillingRoute
+  '/calendar': typeof CalendarRoute
+  '/comments': typeof CommentsRoute
+  '/contacts': typeof ContactsRoute
+  '/create-post': typeof CreatePostRoute
+  '/inbox': typeof InboxRoute
+  '/settings': typeof SettingsRoute
+  '/social-accounts': typeof SocialAccountsRoute
+  '/team': typeof TeamRoute
+  '/usage': typeof UsageRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/account-health': typeof AccountHealthRoute
+  '/admin': typeof AdminRoute
+  '/ai-assistant': typeof AiAssistantRoute
+  '/analytics': typeof AnalyticsRoute
+  '/automations': typeof AutomationsRoute
+  '/billing': typeof BillingRoute
+  '/calendar': typeof CalendarRoute
+  '/comments': typeof CommentsRoute
+  '/contacts': typeof ContactsRoute
+  '/create-post': typeof CreatePostRoute
+  '/inbox': typeof InboxRoute
+  '/settings': typeof SettingsRoute
+  '/social-accounts': typeof SocialAccountsRoute
+  '/team': typeof TeamRoute
+  '/usage': typeof UsageRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/account-health': typeof AccountHealthRoute
+  '/admin': typeof AdminRoute
+  '/ai-assistant': typeof AiAssistantRoute
+  '/analytics': typeof AnalyticsRoute
+  '/automations': typeof AutomationsRoute
+  '/billing': typeof BillingRoute
+  '/calendar': typeof CalendarRoute
+  '/comments': typeof CommentsRoute
+  '/contacts': typeof ContactsRoute
+  '/create-post': typeof CreatePostRoute
+  '/inbox': typeof InboxRoute
+  '/settings': typeof SettingsRoute
+  '/social-accounts': typeof SocialAccountsRoute
+  '/team': typeof TeamRoute
+  '/usage': typeof UsageRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/account-health'
+    | '/admin'
+    | '/ai-assistant'
+    | '/analytics'
+    | '/automations'
+    | '/billing'
+    | '/calendar'
+    | '/comments'
+    | '/contacts'
+    | '/create-post'
+    | '/inbox'
+    | '/settings'
+    | '/social-accounts'
+    | '/team'
+    | '/usage'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/account-health'
+    | '/admin'
+    | '/ai-assistant'
+    | '/analytics'
+    | '/automations'
+    | '/billing'
+    | '/calendar'
+    | '/comments'
+    | '/contacts'
+    | '/create-post'
+    | '/inbox'
+    | '/settings'
+    | '/social-accounts'
+    | '/team'
+    | '/usage'
+  id:
+    | '__root__'
+    | '/'
+    | '/account-health'
+    | '/admin'
+    | '/ai-assistant'
+    | '/analytics'
+    | '/automations'
+    | '/billing'
+    | '/calendar'
+    | '/comments'
+    | '/contacts'
+    | '/create-post'
+    | '/inbox'
+    | '/settings'
+    | '/social-accounts'
+    | '/team'
+    | '/usage'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AccountHealthRoute: typeof AccountHealthRoute
+  AdminRoute: typeof AdminRoute
+  AiAssistantRoute: typeof AiAssistantRoute
+  AnalyticsRoute: typeof AnalyticsRoute
+  AutomationsRoute: typeof AutomationsRoute
+  BillingRoute: typeof BillingRoute
+  CalendarRoute: typeof CalendarRoute
+  CommentsRoute: typeof CommentsRoute
+  ContactsRoute: typeof ContactsRoute
+  CreatePostRoute: typeof CreatePostRoute
+  InboxRoute: typeof InboxRoute
+  SettingsRoute: typeof SettingsRoute
+  SocialAccountsRoute: typeof SocialAccountsRoute
+  TeamRoute: typeof TeamRoute
+  UsageRoute: typeof UsageRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +247,131 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/account-health': {
+      id: '/account-health'
+      path: '/account-health'
+      fullPath: '/account-health'
+      preLoaderRoute: typeof AccountHealthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ai-assistant': {
+      id: '/ai-assistant'
+      path: '/ai-assistant'
+      fullPath: '/ai-assistant'
+      preLoaderRoute: typeof AiAssistantRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/analytics': {
+      id: '/analytics'
+      path: '/analytics'
+      fullPath: '/analytics'
+      preLoaderRoute: typeof AnalyticsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/automations': {
+      id: '/automations'
+      path: '/automations'
+      fullPath: '/automations'
+      preLoaderRoute: typeof AutomationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/billing': {
+      id: '/billing'
+      path: '/billing'
+      fullPath: '/billing'
+      preLoaderRoute: typeof BillingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/calendar': {
+      id: '/calendar'
+      path: '/calendar'
+      fullPath: '/calendar'
+      preLoaderRoute: typeof CalendarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/comments': {
+      id: '/comments'
+      path: '/comments'
+      fullPath: '/comments'
+      preLoaderRoute: typeof CommentsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/contacts': {
+      id: '/contacts'
+      path: '/contacts'
+      fullPath: '/contacts'
+      preLoaderRoute: typeof ContactsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/create-post': {
+      id: '/create-post'
+      path: '/create-post'
+      fullPath: '/create-post'
+      preLoaderRoute: typeof CreatePostRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/inbox': {
+      id: '/inbox'
+      path: '/inbox'
+      fullPath: '/inbox'
+      preLoaderRoute: typeof InboxRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/social-accounts': {
+      id: '/social-accounts'
+      path: '/social-accounts'
+      fullPath: '/social-accounts'
+      preLoaderRoute: typeof SocialAccountsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/team': {
+      id: '/team'
+      path: '/team'
+      fullPath: '/team'
+      preLoaderRoute: typeof TeamRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/usage': {
+      id: '/usage'
+      path: '/usage'
+      fullPath: '/usage'
+      preLoaderRoute: typeof UsageRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AccountHealthRoute: AccountHealthRoute,
+  AdminRoute: AdminRoute,
+  AiAssistantRoute: AiAssistantRoute,
+  AnalyticsRoute: AnalyticsRoute,
+  AutomationsRoute: AutomationsRoute,
+  BillingRoute: BillingRoute,
+  CalendarRoute: CalendarRoute,
+  CommentsRoute: CommentsRoute,
+  ContactsRoute: ContactsRoute,
+  CreatePostRoute: CreatePostRoute,
+  InboxRoute: InboxRoute,
+  SettingsRoute: SettingsRoute,
+  SocialAccountsRoute: SocialAccountsRoute,
+  TeamRoute: TeamRoute,
+  UsageRoute: UsageRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
