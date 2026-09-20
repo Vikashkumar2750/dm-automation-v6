@@ -16,6 +16,7 @@ import {
   listSocialAccounts,
   startSocialConnect,
 } from "@/lib/social-accounts.functions";
+import { getWebhookConfig, listWebhookEvents } from "@/lib/webhooks.functions";
 
 export const Route = createFileRoute("/_authenticated/social-accounts")({
   head: () => ({
