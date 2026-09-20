@@ -16,7 +16,8 @@ Real Meta + YouTube credentials are available when we reach OAuth phases.
 - [x] Phase 9 — Response variations + safety engine (rotating replies, kill switch, blocked + opt-out words, quiet hours, per-contact cap)
 - [x] Phase 10 — Rate limit / quota / viral protection (org hourly+daily caps, spike auto-pause, usage panel)
 - [x] Phase 11 — Publishing & content calendar (composer, scheduling, month calendar, publish queue + cron endpoint)
-- [ ] Phase 12 — YouTube
+- [x] Team management (invites, roles, remove) — Phase 2 leftover
+- [ ] Phase 12 — YouTube (blocked: Google Client ID + Secret needed)
 - [ ] Phase 13 — AI layer
 - [ ] Phase 14 — Analytics & ROI
 - [ ] Phase 15 — Super admin / operations
