@@ -477,6 +477,78 @@ export type Database = {
         }
         Relationships: []
       }
+      posts: {
+        Row: {
+          caption: string
+          created_at: string
+          created_by: string | null
+          error: string | null
+          external_post_id: string | null
+          id: string
+          media_type: string
+          media_url: string | null
+          organization_id: string
+          permalink: string | null
+          platform: Database["public"]["Enums"]["social_platform"]
+          published_at: string | null
+          scheduled_at: string | null
+          social_account_id: string | null
+          status: Database["public"]["Enums"]["post_status"]
+          updated_at: string
+        }
+        Insert: {
+          caption?: string
+          created_at?: string
+          created_by?: string | null
+          error?: string | null
+          external_post_id?: string | null
+          id?: string
+          media_type?: string
+          media_url?: string | null
+          organization_id: string
+          permalink?: string | null
+          platform: Database["public"]["Enums"]["social_platform"]
+          published_at?: string | null
+          scheduled_at?: string | null
+          social_account_id?: string | null
+          status?: Database["public"]["Enums"]["post_status"]
+          updated_at?: string
+        }
+        Update: {
+          caption?: string
+          created_at?: string
+          created_by?: string | null
+          error?: string | null
+          external_post_id?: string | null
+          id?: string
+          media_type?: string
+          media_url?: string | null
+          organization_id?: string
+          permalink?: string | null
+          platform?: Database["public"]["Enums"]["social_platform"]
+          published_at?: string | null
+          scheduled_at?: string | null
+          social_account_id?: string | null
+          status?: Database["public"]["Enums"]["post_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "posts_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "posts_social_account_id_fkey"
+            columns: ["social_account_id"]
+            isOneToOne: false
+            referencedRelation: "social_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -713,6 +785,7 @@ export type Database = {
       message_direction: "inbound" | "outbound"
       org_role: "owner" | "admin" | "manager" | "agent" | "viewer"
       platform_role: "super_admin" | "support"
+      post_status: "draft" | "scheduled" | "publishing" | "published" | "failed"
       social_account_status: "connected" | "attention" | "disconnected"
       social_platform: "instagram" | "facebook" | "youtube"
       webhook_status: "received" | "processed" | "failed" | "ignored"
@@ -857,6 +930,7 @@ export const Constants = {
       message_direction: ["inbound", "outbound"],
       org_role: ["owner", "admin", "manager", "agent", "viewer"],
       platform_role: ["super_admin", "support"],
+      post_status: ["draft", "scheduled", "publishing", "published", "failed"],
       social_account_status: ["connected", "attention", "disconnected"],
       social_platform: ["instagram", "facebook", "youtube"],
       webhook_status: ["received", "processed", "failed", "ignored"],
