@@ -265,6 +265,72 @@ export type Database = {
           },
         ]
       }
+      webhook_events: {
+        Row: {
+          dedupe_key: string | null
+          error: string | null
+          event_type: string
+          external_account_id: string | null
+          id: string
+          organization_id: string | null
+          payload: Json
+          platform: Database["public"]["Enums"]["social_platform"] | null
+          processed_at: string | null
+          provider: string
+          received_at: string
+          signature_valid: boolean
+          social_account_id: string | null
+          status: Database["public"]["Enums"]["webhook_status"]
+        }
+        Insert: {
+          dedupe_key?: string | null
+          error?: string | null
+          event_type?: string
+          external_account_id?: string | null
+          id?: string
+          organization_id?: string | null
+          payload?: Json
+          platform?: Database["public"]["Enums"]["social_platform"] | null
+          processed_at?: string | null
+          provider: string
+          received_at?: string
+          signature_valid?: boolean
+          social_account_id?: string | null
+          status?: Database["public"]["Enums"]["webhook_status"]
+        }
+        Update: {
+          dedupe_key?: string | null
+          error?: string | null
+          event_type?: string
+          external_account_id?: string | null
+          id?: string
+          organization_id?: string | null
+          payload?: Json
+          platform?: Database["public"]["Enums"]["social_platform"] | null
+          processed_at?: string | null
+          provider?: string
+          received_at?: string
+          signature_valid?: boolean
+          social_account_id?: string | null
+          status?: Database["public"]["Enums"]["webhook_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "webhook_events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "webhook_events_social_account_id_fkey"
+            columns: ["social_account_id"]
+            isOneToOne: false
+            referencedRelation: "social_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -295,6 +361,7 @@ export type Database = {
       platform_role: "super_admin" | "support"
       social_account_status: "connected" | "attention" | "disconnected"
       social_platform: "instagram" | "facebook" | "youtube"
+      webhook_status: "received" | "processed" | "failed" | "ignored"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -426,6 +493,7 @@ export const Constants = {
       platform_role: ["super_admin", "support"],
       social_account_status: ["connected", "attention", "disconnected"],
       social_platform: ["instagram", "facebook", "youtube"],
+      webhook_status: ["received", "processed", "failed", "ignored"],
     },
   },
 } as const
