@@ -1,58 +1,59 @@
+import { createOpenAI } from "@ai-sdk/openai";
 import { createServerFn } from "@tanstack/react-start";
+import { Output, streamText } from "ai";
 import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
-const GATEWAY = "https://ai.gateway.lovable.dev/v1/chat/completions";
-const MODEL = "google/gemini-2.5-flash";
+const MODEL = "openai/gpt-6-astra";
 
-type ChatMessage = { role: "system" | "user"; content: string };
+async function runModel<T>(
+  prompt: string,
+  system: string,
+  schema: z.ZodType<T>,
+): Promise<T> {
+  const key = process.env["LOVABLE_API_KEY"];
+  if (!key) throw new Error("AI is not configured yet");
 
-async function chat(messages: ChatMessage[]): Promise<string> {
-  const apiKey = process.env["LOVABLE_API_KEY"];
-  if (!apiKey) throw new Error("AI is not configured yet");
-
-  const response = await fetch(GATEWAY, {
-    method: "POST",
-    headers: {
-      authorization: `Bearer ${apiKey}`,
-      "content-type": "application/json",
-    },
-    body: JSON.stringify({ model: MODEL, messages }),
+  const { createLovableAiGatewayRunIdFetch } = await import("@/lib/ai-gateway.server");
+  const runIdFetch = createLovableAiGatewayRunIdFetch();
+  const lovable = createOpenAI({
+    baseURL: "https://ai.gateway.lovable.dev/v1",
+    apiKey: key,
+    headers: { "Lovable-API-Key": key, "X-Lovable-AIG-SDK": "vercel-ai-sdk" },
+    fetch: runIdFetch.fetch,
   });
 
-  if (response.status === 429) {
-    throw new Error("AI is busy right now — try again in a moment");
-  }
-  if (response.status === 402) {
-    throw new Error("AI credits are exhausted — top up to keep using the assistant");
-  }
-  if (!response.ok) {
+  try {
+    const result = streamText({
+      model: lovable.responses(MODEL),
+      system,
+      prompt,
+      output: Output.object({ schema }),
+      providerOptions: {
+        openai: {
+          forceReasoning: true,
+          reasoningEffort: "low",
+          reasoningSummary: "auto",
+          store: false,
+          include: ["reasoning.encrypted_content"],
+        },
+      },
+    });
+    return await result.output;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    if (message.includes("429")) {
+      throw new Error("AI is busy right now — try again in a moment");
+    }
+    if (message.includes("402")) {
+      throw new Error("AI credits are exhausted — top up to keep using the assistant");
+    }
     throw new Error("The AI service could not complete this request");
   }
-
-  const data = (await response.json()) as {
-    choices?: { message?: { content?: string } }[];
-  };
-  const text = data.choices?.[0]?.message?.content?.trim();
-  if (!text) throw new Error("The AI returned an empty answer");
-  return text;
 }
 
-/** Splits a numbered/bulleted answer into clean options. */
-function toOptions(text: string, max: number): string[] {
-  const blocks = text
-    .split(/\n{2,}|\n(?=\s*(?:\d+[.)]|[-*•]))/g)
-    .map((block) =>
-      block
-        .replace(/^\s*(?:\d+[.)]|[-*•])\s*/, "")
-        .replace(/^["“]|["”]$/g, "")
-        .trim(),
-    )
-    .filter(Boolean);
-  const list = blocks.length > 0 ? blocks : [text];
-  return list.slice(0, max);
-}
+const optionsSchema = z.object({ options: z.array(z.string()) });
 
 const platformLabel: Record<string, string> = {
   instagram: "Instagram",
@@ -72,25 +73,19 @@ export const generateCaptions = createServerFn({ method: "POST" })
       .parse(data),
   )
   .handler(async ({ data }) => {
-    const text = await chat([
-      {
-        role: "system",
-        content:
-          "You are a social media copywriter. Write scroll-stopping captions that sound human, never corporate. Reply with exactly 3 captions, numbered 1., 2., 3. No preamble, no commentary.",
-      },
-      {
-        role: "user",
-        content: [
-          `Platform: ${platformLabel[data.platform]}`,
-          `Tone: ${data.tone}`,
-          `Post idea: ${data.topic}`,
-          data.withHashtags
-            ? "End each caption with 5-8 relevant hashtags."
-            : "Do not use hashtags.",
-        ].join("\n"),
-      },
-    ]);
-    return { options: toOptions(text, 3) };
+    const result = await runModel(
+      [
+        `Platform: ${platformLabel[data.platform]}`,
+        `Tone: ${data.tone}`,
+        `Post idea: ${data.topic}`,
+        data.withHashtags
+          ? "End each caption with 5-8 relevant hashtags."
+          : "Do not use hashtags.",
+      ].join("\n"),
+      "You are a social media copywriter. Write scroll-stopping captions that sound human, never corporate. Return exactly 3 captions in the options array.",
+      optionsSchema,
+    );
+    return { options: result.options.slice(0, 3) };
   });
 
 export const suggestReplies = createServerFn({ method: "POST" })
@@ -105,31 +100,25 @@ export const suggestReplies = createServerFn({ method: "POST" })
       .parse(data),
   )
   .handler(async ({ data }) => {
-    const text = await chat([
-      {
-        role: "system",
-        content:
-          "You write replies for a brand's Instagram and Facebook inbox. Keep each reply under 40 words, warm, specific and ready to send as-is. Reply with exactly 3 options, numbered 1., 2., 3. No preamble.",
-      },
-      {
-        role: "user",
-        content: [
-          `Tone: ${data.tone}`,
-          data.context ? `About the business: ${data.context}` : "",
-          `Customer wrote: "${data.message}"`,
-        ]
-          .filter(Boolean)
-          .join("\n"),
-      },
-    ]);
-    return { options: toOptions(text, 3) };
+    const result = await runModel(
+      [
+        `Tone: ${data.tone}`,
+        data.context ? `About the business: ${data.context}` : "",
+        `Customer wrote: "${data.message}"`,
+      ]
+        .filter(Boolean)
+        .join("\n"),
+      "You write replies for a brand's Instagram and Facebook inbox. Keep each reply under 40 words, warm, specific and ready to send as-is. Return exactly 3 options in the options array.",
+      optionsSchema,
+    );
+    return { options: result.options.slice(0, 3) };
   });
 
 const suggestedRule = z.object({
-  name: z.string().max(80),
+  name: z.string(),
   trigger: z.enum(["dm_received", "comment_received"]),
   matchType: z.enum(["any", "contains", "exact", "starts_with"]),
-  keywords: z.array(z.string()).max(20),
+  keywords: z.array(z.string()),
   action: z.enum([
     "reply_dm",
     "comment_public_reply",
@@ -137,7 +126,7 @@ const suggestedRule = z.object({
     "hide_comment",
     "set_status",
   ]),
-  responseVariations: z.array(z.string()).max(3),
+  responseVariations: z.array(z.string()),
 });
 
 export type SuggestedRule = z.infer<typeof suggestedRule>;
@@ -148,23 +137,21 @@ export const suggestAutomation = createServerFn({ method: "POST" })
     z.object({ goal: z.string().trim().min(5).max(600) }).parse(data),
   )
   .handler(async ({ data }) => {
-    const text = await chat([
-      {
-        role: "system",
-        content: [
-          "You design keyword automation rules for an Instagram/Facebook inbox tool.",
-          "Answer with raw JSON only — no markdown fences, no commentary.",
-          'Shape: {"name":string,"trigger":"dm_received"|"comment_received","matchType":"any"|"contains"|"exact"|"starts_with","keywords":string[],"action":"reply_dm"|"comment_public_reply"|"comment_private_reply"|"hide_comment"|"set_status","responseVariations":string[]}',
-          "Give 3-8 lowercase keywords and 2-3 friendly reply variations under 40 words each.",
-        ].join("\n"),
-      },
-      { role: "user", content: `Goal: ${data.goal}` },
-    ]);
-
-    const cleaned = text.replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
-    try {
-      return { rule: suggestedRule.parse(JSON.parse(cleaned)) };
-    } catch {
-      throw new Error("The AI answer could not be read — try rewording the goal");
-    }
+    const rule = await runModel(
+      `Goal: ${data.goal}`,
+      [
+        "You design keyword automation rules for an Instagram/Facebook inbox tool.",
+        "Give 3-8 lowercase keywords and 2-3 friendly reply variations under 40 words each.",
+        "Keep the rule name under 80 characters.",
+      ].join("\n"),
+      suggestedRule,
+    );
+    return {
+      rule: {
+        ...rule,
+        name: rule.name.slice(0, 80),
+        keywords: rule.keywords.slice(0, 20),
+        responseVariations: rule.responseVariations.slice(0, 3),
+      } satisfies SuggestedRule,
+    };
   });
