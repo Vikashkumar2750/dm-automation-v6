@@ -29,22 +29,10 @@ export type TeamInvite = {
 const roles = ["owner", "admin", "manager", "agent", "viewer"] as const;
 const orgInput = z.object({ organizationId: z.string().uuid() });
 
-type Db = Awaited<
-  ReturnType<typeof import("@/integrations/supabase/auth-middleware").requireSupabaseAuth extends never ? never : never>
->;
+type AuthedClient = SupabaseClient<Database>;
 
 async function requireManager(
-  supabase: {
-    from: (table: "organization_members") => {
-      select: (cols: string) => {
-        eq: (col: string, val: string) => {
-          eq: (col: string, val: string) => {
-            maybeSingle: () => Promise<{ data: { role: string } | null }>;
-          };
-        };
-      };
-    };
-  },
+  supabase: AuthedClient,
   organizationId: string,
   userId: string,
 ) {
