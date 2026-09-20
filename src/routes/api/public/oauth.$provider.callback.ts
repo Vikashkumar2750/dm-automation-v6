@@ -79,7 +79,7 @@ async function saveAccount(
     handle?: string | null;
     avatar_url?: string | null;
     scopes: string[];
-    metadata?: Record<string, unknown>;
+    metadata?: Record<string, string | number | boolean | null>;
     access_token: string;
     refresh_token?: string | null;
     expires_at?: string | null;
