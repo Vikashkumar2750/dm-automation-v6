@@ -640,10 +640,7 @@ function SafetyPanel({ orgId }: { orgId: string | undefined }) {
 
   return (
     <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
-      <Panel
-        title="Safety"
-        description="Guardrails applied before any rule fires."
-      >
+      <Panel title="Safety">
         {settingsQuery.isLoading || !form ? (
           <div className="flex items-center justify-center py-10 text-muted-foreground">
             <Loader2 className="size-5 animate-spin" />
