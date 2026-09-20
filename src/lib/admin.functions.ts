@@ -13,6 +13,7 @@ export type AdminOrgRow = {
   accounts: number;
   conversations: number;
   posts: number;
+  automationsPaused: boolean;
 };
 
 export type PlatformOverview = {
@@ -25,21 +26,129 @@ export type PlatformOverview = {
     automationRuns24h: number;
     postsPublished: number;
     webhookFailures24h: number;
+    queueDepth: number;
+    failedJobs: number;
+    tokenIssues: number;
+    pausedOrgs: number;
   };
+  globalSendPaused: boolean;
+  incidentBanner: string | null;
   byPlan: { plan: string; count: number }[];
   organizations: AdminOrgRow[];
-  recentWebhooks: {
-    id: string;
-    platform: string | null;
-    event_type: string;
-    status: string;
-    signature_valid: boolean;
-    received_at: string;
-    error: string | null;
-  }[];
+  recentWebhooks: WebhookRow[];
 };
 
-async function isSuperAdmin(context: { supabase: any; userId: string }) {
+export type WebhookRow = {
+  id: string;
+  platform: string | null;
+  event_type: string;
+  status: string;
+  signature_valid: boolean;
+  received_at: string;
+  error: string | null;
+  organization_id: string | null;
+};
+
+export type AdminUserRow = {
+  id: string;
+  email: string | null;
+  full_name: string | null;
+  created_at: string;
+  isSuperAdmin: boolean;
+  workspaces: { id: string; name: string; role: string }[];
+};
+
+export type AdminAccountRow = {
+  id: string;
+  organization_id: string;
+  organizationName: string;
+  platform: string;
+  name: string;
+  handle: string | null;
+  status: string;
+  token_expires_at: string | null;
+  last_synced_at: string | null;
+};
+
+export type AdminAutomationRow = {
+  id: string;
+  organization_id: string;
+  organizationName: string;
+  name: string;
+  is_active: boolean;
+  trigger: string;
+  action: string;
+  platform: string | null;
+  runs24h: number;
+};
+
+export type AdminMessageRow = {
+  id: string;
+  direction: string;
+  body: string;
+  sender_name: string | null;
+  sent_at: string;
+  platform: string;
+  organizationName: string;
+};
+
+export type AdminJobRow = {
+  id: string;
+  organizationName: string;
+  platform: string;
+  status: string;
+  scheduled_at: string | null;
+  published_at: string | null;
+  error: string | null;
+  caption: string;
+};
+
+export type AdminOrgDetail = {
+  org: AdminOrgRow;
+  settings: {
+    is_paused: boolean;
+    hourly_send_limit: number;
+    daily_send_limit: number;
+    auto_paused_until: string | null;
+    auto_pause_reason: string | null;
+  } | null;
+  accounts: AdminAccountRow[];
+  automations: AdminAutomationRow[];
+  members: { user_id: string; role: string; email: string | null; full_name: string | null }[];
+  recentErrors: { id: string; source: string; detail: string; at: string }[];
+  usage: { runs24h: number; messages24h: number; postsScheduled: number };
+};
+
+export type PlatformSettings = {
+  global_send_paused: boolean;
+  incident_banner: string | null;
+  feature_flags: Record<string, boolean>;
+  updated_at: string;
+};
+
+export type AuditRow = {
+  id: string;
+  actor_email: string | null;
+  action: string;
+  target_type: string | null;
+  target_id: string | null;
+  detail: string;
+  created_at: string;
+};
+
+type Ctx = { supabase: any; userId: string; claims?: any };
+
+async function assertSuperAdmin(context: Ctx) {
+  const { data, error } = await context.supabase.rpc("has_platform_role", {
+    _user_id: context.userId,
+    _role: "super_admin",
+  });
+  if (error) throw new Error(error.message);
+  if (!data) throw new Error("forbidden");
+  return true;
+}
+
+async function isSuperAdmin(context: Ctx) {
   const { data, error } = await context.supabase.rpc("has_platform_role", {
     _user_id: context.userId,
     _role: "super_admin",
@@ -48,16 +157,25 @@ async function isSuperAdmin(context: { supabase: any; userId: string }) {
   return Boolean(data);
 }
 
+async function audit(
+  context: Ctx,
+  action: string,
+  target: { type?: string; id?: string; detail?: Record<string, unknown> } = {},
+) {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  await supabaseAdmin.from("platform_audit_log").insert({
+    actor_user_id: context.userId,
+    actor_email: (context.claims?.email as string) ?? null,
+    action,
+    target_type: target.type ?? null,
+    target_id: target.id ?? null,
+    detail: (target.detail ?? {}) as never,
+  });
+}
+
 export const getMyPlatformRole = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
-    const { data, error } = await context.supabase.rpc("has_platform_role", {
-      _user_id: context.userId,
-      _role: "super_admin",
-    });
-    if (error) throw new Error(error.message);
-    return { isSuperAdmin: Boolean(data) };
-  });
+  .handler(async ({ context }) => ({ isSuperAdmin: await isSuperAdmin(context) }));
 
 export const getPlatformOverview = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -66,24 +184,32 @@ export const getPlatformOverview = createServerFn({ method: "GET" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
-    const [orgs, members, accounts, convs, posts, profiles, runs, hooks, msgs] =
+    const [orgs, members, accounts, convs, posts, profiles, runs, hooks, msgs, settings, platform] =
       await Promise.all([
         supabaseAdmin.from("organizations").select("id, name, slug, plan, created_at"),
         supabaseAdmin.from("organization_members").select("organization_id"),
-        supabaseAdmin.from("social_accounts").select("organization_id, status"),
+        supabaseAdmin.from("social_accounts").select("organization_id, status, token_expires_at"),
         supabaseAdmin.from("conversations").select("id, organization_id"),
         supabaseAdmin.from("posts").select("organization_id, status"),
         supabaseAdmin.from("profiles").select("id"),
         supabaseAdmin.from("automation_runs").select("id").gte("created_at", since),
         supabaseAdmin
           .from("webhook_events")
-          .select("id, platform, event_type, status, signature_valid, received_at, error")
+          .select(
+            "id, platform, event_type, status, signature_valid, received_at, error, organization_id",
+          )
           .order("received_at", { ascending: false })
           .limit(25),
         supabaseAdmin.from("messages").select("id").gte("sent_at", since),
+        supabaseAdmin.from("automation_settings").select("organization_id, is_paused"),
+        supabaseAdmin
+          .from("platform_settings")
+          .select("global_send_paused, incident_banner")
+          .eq("id", true)
+          .maybeSingle(),
       ]);
 
-    for (const r of [orgs, members, accounts, convs, posts, profiles, runs, hooks, msgs]) {
+    for (const r of [orgs, members, accounts, convs, posts, profiles, runs, hooks, msgs, settings]) {
       if (r.error) throw new Error(r.error.message);
     }
 
@@ -99,6 +225,9 @@ export const getPlatformOverview = createServerFn({ method: "GET" })
     const accountMap = count(accounts.data ?? []);
     const convMap = count(convs.data ?? []);
     const postMap = count(posts.data ?? []);
+    const pausedSet = new Set(
+      (settings.data ?? []).filter((s) => s.is_paused).map((s) => s.organization_id),
+    );
 
     const orgRows: AdminOrgRow[] = (orgs.data ?? [])
       .map((o) => ({
@@ -111,21 +240,15 @@ export const getPlatformOverview = createServerFn({ method: "GET" })
         accounts: accountMap.get(o.id) ?? 0,
         conversations: convMap.get(o.id) ?? 0,
         posts: postMap.get(o.id) ?? 0,
+        automationsPaused: pausedSet.has(o.id),
       }))
       .sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
 
     const planMap = new Map<string, number>();
     for (const o of orgRows) planMap.set(o.plan, (planMap.get(o.plan) ?? 0) + 1);
 
-    const recentWebhooks = (hooks.data ?? []).map((h) => ({
-      id: h.id,
-      platform: h.platform,
-      event_type: h.event_type,
-      status: h.status as string,
-      signature_valid: h.signature_valid,
-      received_at: h.received_at,
-      error: h.error,
-    }));
+    const recentWebhooks = (hooks.data ?? []) as WebhookRow[];
+    const soon = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
 
     return {
       totals: {
@@ -139,7 +262,16 @@ export const getPlatformOverview = createServerFn({ method: "GET" })
         webhookFailures24h: recentWebhooks.filter(
           (h) => h.status === "failed" && h.received_at >= since,
         ).length,
+        queueDepth: (posts.data ?? []).filter((p) => p.status === "scheduled").length,
+        failedJobs: (posts.data ?? []).filter((p) => p.status === "failed").length,
+        tokenIssues: (accounts.data ?? []).filter(
+          (a) =>
+            a.status !== "connected" || (a.token_expires_at && a.token_expires_at < soon),
+        ).length,
+        pausedOrgs: pausedSet.size,
       },
+      globalSendPaused: Boolean(platform.data?.global_send_paused),
+      incidentBanner: platform.data?.incident_banner ?? null,
       byPlan: [...planMap.entries()]
         .map(([plan, c]) => ({ plan, count: c }))
         .sort((a, b) => b.count - a.count),
@@ -159,12 +291,436 @@ export const setOrganizationPlan = createServerFn({ method: "POST" })
       .parse(data),
   )
   .handler(async ({ data, context }) => {
-    if (!(await isSuperAdmin(context))) throw new Error("forbidden");
+    await assertSuperAdmin(context);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { error } = await supabaseAdmin
       .from("organizations")
       .update({ plan: data.plan })
       .eq("id", data.organizationId);
     if (error) throw new Error(error.message);
+    await audit(context, "organization.plan_changed", {
+      type: "organization",
+      id: data.organizationId,
+      detail: { plan: data.plan },
+    });
     return { ok: true };
+  });
+
+export const getAdminOrganization = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => z.object({ organizationId: z.string().uuid() }).parse(data))
+  .handler(async ({ data, context }): Promise<AdminOrgDetail> => {
+    await assertSuperAdmin(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const id = data.organizationId;
+    const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+
+    const [org, settings, accounts, rules, members, runs, posts, hooks] = await Promise.all([
+      supabaseAdmin
+        .from("organizations")
+        .select("id, name, slug, plan, created_at")
+        .eq("id", id)
+        .maybeSingle(),
+      supabaseAdmin
+        .from("automation_settings")
+        .select("is_paused, hourly_send_limit, daily_send_limit, auto_paused_until, auto_pause_reason")
+        .eq("organization_id", id)
+        .maybeSingle(),
+      supabaseAdmin
+        .from("social_accounts")
+        .select("id, organization_id, platform, name, handle, status, token_expires_at, last_synced_at")
+        .eq("organization_id", id),
+      supabaseAdmin
+        .from("automation_rules")
+        .select("id, organization_id, name, is_active, trigger, action, platform")
+        .eq("organization_id", id),
+      supabaseAdmin.from("organization_members").select("user_id, role").eq("organization_id", id),
+      supabaseAdmin
+        .from("automation_runs")
+        .select("id, rule_id, status, detail, created_at")
+        .eq("organization_id", id)
+        .gte("created_at", since),
+      supabaseAdmin.from("posts").select("id, status, error, updated_at").eq("organization_id", id),
+      supabaseAdmin
+        .from("webhook_events")
+        .select("id, event_type, status, error, received_at")
+        .eq("organization_id", id)
+        .order("received_at", { ascending: false })
+        .limit(10),
+    ]);
+
+    if (!org.data) throw new Error("not_found");
+
+    const userIds = (members.data ?? []).map((m) => m.user_id);
+    const profiles = userIds.length
+      ? await supabaseAdmin.from("profiles").select("id, email, full_name").in("id", userIds)
+      : { data: [] as { id: string; email: string | null; full_name: string | null }[] };
+    const profileMap = new Map((profiles.data ?? []).map((p) => [p.id, p]));
+
+    const convs = await supabaseAdmin.from("conversations").select("id").eq("organization_id", id);
+
+    const runCountByRule = new Map<string, number>();
+    for (const r of runs.data ?? []) {
+      if (r.rule_id) runCountByRule.set(r.rule_id, (runCountByRule.get(r.rule_id) ?? 0) + 1);
+    }
+
+    const recentErrors = [
+      ...(runs.data ?? [])
+        .filter((r) => r.status === "failed")
+        .map((r) => ({
+          id: r.id,
+          source: "automation",
+          detail: r.detail ?? "failed",
+          at: r.created_at,
+        })),
+      ...(posts.data ?? [])
+        .filter((p) => p.status === "failed")
+        .map((p) => ({
+          id: p.id,
+          source: "publishing",
+          detail: p.error ?? "failed",
+          at: p.updated_at,
+        })),
+      ...(hooks.data ?? [])
+        .filter((h) => h.status === "failed")
+        .map((h) => ({
+          id: h.id,
+          source: "webhook",
+          detail: h.error ?? h.event_type,
+          at: h.received_at,
+        })),
+    ]
+      .sort((a, b) => (a.at < b.at ? 1 : -1))
+      .slice(0, 15);
+
+    return {
+      org: {
+        id: org.data.id,
+        name: org.data.name,
+        slug: org.data.slug,
+        plan: org.data.plan,
+        created_at: org.data.created_at,
+        members: (members.data ?? []).length,
+        accounts: (accounts.data ?? []).length,
+        conversations: (convs.data ?? []).length,
+        posts: (posts.data ?? []).length,
+        automationsPaused: Boolean(settings.data?.is_paused),
+      },
+      settings: settings.data ?? null,
+      accounts: (accounts.data ?? []).map((a) => ({
+        ...a,
+        organizationName: org.data!.name,
+      })) as AdminAccountRow[],
+      automations: (rules.data ?? []).map((r) => ({
+        ...r,
+        organizationName: org.data!.name,
+        runs24h: runCountByRule.get(r.id) ?? 0,
+      })) as AdminAutomationRow[],
+      members: (members.data ?? []).map((m) => ({
+        user_id: m.user_id,
+        role: m.role,
+        email: profileMap.get(m.user_id)?.email ?? null,
+        full_name: profileMap.get(m.user_id)?.full_name ?? null,
+      })),
+      recentErrors,
+      usage: {
+        runs24h: (runs.data ?? []).length,
+        messages24h: 0,
+        postsScheduled: (posts.data ?? []).filter((p) => p.status === "scheduled").length,
+      },
+    };
+  });
+
+export const setOrganizationAutomationPause = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) =>
+    z.object({ organizationId: z.string().uuid(), paused: z.boolean() }).parse(data),
+  )
+  .handler(async ({ data, context }) => {
+    await assertSuperAdmin(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin
+      .from("automation_settings")
+      .upsert(
+        { organization_id: data.organizationId, is_paused: data.paused },
+        { onConflict: "organization_id" },
+      );
+    if (error) throw new Error(error.message);
+    await audit(context, data.paused ? "organization.paused" : "organization.resumed", {
+      type: "organization",
+      id: data.organizationId,
+    });
+    return { ok: true };
+  });
+
+export const listAdminUsers = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<AdminUserRow[]> => {
+    await assertSuperAdmin(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const [profiles, members, orgs, roles] = await Promise.all([
+      supabaseAdmin
+        .from("profiles")
+        .select("id, email, full_name, created_at")
+        .order("created_at", { ascending: false }),
+      supabaseAdmin.from("organization_members").select("user_id, organization_id, role"),
+      supabaseAdmin.from("organizations").select("id, name"),
+      supabaseAdmin.from("platform_roles").select("user_id, role"),
+    ]);
+    const orgName = new Map((orgs.data ?? []).map((o) => [o.id, o.name]));
+    const superSet = new Set(
+      (roles.data ?? []).filter((r) => r.role === "super_admin").map((r) => r.user_id),
+    );
+    return (profiles.data ?? []).map((p) => ({
+      id: p.id,
+      email: p.email,
+      full_name: p.full_name,
+      created_at: p.created_at,
+      isSuperAdmin: superSet.has(p.id),
+      workspaces: (members.data ?? [])
+        .filter((m) => m.user_id === p.id)
+        .map((m) => ({
+          id: m.organization_id,
+          name: orgName.get(m.organization_id) ?? "Unknown",
+          role: m.role,
+        })),
+    }));
+  });
+
+export const setUserSuperAdmin = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) =>
+    z.object({ userId: z.string().uuid(), grant: z.boolean() }).parse(data),
+  )
+  .handler(async ({ data, context }) => {
+    await assertSuperAdmin(context);
+    if (data.userId === context.userId && !data.grant) {
+      throw new Error("You cannot remove your own platform access");
+    }
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    if (data.grant) {
+      const { error } = await supabaseAdmin
+        .from("platform_roles")
+        .upsert({ user_id: data.userId, role: "super_admin" }, { onConflict: "user_id,role" });
+      if (error) throw new Error(error.message);
+    } else {
+      const { error } = await supabaseAdmin
+        .from("platform_roles")
+        .delete()
+        .eq("user_id", data.userId)
+        .eq("role", "super_admin");
+      if (error) throw new Error(error.message);
+    }
+    await audit(context, data.grant ? "user.super_admin_granted" : "user.super_admin_revoked", {
+      type: "user",
+      id: data.userId,
+    });
+    return { ok: true };
+  });
+
+export const listAdminAccounts = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<AdminAccountRow[]> => {
+    await assertSuperAdmin(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const [accounts, orgs] = await Promise.all([
+      supabaseAdmin
+        .from("social_accounts")
+        .select(
+          "id, organization_id, platform, name, handle, status, token_expires_at, last_synced_at",
+        )
+        .order("created_at", { ascending: false }),
+      supabaseAdmin.from("organizations").select("id, name"),
+    ]);
+    const orgName = new Map((orgs.data ?? []).map((o) => [o.id, o.name]));
+    return (accounts.data ?? []).map((a) => ({
+      ...a,
+      organizationName: orgName.get(a.organization_id) ?? "Unknown",
+    })) as AdminAccountRow[];
+  });
+
+export const listAdminAutomations = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<AdminAutomationRow[]> => {
+    await assertSuperAdmin(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const [rules, orgs, runs] = await Promise.all([
+      supabaseAdmin
+        .from("automation_rules")
+        .select("id, organization_id, name, is_active, trigger, action, platform")
+        .order("created_at", { ascending: false }),
+      supabaseAdmin.from("organizations").select("id, name"),
+      supabaseAdmin.from("automation_runs").select("rule_id").gte("created_at", since),
+    ]);
+    const orgName = new Map((orgs.data ?? []).map((o) => [o.id, o.name]));
+    const runMap = new Map<string, number>();
+    for (const r of runs.data ?? []) {
+      if (r.rule_id) runMap.set(r.rule_id, (runMap.get(r.rule_id) ?? 0) + 1);
+    }
+    return (rules.data ?? []).map((r) => ({
+      ...r,
+      organizationName: orgName.get(r.organization_id) ?? "Unknown",
+      runs24h: runMap.get(r.id) ?? 0,
+    })) as AdminAutomationRow[];
+  });
+
+export const listAdminMessages = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<AdminMessageRow[]> => {
+    await assertSuperAdmin(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const msgs = await supabaseAdmin
+      .from("messages")
+      .select("id, direction, body, sender_name, sent_at, conversation_id")
+      .order("sent_at", { ascending: false })
+      .limit(100);
+    const convIds = [...new Set((msgs.data ?? []).map((m) => m.conversation_id))];
+    const convs = convIds.length
+      ? await supabaseAdmin
+          .from("conversations")
+          .select("id, platform, organization_id")
+          .in("id", convIds)
+      : { data: [] as { id: string; platform: string; organization_id: string }[] };
+    const orgs = await supabaseAdmin.from("organizations").select("id, name");
+    const orgName = new Map((orgs.data ?? []).map((o) => [o.id, o.name]));
+    const convMap = new Map((convs.data ?? []).map((c) => [c.id, c]));
+    return (msgs.data ?? []).map((m) => {
+      const c = convMap.get(m.conversation_id);
+      return {
+        id: m.id,
+        direction: m.direction,
+        body: m.body,
+        sender_name: m.sender_name,
+        sent_at: m.sent_at,
+        platform: c?.platform ?? "unknown",
+        organizationName: c ? (orgName.get(c.organization_id) ?? "Unknown") : "Unknown",
+      };
+    });
+  });
+
+export const listAdminJobs = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<AdminJobRow[]> => {
+    await assertSuperAdmin(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const [posts, orgs] = await Promise.all([
+      supabaseAdmin
+        .from("posts")
+        .select("id, organization_id, platform, status, scheduled_at, published_at, error, caption")
+        .in("status", ["scheduled", "publishing", "failed"])
+        .order("scheduled_at", { ascending: true })
+        .limit(100),
+      supabaseAdmin.from("organizations").select("id, name"),
+    ]);
+    const orgName = new Map((orgs.data ?? []).map((o) => [o.id, o.name]));
+    return (posts.data ?? []).map((p) => ({
+      id: p.id,
+      organizationName: orgName.get(p.organization_id) ?? "Unknown",
+      platform: p.platform,
+      status: p.status,
+      scheduled_at: p.scheduled_at,
+      published_at: p.published_at,
+      error: p.error,
+      caption: p.caption,
+    }));
+  });
+
+export const requeueAdminJob = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => z.object({ postId: z.string().uuid() }).parse(data))
+  .handler(async ({ data, context }) => {
+    await assertSuperAdmin(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin
+      .from("posts")
+      .update({ status: "scheduled", error: null })
+      .eq("id", data.postId);
+    if (error) throw new Error(error.message);
+    await audit(context, "job.requeued", { type: "post", id: data.postId });
+    return { ok: true };
+  });
+
+export const listAdminWebhooks = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<WebhookRow[]> => {
+    await assertSuperAdmin(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data, error } = await supabaseAdmin
+      .from("webhook_events")
+      .select(
+        "id, platform, event_type, status, signature_valid, received_at, error, organization_id",
+      )
+      .order("received_at", { ascending: false })
+      .limit(100);
+    if (error) throw new Error(error.message);
+    return (data ?? []) as WebhookRow[];
+  });
+
+export const getPlatformSettings = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<PlatformSettings> => {
+    await assertSuperAdmin(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data, error } = await supabaseAdmin
+      .from("platform_settings")
+      .select("global_send_paused, incident_banner, feature_flags, updated_at")
+      .eq("id", true)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    return {
+      global_send_paused: Boolean(data?.global_send_paused),
+      incident_banner: data?.incident_banner ?? null,
+      feature_flags: (data?.feature_flags as Record<string, boolean>) ?? {},
+      updated_at: data?.updated_at ?? new Date().toISOString(),
+    };
+  });
+
+export const updatePlatformSettings = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) =>
+    z
+      .object({
+        globalSendPaused: z.boolean().optional(),
+        incidentBanner: z.string().max(300).nullable().optional(),
+        featureFlags: z.record(z.string(), z.boolean()).optional(),
+      })
+      .parse(data),
+  )
+  .handler(async ({ data, context }) => {
+    await assertSuperAdmin(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const patch: Record<string, unknown> = { id: true, updated_at: new Date().toISOString() };
+    if (data.globalSendPaused !== undefined) patch["global_send_paused"] = data.globalSendPaused;
+    if (data.incidentBanner !== undefined)
+      patch["incident_banner"] = data.incidentBanner?.trim() ? data.incidentBanner.trim() : null;
+    if (data.featureFlags !== undefined) patch["feature_flags"] = data.featureFlags;
+    const { error } = await supabaseAdmin
+      .from("platform_settings")
+      .upsert(patch as never, { onConflict: "id" });
+    if (error) throw new Error(error.message);
+    await audit(context, "platform.settings_updated", { type: "platform", detail: data });
+    return { ok: true };
+  });
+
+export const listAuditLog = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<AuditRow[]> => {
+    await assertSuperAdmin(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data, error } = await supabaseAdmin
+      .from("platform_audit_log")
+      .select("id, actor_email, action, target_type, target_id, detail, created_at")
+      .order("created_at", { ascending: false })
+      .limit(100);
+    if (error) throw new Error(error.message);
+    return (data ?? []).map((r) => ({
+      id: r.id,
+      actor_email: r.actor_email,
+      action: r.action,
+      target_type: r.target_type,
+      target_id: r.target_id,
+      detail: r.detail ? JSON.stringify(r.detail) : "",
+      created_at: r.created_at,
+    }));
   });
