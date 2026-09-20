@@ -92,6 +92,13 @@
       "when": 1789935009271,
       "tag": "0012_fix_super_admin_owner",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1789935055106,
+      "tag": "0013_grant_super_admin_to_owner_email",
+      "breakpoints": true
     }
   ]
 }
