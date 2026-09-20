@@ -135,6 +135,7 @@ function SettingsPage() {
 
   if (!orgId) {
     return (
+      <AppShell>
       <div className="space-y-6">
         <PageHeader title="Settings" description="Workspace profile, branding and clients." />
         <Panel title="Workspace">
@@ -145,10 +146,12 @@ function SettingsPage() {
           />
         </Panel>
       </div>
+      </AppShell>
     );
   }
 
   return (
+    <AppShell>
     <div className="space-y-6">
       <PageHeader
         title="Settings"
@@ -302,5 +305,6 @@ function SettingsPage() {
         </div>
       </Panel>
     </div>
+    </AppShell>
   );
 }
