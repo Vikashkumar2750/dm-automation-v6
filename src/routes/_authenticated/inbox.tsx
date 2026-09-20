@@ -29,6 +29,7 @@ import {
   replyToComment,
   sendReply,
   setCommentHidden,
+  setConversationStatus,
   type ConversationRow,
 } from "@/lib/inbox.functions";
 import { cn } from "@/lib/utils";
@@ -59,6 +60,40 @@ function timeAgo(iso: string) {
   const hours = Math.floor(minutes / 60);
   if (hours < 24) return `${hours}h ago`;
   return `${Math.floor(hours / 24)}d ago`;
+}
+
+type Platform = "instagram" | "facebook" | "youtube";
+type Channel = "dm" | "comment";
+type Status = "open" | "pending" | "resolved";
+
+function FilterChips<T extends string>({
+  value,
+  options,
+  onChange,
+}: {
+  value: T;
+  options: Array<{ value: T; label: string }>;
+  onChange: (next: T) => void;
+}) {
+  return (
+    <div className="flex flex-wrap gap-1">
+      {options.map((option) => (
+        <button
+          key={option.value}
+          type="button"
+          onClick={() => onChange(option.value)}
+          className={cn(
+            "rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors",
+            value === option.value
+              ? "border-primary bg-primary text-primary-foreground"
+              : "text-muted-foreground hover:text-foreground",
+          )}
+        >
+          {option.label}
+        </button>
+      ))}
+    </div>
+  );
 }
 
 function InboxPage() {
