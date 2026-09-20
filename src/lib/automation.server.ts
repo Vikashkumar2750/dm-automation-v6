@@ -268,7 +268,7 @@ export async function runAutomations(admin: AdminClient, ctx: AutomationContext)
       return;
     }
 
-    const text = rule.response_text?.trim();
+    const text = pickResponse(rule);
 
     if (rule.action === "hide_comment") {
       if (!ctx.externalId) {
