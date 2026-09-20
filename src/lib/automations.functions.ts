@@ -55,6 +55,7 @@ const ruleInput = z.object({
     "set_status",
   ]),
   responseText: z.string().trim().max(1000).nullable(),
+  responseVariations: z.array(z.string().trim().min(1).max(1000)).max(10),
   setStatus: z.enum(["open", "pending", "resolved"]).nullable(),
   cooldownSeconds: z.number().int().min(0).max(86400),
   dailyLimit: z.number().int().min(1).max(5000),
