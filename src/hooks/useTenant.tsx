@@ -12,6 +12,9 @@ export type Organization = {
   slug: string;
   plan: string;
   role: OrgRole;
+  brandName: string | null;
+  logoUrl: string | null;
+  brandColor: string | null;
 };
 
 const ACTIVE_ORG_KEY = "dmfiy.active_org";
@@ -103,7 +106,7 @@ export function useTenant() {
     queryFn: async (): Promise<Organization[]> => {
       const { data } = await supabase
         .from("organization_members")
-        .select("role, organizations(id, name, slug, plan)")
+        .select("role, organizations(id, name, slug, plan, brand_name, logo_url, brand_color)")
         .eq("user_id", user!.id);
 
       return (data ?? [])
@@ -114,6 +117,9 @@ export function useTenant() {
           slug: row.organizations!.slug,
           plan: planLabel(row.organizations!.plan),
           role: row.role as OrgRole,
+          brandName: row.organizations!.brand_name,
+          logoUrl: row.organizations!.logo_url,
+          brandColor: row.organizations!.brand_color,
         }));
     },
   });
