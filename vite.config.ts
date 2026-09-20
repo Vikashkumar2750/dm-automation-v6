@@ -8,7 +8,7 @@ import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 
 // Self-hosted deploys (Railway, Fly, a VPS) set NITRO_PRESET=node-server so the
 // build emits a plain Node server. Without it we keep the default Cloudflare target.
-const preset = process.env.NITRO_PRESET;
+const preset = process.env["NITRO_PRESET"];
 
 export default defineConfig({
   ...(preset ? { nitro: { preset } } : {}),
