@@ -273,13 +273,12 @@ function AutomationsPage() {
                       >
                         {rule.name}
                       </button>
-                      <StatusBadge
-                        tone={rule.is_active ? "success" : "neutral"}
-                        label={rule.is_active ? "Active" : "Paused"}
-                      />
-                      <StatusBadge tone="info" label={triggerLabel[rule.trigger]} />
+                      <StatusBadge tone={rule.is_active ? "success" : "neutral"}>
+                        {rule.is_active ? "Active" : "Paused"}
+                      </StatusBadge>
+                      <StatusBadge tone="info">{triggerLabel[rule.trigger]}</StatusBadge>
                       {rule.platform && (
-                        <StatusBadge tone="neutral" label={rule.platform} />
+                        <StatusBadge tone="neutral">{rule.platform}</StatusBadge>
                       )}
                     </div>
                     <p className="mt-1 text-sm text-muted-foreground">
@@ -328,7 +327,7 @@ function AutomationsPage() {
             <ul className="divide-y">
               {runs.map((run) => (
                 <li key={run.id} className="flex items-start gap-3 px-5 py-3">
-                  <StatusBadge tone={runTone[run.status]} label={run.status} />
+                  <StatusBadge tone={runTone[run.status]}>{run.status}</StatusBadge>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium">{ruleName(run.rule_id)}</p>
                     <p className="truncate text-xs text-muted-foreground">
