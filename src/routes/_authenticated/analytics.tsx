@@ -11,7 +11,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { BarChart3, Bot, MessageSquare, Send, Timer, CheckCircle2 } from "lucide-react";
+import { Bot, MessageSquare, Send, Timer, CheckCircle2 } from "lucide-react";
 
 import { AppShell } from "@/components/app/AppShell";
 import {
@@ -69,7 +69,6 @@ function AnalyticsPage() {
       <PageHeader
         title="Analytics"
         description="Conversations, reply speed, automation share and publishing results."
-        icon={BarChart3}
         actions={
           <div className="flex items-center gap-1 rounded-lg border border-border p-1">
             {RANGES.map((r) => (
@@ -91,25 +90,25 @@ function AnalyticsPage() {
           label="Conversations"
           value={String(t?.conversations ?? 0)}
           icon={MessageSquare}
-          hint={`${t?.openThreads ?? 0} open · ${t?.resolved ?? 0} resolved`}
+          sub={`${t?.openThreads ?? 0} open · ${t?.resolved ?? 0} resolved`}
         />
         <StatCard
           label="Messages received"
           value={String(t?.inbound ?? 0)}
           icon={MessageSquare}
-          hint={`${t?.unread ?? 0} unread right now`}
+          sub={`${t?.unread ?? 0} unread right now`}
         />
         <StatCard
           label="Replies sent"
           value={String(t?.outbound ?? 0)}
           icon={Send}
-          hint={`${t?.manual ?? 0} manual · ${t?.automated ?? 0} automated`}
+          sub={`${t?.manual ?? 0} manual · ${t?.automated ?? 0} automated`}
         />
         <StatCard
           label="Automation share"
           value={`${data?.automationShare ?? 0}%`}
           icon={Bot}
-          hint={`${t?.automationBlocked ?? 0} runs skipped by safety rules`}
+          sub={`${t?.automationBlocked ?? 0} runs skipped by safety rules`}
         />
       </div>
 
@@ -118,7 +117,7 @@ function AnalyticsPage() {
           label="Answered conversations"
           value={`${data?.responseRate ?? 0}%`}
           icon={CheckCircle2}
-          hint="Threads that got at least one reply"
+          sub="Threads that got at least one reply"
         />
         <StatCard
           label="Median first reply"
@@ -128,19 +127,19 @@ function AnalyticsPage() {
               : `${data.medianFirstResponseMinutes} min`
           }
           icon={Timer}
-          hint="Time from first message to first reply"
+          sub="Time from first message to first reply"
         />
         <StatCard
           label="Posts published"
           value={String(t?.postsPublished ?? 0)}
           icon={CheckCircle2}
-          hint={`${t?.postsScheduled ?? 0} scheduled · ${t?.postsFailed ?? 0} failed`}
+          sub={`${t?.postsScheduled ?? 0} scheduled · ${t?.postsFailed ?? 0} failed`}
         />
         <StatCard
           label="Automated replies"
           value={String(t?.automated ?? 0)}
           icon={Bot}
-          hint={`Last ${rangeDays} days`}
+          sub={`Last ${rangeDays} days`}
         />
       </div>
 
@@ -223,9 +222,10 @@ function AnalyticsPage() {
       </Panel>
 
       <div className="grid gap-4 lg:grid-cols-3">
-        <Panel title="By platform" description="Where your conversations come from.">
+        <Panel title="By platform">
           {(data?.byPlatform.length ?? 0) === 0 ? (
             <EmptyState
+              icon={MessageSquare}
               title="No conversations yet"
               description="Connect an account and incoming messages will show up here."
             />
@@ -233,7 +233,7 @@ function AnalyticsPage() {
             <div className="space-y-3">
               {data?.byPlatform.map((p) => (
                 <div key={p.platform} className="flex items-center justify-between gap-3">
-                  <PlatformBadge platform={p.platform} withLabel />
+                  <PlatformBadge platform={p.platform} withLabel={p.platform} />
                   <div className="text-right text-sm">
                     <div className="num font-medium">{p.conversations} threads</div>
                     <div className="text-xs text-muted-foreground">
@@ -246,9 +246,9 @@ function AnalyticsPage() {
           )}
         </Panel>
 
-        <Panel title="By type" description="DMs versus comment threads.">
+        <Panel title="By type">
           {(data?.byChannel.length ?? 0) === 0 ? (
-            <EmptyState title="Nothing yet" description="Types appear once messages arrive." />
+            <EmptyState icon={MessageSquare} title="Nothing yet" description="Types appear once messages arrive." />
           ) : (
             <div className="space-y-3">
               {data?.byChannel.map((c) => (
@@ -264,6 +264,7 @@ function AnalyticsPage() {
         <Panel title="Top automations" description={`Most used rules in the last ${rangeDays} days.`}>
           {(data?.topRules.length ?? 0) === 0 ? (
             <EmptyState
+              icon={MessageSquare}
               title="No automation runs"
               description="Create a rule on the Automations page to start replying automatically."
             />
