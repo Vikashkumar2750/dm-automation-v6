@@ -128,6 +128,8 @@ export const updateAutomationRule = createServerFn({ method: "POST" })
     if (rest.keywords !== undefined) patch.keywords = rest.keywords;
     if (rest.action !== undefined) patch.action = rest.action;
     if (rest.responseText !== undefined) patch.response_text = rest.responseText;
+    if (rest.responseVariations !== undefined)
+      patch.response_variations = rest.responseVariations;
     if (rest.setStatus !== undefined) patch.set_status = rest.setStatus;
     if (rest.cooldownSeconds !== undefined) patch.cooldown_seconds = rest.cooldownSeconds;
     if (rest.dailyLimit !== undefined) patch.daily_limit = rest.dailyLimit;
