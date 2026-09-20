@@ -57,6 +57,13 @@
       "when": 1789931928824,
       "tag": "0007_create_posts",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1789932821285,
+      "tag": "0008_team_invitations",
+      "breakpoints": true
     }
   ]
 }
