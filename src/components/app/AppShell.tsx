@@ -119,11 +119,15 @@ function Sidebar({ pathname }: { pathname: string }) {
             <NavLink key={item.to} item={item} active={pathname.startsWith(item.to)} />
           ))}
         </div>
-        <div className="my-4 border-t" />
-        <NavLink
-          item={{ label: "Super Admin", to: "/admin", icon: Shield }}
-          active={pathname.startsWith("/admin")}
-        />
+        {platformRole?.isSuperAdmin ? (
+          <>
+            <div className="my-4 border-t" />
+            <NavLink
+              item={{ label: "Super Admin", to: "/admin", icon: Shield }}
+              active={pathname.startsWith("/admin")}
+            />
+          </>
+        ) : null}
       </nav>
 
       <div className="border-t p-3">
