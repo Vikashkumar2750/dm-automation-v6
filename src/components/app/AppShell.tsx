@@ -84,15 +84,36 @@ function NavLink({ item, active }: { item: NavItem; active: boolean }) {
 }
 
 function Sidebar({ pathname }: { pathname: string }) {
+  const { activeOrg } = useTenant();
+  const brand = activeOrg?.brandName?.trim() || "DM FB-IG-YT";
+  const logo = activeOrg?.logoUrl?.trim() || null;
+  const color = activeOrg?.brandColor?.trim() || null;
+
   return (
     <div className="flex h-full flex-col border-r bg-sidebar">
       <div className="flex items-center gap-3 border-b px-5 py-4">
-        <span className="inline-flex size-9 items-center justify-center rounded-xl bg-primary text-base font-bold text-primary-foreground">
-          W
-        </span>
+        {logo ? (
+          <img
+            src={logo}
+            alt={brand}
+            className="size-9 rounded-xl object-cover"
+            onError={(e) => {
+              e.currentTarget.style.display = "none";
+            }}
+          />
+        ) : (
+          <span
+            className="inline-flex size-9 items-center justify-center rounded-xl bg-primary text-base font-bold text-primary-foreground"
+            style={color ? { background: color } : undefined}
+          >
+            {brand.slice(0, 1).toUpperCase()}
+          </span>
+        )}
         <div className="min-w-0">
-          <p className="truncate text-sm font-bold">DM FB-IG-YT</p>
-          <p className="truncate text-xs text-subtle-foreground">by Techaasvik</p>
+          <p className="truncate text-sm font-bold">{brand}</p>
+          <p className="truncate text-xs text-subtle-foreground">
+            {activeOrg?.name ?? "by Techaasvik"}
+          </p>
         </div>
       </div>
 
