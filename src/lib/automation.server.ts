@@ -45,6 +45,13 @@ type Settings = {
   quiet_hours_start: number;
   quiet_hours_end: number;
   timezone_offset_minutes: number;
+  hourly_send_limit: number;
+  daily_send_limit: number;
+  viral_guard_enabled: boolean;
+  viral_threshold_per_minute: number;
+  viral_cooldown_minutes: number;
+  auto_paused_until: string | null;
+  auto_pause_reason: string | null;
 };
 
 const DEFAULT_SETTINGS: Settings = {
@@ -56,7 +63,15 @@ const DEFAULT_SETTINGS: Settings = {
   quiet_hours_start: 22,
   quiet_hours_end: 7,
   timezone_offset_minutes: 330,
+  hourly_send_limit: 120,
+  daily_send_limit: 1000,
+  viral_guard_enabled: true,
+  viral_threshold_per_minute: 30,
+  viral_cooldown_minutes: 15,
+  auto_paused_until: null,
+  auto_pause_reason: null,
 };
+
 
 function inQuietHours(s: Settings, now = new Date()) {
   if (!s.quiet_hours_enabled) return false;
