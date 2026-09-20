@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
-import { Loader2, Plus, Trash2, Workflow, Zap } from "lucide-react";
+import { Loader2, Plus, ShieldCheck, Trash2, Workflow, Zap } from "lucide-react";
 import { toast } from "sonner";
 
 import { AppShell } from "@/components/app/AppShell";
@@ -577,5 +577,244 @@ function AutomationsPage() {
         </DialogContent>
       </Dialog>
     </AppShell>
+  );
+}
+
+function SafetyPanel({ orgId }: { orgId: string | undefined }) {
+  const queryClient = useQueryClient();
+  const fetchSettings = useServerFn(getAutomationSettings);
+  const saveSettings = useServerFn(saveAutomationSettings);
+  const fetchOptOuts = useServerFn(listOptOuts);
+  const removeFn = useServerFn(removeOptOut);
+
+  const [form, setForm] = useState<AutomationSettings | null>(null);
+
+  const settingsQuery = useQuery({
+    queryKey: ["automation-settings", orgId],
+    enabled: Boolean(orgId),
+    queryFn: async () => {
+      const value = await fetchSettings({ data: { organizationId: orgId! } });
+      setForm(value);
+      return value;
+    },
+  });
+
+  const optOutsQuery = useQuery({
+    queryKey: ["automation-optouts", orgId],
+    enabled: Boolean(orgId),
+    queryFn: () => fetchOptOuts({ data: { organizationId: orgId! } }),
+  });
+
+  const saveMutation = useMutation({
+    mutationFn: (value: AutomationSettings) =>
+      saveSettings({
+        data: {
+          organizationId: orgId!,
+          isPaused: value.is_paused,
+          blockedKeywords: value.blocked_keywords,
+          optOutKeywords: value.opt_out_keywords,
+          perContactDailyLimit: Number(value.per_contact_daily_limit) || 1,
+          quietHoursEnabled: value.quiet_hours_enabled,
+          quietHoursStart: Number(value.quiet_hours_start) || 0,
+          quietHoursEnd: Number(value.quiet_hours_end) || 0,
+          timezoneOffsetMinutes: Number(value.timezone_offset_minutes) || 0,
+        },
+      }),
+    onSuccess: () => {
+      toast.success("Safety settings saved");
+      void queryClient.invalidateQueries({ queryKey: ["automation-settings", orgId] });
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
+  const unblockMutation = useMutation({
+    mutationFn: (id: string) => removeFn({ data: { id } }),
+    onSuccess: () => {
+      toast.success("Contact can receive automations again");
+      void queryClient.invalidateQueries({ queryKey: ["automation-optouts", orgId] });
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
+  const optOuts = optOutsQuery.data ?? [];
+
+  return (
+    <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+      <Panel
+        title="Safety"
+        description="Guardrails applied before any rule fires."
+      >
+        {settingsQuery.isLoading || !form ? (
+          <div className="flex items-center justify-center py-10 text-muted-foreground">
+            <Loader2 className="size-5 animate-spin" />
+          </div>
+        ) : (
+          <div className="grid gap-4">
+            <div className="flex items-center justify-between rounded-lg border px-4 py-3">
+              <div>
+                <p className="text-sm font-medium">Pause all automations</p>
+                <p className="text-xs text-muted-foreground">
+                  Emergency switch — nothing auto-replies while this is on.
+                </p>
+              </div>
+              <Switch
+                checked={form.is_paused}
+                onCheckedChange={(checked) => setForm({ ...form, is_paused: checked })}
+              />
+            </div>
+
+            <div className="grid gap-2">
+              <Label>Sensitive words (comma separated)</Label>
+              <Input
+                value={form.blocked_keywords.join(", ")}
+                placeholder="refund, legal, complaint"
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    blocked_keywords: e.target.value
+                      .split(",")
+                      .map((k) => k.trim())
+                      .filter(Boolean),
+                  })
+                }
+              />
+              <p className="text-xs text-muted-foreground">
+                These messages skip automation and stay open for a human.
+              </p>
+            </div>
+
+            <div className="grid gap-2">
+              <Label>Opt-out words (comma separated)</Label>
+              <Input
+                value={form.opt_out_keywords.join(", ")}
+                placeholder="stop, unsubscribe"
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    opt_out_keywords: e.target.value
+                      .split(",")
+                      .map((k) => k.trim())
+                      .filter(Boolean),
+                  })
+                }
+              />
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-2">
+                <Label>Max auto-replies per person / day</Label>
+                <Input
+                  type="number"
+                  value={form.per_contact_daily_limit}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      per_contact_daily_limit: Number(e.target.value),
+                    })
+                  }
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label>Timezone offset (minutes)</Label>
+                <Input
+                  type="number"
+                  value={form.timezone_offset_minutes}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      timezone_offset_minutes: Number(e.target.value),
+                    })
+                  }
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between rounded-lg border px-4 py-3">
+              <div>
+                <p className="text-sm font-medium">Quiet hours</p>
+                <p className="text-xs text-muted-foreground">
+                  No auto-replies during these hours.
+                </p>
+              </div>
+              <Switch
+                checked={form.quiet_hours_enabled}
+                onCheckedChange={(checked) =>
+                  setForm({ ...form, quiet_hours_enabled: checked })
+                }
+              />
+            </div>
+
+            {form.quiet_hours_enabled && (
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid gap-2">
+                  <Label>From (hour)</Label>
+                  <Input
+                    type="number"
+                    value={form.quiet_hours_start}
+                    onChange={(e) =>
+                      setForm({ ...form, quiet_hours_start: Number(e.target.value) })
+                    }
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label>To (hour)</Label>
+                  <Input
+                    type="number"
+                    value={form.quiet_hours_end}
+                    onChange={(e) =>
+                      setForm({ ...form, quiet_hours_end: Number(e.target.value) })
+                    }
+                  />
+                </div>
+              </div>
+            )}
+
+            <div>
+              <Button
+                onClick={() => form && saveMutation.mutate(form)}
+                disabled={saveMutation.isPending || !orgId}
+              >
+                {saveMutation.isPending && <Loader2 className="size-4 animate-spin" />}
+                Save safety settings
+              </Button>
+            </div>
+          </div>
+        )}
+      </Panel>
+
+      <Panel title="Opted out contacts" bodyClassName="p-0">
+        {optOuts.length === 0 ? (
+          <div className="p-5">
+            <EmptyState
+              icon={ShieldCheck}
+              title="No opt-outs"
+              description="Anyone who replies STOP is added here and never gets automated messages again."
+            />
+          </div>
+        ) : (
+          <ul className="divide-y">
+            {optOuts.map((row) => (
+              <li key={row.id} className="flex items-center gap-3 px-5 py-3">
+                <StatusBadge tone="neutral">{row.platform}</StatusBadge>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium">{row.external_user_id}</p>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {row.reason ?? "opted out"} ·{" "}
+                    {new Date(row.created_at).toLocaleDateString()}
+                  </p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => unblockMutation.mutate(row.id)}
+                >
+                  Allow
+                </Button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Panel>
+    </div>
   );
 }
