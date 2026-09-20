@@ -182,6 +182,13 @@ export type AutomationSettings = {
   quiet_hours_start: number;
   quiet_hours_end: number;
   timezone_offset_minutes: number;
+  hourly_send_limit: number;
+  daily_send_limit: number;
+  viral_guard_enabled: boolean;
+  viral_threshold_per_minute: number;
+  viral_cooldown_minutes: number;
+  auto_paused_until: string | null;
+  auto_pause_reason: string | null;
 };
 
 export type AutomationOptOut = {
@@ -193,7 +200,8 @@ export type AutomationOptOut = {
 };
 
 const SETTINGS_SELECT =
-  "organization_id, is_paused, blocked_keywords, opt_out_keywords, per_contact_daily_limit, quiet_hours_enabled, quiet_hours_start, quiet_hours_end, timezone_offset_minutes";
+  "organization_id, is_paused, blocked_keywords, opt_out_keywords, per_contact_daily_limit, quiet_hours_enabled, quiet_hours_start, quiet_hours_end, timezone_offset_minutes, hourly_send_limit, daily_send_limit, viral_guard_enabled, viral_threshold_per_minute, viral_cooldown_minutes, auto_paused_until, auto_pause_reason";
+
 
 export const getAutomationSettings = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
