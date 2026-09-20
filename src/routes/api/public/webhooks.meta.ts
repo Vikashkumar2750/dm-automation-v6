@@ -238,6 +238,22 @@ export const Route = createFileRoute("/api/public/webhooks/meta")({
             });
             // Duplicate delivery (Meta retries) — safe to skip.
             if (error && error.code !== "23505") console.error("webhook insert failed", error);
+
+            // Mirror into the inbox (conversations/messages).
+            if (organizationId && platform && (!error || error.code === "23505")) {
+              try {
+                await ingestIntoInbox(supabaseAdmin, {
+                  organizationId,
+                  socialAccountId,
+                  platform,
+                  accountExternalId: externalId,
+                  type: item.type,
+                  value: item.value,
+                });
+              } catch (ingestError) {
+                console.error("inbox ingest failed", ingestError);
+              }
+            }
           }
         }
 
