@@ -148,6 +148,7 @@ function TeamPage() {
   }
 
   return (
+    <AppShell>
     <div>
       <PageHeader
         title="Team"
@@ -294,5 +295,6 @@ function TeamPage() {
         </Panel>
       )}
     </div>
+    </AppShell>
   );
 }
