@@ -72,6 +72,7 @@ function toRow(input: z.infer<typeof ruleInput>) {
     keywords: input.keywords,
     action: input.action,
     response_text: input.responseText,
+    response_variations: input.responseVariations,
     set_status: input.setStatus,
     cooldown_seconds: input.cooldownSeconds,
     daily_limit: input.dailyLimit,
