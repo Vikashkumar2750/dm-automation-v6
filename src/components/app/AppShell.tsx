@@ -87,6 +87,14 @@ function NavLink({ item, active }: { item: NavItem; active: boolean }) {
 }
 
 function Sidebar({ pathname }: { pathname: string }) {
+  const fetchRole = useServerFn(getMyPlatformRole);
+  const { data: platformRole } = useQuery({
+    queryKey: ["my-platform-role"],
+    queryFn: () => fetchRole(),
+    retry: false,
+    staleTime: 5 * 60_000,
+  });
+
   return (
     <div className="flex h-full flex-col border-r bg-sidebar">
       <div className="flex items-center gap-3 border-b px-5 py-4">
