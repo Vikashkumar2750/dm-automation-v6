@@ -775,6 +775,83 @@ function SafetyPanel({ orgId }: { orgId: string | undefined }) {
               </div>
             )}
 
+            <div className="grid gap-4 rounded-lg border p-4">
+              <div>
+                <p className="text-sm font-medium">Sending limits</p>
+                <p className="text-xs text-muted-foreground">
+                  Hard caps so a busy day never turns into spam.
+                </p>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid gap-2">
+                  <Label>Max auto-replies / hour</Label>
+                  <Input
+                    type="number"
+                    value={form.hourly_send_limit}
+                    onChange={(e) =>
+                      setForm({ ...form, hourly_send_limit: Number(e.target.value) })
+                    }
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label>Max auto-replies / day</Label>
+                  <Input
+                    type="number"
+                    value={form.daily_send_limit}
+                    onChange={(e) =>
+                      setForm({ ...form, daily_send_limit: Number(e.target.value) })
+                    }
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between rounded-lg border px-4 py-3">
+                <div>
+                  <p className="text-sm font-medium">Viral protection</p>
+                  <p className="text-xs text-muted-foreground">
+                    If a post blows up, automation pauses itself for a while.
+                  </p>
+                </div>
+                <Switch
+                  checked={form.viral_guard_enabled}
+                  onCheckedChange={(checked) =>
+                    setForm({ ...form, viral_guard_enabled: checked })
+                  }
+                />
+              </div>
+
+              {form.viral_guard_enabled && (
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="grid gap-2">
+                    <Label>Spike threshold (events / minute)</Label>
+                    <Input
+                      type="number"
+                      value={form.viral_threshold_per_minute}
+                      onChange={(e) =>
+                        setForm({
+                          ...form,
+                          viral_threshold_per_minute: Number(e.target.value),
+                        })
+                      }
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label>Pause for (minutes)</Label>
+                    <Input
+                      type="number"
+                      value={form.viral_cooldown_minutes}
+                      onChange={(e) =>
+                        setForm({
+                          ...form,
+                          viral_cooldown_minutes: Number(e.target.value),
+                        })
+                      }
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
             <div>
               <Button
                 onClick={() => form && saveMutation.mutate(form)}
@@ -788,7 +865,11 @@ function SafetyPanel({ orgId }: { orgId: string | undefined }) {
         )}
       </Panel>
 
+      <div className="grid gap-5">
+      <UsagePanel orgId={orgId} />
+
       <Panel title="Opted out contacts" bodyClassName="p-0">
+
         {optOuts.length === 0 ? (
           <div className="p-5">
             <EmptyState
