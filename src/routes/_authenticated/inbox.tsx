@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import {
   CheckCheck,
+  EyeOff,
   Inbox as InboxIcon,
   Loader2,
   MessageSquareText,
@@ -25,7 +26,9 @@ import {
   listConversations,
   listMessages,
   markConversationRead,
+  replyToComment,
   sendReply,
+  setCommentHidden,
   type ConversationRow,
 } from "@/lib/inbox.functions";
 import { cn } from "@/lib/utils";
@@ -64,11 +67,14 @@ function InboxPage() {
   const queryClient = useQueryClient();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
+  const [commentMode, setCommentMode] = useState<"public" | "private">("public");
 
   const fetchConversations = useServerFn(listConversations);
   const fetchMessages = useServerFn(listMessages);
   const markReadFn = useServerFn(markConversationRead);
   const sendReplyFn = useServerFn(sendReply);
+  const replyToCommentFn = useServerFn(replyToComment);
+  const setCommentHiddenFn = useServerFn(setCommentHidden);
 
   const conversationsQuery = useQuery({
     queryKey: ["conversations", orgId],
@@ -110,6 +116,42 @@ function InboxPage() {
         toast.error("Could not send the reply. Check the account connection.");
       }
     },
+  });
+
+  function commentError(error: unknown) {
+    const message = error instanceof Error ? error.message : "";
+    if (message.includes("window_expired")) {
+      toast.error("This comment is older than Meta's reply window.");
+    } else if (message.includes("not_allowed")) {
+      toast.error("You need agent access or higher to reply.");
+    } else if (message.includes("no_comment_id")) {
+      toast.error("We don't have the original comment id for this thread yet.");
+    } else {
+      toast.error("Could not complete the action. Check the account connection.");
+    }
+  }
+
+  const commentReply = useMutation({
+    mutationFn: (body: string) =>
+      replyToCommentFn({
+        data: { conversationId: selected!.id, body, mode: commentMode },
+      }),
+    onSuccess: () => {
+      setDraft("");
+      toast.success(
+        commentMode === "public" ? "Public reply posted." : "Private DM sent.",
+      );
+      queryClient.invalidateQueries({ queryKey: ["messages", selected?.id] });
+      queryClient.invalidateQueries({ queryKey: ["conversations", orgId] });
+    },
+    onError: commentError,
+  });
+
+  const hideComment = useMutation({
+    mutationFn: (hidden: boolean) =>
+      setCommentHiddenFn({ data: { conversationId: selected!.id, hidden } }),
+    onSuccess: () => toast.success("Comment hidden on the post."),
+    onError: commentError,
   });
 
   function openConversation(id: string) {
@@ -250,7 +292,69 @@ function InboxPage() {
                 )}
               </div>
 
-              {selected.channel === "dm" && selected.platform !== "youtube" ? (
+              {selected.channel === "comment" && selected.platform !== "youtube" ? (
+                <form
+                  className="space-y-2 border-t px-4 py-3"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    const body = draft.trim();
+                    if (body && !commentReply.isPending) commentReply.mutate(body);
+                  }}
+                >
+                  <input
+                    value={draft}
+                    onChange={(e) => setDraft(e.target.value)}
+                    placeholder={
+                      commentMode === "public"
+                        ? "Reply publicly under this comment…"
+                        : "Send a private DM to this commenter…"
+                    }
+                    className="h-9 w-full rounded-md border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
+                    maxLength={1000}
+                  />
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className="flex rounded-md border p-0.5">
+                      {(["public", "private"] as const).map((mode) => (
+                        <button
+                          key={mode}
+                          type="button"
+                          onClick={() => setCommentMode(mode)}
+                          className={cn(
+                            "rounded px-2.5 py-1 text-xs font-medium transition-colors",
+                            commentMode === mode
+                              ? "bg-primary text-primary-foreground"
+                              : "text-muted-foreground hover:text-foreground",
+                          )}
+                        >
+                          {mode === "public" ? "Public reply" : "Private DM"}
+                        </button>
+                      ))}
+                    </div>
+                    <Button
+                      type="submit"
+                      size="sm"
+                      disabled={!draft.trim() || commentReply.isPending}
+                    >
+                      {commentReply.isPending ? (
+                        <Loader2 className="size-4 animate-spin" />
+                      ) : (
+                        <Send className="size-4" />
+                      )}
+                      Send
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={hideComment.isPending}
+                      onClick={() => hideComment.mutate(true)}
+                    >
+                      <EyeOff className="size-4" />
+                      Hide comment
+                    </Button>
+                  </div>
+                </form>
+              ) : selected.channel === "dm" && selected.platform !== "youtube" ? (
                 <form
                   className="flex items-center gap-2 border-t px-4 py-3"
                   onSubmit={(e) => {

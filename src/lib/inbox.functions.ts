@@ -23,6 +23,7 @@ export type MessageRow = {
   conversation_id: string;
   direction: "inbound" | "outbound";
   body: string;
+  external_id: string | null;
   sender_name: string | null;
   sent_at: string;
 };
@@ -64,7 +65,7 @@ export const listMessages = createServerFn({ method: "GET" })
   .handler(async ({ data, context }) => {
     const { data: rows, error } = await context.supabase
       .from("messages")
-      .select("id, conversation_id, direction, body, sender_name, sent_at")
+      .select("id, conversation_id, direction, body, external_id, sender_name, sent_at")
       .eq("conversation_id", data.conversationId)
       .order("sent_at", { ascending: true })
       .limit(200);
@@ -212,5 +213,190 @@ export const sendReply = createServerFn({ method: "POST" })
       })
       .eq("id", conversation.id);
 
+    return { ok: true };
+  });
+
+/**
+ * Comment automation (Phase 6).
+ * mode "public"  → posts a public reply under the comment.
+ * mode "private" → sends a private DM triggered by the comment
+ *                  (Meta allows one private reply per comment).
+ */
+export const replyToComment = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) =>
+    z
+      .object({
+        conversationId: z.string().uuid(),
+        body: z.string().trim().min(1).max(1000),
+        mode: z.enum(["public", "private"]),
+      })
+      .parse(data),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: conversation, error: convError } = await context.supabase
+      .from("conversations")
+      .select("id, organization_id, social_account_id, platform, channel")
+      .eq("id", data.conversationId)
+      .single();
+    if (convError || !conversation) throw new Error("Conversation not found");
+
+    const { data: allowed } = await context.supabase.rpc("has_org_role", {
+      _org_id: conversation.organization_id,
+      _user_id: context.userId,
+      _roles: [...WRITE_ROLES],
+    });
+    if (!allowed) throw new Error("not_allowed");
+
+    if (conversation.channel !== "comment") throw new Error("not_a_comment");
+    if (conversation.platform === "youtube") throw new Error("youtube_unsupported");
+    if (!conversation.social_account_id) throw new Error("no_account");
+
+    // Latest inbound comment id — that is what we reply to.
+    const { data: lastComment } = await context.supabase
+      .from("messages")
+      .select("external_id, sent_at")
+      .eq("conversation_id", conversation.id)
+      .eq("direction", "inbound")
+      .not("external_id", "is", null)
+      .order("sent_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (!lastComment?.external_id) throw new Error("no_comment_id");
+
+    // Meta's comment reply window is also 7 days for public / 7 days for private.
+    const ageMs = Date.now() - new Date(lastComment.sent_at).getTime();
+    if (ageMs > 7 * 24 * 60 * 60 * 1000) throw new Error("window_expired");
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const [{ data: tokenRow }, { data: account }] = await Promise.all([
+      supabaseAdmin
+        .from("social_account_tokens")
+        .select("access_token")
+        .eq("social_account_id", conversation.social_account_id)
+        .single(),
+      supabaseAdmin
+        .from("social_accounts")
+        .select("external_id")
+        .eq("id", conversation.social_account_id)
+        .single(),
+    ]);
+    if (!tokenRow?.access_token || !account?.external_id) throw new Error("no_token");
+
+    const accessToken = tokenRow.access_token;
+    let url: string;
+    let payload: Record<string, unknown>;
+
+    if (data.mode === "private") {
+      // Private reply: recipient is the comment itself.
+      url = `https://graph.facebook.com/v21.0/${account.external_id}/messages`;
+      payload = {
+        recipient: { comment_id: lastComment.external_id },
+        message: { text: data.body },
+        access_token: accessToken,
+      };
+    } else if (conversation.platform === "instagram") {
+      url = `https://graph.facebook.com/v21.0/${lastComment.external_id}/replies`;
+      payload = { message: data.body, access_token: accessToken };
+    } else {
+      url = `https://graph.facebook.com/v21.0/${lastComment.external_id}/comments`;
+      payload = { message: data.body, access_token: accessToken };
+    }
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const result = (await response.json()) as {
+      id?: string;
+      message_id?: string;
+      error?: { message?: string };
+    };
+    if (!response.ok || result.error) {
+      throw new Error(result.error?.message ?? "Meta rejected the reply");
+    }
+
+    const now = new Date().toISOString();
+    const prefix = data.mode === "private" ? "[private reply] " : "[public reply] ";
+    await supabaseAdmin.from("messages").insert({
+      conversation_id: conversation.id,
+      direction: "outbound",
+      body: `${prefix}${data.body}`,
+      external_id: result.id ?? result.message_id ?? null,
+      sent_by: context.userId,
+      sent_at: now,
+    });
+    await supabaseAdmin
+      .from("conversations")
+      .update({
+        last_message_at: now,
+        last_message_preview: `${prefix}${data.body}`.slice(0, 140),
+        status: "pending",
+      })
+      .eq("id", conversation.id);
+
+    return { ok: true };
+  });
+
+/** Hide or unhide a comment on Instagram/Facebook. */
+export const setCommentHidden = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) =>
+    z
+      .object({ conversationId: z.string().uuid(), hidden: z.boolean() })
+      .parse(data),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: conversation, error } = await context.supabase
+      .from("conversations")
+      .select("id, organization_id, social_account_id, channel")
+      .eq("id", data.conversationId)
+      .single();
+    if (error || !conversation) throw new Error("Conversation not found");
+    if (conversation.channel !== "comment") throw new Error("not_a_comment");
+
+    const { data: allowed } = await context.supabase.rpc("has_org_role", {
+      _org_id: conversation.organization_id,
+      _user_id: context.userId,
+      _roles: [...WRITE_ROLES],
+    });
+    if (!allowed) throw new Error("not_allowed");
+    if (!conversation.social_account_id) throw new Error("no_account");
+
+    const { data: lastComment } = await context.supabase
+      .from("messages")
+      .select("external_id")
+      .eq("conversation_id", conversation.id)
+      .eq("direction", "inbound")
+      .not("external_id", "is", null)
+      .order("sent_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (!lastComment?.external_id) throw new Error("no_comment_id");
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: tokenRow } = await supabaseAdmin
+      .from("social_account_tokens")
+      .select("access_token")
+      .eq("social_account_id", conversation.social_account_id)
+      .single();
+    if (!tokenRow?.access_token) throw new Error("no_token");
+
+    const response = await fetch(
+      `https://graph.facebook.com/v21.0/${lastComment.external_id}`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          hide: data.hidden,
+          access_token: tokenRow.access_token,
+        }),
+      },
+    );
+    const result = (await response.json()) as { error?: { message?: string } };
+    if (!response.ok || result.error) {
+      throw new Error(result.error?.message ?? "Meta rejected the request");
+    }
     return { ok: true };
   });
