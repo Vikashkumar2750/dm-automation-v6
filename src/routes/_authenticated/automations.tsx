@@ -476,6 +476,23 @@ function AutomationsPage() {
                 </div>
               )}
 
+              {needsText && (
+                <div className="grid gap-2">
+                  <Label>Alternate messages (one per line)</Label>
+                  <Textarea
+                    rows={3}
+                    value={draft.responseVariations}
+                    placeholder={"Hi! Pricing starts at ₹4,999/month.\nHey — plans begin at ₹4,999/month."}
+                    onChange={(e) =>
+                      setDraft({ ...draft, responseVariations: e.target.value })
+                    }
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    One is picked at random each time, so replies never look robotic.
+                  </p>
+                </div>
+              )}
+
               {draft.action === "set_status" && (
                 <div className="grid gap-2">
                   <Label>Set status to</Label>
