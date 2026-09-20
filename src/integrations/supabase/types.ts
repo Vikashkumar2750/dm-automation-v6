@@ -14,6 +14,47 @@ export type Database = {
   }
   public: {
     Tables: {
+      oauth_states: {
+        Row: {
+          code_verifier: string | null
+          created_at: string
+          expires_at: string
+          organization_id: string
+          platform: Database["public"]["Enums"]["social_platform"]
+          redirect_path: string
+          state: string
+          user_id: string
+        }
+        Insert: {
+          code_verifier?: string | null
+          created_at?: string
+          expires_at?: string
+          organization_id: string
+          platform: Database["public"]["Enums"]["social_platform"]
+          redirect_path?: string
+          state: string
+          user_id: string
+        }
+        Update: {
+          code_verifier?: string | null
+          created_at?: string
+          expires_at?: string
+          organization_id?: string
+          platform?: Database["public"]["Enums"]["social_platform"]
+          redirect_path?: string
+          state?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "oauth_states_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organization_members: {
         Row: {
           created_at: string
@@ -124,6 +165,106 @@ export type Database = {
         }
         Relationships: []
       }
+      social_account_tokens: {
+        Row: {
+          access_token: string
+          created_at: string
+          expires_at: string | null
+          refresh_token: string | null
+          social_account_id: string
+          updated_at: string
+        }
+        Insert: {
+          access_token: string
+          created_at?: string
+          expires_at?: string | null
+          refresh_token?: string | null
+          social_account_id: string
+          updated_at?: string
+        }
+        Update: {
+          access_token?: string
+          created_at?: string
+          expires_at?: string | null
+          refresh_token?: string | null
+          social_account_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "social_account_tokens_social_account_id_fkey"
+            columns: ["social_account_id"]
+            isOneToOne: true
+            referencedRelation: "social_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      social_accounts: {
+        Row: {
+          avatar_url: string | null
+          capabilities: Json
+          connected_by: string | null
+          created_at: string
+          external_id: string
+          handle: string | null
+          id: string
+          last_synced_at: string | null
+          metadata: Json
+          name: string
+          organization_id: string
+          platform: Database["public"]["Enums"]["social_platform"]
+          scopes: string[]
+          status: Database["public"]["Enums"]["social_account_status"]
+          token_expires_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          capabilities?: Json
+          connected_by?: string | null
+          created_at?: string
+          external_id: string
+          handle?: string | null
+          id?: string
+          last_synced_at?: string | null
+          metadata?: Json
+          name: string
+          organization_id: string
+          platform: Database["public"]["Enums"]["social_platform"]
+          scopes?: string[]
+          status?: Database["public"]["Enums"]["social_account_status"]
+          token_expires_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          capabilities?: Json
+          connected_by?: string | null
+          created_at?: string
+          external_id?: string
+          handle?: string | null
+          id?: string
+          last_synced_at?: string | null
+          metadata?: Json
+          name?: string
+          organization_id?: string
+          platform?: Database["public"]["Enums"]["social_platform"]
+          scopes?: string[]
+          status?: Database["public"]["Enums"]["social_account_status"]
+          token_expires_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "social_accounts_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -152,6 +293,8 @@ export type Database = {
     Enums: {
       org_role: "owner" | "admin" | "manager" | "agent" | "viewer"
       platform_role: "super_admin" | "support"
+      social_account_status: "connected" | "attention" | "disconnected"
+      social_platform: "instagram" | "facebook" | "youtube"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -281,6 +424,8 @@ export const Constants = {
     Enums: {
       org_role: ["owner", "admin", "manager", "agent", "viewer"],
       platform_role: ["super_admin", "support"],
+      social_account_status: ["connected", "attention", "disconnected"],
+      social_platform: ["instagram", "facebook", "youtube"],
     },
   },
 } as const
