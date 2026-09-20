@@ -46,9 +46,7 @@ function platformFor(object: string | undefined) {
   return null;
 }
 
-type AdminClient = Awaited<
-  ReturnType<typeof import("@/integrations/supabase/client.server")>
->["supabaseAdmin"];
+type AdminClient = import("@supabase/supabase-js").SupabaseClient;
 
 type MessagingEvent = {
   sender?: { id?: string };
