@@ -67,11 +67,14 @@ function InboxPage() {
   const queryClient = useQueryClient();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
+  const [commentMode, setCommentMode] = useState<"public" | "private">("public");
 
   const fetchConversations = useServerFn(listConversations);
   const fetchMessages = useServerFn(listMessages);
   const markReadFn = useServerFn(markConversationRead);
   const sendReplyFn = useServerFn(sendReply);
+  const replyToCommentFn = useServerFn(replyToComment);
+  const setCommentHiddenFn = useServerFn(setCommentHidden);
 
   const conversationsQuery = useQuery({
     queryKey: ["conversations", orgId],
