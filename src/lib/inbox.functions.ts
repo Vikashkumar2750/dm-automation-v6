@@ -38,6 +38,9 @@ export const listConversations = createServerFn({ method: "GET" })
         organizationId: z.string().uuid(),
         platform: z.enum(["instagram", "facebook", "youtube"]).optional(),
         channel: z.enum(["dm", "comment"]).optional(),
+        status: z.enum(["open", "pending", "resolved"]).optional(),
+        unreadOnly: z.boolean().optional(),
+        search: z.string().trim().max(120).optional(),
       })
       .parse(data),
   )
@@ -52,6 +55,14 @@ export const listConversations = createServerFn({ method: "GET" })
       .limit(100);
     if (data.platform) query = query.eq("platform", data.platform);
     if (data.channel) query = query.eq("channel", data.channel);
+    if (data.status) query = query.eq("status", data.status);
+    if (data.unreadOnly) query = query.gt("unread_count", 0);
+    if (data.search) {
+      const term = data.search.replace(/[%,]/g, " ");
+      query = query.or(
+        `external_user_name.ilike.%${term}%,last_message_preview.ilike.%${term}%`,
+      );
+    }
     const { data: rows, error } = await query;
     if (error) throw new Error(error.message);
     return (rows ?? []) as ConversationRow[];

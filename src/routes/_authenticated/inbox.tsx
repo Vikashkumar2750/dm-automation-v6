@@ -29,6 +29,7 @@ import {
   replyToComment,
   sendReply,
   setCommentHidden,
+  setConversationStatus,
   type ConversationRow,
 } from "@/lib/inbox.functions";
 import { cn } from "@/lib/utils";
@@ -61,6 +62,40 @@ function timeAgo(iso: string) {
   return `${Math.floor(hours / 24)}d ago`;
 }
 
+type Platform = "instagram" | "facebook" | "youtube";
+type Channel = "dm" | "comment";
+type Status = "open" | "pending" | "resolved";
+
+function FilterChips<T extends string>({
+  value,
+  options,
+  onChange,
+}: {
+  value: T;
+  options: Array<{ value: T; label: string }>;
+  onChange: (next: T) => void;
+}) {
+  return (
+    <div className="flex flex-wrap gap-1">
+      {options.map((option) => (
+        <button
+          key={option.value}
+          type="button"
+          onClick={() => onChange(option.value)}
+          className={cn(
+            "rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors",
+            value === option.value
+              ? "border-primary bg-primary text-primary-foreground"
+              : "text-muted-foreground hover:text-foreground",
+          )}
+        >
+          {option.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 function InboxPage() {
   const { activeOrg } = useTenant();
   const orgId = activeOrg?.id;
@@ -68,6 +103,11 @@ function InboxPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
   const [commentMode, setCommentMode] = useState<"public" | "private">("public");
+  const [platform, setPlatform] = useState<Platform | "all">("all");
+  const [channel, setChannel] = useState<Channel | "all">("all");
+  const [status, setStatus] = useState<Status | "all">("all");
+  const [unreadOnly, setUnreadOnly] = useState(false);
+  const [search, setSearch] = useState("");
 
   const fetchConversations = useServerFn(listConversations);
   const fetchMessages = useServerFn(listMessages);
@@ -75,12 +115,22 @@ function InboxPage() {
   const sendReplyFn = useServerFn(sendReply);
   const replyToCommentFn = useServerFn(replyToComment);
   const setCommentHiddenFn = useServerFn(setCommentHidden);
+  const setStatusFn = useServerFn(setConversationStatus);
+
+  const filters = {
+    ...(platform !== "all" ? { platform } : {}),
+    ...(channel !== "all" ? { channel } : {}),
+    ...(status !== "all" ? { status } : {}),
+    ...(unreadOnly ? { unreadOnly: true } : {}),
+    ...(search.trim() ? { search: search.trim() } : {}),
+  };
 
   const conversationsQuery = useQuery({
-    queryKey: ["conversations", orgId],
+    queryKey: ["conversations", orgId, filters],
     enabled: Boolean(orgId),
     refetchInterval: 15_000,
-    queryFn: () => fetchConversations({ data: { organizationId: orgId! } }),
+    queryFn: () =>
+      fetchConversations({ data: { organizationId: orgId!, ...filters } }),
   });
 
   const conversations = conversationsQuery.data ?? [];
@@ -154,6 +204,14 @@ function InboxPage() {
     onError: commentError,
   });
 
+  const changeStatus = useMutation({
+    mutationFn: (next: Status) =>
+      setStatusFn({ data: { conversationId: selected!.id, status: next } }),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ["conversations", orgId] }),
+    onError: () => toast.error("Could not update the status."),
+  });
+
   function openConversation(id: string) {
     setSelectedId(id);
     markReadFn({ data: { conversationId: id } }).then(() =>
@@ -171,11 +229,62 @@ function InboxPage() {
       <div className="grid gap-4 lg:grid-cols-[340px_1fr]">
         {/* Conversation list */}
         <Panel bodyClassName="p-0" className="min-h-[480px]">
-          <div className="border-b px-4 py-3">
-            <p className="text-sm font-semibold">Conversations</p>
-            <p className="text-xs text-muted-foreground">
-              Refreshes automatically every 15 seconds.
-            </p>
+          <div className="space-y-2 border-b px-4 py-3">
+            <div>
+              <p className="text-sm font-semibold">Conversations</p>
+              <p className="text-xs text-muted-foreground">
+                Refreshes automatically every 15 seconds.
+              </p>
+            </div>
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search name or message…"
+              className="h-8 w-full rounded-md border bg-background px-2.5 text-xs outline-none focus:ring-2 focus:ring-ring"
+            />
+            <FilterChips
+              value={platform}
+              onChange={setPlatform}
+              options={[
+                { value: "all", label: "All platforms" },
+                { value: "instagram", label: "Instagram" },
+                { value: "facebook", label: "Facebook" },
+                { value: "youtube", label: "YouTube" },
+              ]}
+            />
+            <FilterChips
+              value={channel}
+              onChange={setChannel}
+              options={[
+                { value: "all", label: "All types" },
+                { value: "dm", label: "DMs" },
+                { value: "comment", label: "Comments" },
+              ]}
+            />
+            <div className="flex flex-wrap items-center gap-1">
+              <FilterChips
+                value={status}
+                onChange={setStatus}
+                options={[
+                  { value: "all", label: "Any status" },
+                  { value: "open", label: "Open" },
+                  { value: "pending", label: "Pending" },
+                  { value: "resolved", label: "Resolved" },
+                ]}
+              />
+              <button
+                type="button"
+                onClick={() => setUnreadOnly((v) => !v)}
+                className={cn(
+                  "rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors",
+                  unreadOnly
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                Unread only
+              </button>
+            </div>
           </div>
           {conversationsQuery.isLoading ? (
             <div className="flex items-center justify-center py-16 text-sm text-muted-foreground">
@@ -252,6 +361,17 @@ function InboxPage() {
                       {selected.channel === "comment" ? "Comment thread" : "Direct message"}
                     </p>
                   </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <FilterChips
+                    value={selected.status}
+                    onChange={(next) => changeStatus.mutate(next)}
+                    options={[
+                      { value: "open", label: "Open" },
+                      { value: "pending", label: "Pending" },
+                      { value: "resolved", label: "Resolved" },
+                    ]}
+                  />
                 </div>
                 <StatusBadge
                   tone={selected.status === "resolved" ? "neutral" : "success"}
