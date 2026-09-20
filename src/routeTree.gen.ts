@@ -9,163 +9,166 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as IndexRouteImport } from './routes/index'
-import { Route as AccountHealthRouteImport } from './routes/account-health'
-import { Route as AdminRouteImport } from './routes/admin'
-import { Route as AiAssistantRouteImport } from './routes/ai-assistant'
-import { Route as AnalyticsRouteImport } from './routes/analytics'
-import { Route as AutomationsRouteImport } from './routes/automations'
-import { Route as BillingRouteImport } from './routes/billing'
-import { Route as CalendarRouteImport } from './routes/calendar'
-import { Route as CommentsRouteImport } from './routes/comments'
-import { Route as ContactsRouteImport } from './routes/contacts'
-import { Route as CreatePostRouteImport } from './routes/create-post'
-import { Route as InboxRouteImport } from './routes/inbox'
-import { Route as SettingsRouteImport } from './routes/settings'
-import { Route as SocialAccountsRouteImport } from './routes/social-accounts'
-import { Route as TeamRouteImport } from './routes/team'
-import { Route as UsageRouteImport } from './routes/usage'
+import { Route as AuthenticatedAccountHealthRouteImport } from './routes/_authenticated/account-health'
+import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
+import { Route as AuthenticatedAiAssistantRouteImport } from './routes/_authenticated/ai-assistant'
+import { Route as AuthenticatedAnalyticsRouteImport } from './routes/_authenticated/analytics'
+import { Route as AuthenticatedAutomationsRouteImport } from './routes/_authenticated/automations'
+import { Route as AuthenticatedBillingRouteImport } from './routes/_authenticated/billing'
+import { Route as AuthenticatedCalendarRouteImport } from './routes/_authenticated/calendar'
+import { Route as AuthenticatedCommentsRouteImport } from './routes/_authenticated/comments'
+import { Route as AuthenticatedContactsRouteImport } from './routes/_authenticated/contacts'
+import { Route as AuthenticatedCreatePostRouteImport } from './routes/_authenticated/create-post'
+import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedInboxRouteImport } from './routes/_authenticated/inbox'
+import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
+import { Route as AuthenticatedSocialAccountsRouteImport } from './routes/_authenticated/social-accounts'
+import { Route as AuthenticatedTeamRouteImport } from './routes/_authenticated/team'
+import { Route as AuthenticatedUsageRouteImport } from './routes/_authenticated/usage'
 
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AccountHealthRoute = AccountHealthRouteImport.update({
-  id: '/account-health',
-  path: '/account-health',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminRoute = AdminRouteImport.update({
-  id: '/admin',
+const AuthenticatedAccountHealthRoute =
+  AuthenticatedAccountHealthRouteImport.update({
+    id: '/_authenticated/account-health',
+    path: '/account-health',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
+  id: '/_authenticated/admin',
   path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AiAssistantRoute = AiAssistantRouteImport.update({
-  id: '/ai-assistant',
-  path: '/ai-assistant',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AnalyticsRoute = AnalyticsRouteImport.update({
-  id: '/analytics',
+const AuthenticatedAiAssistantRoute =
+  AuthenticatedAiAssistantRouteImport.update({
+    id: '/_authenticated/ai-assistant',
+    path: '/ai-assistant',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const AuthenticatedAnalyticsRoute = AuthenticatedAnalyticsRouteImport.update({
+  id: '/_authenticated/analytics',
   path: '/analytics',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AutomationsRoute = AutomationsRouteImport.update({
-  id: '/automations',
-  path: '/automations',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const BillingRoute = BillingRouteImport.update({
-  id: '/billing',
+const AuthenticatedAutomationsRoute =
+  AuthenticatedAutomationsRouteImport.update({
+    id: '/_authenticated/automations',
+    path: '/automations',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const AuthenticatedBillingRoute = AuthenticatedBillingRouteImport.update({
+  id: '/_authenticated/billing',
   path: '/billing',
   getParentRoute: () => rootRouteImport,
 } as any)
-const CalendarRoute = CalendarRouteImport.update({
-  id: '/calendar',
+const AuthenticatedCalendarRoute = AuthenticatedCalendarRouteImport.update({
+  id: '/_authenticated/calendar',
   path: '/calendar',
   getParentRoute: () => rootRouteImport,
 } as any)
-const CommentsRoute = CommentsRouteImport.update({
-  id: '/comments',
+const AuthenticatedCommentsRoute = AuthenticatedCommentsRouteImport.update({
+  id: '/_authenticated/comments',
   path: '/comments',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ContactsRoute = ContactsRouteImport.update({
-  id: '/contacts',
+const AuthenticatedContactsRoute = AuthenticatedContactsRouteImport.update({
+  id: '/_authenticated/contacts',
   path: '/contacts',
   getParentRoute: () => rootRouteImport,
 } as any)
-const CreatePostRoute = CreatePostRouteImport.update({
-  id: '/create-post',
+const AuthenticatedCreatePostRoute = AuthenticatedCreatePostRouteImport.update({
+  id: '/_authenticated/create-post',
   path: '/create-post',
   getParentRoute: () => rootRouteImport,
 } as any)
-const InboxRoute = InboxRouteImport.update({
-  id: '/inbox',
+const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
+  id: '/_authenticated/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedInboxRoute = AuthenticatedInboxRouteImport.update({
+  id: '/_authenticated/inbox',
   path: '/inbox',
   getParentRoute: () => rootRouteImport,
 } as any)
-const SettingsRoute = SettingsRouteImport.update({
-  id: '/settings',
+const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
+  id: '/_authenticated/settings',
   path: '/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
-const SocialAccountsRoute = SocialAccountsRouteImport.update({
-  id: '/social-accounts',
-  path: '/social-accounts',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const TeamRoute = TeamRouteImport.update({
-  id: '/team',
+const AuthenticatedSocialAccountsRoute =
+  AuthenticatedSocialAccountsRouteImport.update({
+    id: '/_authenticated/social-accounts',
+    path: '/social-accounts',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const AuthenticatedTeamRoute = AuthenticatedTeamRouteImport.update({
+  id: '/_authenticated/team',
   path: '/team',
   getParentRoute: () => rootRouteImport,
 } as any)
-const UsageRoute = UsageRouteImport.update({
-  id: '/usage',
+const AuthenticatedUsageRoute = AuthenticatedUsageRouteImport.update({
+  id: '/_authenticated/usage',
   path: '/usage',
   getParentRoute: () => rootRouteImport,
 } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
-  '/account-health': typeof AccountHealthRoute
-  '/admin': typeof AdminRoute
-  '/ai-assistant': typeof AiAssistantRoute
-  '/analytics': typeof AnalyticsRoute
-  '/automations': typeof AutomationsRoute
-  '/billing': typeof BillingRoute
-  '/calendar': typeof CalendarRoute
-  '/comments': typeof CommentsRoute
-  '/contacts': typeof ContactsRoute
-  '/create-post': typeof CreatePostRoute
-  '/inbox': typeof InboxRoute
-  '/settings': typeof SettingsRoute
-  '/social-accounts': typeof SocialAccountsRoute
-  '/team': typeof TeamRoute
-  '/usage': typeof UsageRoute
+  '/account-health': typeof AuthenticatedAccountHealthRoute
+  '/admin': typeof AuthenticatedAdminRoute
+  '/ai-assistant': typeof AuthenticatedAiAssistantRoute
+  '/analytics': typeof AuthenticatedAnalyticsRoute
+  '/automations': typeof AuthenticatedAutomationsRoute
+  '/billing': typeof AuthenticatedBillingRoute
+  '/calendar': typeof AuthenticatedCalendarRoute
+  '/comments': typeof AuthenticatedCommentsRoute
+  '/contacts': typeof AuthenticatedContactsRoute
+  '/create-post': typeof AuthenticatedCreatePostRoute
+  '/dashboard': typeof AuthenticatedDashboardRoute
+  '/inbox': typeof AuthenticatedInboxRoute
+  '/settings': typeof AuthenticatedSettingsRoute
+  '/social-accounts': typeof AuthenticatedSocialAccountsRoute
+  '/team': typeof AuthenticatedTeamRoute
+  '/usage': typeof AuthenticatedUsageRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
-  '/account-health': typeof AccountHealthRoute
-  '/admin': typeof AdminRoute
-  '/ai-assistant': typeof AiAssistantRoute
-  '/analytics': typeof AnalyticsRoute
-  '/automations': typeof AutomationsRoute
-  '/billing': typeof BillingRoute
-  '/calendar': typeof CalendarRoute
-  '/comments': typeof CommentsRoute
-  '/contacts': typeof ContactsRoute
-  '/create-post': typeof CreatePostRoute
-  '/inbox': typeof InboxRoute
-  '/settings': typeof SettingsRoute
-  '/social-accounts': typeof SocialAccountsRoute
-  '/team': typeof TeamRoute
-  '/usage': typeof UsageRoute
+  '/account-health': typeof AuthenticatedAccountHealthRoute
+  '/admin': typeof AuthenticatedAdminRoute
+  '/ai-assistant': typeof AuthenticatedAiAssistantRoute
+  '/analytics': typeof AuthenticatedAnalyticsRoute
+  '/automations': typeof AuthenticatedAutomationsRoute
+  '/billing': typeof AuthenticatedBillingRoute
+  '/calendar': typeof AuthenticatedCalendarRoute
+  '/comments': typeof AuthenticatedCommentsRoute
+  '/contacts': typeof AuthenticatedContactsRoute
+  '/create-post': typeof AuthenticatedCreatePostRoute
+  '/dashboard': typeof AuthenticatedDashboardRoute
+  '/inbox': typeof AuthenticatedInboxRoute
+  '/settings': typeof AuthenticatedSettingsRoute
+  '/social-accounts': typeof AuthenticatedSocialAccountsRoute
+  '/team': typeof AuthenticatedTeamRoute
+  '/usage': typeof AuthenticatedUsageRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
-  '/account-health': typeof AccountHealthRoute
-  '/admin': typeof AdminRoute
-  '/ai-assistant': typeof AiAssistantRoute
-  '/analytics': typeof AnalyticsRoute
-  '/automations': typeof AutomationsRoute
-  '/billing': typeof BillingRoute
-  '/calendar': typeof CalendarRoute
-  '/comments': typeof CommentsRoute
-  '/contacts': typeof ContactsRoute
-  '/create-post': typeof CreatePostRoute
-  '/inbox': typeof InboxRoute
-  '/settings': typeof SettingsRoute
-  '/social-accounts': typeof SocialAccountsRoute
-  '/team': typeof TeamRoute
-  '/usage': typeof UsageRoute
+  '/_authenticated/account-health': typeof AuthenticatedAccountHealthRoute
+  '/_authenticated/admin': typeof AuthenticatedAdminRoute
+  '/_authenticated/ai-assistant': typeof AuthenticatedAiAssistantRoute
+  '/_authenticated/analytics': typeof AuthenticatedAnalyticsRoute
+  '/_authenticated/automations': typeof AuthenticatedAutomationsRoute
+  '/_authenticated/billing': typeof AuthenticatedBillingRoute
+  '/_authenticated/calendar': typeof AuthenticatedCalendarRoute
+  '/_authenticated/comments': typeof AuthenticatedCommentsRoute
+  '/_authenticated/contacts': typeof AuthenticatedContactsRoute
+  '/_authenticated/create-post': typeof AuthenticatedCreatePostRoute
+  '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/inbox': typeof AuthenticatedInboxRoute
+  '/_authenticated/settings': typeof AuthenticatedSettingsRoute
+  '/_authenticated/social-accounts': typeof AuthenticatedSocialAccountsRoute
+  '/_authenticated/team': typeof AuthenticatedTeamRoute
+  '/_authenticated/usage': typeof AuthenticatedUsageRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    | '/'
     | '/account-health'
     | '/admin'
     | '/ai-assistant'
@@ -176,6 +179,7 @@ export interface FileRouteTypes {
     | '/comments'
     | '/contacts'
     | '/create-post'
+    | '/dashboard'
     | '/inbox'
     | '/settings'
     | '/social-accounts'
@@ -183,7 +187,6 @@ export interface FileRouteTypes {
     | '/usage'
   fileRoutesByTo: FileRoutesByTo
   to:
-    | '/'
     | '/account-health'
     | '/admin'
     | '/ai-assistant'
@@ -194,6 +197,7 @@ export interface FileRouteTypes {
     | '/comments'
     | '/contacts'
     | '/create-post'
+    | '/dashboard'
     | '/inbox'
     | '/settings'
     | '/social-accounts'
@@ -201,177 +205,177 @@ export interface FileRouteTypes {
     | '/usage'
   id:
     | '__root__'
-    | '/'
-    | '/account-health'
-    | '/admin'
-    | '/ai-assistant'
-    | '/analytics'
-    | '/automations'
-    | '/billing'
-    | '/calendar'
-    | '/comments'
-    | '/contacts'
-    | '/create-post'
-    | '/inbox'
-    | '/settings'
-    | '/social-accounts'
-    | '/team'
-    | '/usage'
+    | '/_authenticated/account-health'
+    | '/_authenticated/admin'
+    | '/_authenticated/ai-assistant'
+    | '/_authenticated/analytics'
+    | '/_authenticated/automations'
+    | '/_authenticated/billing'
+    | '/_authenticated/calendar'
+    | '/_authenticated/comments'
+    | '/_authenticated/contacts'
+    | '/_authenticated/create-post'
+    | '/_authenticated/dashboard'
+    | '/_authenticated/inbox'
+    | '/_authenticated/settings'
+    | '/_authenticated/social-accounts'
+    | '/_authenticated/team'
+    | '/_authenticated/usage'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
-  AccountHealthRoute: typeof AccountHealthRoute
-  AdminRoute: typeof AdminRoute
-  AiAssistantRoute: typeof AiAssistantRoute
-  AnalyticsRoute: typeof AnalyticsRoute
-  AutomationsRoute: typeof AutomationsRoute
-  BillingRoute: typeof BillingRoute
-  CalendarRoute: typeof CalendarRoute
-  CommentsRoute: typeof CommentsRoute
-  ContactsRoute: typeof ContactsRoute
-  CreatePostRoute: typeof CreatePostRoute
-  InboxRoute: typeof InboxRoute
-  SettingsRoute: typeof SettingsRoute
-  SocialAccountsRoute: typeof SocialAccountsRoute
-  TeamRoute: typeof TeamRoute
-  UsageRoute: typeof UsageRoute
+  AuthenticatedAccountHealthRoute: typeof AuthenticatedAccountHealthRoute
+  AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
+  AuthenticatedAiAssistantRoute: typeof AuthenticatedAiAssistantRoute
+  AuthenticatedAnalyticsRoute: typeof AuthenticatedAnalyticsRoute
+  AuthenticatedAutomationsRoute: typeof AuthenticatedAutomationsRoute
+  AuthenticatedBillingRoute: typeof AuthenticatedBillingRoute
+  AuthenticatedCalendarRoute: typeof AuthenticatedCalendarRoute
+  AuthenticatedCommentsRoute: typeof AuthenticatedCommentsRoute
+  AuthenticatedContactsRoute: typeof AuthenticatedContactsRoute
+  AuthenticatedCreatePostRoute: typeof AuthenticatedCreatePostRoute
+  AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedInboxRoute: typeof AuthenticatedInboxRoute
+  AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
+  AuthenticatedSocialAccountsRoute: typeof AuthenticatedSocialAccountsRoute
+  AuthenticatedTeamRoute: typeof AuthenticatedTeamRoute
+  AuthenticatedUsageRoute: typeof AuthenticatedUsageRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/account-health': {
-      id: '/account-health'
+    '/_authenticated/account-health': {
+      id: '/_authenticated/account-health'
       path: '/account-health'
       fullPath: '/account-health'
-      preLoaderRoute: typeof AccountHealthRouteImport
+      preLoaderRoute: typeof AuthenticatedAccountHealthRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/admin': {
-      id: '/admin'
+    '/_authenticated/admin': {
+      id: '/_authenticated/admin'
       path: '/admin'
       fullPath: '/admin'
-      preLoaderRoute: typeof AdminRouteImport
+      preLoaderRoute: typeof AuthenticatedAdminRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/ai-assistant': {
-      id: '/ai-assistant'
+    '/_authenticated/ai-assistant': {
+      id: '/_authenticated/ai-assistant'
       path: '/ai-assistant'
       fullPath: '/ai-assistant'
-      preLoaderRoute: typeof AiAssistantRouteImport
+      preLoaderRoute: typeof AuthenticatedAiAssistantRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/analytics': {
-      id: '/analytics'
+    '/_authenticated/analytics': {
+      id: '/_authenticated/analytics'
       path: '/analytics'
       fullPath: '/analytics'
-      preLoaderRoute: typeof AnalyticsRouteImport
+      preLoaderRoute: typeof AuthenticatedAnalyticsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/automations': {
-      id: '/automations'
+    '/_authenticated/automations': {
+      id: '/_authenticated/automations'
       path: '/automations'
       fullPath: '/automations'
-      preLoaderRoute: typeof AutomationsRouteImport
+      preLoaderRoute: typeof AuthenticatedAutomationsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/billing': {
-      id: '/billing'
+    '/_authenticated/billing': {
+      id: '/_authenticated/billing'
       path: '/billing'
       fullPath: '/billing'
-      preLoaderRoute: typeof BillingRouteImport
+      preLoaderRoute: typeof AuthenticatedBillingRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/calendar': {
-      id: '/calendar'
+    '/_authenticated/calendar': {
+      id: '/_authenticated/calendar'
       path: '/calendar'
       fullPath: '/calendar'
-      preLoaderRoute: typeof CalendarRouteImport
+      preLoaderRoute: typeof AuthenticatedCalendarRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/comments': {
-      id: '/comments'
+    '/_authenticated/comments': {
+      id: '/_authenticated/comments'
       path: '/comments'
       fullPath: '/comments'
-      preLoaderRoute: typeof CommentsRouteImport
+      preLoaderRoute: typeof AuthenticatedCommentsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/contacts': {
-      id: '/contacts'
+    '/_authenticated/contacts': {
+      id: '/_authenticated/contacts'
       path: '/contacts'
       fullPath: '/contacts'
-      preLoaderRoute: typeof ContactsRouteImport
+      preLoaderRoute: typeof AuthenticatedContactsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/create-post': {
-      id: '/create-post'
+    '/_authenticated/create-post': {
+      id: '/_authenticated/create-post'
       path: '/create-post'
       fullPath: '/create-post'
-      preLoaderRoute: typeof CreatePostRouteImport
+      preLoaderRoute: typeof AuthenticatedCreatePostRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/inbox': {
-      id: '/inbox'
+    '/_authenticated/dashboard': {
+      id: '/_authenticated/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof AuthenticatedDashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/inbox': {
+      id: '/_authenticated/inbox'
       path: '/inbox'
       fullPath: '/inbox'
-      preLoaderRoute: typeof InboxRouteImport
+      preLoaderRoute: typeof AuthenticatedInboxRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/settings': {
-      id: '/settings'
+    '/_authenticated/settings': {
+      id: '/_authenticated/settings'
       path: '/settings'
       fullPath: '/settings'
-      preLoaderRoute: typeof SettingsRouteImport
+      preLoaderRoute: typeof AuthenticatedSettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/social-accounts': {
-      id: '/social-accounts'
+    '/_authenticated/social-accounts': {
+      id: '/_authenticated/social-accounts'
       path: '/social-accounts'
       fullPath: '/social-accounts'
-      preLoaderRoute: typeof SocialAccountsRouteImport
+      preLoaderRoute: typeof AuthenticatedSocialAccountsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/team': {
-      id: '/team'
+    '/_authenticated/team': {
+      id: '/_authenticated/team'
       path: '/team'
       fullPath: '/team'
-      preLoaderRoute: typeof TeamRouteImport
+      preLoaderRoute: typeof AuthenticatedTeamRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/usage': {
-      id: '/usage'
+    '/_authenticated/usage': {
+      id: '/_authenticated/usage'
       path: '/usage'
       fullPath: '/usage'
-      preLoaderRoute: typeof UsageRouteImport
+      preLoaderRoute: typeof AuthenticatedUsageRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
-  AccountHealthRoute: AccountHealthRoute,
-  AdminRoute: AdminRoute,
-  AiAssistantRoute: AiAssistantRoute,
-  AnalyticsRoute: AnalyticsRoute,
-  AutomationsRoute: AutomationsRoute,
-  BillingRoute: BillingRoute,
-  CalendarRoute: CalendarRoute,
-  CommentsRoute: CommentsRoute,
-  ContactsRoute: ContactsRoute,
-  CreatePostRoute: CreatePostRoute,
-  InboxRoute: InboxRoute,
-  SettingsRoute: SettingsRoute,
-  SocialAccountsRoute: SocialAccountsRoute,
-  TeamRoute: TeamRoute,
-  UsageRoute: UsageRoute,
+  AuthenticatedAccountHealthRoute: AuthenticatedAccountHealthRoute,
+  AuthenticatedAdminRoute: AuthenticatedAdminRoute,
+  AuthenticatedAiAssistantRoute: AuthenticatedAiAssistantRoute,
+  AuthenticatedAnalyticsRoute: AuthenticatedAnalyticsRoute,
+  AuthenticatedAutomationsRoute: AuthenticatedAutomationsRoute,
+  AuthenticatedBillingRoute: AuthenticatedBillingRoute,
+  AuthenticatedCalendarRoute: AuthenticatedCalendarRoute,
+  AuthenticatedCommentsRoute: AuthenticatedCommentsRoute,
+  AuthenticatedContactsRoute: AuthenticatedContactsRoute,
+  AuthenticatedCreatePostRoute: AuthenticatedCreatePostRoute,
+  AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedInboxRoute: AuthenticatedInboxRoute,
+  AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
+  AuthenticatedSocialAccountsRoute: AuthenticatedSocialAccountsRoute,
+  AuthenticatedTeamRoute: AuthenticatedTeamRoute,
+  AuthenticatedUsageRoute: AuthenticatedUsageRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
