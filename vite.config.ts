@@ -11,7 +11,14 @@ import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 const preset = process.env["NITRO_PRESET"];
 
 export default defineConfig({
-  ...(preset ? { nitro: { preset } } : {}),
+  ...(preset
+    ? {
+        nitro: {
+          preset,
+          output: { dir: "dist", serverDir: "dist/server", publicDir: "dist/client" },
+        },
+      }
+    : {}),
   tanstackStart: {
     // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
     // nitro/vite builds from this
