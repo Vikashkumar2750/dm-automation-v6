@@ -164,7 +164,7 @@ export async function runAutomations(admin: AdminClient, ctx: AutomationContext)
       return;
     }
 
-    let result: { id?: string; error?: string };
+    let result: { id?: string | undefined; error?: string | undefined };
     let prefix = "";
 
     if (rule.action === "reply_dm") {
