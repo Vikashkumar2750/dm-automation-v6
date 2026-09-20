@@ -5,6 +5,7 @@ import { Copy, Mail, Trash2, UsersRound } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { AppShell } from "@/components/app/AppShell";
 import { EmptyState, PageHeader, Panel, StatusBadge } from "@/components/app/primitives";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -148,6 +149,7 @@ function TeamPage() {
   }
 
   return (
+    <AppShell>
     <div>
       <PageHeader
         title="Team"
@@ -294,5 +296,6 @@ function TeamPage() {
         </Panel>
       )}
     </div>
+    </AppShell>
   );
 }

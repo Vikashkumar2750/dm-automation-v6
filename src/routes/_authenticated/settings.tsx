@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { Building2, Plus } from "lucide-react";
 import { toast } from "sonner";
 
+import { AppShell } from "@/components/app/AppShell";
 import { PageHeader, Panel, EmptyState } from "@/components/app/primitives";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -134,6 +135,7 @@ function SettingsPage() {
 
   if (!orgId) {
     return (
+      <AppShell>
       <div className="space-y-6">
         <PageHeader title="Settings" description="Workspace profile, branding and clients." />
         <Panel title="Workspace">
@@ -144,10 +146,12 @@ function SettingsPage() {
           />
         </Panel>
       </div>
+      </AppShell>
     );
   }
 
   return (
+    <AppShell>
     <div className="space-y-6">
       <PageHeader
         title="Settings"
@@ -301,5 +305,6 @@ function SettingsPage() {
         </div>
       </Panel>
     </div>
+    </AppShell>
   );
 }

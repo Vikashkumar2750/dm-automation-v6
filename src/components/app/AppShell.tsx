@@ -43,8 +43,8 @@ const primaryNav: NavItem[] = [
   { label: "Dashboard", to: "/dashboard", icon: LayoutDashboard },
   { label: "Create Post", to: "/create-post", icon: PenSquare },
   { label: "Calendar", to: "/calendar", icon: CalendarDays },
-  { label: "Inbox", to: "/inbox", icon: Inbox, badge: 12 },
-  { label: "Comments", to: "/comments", icon: MessageSquare, badge: 8 },
+  { label: "Inbox", to: "/inbox", icon: Inbox },
+  { label: "Comments", to: "/comments", icon: MessageSquare },
   { label: "Automations", to: "/automations", icon: Workflow },
   { label: "Contacts", to: "/contacts", icon: Users },
   { label: "Analytics", to: "/analytics", icon: BarChart3 },
@@ -137,8 +137,8 @@ function Sidebar({ pathname }: { pathname: string }) {
           <p className="mt-1 text-xs text-muted-foreground">
             More automations, higher limits and advanced analytics.
           </p>
-          <Button className="mt-3 w-full" size="sm">
-            Upgrade Plan
+          <Button className="mt-3 w-full" size="sm" asChild>
+            <Link to="/billing">Upgrade Plan</Link>
           </Button>
         </div>
       </div>
@@ -203,10 +203,11 @@ function TopBar({ onMenu }: { onMenu: () => void }) {
       </div>
 
       <div className="ml-auto flex items-center gap-2">
-        <Button variant="ghost" size="icon" className="relative">
-          <Bell className="size-5" />
-          <span className="absolute top-2 right-2 size-2 rounded-full bg-danger" />
-          <span className="sr-only">Notifications</span>
+        <Button variant="ghost" size="icon" asChild>
+          <Link to="/account-health">
+            <Bell className="size-5" />
+            <span className="sr-only">Account health</span>
+          </Link>
         </Button>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
