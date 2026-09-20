@@ -263,6 +263,72 @@ function SocialAccountsPage() {
           </ul>
         )}
       </Panel>
+
+      <Panel className="mt-6" bodyClassName="p-0">
+        <div className="flex items-center justify-between gap-3 border-b px-5 py-4">
+          <div className="min-w-0">
+            <p className="text-sm font-semibold">Live event feed</p>
+            <p className="text-xs text-muted-foreground">
+              Comments, messages and mentions arrive here in real time once the callback
+              URL is saved in your Meta app.
+            </p>
+          </div>
+          {webhookConfigQuery.data ? (
+            webhookConfigQuery.data.verifyTokenSet && webhookConfigQuery.data.appSecretSet ? (
+              <StatusBadge tone="success">Endpoint ready</StatusBadge>
+            ) : (
+              <StatusBadge tone="warning">Setup needed</StatusBadge>
+            )
+          ) : null}
+        </div>
+
+        <div className="border-b px-5 py-3">
+          <p className="text-xs text-muted-foreground">Callback URL</p>
+          <code className="mt-1 block truncate text-xs">
+            {typeof window === "undefined"
+              ? "/api/public/webhooks/meta"
+              : `${window.location.origin}/api/public/webhooks/meta`}
+          </code>
+        </div>
+
+        {eventsQuery.isLoading ? (
+          <div className="flex items-center justify-center py-10 text-sm text-muted-foreground">
+            <Loader2 className="mr-2 size-4 animate-spin" /> Loading events…
+          </div>
+        ) : (eventsQuery.data ?? []).length === 0 ? (
+          <EmptyState
+            icon={RefreshCw}
+            title="No events yet"
+            description="Once an account is connected and the webhook is subscribed, incoming activity shows up here."
+          />
+        ) : (
+          <ul className="divide-y">
+            {(eventsQuery.data ?? []).map((event) => (
+              <li key={event.id} className="flex items-center gap-4 px-5 py-3">
+                {event.platform ? <PlatformBadge platform={event.platform} /> : null}
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium">{event.event_type}</p>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {new Date(event.received_at).toLocaleString()}
+                    {event.error ? ` — ${event.error}` : ""}
+                  </p>
+                </div>
+                <StatusBadge
+                  tone={
+                    event.status === "failed"
+                      ? "danger"
+                      : event.status === "processed"
+                        ? "success"
+                        : "neutral"
+                  }
+                >
+                  {event.status}
+                </StatusBadge>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Panel>
     </AppShell>
   );
 }
