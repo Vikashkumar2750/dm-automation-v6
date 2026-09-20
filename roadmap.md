@@ -23,4 +23,4 @@ Real Meta + YouTube credentials are available when we reach OAuth phases.
 - [x] Phase 14 — Analytics & ROI (engagement, reply speed, automation share, publishing results)
 - [x] Phase 15 — Super admin / operations (workspaces, plans, platform stats, event health)
 - [x] Phase 16 — Agency / white label (workspace branding, logo, brand colour, support email, client workspaces)
-- [ ] Export pack for Railway (Dockerfile, env template, migration runner)
+- [x] Phase 17 — Export pack for Railway (Dockerfile, .dockerignore, railway.json, .env.example, scripts/migrate.mjs, DEPLOY-RAILWAY.md)
