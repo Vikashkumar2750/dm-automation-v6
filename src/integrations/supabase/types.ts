@@ -177,8 +177,12 @@ export type Database = {
       }
       automation_settings: {
         Row: {
+          auto_pause_reason: string | null
+          auto_paused_until: string | null
           blocked_keywords: string[]
           created_at: string
+          daily_send_limit: number
+          hourly_send_limit: number
           is_paused: boolean
           opt_out_keywords: string[]
           organization_id: string
@@ -188,10 +192,17 @@ export type Database = {
           quiet_hours_start: number
           timezone_offset_minutes: number
           updated_at: string
+          viral_cooldown_minutes: number
+          viral_guard_enabled: boolean
+          viral_threshold_per_minute: number
         }
         Insert: {
+          auto_pause_reason?: string | null
+          auto_paused_until?: string | null
           blocked_keywords?: string[]
           created_at?: string
+          daily_send_limit?: number
+          hourly_send_limit?: number
           is_paused?: boolean
           opt_out_keywords?: string[]
           organization_id: string
@@ -201,10 +212,17 @@ export type Database = {
           quiet_hours_start?: number
           timezone_offset_minutes?: number
           updated_at?: string
+          viral_cooldown_minutes?: number
+          viral_guard_enabled?: boolean
+          viral_threshold_per_minute?: number
         }
         Update: {
+          auto_pause_reason?: string | null
+          auto_paused_until?: string | null
           blocked_keywords?: string[]
           created_at?: string
+          daily_send_limit?: number
+          hourly_send_limit?: number
           is_paused?: boolean
           opt_out_keywords?: string[]
           organization_id?: string
@@ -214,6 +232,9 @@ export type Database = {
           quiet_hours_start?: number
           timezone_offset_minutes?: number
           updated_at?: string
+          viral_cooldown_minutes?: number
+          viral_guard_enabled?: boolean
+          viral_threshold_per_minute?: number
         }
         Relationships: [
           {
