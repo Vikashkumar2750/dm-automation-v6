@@ -118,7 +118,14 @@ function SocialAccountsPage() {
         data: { organizationId: orgId, platform, origin: window.location.origin },
       });
       if ("url" in result && result.url) {
-        window.location.href = result.url;
+        // Facebook and Google refuse to load inside an iframe (the editor preview),
+        // so always hand the sign-in over to a real browser tab.
+        const opened = window.open(result.url, "_blank", "noopener,noreferrer");
+        if (!opened) {
+          toast.error("Allow pop-ups for this site, then press Connect again.");
+        } else {
+          toast("Finish the sign-in in the new tab, then come back here.");
+        }
         return;
       }
       if (result.error === "missing_credentials") {
