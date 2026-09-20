@@ -99,6 +99,13 @@
       "when": 1789935055106,
       "tag": "0013_grant_super_admin_to_owner_email",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1789935315366,
+      "tag": "0014_grant_super_admin_techaasvik_contact",
+      "breakpoints": true
     }
   ]
 }
