@@ -354,6 +354,17 @@ function InboxPage() {
                     </p>
                   </div>
                 </div>
+                <div className="flex items-center gap-2">
+                  <FilterChips
+                    value={selected.status}
+                    onChange={(next) => changeStatus.mutate(next)}
+                    options={[
+                      { value: "open", label: "Open" },
+                      { value: "pending", label: "Pending" },
+                      { value: "resolved", label: "Resolved" },
+                    ]}
+                  />
+                </div>
                 <StatusBadge
                   tone={selected.status === "resolved" ? "neutral" : "success"}
                 >
