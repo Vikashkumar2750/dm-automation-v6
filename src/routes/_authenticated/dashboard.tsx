@@ -33,10 +33,10 @@ import {
   UsageMeter,
 } from "@/components/app/primitives";
 import { Button } from "@/components/ui/button";
+import { useTenant } from "@/hooks/useTenant";
 import {
   connectedAccounts,
   conversations,
-  currentUser,
   engagementSeries,
   kpis,
   topAutomations,
@@ -74,10 +74,13 @@ const kpiIcons = [
 ];
 
 function Dashboard() {
+  const { profile } = useTenant();
+  const firstName = profile.name.split(" ")[0] || "there";
+
   return (
     <AppShell>
       <PageHeader
-        title={`Good morning, ${currentUser.name.split(" ")[0]}`}
+        title={`Good morning, ${firstName}`}
         description="Here's what's happening with your social media today."
         actions={
           <>
