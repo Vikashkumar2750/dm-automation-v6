@@ -45,6 +45,13 @@ type Settings = {
   quiet_hours_start: number;
   quiet_hours_end: number;
   timezone_offset_minutes: number;
+  hourly_send_limit: number;
+  daily_send_limit: number;
+  viral_guard_enabled: boolean;
+  viral_threshold_per_minute: number;
+  viral_cooldown_minutes: number;
+  auto_paused_until: string | null;
+  auto_pause_reason: string | null;
 };
 
 const DEFAULT_SETTINGS: Settings = {
@@ -56,7 +63,15 @@ const DEFAULT_SETTINGS: Settings = {
   quiet_hours_start: 22,
   quiet_hours_end: 7,
   timezone_offset_minutes: 330,
+  hourly_send_limit: 120,
+  daily_send_limit: 1000,
+  viral_guard_enabled: true,
+  viral_threshold_per_minute: 30,
+  viral_cooldown_minutes: 15,
+  auto_paused_until: null,
+  auto_pause_reason: null,
 };
+
 
 function inQuietHours(s: Settings, now = new Date()) {
   if (!s.quiet_hours_enabled) return false;
@@ -119,7 +134,7 @@ export async function runAutomations(admin: AdminClient, ctx: AutomationContext)
   const { data: settingsRow } = await admin
     .from("automation_settings")
     .select(
-      "is_paused, blocked_keywords, opt_out_keywords, per_contact_daily_limit, quiet_hours_enabled, quiet_hours_start, quiet_hours_end, timezone_offset_minutes",
+      "is_paused, blocked_keywords, opt_out_keywords, per_contact_daily_limit, quiet_hours_enabled, quiet_hours_start, quiet_hours_end, timezone_offset_minutes, hourly_send_limit, daily_send_limit, viral_guard_enabled, viral_threshold_per_minute, viral_cooldown_minutes, auto_paused_until, auto_pause_reason",
     )
     .eq("organization_id", ctx.organizationId)
     .maybeSingle();
@@ -128,6 +143,68 @@ export async function runAutomations(admin: AdminClient, ctx: AutomationContext)
   // Safety: org kill switch.
   if (settings.is_paused) {
     await log(admin, ctx, null, "skipped", "automation_paused");
+    return;
+  }
+
+  // Viral protection: a spike auto-pauses automation for a cooldown window.
+  if (settings.auto_paused_until && new Date(settings.auto_paused_until) > new Date()) {
+    await log(
+      admin,
+      ctx,
+      null,
+      "skipped",
+      `auto_paused:${settings.auto_pause_reason ?? "spike"}`,
+    );
+    return;
+  }
+
+  if (settings.viral_guard_enabled) {
+    const minuteAgo = new Date(Date.now() - 60 * 1000).toISOString();
+    const { count: burst } = await admin
+      .from("webhook_events")
+      .select("id", { count: "exact", head: true })
+      .eq("organization_id", ctx.organizationId)
+      .gte("received_at", minuteAgo);
+    if ((burst ?? 0) >= settings.viral_threshold_per_minute) {
+      const until = new Date(
+        Date.now() + settings.viral_cooldown_minutes * 60 * 1000,
+      ).toISOString();
+      await admin.from("automation_settings").upsert(
+        {
+          organization_id: ctx.organizationId,
+          auto_paused_until: until,
+          auto_pause_reason: `traffic spike (${burst}/min)`,
+        },
+        { onConflict: "organization_id" },
+      );
+      await log(admin, ctx, null, "skipped", `viral_guard:${burst}_per_min`);
+      return;
+    }
+  }
+
+  // Quota: org-wide hourly and daily send caps.
+  const hourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+  const dayStart = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const [{ count: sentHour }, { count: sentDay }] = await Promise.all([
+    admin
+      .from("automation_runs")
+      .select("id", { count: "exact", head: true })
+      .eq("organization_id", ctx.organizationId)
+      .eq("status", "sent")
+      .gte("created_at", hourAgo),
+    admin
+      .from("automation_runs")
+      .select("id", { count: "exact", head: true })
+      .eq("organization_id", ctx.organizationId)
+      .eq("status", "sent")
+      .gte("created_at", dayStart),
+  ]);
+  if ((sentHour ?? 0) >= settings.hourly_send_limit) {
+    await log(admin, ctx, null, "skipped", "org_hourly_limit");
+    return;
+  }
+  if ((sentDay ?? 0) >= settings.daily_send_limit) {
+    await log(admin, ctx, null, "skipped", "org_daily_limit");
     return;
   }
 
@@ -146,6 +223,7 @@ export async function runAutomations(admin: AdminClient, ctx: AutomationContext)
     await log(admin, ctx, null, "skipped", `opt_out:${optOutHit}`);
     return;
   }
+
 
   const { data: optedOut } = await admin
     .from("automation_opt_outs")

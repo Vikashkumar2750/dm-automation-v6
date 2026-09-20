@@ -43,6 +43,13 @@
       "when": 1789931214903,
       "tag": "0005_automation_safety_and_variations",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1789931593331,
+      "tag": "0006_automation_quota_and_viral_guard",
+      "breakpoints": true
     }
   ]
 }

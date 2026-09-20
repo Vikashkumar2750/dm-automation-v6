@@ -31,15 +31,18 @@ import {
   createAutomationRule,
   deleteAutomationRule,
   getAutomationSettings,
+  getAutomationUsage,
   listAutomationRules,
   listAutomationRuns,
   listOptOuts,
   removeOptOut,
+  resumeAutomations,
   saveAutomationSettings,
   updateAutomationRule,
   type AutomationRule,
   type AutomationSettings,
 } from "@/lib/automations.functions";
+
 
 export const Route = createFileRoute("/_authenticated/automations")({
   head: () => ({
@@ -618,8 +621,14 @@ function SafetyPanel({ orgId }: { orgId: string | undefined }) {
           quietHoursStart: Number(value.quiet_hours_start) || 0,
           quietHoursEnd: Number(value.quiet_hours_end) || 0,
           timezoneOffsetMinutes: Number(value.timezone_offset_minutes) || 0,
+          hourlySendLimit: Number(value.hourly_send_limit) || 120,
+          dailySendLimit: Number(value.daily_send_limit) || 1000,
+          viralGuardEnabled: value.viral_guard_enabled,
+          viralThresholdPerMinute: Number(value.viral_threshold_per_minute) || 30,
+          viralCooldownMinutes: Number(value.viral_cooldown_minutes) || 15,
         },
       }),
+
     onSuccess: () => {
       toast.success("Safety settings saved");
       void queryClient.invalidateQueries({ queryKey: ["automation-settings", orgId] });
@@ -766,6 +775,83 @@ function SafetyPanel({ orgId }: { orgId: string | undefined }) {
               </div>
             )}
 
+            <div className="grid gap-4 rounded-lg border p-4">
+              <div>
+                <p className="text-sm font-medium">Sending limits</p>
+                <p className="text-xs text-muted-foreground">
+                  Hard caps so a busy day never turns into spam.
+                </p>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid gap-2">
+                  <Label>Max auto-replies / hour</Label>
+                  <Input
+                    type="number"
+                    value={form.hourly_send_limit}
+                    onChange={(e) =>
+                      setForm({ ...form, hourly_send_limit: Number(e.target.value) })
+                    }
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label>Max auto-replies / day</Label>
+                  <Input
+                    type="number"
+                    value={form.daily_send_limit}
+                    onChange={(e) =>
+                      setForm({ ...form, daily_send_limit: Number(e.target.value) })
+                    }
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between rounded-lg border px-4 py-3">
+                <div>
+                  <p className="text-sm font-medium">Viral protection</p>
+                  <p className="text-xs text-muted-foreground">
+                    If a post blows up, automation pauses itself for a while.
+                  </p>
+                </div>
+                <Switch
+                  checked={form.viral_guard_enabled}
+                  onCheckedChange={(checked) =>
+                    setForm({ ...form, viral_guard_enabled: checked })
+                  }
+                />
+              </div>
+
+              {form.viral_guard_enabled && (
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="grid gap-2">
+                    <Label>Spike threshold (events / minute)</Label>
+                    <Input
+                      type="number"
+                      value={form.viral_threshold_per_minute}
+                      onChange={(e) =>
+                        setForm({
+                          ...form,
+                          viral_threshold_per_minute: Number(e.target.value),
+                        })
+                      }
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label>Pause for (minutes)</Label>
+                    <Input
+                      type="number"
+                      value={form.viral_cooldown_minutes}
+                      onChange={(e) =>
+                        setForm({
+                          ...form,
+                          viral_cooldown_minutes: Number(e.target.value),
+                        })
+                      }
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
             <div>
               <Button
                 onClick={() => form && saveMutation.mutate(form)}
@@ -779,7 +865,11 @@ function SafetyPanel({ orgId }: { orgId: string | undefined }) {
         )}
       </Panel>
 
+      <div className="grid gap-5">
+      <UsagePanel orgId={orgId} />
+
       <Panel title="Opted out contacts" bodyClassName="p-0">
+
         {optOuts.length === 0 ? (
           <div className="p-5">
             <EmptyState
@@ -812,6 +902,92 @@ function SafetyPanel({ orgId }: { orgId: string | undefined }) {
           </ul>
         )}
       </Panel>
+      </div>
     </div>
   );
 }
+
+function UsagePanel({ orgId }: { orgId: string | undefined }) {
+  const queryClient = useQueryClient();
+  const fetchUsage = useServerFn(getAutomationUsage);
+  const resumeFn = useServerFn(resumeAutomations);
+
+  const usageQuery = useQuery({
+    queryKey: ["automation-usage", orgId],
+    enabled: Boolean(orgId),
+    refetchInterval: 20000,
+    queryFn: () => fetchUsage({ data: { organizationId: orgId! } }),
+  });
+
+  const resumeMutation = useMutation({
+    mutationFn: () => resumeFn({ data: { organizationId: orgId! } }),
+    onSuccess: () => {
+      toast.success("Automation resumed");
+      void queryClient.invalidateQueries({ queryKey: ["automation-usage", orgId] });
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
+  const usage = usageQuery.data;
+  const paused =
+    usage?.autoPausedUntil && new Date(usage.autoPausedUntil) > new Date()
+      ? usage
+      : null;
+
+  return (
+    <Panel title="Usage today">
+      {!usage ? (
+        <div className="flex items-center justify-center py-8 text-muted-foreground">
+          <Loader2 className="size-5 animate-spin" />
+        </div>
+      ) : (
+        <div className="grid gap-4">
+          {paused && (
+            <div className="rounded-lg border border-destructive/40 bg-destructive/5 p-3">
+              <p className="text-sm font-medium">Automation paused automatically</p>
+              <p className="text-xs text-muted-foreground">
+                {paused.autoPauseReason ?? "Traffic spike"} · resumes{" "}
+                {new Date(paused.autoPausedUntil!).toLocaleTimeString()}
+              </p>
+              <Button
+                size="sm"
+                variant="outline"
+                className="mt-2"
+                onClick={() => resumeMutation.mutate()}
+                disabled={resumeMutation.isPending}
+              >
+                Resume now
+              </Button>
+            </div>
+          )}
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Stat
+              label="Sent this hour"
+              value={`${usage.sentLastHour} / ${usage.hourlyLimit}`}
+            />
+            <Stat
+              label="Sent today"
+              value={`${usage.sentLastDay} / ${usage.dailyLimit}`}
+            />
+            <Stat label="Incoming events / hour" value={String(usage.inboundLastHour)} />
+            <Stat
+              label="Skipped · failed today"
+              value={`${usage.skippedLastDay} · ${usage.failedLastDay}`}
+            />
+          </div>
+        </div>
+      )}
+    </Panel>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg border px-4 py-3">
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className="num mt-1 text-lg font-semibold">{value}</p>
+    </div>
+  );
+}
+
