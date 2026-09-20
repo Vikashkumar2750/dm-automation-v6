@@ -145,6 +145,23 @@ async function ingestIntoInbox(
   if (msgError) return;
 
   await admin.rpc("increment_unread", { p_conversation_id: conversation.id });
+
+  // Automation engine (Phase 8) — evaluate rules for this inbound message.
+  try {
+    const { runAutomations } = await import("@/lib/automation.server");
+    await runAutomations(admin, {
+      organizationId,
+      conversationId: conversation.id,
+      socialAccountId,
+      platform,
+      channel,
+      body,
+      externalUserId,
+      externalId,
+    });
+  } catch (automationError) {
+    console.error("automation run failed", automationError);
+  }
 }
 
 export const Route = createFileRoute("/api/public/webhooks/meta")({
