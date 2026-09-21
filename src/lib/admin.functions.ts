@@ -724,3 +724,67 @@ export const listAuditLog = createServerFn({ method: "GET" })
       created_at: r.created_at,
     }));
   });
+
+export const grantOrganizationPlan = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) =>
+    z
+      .object({
+        organizationId: z.string().uuid(),
+        plan: z.enum(["starter", "pro", "agency"]),
+        months: z.number().int().min(0).max(120),
+        note: z.string().max(200).optional(),
+      })
+      .parse(data),
+  )
+  .handler(async ({ data, context }) => {
+    await assertSuperAdmin(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    let expires: string | null = null;
+    if (data.months > 0) {
+      const d = new Date();
+      d.setMonth(d.getMonth() + data.months);
+      expires = d.toISOString();
+    }
+
+    const { error } = await supabaseAdmin
+      .from("organizations")
+      .update({ plan: data.plan, plan_expires_at: expires, plan_source: "granted" })
+      .eq("id", data.organizationId);
+    if (error) throw new Error(error.message);
+
+    await supabaseAdmin.from("plan_orders").insert({
+      organization_id: data.organizationId,
+      created_by: context.userId,
+      plan: data.plan,
+      billing_cycle: data.months > 0 ? `granted_${data.months}m` : "granted_lifetime",
+      amount_paise: 0,
+      provider: "manual",
+      mode: "grant",
+      status: "paid",
+      paid_at: new Date().toISOString(),
+      error: data.note ?? null,
+    });
+
+    await audit(context, "organization.plan_granted", {
+      type: "organization",
+      id: data.organizationId,
+      detail: { plan: data.plan, months: data.months, note: data.note ?? null },
+    });
+    return { ok: true, plan: data.plan, planExpiresAt: expires };
+  });
+
+export const listPlanOrders = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertSuperAdmin(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data, error } = await supabaseAdmin
+      .from("plan_orders")
+      .select("id, organization_id, plan, billing_cycle, amount_paise, status, mode, created_at, paid_at")
+      .order("created_at", { ascending: false })
+      .limit(50);
+    if (error) throw new Error(error.message);
+    return data ?? [];
+  });
