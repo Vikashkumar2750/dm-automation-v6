@@ -484,6 +484,8 @@ export type Database = {
           owner_id: string
           parent_organization_id: string | null
           plan: string
+          plan_expires_at: string | null
+          plan_source: string
           slug: string
           support_email: string | null
           timezone: string
@@ -499,6 +501,8 @@ export type Database = {
           owner_id: string
           parent_organization_id?: string | null
           plan?: string
+          plan_expires_at?: string | null
+          plan_source?: string
           slug: string
           support_email?: string | null
           timezone?: string
@@ -514,6 +518,8 @@ export type Database = {
           owner_id?: string
           parent_organization_id?: string | null
           plan?: string
+          plan_expires_at?: string | null
+          plan_source?: string
           slug?: string
           support_email?: string | null
           timezone?: string
@@ -523,6 +529,68 @@ export type Database = {
           {
             foreignKeyName: "organizations_parent_organization_id_fkey"
             columns: ["parent_organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      plan_orders: {
+        Row: {
+          amount_paise: number
+          billing_cycle: string
+          created_at: string
+          created_by: string | null
+          currency: string
+          error: string | null
+          id: string
+          mode: string
+          organization_id: string
+          paid_at: string | null
+          plan: string
+          provider: string
+          provider_order_id: string | null
+          provider_payment_id: string | null
+          status: string
+        }
+        Insert: {
+          amount_paise: number
+          billing_cycle: string
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          error?: string | null
+          id?: string
+          mode?: string
+          organization_id: string
+          paid_at?: string | null
+          plan: string
+          provider?: string
+          provider_order_id?: string | null
+          provider_payment_id?: string | null
+          status?: string
+        }
+        Update: {
+          amount_paise?: number
+          billing_cycle?: string
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          error?: string | null
+          id?: string
+          mode?: string
+          organization_id?: string
+          paid_at?: string | null
+          plan?: string
+          provider?: string
+          provider_order_id?: string | null
+          provider_payment_id?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_orders_organization_id_fkey"
+            columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
