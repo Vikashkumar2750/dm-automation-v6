@@ -77,18 +77,8 @@ migration(s)` dikhega.
 
 ## 6. Super admin banayein
 
-**Aasan tareeka (Railway se, bina SQL):**
-
-1. Railway variables me `SUPER_ADMIN_EMAIL` = apna admin email daal dein
-   (e.g. `contact@techaavik.com`) — deploy khud ho jayega.
-2. App me `/auth` par **usi email se sign up** karein aur mail wala confirmation
-   link kholein — yahi aapka admin password banta hai.
-3. Railway me ek baar **Deploy** dobara dabayein — boot par role khud mil jayega.
-4. Login karein — seedha `/admin` console khulega.
-
-**Manually (Supabase SQL Editor se):**
-
-1. App me `/auth` par sign up + email confirm karein.
+1. App khulne par `/auth` par apne admin email se **sign up** karein aur mail me
+   aaya confirmation link kholein.
 2. Supabase → **SQL Editor** me ye chala dein (email apna daalein):
 
 ```sql

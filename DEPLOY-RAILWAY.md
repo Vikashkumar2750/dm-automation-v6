@@ -44,24 +44,9 @@ Feature keys: `META_APP_ID`, `META_APP_SECRET`, `META_WEBHOOK_VERIFY_TOKEN`
 (Instagram/Facebook), `GOOGLE_OAUTH_CLIENT_ID` / `GOOGLE_OAUTH_CLIENT_SECRET`
 (YouTube), `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` (plans; test keys stay in
 demo mode and charge nothing), `LOVABLE_API_KEY` (AI assistant), `CRON_SECRET`
-(scheduled publishing), `SUPER_ADMIN_EMAIL` (super admin bootstrap — see step 5).
+(scheduled publishing).
 
-## 4. Super admin
-
-Password Railway se nahi banti — aap khud banate ho, app ke `/auth` sign-up se:
-
-1. `SUPER_ADMIN_EMAIL` variable me apna admin email daalein
-   (e.g. `contact@techaavik.com`).
-2. App khulne par `/auth` par **usi email se sign up** karein aur mail me aaya
-   confirmation link kholein — yahi aapka "admin password" banta hai.
-3. Railway me **Deploy** dobara dabayein (ya koi variable save karein — Railway
-   khud redeploy kar deta hai). Boot par migration runner us email ko check
-   karke `super_admin` role de deta hai — koi SQL nahi chalani.
-4. Login karein — seedha `/admin` console khulega.
-
-(Manually karne ho to `SUPABASE-SETUP.md` ke step 6 wala SQL bhi chalega.)
-
-## 5. Migrations
+## 4. Migrations
 
 `scripts/migrate.mjs` runs on every boot. It applies each file in
 `drizzle/migrations/` once, in filename order, and records it in
@@ -89,7 +74,7 @@ on conflict do nothing;
 
 To run it by hand: `DATABASE_URL=postgres://... bun run scripts/migrate.mjs`.
 
-## 6. After the first deploy
+## 5. After the first deploy
 
 1. Note the Railway domain, e.g. `https://app.up.railway.app` (or your custom
    domain, `https://contentengineer.techaasvik.in`).
@@ -111,14 +96,14 @@ To run it by hand: `DATABASE_URL=postgres://... bun run scripts/migrate.mjs`.
      https://<domain>/api/public/cron/publish-due
    ```
 
-## 7. Local production check
+## 6. Local production check
 
 ```bash
 NITRO_PRESET=node-server bun run build
 PORT=3000 bun dist/server/index.mjs
 ```
 
-## 8. Known gaps
+## 7. Known gaps
 
 - YouTube: connecting a channel works; uploading videos to YouTube is not
   implemented yet (Instagram and Facebook publishing are).
