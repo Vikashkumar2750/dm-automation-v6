@@ -110,38 +110,53 @@ function SocialAccountsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function handleConnect(platform: SocialPlatform) {
+  function handleConnect(platform: SocialPlatform) {
     if (!orgId) return;
-    setPending(platform);
-    try {
-      const result = await connectFn({
-        data: { organizationId: orgId, platform, origin: window.location.origin },
-      });
-      if ("url" in result && result.url) {
-        // Facebook and Google refuse to load inside an iframe (the editor preview),
-        // so always hand the sign-in over to a real browser tab.
-        const opened = window.open(result.url, "_blank", "noopener,noreferrer");
-        if (!opened) {
-          toast.error("Allow pop-ups for this site, then press Connect again.");
-        } else {
-          toast("Finish the sign-in in the new tab, then come back here.");
-        }
-        return;
-      }
-      if (result.error === "missing_credentials") {
-        toast.error(
-          platform === "youtube"
-            ? "YouTube sign-in isn't set up yet — add your Google credentials first."
-            : "Facebook/Instagram sign-in isn't set up yet — add your Meta credentials first.",
-        );
-      } else {
-        toast.error("You need manager access or higher to connect accounts.");
-      }
-    } catch {
-      toast.error("Could not start the connection");
-    } finally {
-      setPending(null);
+    // Open the popup synchronously inside the click — browsers block
+    // window.open called after an await, and feature-sized windows give us a
+    // real dialog instead of a full tab. Location is assigned once the
+    // signed OAuth URL is ready.
+    const popup = window.open(
+      "about:blank",
+      "social_connect",
+      "popup=yes,width=640,height=760,left=200,top=80",
+    );
+    if (!popup) {
+      toast.error("Allow pop-ups for this site, then press Connect again.");
+      return;
     }
+    popup.document.title = "Connecting…";
+    popup.document.body.style.cssText =
+      "font-family:system-ui;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;color:#555";
+    popup.document.body.textContent = "Taking you to the sign-in page…";
+    setPending(platform);
+    void (async () => {
+      try {
+        const result = await connectFn({
+          data: { organizationId: orgId, platform, origin: window.location.origin },
+        });
+        if ("url" in result && result.url) {
+          popup.location.href = result.url;
+          toast("Finish the sign-in in the popup, then come back here.");
+          return;
+        }
+        popup.close();
+        if (result.error === "missing_credentials") {
+          toast.error(
+            platform === "youtube"
+              ? "YouTube sign-in isn't set up yet — add your Google credentials first."
+              : "Facebook/Instagram sign-in isn't set up yet — add your Meta credentials first.",
+          );
+        } else {
+          toast.error("You need manager access or higher to connect accounts.");
+        }
+      } catch {
+        popup.close();
+        toast.error("Could not start the connection");
+      } finally {
+        setPending(null);
+      }
+    })();
   }
 
   const accounts = accountsQuery.data ?? [];
