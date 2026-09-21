@@ -80,12 +80,10 @@ export const startSocialConnect = createServerFn({ method: "POST" })
     const platform = data.platform as SocialPlatform;
     const provider = platform === "youtube" ? "google" : "meta";
 
-    const clientId =
-      provider === "meta" ? process.env["META_APP_ID"] : process.env["YOUTUBE_CLIENT_ID"];
+    const google = googleCredentials();
+    const clientId = provider === "meta" ? process.env["META_APP_ID"] : google.clientId;
     const clientSecret =
-      provider === "meta"
-        ? process.env["META_APP_SECRET"]
-        : process.env["YOUTUBE_CLIENT_SECRET"];
+      provider === "meta" ? process.env["META_APP_SECRET"] : google.clientSecret;
     if (!clientId || !clientSecret) return { error: "missing_credentials" as const };
 
     const state = crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().replace(/-/g, "");
