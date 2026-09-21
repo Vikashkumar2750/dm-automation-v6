@@ -183,6 +183,22 @@ export const Route = createFileRoute("/")({
                 "Conversation and lead analytics",
               ],
               publisher: { "@type": "Organization", name: "Techaasvik" },
+              offers: [
+                {
+                  "@type": "Offer",
+                  name: "Free",
+                  price: "9",
+                  priceCurrency: "INR",
+                  description: "One-time payment, lifetime access",
+                },
+                {
+                  "@type": "Offer",
+                  name: "Pro",
+                  price: "59",
+                  priceCurrency: "INR",
+                  description: "Per month; ₹299 for 6 months or ₹599 per year",
+                },
+              ],
             },
             {
               "@type": "FAQPage",
