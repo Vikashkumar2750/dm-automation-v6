@@ -54,6 +54,31 @@ try {
     on conflict (id) do nothing
   `.catch((e) => console.warn("[migrate] could not ensure post-media bucket:", e.message));
 
+  // Super admin bootstrap: when SUPER_ADMIN_EMAIL is set and a user with that
+  // email exists, grant them the super_admin platform role. Idempotent, so it
+  // stays in the boot path and picks the user up as soon as they sign up.
+  const adminEmail = (process.env.SUPER_ADMIN_EMAIL ?? "").trim().toLowerCase();
+  if (adminEmail) {
+    try {
+      const granted = await sql`
+        insert into public.platform_roles (user_id, role)
+        select u.id, 'super_admin'::platform_role
+        from auth.users u
+        where lower(u.email) = ${adminEmail}
+        on conflict (user_id, role) do nothing
+        returning user_id
+      `;
+      console.log(
+        granted.length > 0
+          ? `[migrate] super admin role granted to ${adminEmail}`
+          : `[migrate] super admin: ${adminEmail} already has the role (or has not signed up yet)`,
+      );
+    } catch (e) {
+      console.warn("[migrate] could not seed super admin role:", e.message);
+    }
+  }
+
+
   const applied = new Set(
     (await sql`select name from public._app_migrations`).map((r) => r.name),
   );
