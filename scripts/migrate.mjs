@@ -13,14 +13,31 @@ import path from "node:path";
 import postgres from "postgres";
 
 const MIGRATIONS_DIR = path.join(process.cwd(), "drizzle", "migrations");
-const url = process.env.DATABASE_URL ?? process.env.LOVABLE_DB_MIGRATION_URL;
+const rawUrl = (process.env.DATABASE_URL ?? process.env.LOVABLE_DB_MIGRATION_URL ?? "").trim();
+// Strip accidental surrounding quotes (common when pasting into a host UI).
+const url = rawUrl.replace(/^["']|["']$/g, "");
 
 if (!url) {
   console.log("[migrate] DATABASE_URL not set — skipping migrations.");
   process.exit(0);
 }
 
-const sql = postgres(url, { max: 1, onnotice: () => {}, ssl: "prefer" });
+if (!/^postgres(ql)?:\/\/.+/i.test(url)) {
+  console.error(
+    "[migrate] DATABASE_URL is not a valid Postgres connection string " +
+      "(it must start with postgresql:// ). Skipping migrations so the app can still boot.",
+  );
+  process.exit(0);
+}
+
+let sql;
+try {
+  sql = postgres(url, { max: 1, onnotice: () => {}, ssl: "prefer" });
+} catch (error) {
+  console.error("[migrate] could not connect with DATABASE_URL:", error?.message ?? error);
+  process.exit(0);
+}
+
 
 try {
   await sql`
