@@ -17,7 +17,7 @@ export const Route = createFileRoute("/data-deletion")({
       { name: "twitter:card", content: "summary" },
     ],
   }),
-  component: DataDeletion;
+  component: DataDeletion,
 });
 
 function DataDeletion() {
