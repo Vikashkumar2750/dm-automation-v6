@@ -44,9 +44,24 @@ Feature keys: `META_APP_ID`, `META_APP_SECRET`, `META_WEBHOOK_VERIFY_TOKEN`
 (Instagram/Facebook), `GOOGLE_OAUTH_CLIENT_ID` / `GOOGLE_OAUTH_CLIENT_SECRET`
 (YouTube), `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` (plans; test keys stay in
 demo mode and charge nothing), `LOVABLE_API_KEY` (AI assistant), `CRON_SECRET`
-(scheduled publishing).
+(scheduled publishing), `SUPER_ADMIN_EMAIL` (super admin bootstrap — see step 5).
 
-## 4. Migrations
+## 4. Super admin
+
+Password Railway se nahi banti — aap khud banate ho, app ke `/auth` sign-up se:
+
+1. `SUPER_ADMIN_EMAIL` variable me apna admin email daalein
+   (e.g. `contact@techaavik.com`).
+2. App khulne par `/auth` par **usi email se sign up** karein aur mail me aaya
+   confirmation link kholein — yahi aapka "admin password" banta hai.
+3. Railway me **Deploy** dobara dabayein (ya koi variable save karein — Railway
+   khud redeploy kar deta hai). Boot par migration runner us email ko check
+   karke `super_admin` role de deta hai — koi SQL nahi chalani.
+4. Login karein — seedha `/admin` console khulega.
+
+(Manually karne ho to `SUPABASE-SETUP.md` ke step 6 wala SQL bhi chalega.)
+
+## 5. Migrations
 
 `scripts/migrate.mjs` runs on every boot. It applies each file in
 `drizzle/migrations/` once, in filename order, and records it in
