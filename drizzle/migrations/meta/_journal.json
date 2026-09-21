@@ -134,6 +134,13 @@
       "when": 1789999241982,
       "tag": "0018_razorpay_plan_orders",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1789999678040,
+      "tag": "0019_private_security_definer_helpers",
+      "breakpoints": true
     }
   ]
 }
