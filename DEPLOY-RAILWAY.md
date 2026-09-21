@@ -19,6 +19,10 @@ The app uses Supabase for auth (JWT), row-level security, and the private
 `post-media` storage bucket, so keep a Supabase project in the picture. A bare
 Postgres add-on is not enough on its own.
 
+Don't have Supabase credentials yet? Follow **[SUPABASE-SETUP.md](./SUPABASE-SETUP.md)**
+first — it walks through creating a free project and collecting every value
+listed in section 3 below.
+
 ## 2. Create the service
 
 1. Push this repository to GitHub.

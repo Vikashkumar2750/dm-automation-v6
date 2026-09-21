@@ -30,6 +30,13 @@ try {
     )
   `;
 
+  // Private media bucket used by Create Post. Idempotent: safe on every boot.
+  await sql`
+    insert into storage.buckets (id, name, public)
+    values ('post-media', 'post-media', false)
+    on conflict (id) do nothing
+  `.catch((e) => console.warn("[migrate] could not ensure post-media bucket:", e.message));
+
   const applied = new Set(
     (await sql`select name from public._app_migrations`).map((r) => r.name),
   );
