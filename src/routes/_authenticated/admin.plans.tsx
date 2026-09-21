@@ -122,6 +122,85 @@ function PlansPage() {
         </div>
       </Panel>
 
+      <Panel title="Give a plan without payment">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div>
+            <p className="mb-1 text-xs text-muted-foreground">Workspace</p>
+            <Select value={orgId} onValueChange={setOrgId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Choose a workspace" />
+              </SelectTrigger>
+              <SelectContent>
+                {orgs.map((o) => (
+                  <SelectItem key={o.id} value={o.id}>
+                    {o.name} · {o.plan}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <p className="mb-1 text-xs text-muted-foreground">Plan</p>
+            <Select value={plan} onValueChange={(v) => setPlan(v as typeof plan)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="starter">Free</SelectItem>
+                <SelectItem value="pro">Pro</SelectItem>
+                <SelectItem value="agency">Agency</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <p className="mb-1 text-xs text-muted-foreground">Months (0 = no end date)</p>
+            <Input value={months} onChange={(e) => setMonths(e.target.value)} inputMode="numeric" />
+          </div>
+          <div>
+            <p className="mb-1 text-xs text-muted-foreground">Reason (optional)</p>
+            <Input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Partner deal" />
+          </div>
+        </div>
+        <Button className="mt-4" disabled={!orgId || saving} onClick={onGrant}>
+          {saving ? "Saving…" : "Give this plan"}
+        </Button>
+      </Panel>
+
+      <Panel title="Recent payments and grants">
+        <AdminTable
+          rows={orders.data ?? []}
+          minWidth={720}
+          columns={[
+            { header: "Plan", cell: (o) => <span className="capitalize">{o.plan}</span> },
+            {
+              header: "Cycle",
+              cell: (o) => <span>{String(o.billing_cycle).replace(/_/g, " ")}</span>,
+            },
+            { header: "Amount", cell: (o) => <span className="num">{formatPaise(o.amount_paise)}</span> },
+            {
+              header: "Source",
+              cell: (o) => <StatusBadge tone="info">{o.mode}</StatusBadge>,
+            },
+            {
+              header: "Status",
+              cell: (o) => (
+                <StatusBadge tone={o.status === "paid" ? "success" : "warning"}>{o.status}</StatusBadge>
+              ),
+            },
+            {
+              header: "When",
+              cell: (o) => (
+                <span className="num text-xs">
+                  {new Date(o.created_at).toLocaleString("en-IN")}
+                </span>
+              ),
+            },
+          ]}
+        />
+      </Panel>
+
+
+
       <Panel
         title="Workspaces by plan"
         action={
