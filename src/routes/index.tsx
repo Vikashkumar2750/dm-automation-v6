@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { useEffect } from "react";
 
+import metaPartnerBadge from "@/assets/meta-business-partner.png.asset.json";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -112,6 +113,41 @@ const forWho = [
   },
 ];
 
+const plans = [
+  {
+    name: "Free",
+    price: "₹9",
+    cadence: "One-time payment, lifetime access",
+    popular: false,
+    features: [
+      { text: "1× Instagram account", included: true },
+      { text: "1× Facebook page", included: true },
+      { text: "1× YouTube channel", included: true },
+      { text: "AI content analysis", included: true },
+      { text: "DM & comment automation", included: true },
+      { text: "Multi-account publish", included: false },
+      { text: "Priority support", included: false },
+    ],
+    cta: "Start with Free",
+  },
+  {
+    name: "Pro",
+    price: "₹59",
+    cadence: "per month · or ₹299 / 6 months · ₹599 / year",
+    popular: true,
+    features: [
+      { text: "5× Instagram accounts", included: true },
+      { text: "5× Facebook pages", included: true },
+      { text: "5× YouTube channels", included: true },
+      { text: "AI content analysis", included: true },
+      { text: "DM & comment automation", included: true },
+      { text: "Publish to all accounts at once", included: true },
+      { text: "Priority support", included: true },
+    ],
+    cta: "Upgrade to Pro",
+  },
+];
+
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
@@ -147,6 +183,22 @@ export const Route = createFileRoute("/")({
                 "Conversation and lead analytics",
               ],
               publisher: { "@type": "Organization", name: "Techaasvik" },
+              offers: [
+                {
+                  "@type": "Offer",
+                  name: "Free",
+                  price: "9",
+                  priceCurrency: "INR",
+                  description: "One-time payment, lifetime access",
+                },
+                {
+                  "@type": "Offer",
+                  name: "Pro",
+                  price: "59",
+                  priceCurrency: "INR",
+                  description: "Per month; ₹299 for 6 months or ₹599 per year",
+                },
+              ],
             },
             {
               "@type": "FAQPage",
@@ -195,6 +247,9 @@ function LandingPage() {
             </a>
             <a className="hover:text-foreground" href="#safety">
               Safety
+            </a>
+            <a className="hover:text-foreground" href="#pricing">
+              Pricing
             </a>
             <a className="hover:text-foreground" href="#faq">
               FAQ
@@ -251,6 +306,18 @@ function LandingPage() {
                   </li>
                 ))}
               </ul>
+              <div className="mt-8 inline-flex items-center gap-3 rounded-xl border bg-surface px-4 py-3">
+                <img
+                  src={metaPartnerBadge.url}
+                  alt="Meta Business Partner"
+                  className="h-9 w-auto"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Built on the official Meta platform
+                  <br />
+                  as a Meta Business Partner
+                </p>
+              </div>
             </div>
 
             <div className="panel p-5">
@@ -437,6 +504,83 @@ function LandingPage() {
           </div>
         </section>
 
+        {/* Pricing */}
+        <section id="pricing" className="border-b">
+          <div className="mx-auto max-w-6xl px-6 py-16 lg:py-20">
+            <h2 className="text-3xl font-bold tracking-tight">
+              Simple pricing that pays for itself
+            </h2>
+            <p className="mt-3 max-w-2xl text-muted-foreground">
+              Start with a one-time pass, then upgrade when your audience grows. No
+              hidden fees, cancel anytime.
+            </p>
+            <div className="mt-10 grid gap-6 md:grid-cols-2">
+              {plans.map((plan) => (
+                <div
+                  key={plan.name}
+                  className={
+                    plan.popular
+                      ? "panel relative border-primary/40 bg-surface-secondary p-6"
+                      : "panel p-6"
+                  }
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <h3 className="text-lg font-bold">{plan.name}</h3>
+                      {plan.popular && (
+                        <p className="mt-0.5 text-sm font-medium text-primary">
+                          Most popular
+                        </p>
+                      )}
+                    </div>
+                    <div className="text-right">
+                      <p className="num text-3xl font-bold">{plan.price}</p>
+                    </div>
+                  </div>
+                  <p className="mt-2 text-sm text-muted-foreground">{plan.cadence}</p>
+                  <ul className="mt-6 space-y-2.5">
+                    {plan.features.map((f) => (
+                      <li
+                        key={f.text}
+                        className={
+                          f.included
+                            ? "flex items-center gap-2 text-sm"
+                            : "flex items-center gap-2 text-sm text-subtle-foreground line-through"
+                        }
+                      >
+                        {f.included ? (
+                          <CheckCircle2 className="size-4 shrink-0 text-success" />
+                        ) : (
+                          <span className="inline-block size-4 shrink-0 rounded-full border" />
+                        )}
+                        {f.text}
+                      </li>
+                    ))}
+                  </ul>
+                  <Button
+                    asChild
+                    size="lg"
+                    variant={plan.popular ? "default" : "outline"}
+                    className="mt-8 w-full"
+                  >
+                    <Link to="/auth">
+                      {plan.cta}
+                      <ArrowRight className="size-4" />
+                    </Link>
+                  </Button>
+                </div>
+              ))}
+            </div>
+            <p className="mt-6 text-sm text-muted-foreground">
+              Agency or managing many clients?{" "}
+              <Link to="/auth" className="font-medium text-primary">
+                Create a workspace
+              </Link>{" "}
+              and talk to us about multi-client plans.
+            </p>
+          </div>
+        </section>
+
         {/* FAQ */}
         <section id="faq" className="border-b bg-surface">
           <div className="mx-auto max-w-3xl px-6 py-16 lg:py-20">
@@ -482,11 +626,18 @@ function LandingPage() {
       </main>
 
       <footer className="border-t bg-surface">
-        <div className="mx-auto flex max-w-6xl flex-col gap-2 px-6 py-8 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
-          <p>DM FB-IG-YT by Techaasvik</p>
+        <div className="mx-auto flex max-w-6xl flex-col gap-3 px-6 py-8 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3">
+            <img
+              src={metaPartnerBadge.url}
+              alt="Meta Business Partner"
+              className="h-8 w-auto"
+            />
+            <p>DM FB-IG-YT by Techaasvik</p>
+          </div>
           <p className="text-xs">
-            Not affiliated with Meta or Google. Instagram, Facebook and YouTube are
-            trademarks of their respective owners.
+            Instagram and Facebook are trademarks of Meta Platforms, Inc. YouTube is a
+            trademark of Google LLC.
           </p>
         </div>
       </footer>
