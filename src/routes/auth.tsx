@@ -32,7 +32,7 @@ function AuthPage() {
   const navigate = useNavigate();
   const fetchPlatformRole = useServerFn(getMyPlatformRole);
   const redirectingRef = useRef(false);
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const [mode, setMode] = useState<"signin" | "signup" | "forgot">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
@@ -74,7 +74,16 @@ function AuthPage() {
     setError(null);
     setNotice(null);
 
-    if (mode === "signup") {
+    if (mode === "forgot") {
+      const { error: err } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (err) setError(err.message);
+      else
+        setNotice(
+          "If that email has an account, a password reset link is on its way. Check your inbox.",
+        );
+    } else if (mode === "signup") {
       const { data, error: err } = await supabase.auth.signUp({
         email,
         password,
@@ -138,28 +147,39 @@ function AuthPage() {
 
         <div className="panel p-6">
           <h1 className="text-xl font-semibold">
-            {mode === "signin" ? "Sign in to your workspace" : "Create your workspace"}
+            {mode === "signin"
+              ? "Sign in to your workspace"
+              : mode === "signup"
+                ? "Create your workspace"
+                : "Reset your password"}
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {mode === "signin"
               ? "Welcome back. Enter your details to continue."
-              : "Start automating Instagram, Facebook and YouTube."}
+              : mode === "signup"
+                ? "Start automating Instagram, Facebook and YouTube."
+                : "Enter your email and we will send you a reset link."}
           </p>
 
-          <Button
-            type="button"
-            variant="outline"
-            className="mt-5 w-full"
-            onClick={handleGoogle}
-          >
-            Continue with Google
-          </Button>
+          {mode !== "forgot" && (
+            <>
+              <Button
+                type="button"
+                variant="outline"
+                className="mt-5 w-full"
+                onClick={handleGoogle}
+              >
+                Continue with Google
+              </Button>
 
-          <div className="my-5 flex items-center gap-3 text-xs text-subtle-foreground">
-            <span className="h-px flex-1 bg-border" />
-            or
-            <span className="h-px flex-1 bg-border" />
-          </div>
+              <div className="my-5 flex items-center gap-3 text-xs text-subtle-foreground">
+                <span className="h-px flex-1 bg-border" />
+                or
+                <span className="h-px flex-1 bg-border" />
+              </div>
+            </>
+          )}
+
 
           <form onSubmit={handleSubmit} className="space-y-3">
             {mode === "signup" && (
@@ -190,27 +210,50 @@ function AuthPage() {
                 className="mt-1 h-10 w-full rounded-lg border bg-surface-secondary px-3 text-sm outline-none focus:border-ring"
               />
             </div>
-            <div>
-              <label className="text-sm font-medium" htmlFor="password">
-                Password
-              </label>
-              <input
-                id="password"
-                type="password"
-                autoComplete={mode === "signin" ? "current-password" : "new-password"}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                minLength={8}
-                className="mt-1 h-10 w-full rounded-lg border bg-surface-secondary px-3 text-sm outline-none focus:border-ring"
-              />
-            </div>
+            {mode !== "forgot" && (
+              <div>
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium" htmlFor="password">
+                    Password
+                  </label>
+                  {mode === "signin" && (
+                    <button
+                      type="button"
+                      className="text-xs font-medium text-primary"
+                      onClick={() => {
+                        setMode("forgot");
+                        setError(null);
+                        setNotice(null);
+                      }}
+                    >
+                      Forgot password?
+                    </button>
+                  )}
+                </div>
+                <input
+                  id="password"
+                  type="password"
+                  autoComplete={mode === "signin" ? "current-password" : "new-password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  minLength={8}
+                  className="mt-1 h-10 w-full rounded-lg border bg-surface-secondary px-3 text-sm outline-none focus:border-ring"
+                />
+              </div>
+            )}
 
             {error && <p className="text-sm text-danger">{error}</p>}
             {notice && <p className="text-sm text-success">{notice}</p>}
 
             <Button type="submit" className="w-full" disabled={busy}>
-              {busy ? "Please wait..." : mode === "signin" ? "Sign in" : "Create account"}
+              {busy
+                ? "Please wait..."
+                : mode === "signin"
+                  ? "Sign in"
+                  : mode === "signup"
+                    ? "Create account"
+                    : "Send reset link"}
             </Button>
           </form>
 
