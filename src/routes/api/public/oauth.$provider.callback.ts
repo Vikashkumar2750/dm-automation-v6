@@ -234,8 +234,10 @@ async function connectGoogle(args: {
     headers: { "content-type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
       code,
-      client_id: process.env["YOUTUBE_CLIENT_ID"]!,
-      client_secret: process.env["YOUTUBE_CLIENT_SECRET"]!,
+      client_id: (process.env["GOOGLE_OAUTH_CLIENT_ID"] ??
+        process.env["YOUTUBE_CLIENT_ID"])!,
+      client_secret: (process.env["GOOGLE_OAUTH_CLIENT_SECRET"] ??
+        process.env["YOUTUBE_CLIENT_SECRET"])!,
       redirect_uri: redirectUri,
       grant_type: "authorization_code",
     }),

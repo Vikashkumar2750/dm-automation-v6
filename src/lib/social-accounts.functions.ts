@@ -21,15 +21,25 @@ export const listSocialAccounts = createServerFn({ method: "GET" })
     return (rows ?? []) as SocialAccountRow[];
   });
 
+/** Google OAuth credentials, accepting either secret naming convention. */
+export function googleCredentials() {
+  return {
+    clientId: process.env["GOOGLE_OAUTH_CLIENT_ID"] ?? process.env["YOUTUBE_CLIENT_ID"],
+    clientSecret:
+      process.env["GOOGLE_OAUTH_CLIENT_SECRET"] ?? process.env["YOUTUBE_CLIENT_SECRET"],
+  };
+}
+
 /** Which providers have credentials configured on the server. */
 export const getProviderReadiness = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async () => ({
-    meta: Boolean(process.env["META_APP_ID"] && process.env["META_APP_SECRET"]),
-    google: Boolean(
-      process.env["YOUTUBE_CLIENT_ID"] && process.env["YOUTUBE_CLIENT_SECRET"],
-    ),
-  }));
+  .handler(async () => {
+    const google = googleCredentials();
+    return {
+      meta: Boolean(process.env["META_APP_ID"] && process.env["META_APP_SECRET"]),
+      google: Boolean(google.clientId && google.clientSecret),
+    };
+  });
 
 export const disconnectSocialAccount = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -70,12 +80,10 @@ export const startSocialConnect = createServerFn({ method: "POST" })
     const platform = data.platform as SocialPlatform;
     const provider = platform === "youtube" ? "google" : "meta";
 
-    const clientId =
-      provider === "meta" ? process.env["META_APP_ID"] : process.env["YOUTUBE_CLIENT_ID"];
+    const google = googleCredentials();
+    const clientId = provider === "meta" ? process.env["META_APP_ID"] : google.clientId;
     const clientSecret =
-      provider === "meta"
-        ? process.env["META_APP_SECRET"]
-        : process.env["YOUTUBE_CLIENT_SECRET"];
+      provider === "meta" ? process.env["META_APP_SECRET"] : google.clientSecret;
     if (!clientId || !clientSecret) return { error: "missing_credentials" as const };
 
     const state = crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().replace(/-/g, "");
