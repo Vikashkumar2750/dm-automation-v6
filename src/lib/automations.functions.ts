@@ -336,8 +336,8 @@ export const getAutomationUsage = createServerFn({ method: "GET" })
       skippedLastDay: skipped.count ?? 0,
       failedLastDay: failed.count ?? 0,
       inboundLastHour: inbound.count ?? 0,
-      hourlyLimit: settings.data?.hourly_send_limit ?? 120,
-      dailyLimit: settings.data?.daily_send_limit ?? 1000,
+      hourlyLimit: settings.data?.hourly_send_limit ?? 60,
+      dailyLimit: settings.data?.daily_send_limit ?? 500,
       autoPausedUntil: settings.data?.auto_paused_until ?? null,
       autoPauseReason: settings.data?.auto_pause_reason ?? null,
     } satisfies AutomationUsage;
