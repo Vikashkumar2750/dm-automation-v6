@@ -96,6 +96,21 @@ function AuthPage() {
 
   async function handleGoogle() {
     setError(null);
+
+    // The Lovable broker only works on Lovable-hosted domains. On any other
+    // host (e.g. Railway / custom domain) go straight to Supabase OAuth,
+    // otherwise the callback comes back with "OAuth state parameter missing".
+    const isLovableHost = /(^|\.)lovable\.(app|dev)$/.test(window.location.hostname);
+
+    if (!isLovableHost) {
+      const { error: err } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo: `${window.location.origin}/auth` },
+      });
+      if (err) setError("Google sign-in failed. Please try again.");
+      return;
+    }
+
     const result = await lovable.auth.signInWithOAuth("google", {
       redirect_uri: window.location.origin,
     });
@@ -106,6 +121,7 @@ function AuthPage() {
     if (result.redirected) return;
     await navigateAfterSignIn();
   }
+
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4 py-10">
