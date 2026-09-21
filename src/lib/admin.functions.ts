@@ -139,8 +139,7 @@ export type AuditRow = {
 type Ctx = { supabase: any; userId: string; claims?: any };
 
 async function assertSuperAdmin(context: Ctx) {
-  const { data, error } = await context.supabase.rpc("has_platform_role", {
-    _user_id: context.userId,
+  const { data, error } = await context.supabase.rpc("current_user_has_platform_role", {
     _role: "super_admin",
   });
   if (error) throw new Error(error.message);
@@ -149,8 +148,7 @@ async function assertSuperAdmin(context: Ctx) {
 }
 
 async function isSuperAdmin(context: Ctx) {
-  const { data, error } = await context.supabase.rpc("has_platform_role", {
-    _user_id: context.userId,
+  const { data, error } = await context.supabase.rpc("current_user_has_platform_role", {
     _role: "super_admin",
   });
   if (error) throw new Error(error.message);

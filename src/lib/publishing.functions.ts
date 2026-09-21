@@ -31,11 +31,10 @@ const SELECT =
 async function assertWriter(
   supabase: import("@supabase/supabase-js").SupabaseClient,
   organizationId: string,
-  userId: string,
+  _userId: string,
 ) {
-  const { data: allowed } = await supabase.rpc("has_org_role", {
+  const { data: allowed } = await supabase.rpc("current_user_has_org_role", {
     _org_id: organizationId,
-    _user_id: userId,
     _roles: [...WRITE_ROLES],
   });
   if (!allowed) throw new Error("not_allowed");
@@ -208,9 +207,8 @@ export const runDuePosts = createServerFn({ method: "POST" })
     z.object({ organizationId: z.string().uuid() }).parse(input),
   )
   .handler(async ({ data, context }) => {
-    const { data: member } = await context.supabase.rpc("is_org_member", {
+    const { data: member } = await context.supabase.rpc("current_user_is_org_member", {
       _org_id: data.organizationId,
-      _user_id: context.userId,
     });
     if (!member) throw new Error("not_allowed");
 

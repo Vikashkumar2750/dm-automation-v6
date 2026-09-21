@@ -954,30 +954,25 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      has_org_role: {
+      current_user_has_org_role: {
         Args: {
           _org_id: string
           _roles: Database["public"]["Enums"]["org_role"][]
-          _user_id: string
         }
         Returns: boolean
       }
-      has_platform_role: {
-        Args: {
-          _role: Database["public"]["Enums"]["platform_role"]
-          _user_id: string
-        }
+      current_user_has_platform_role: {
+        Args: { _role: Database["public"]["Enums"]["platform_role"] }
+        Returns: boolean
+      }
+      current_user_is_org_member: {
+        Args: { _org_id: string }
         Returns: boolean
       }
       increment_unread: {
         Args: { p_conversation_id: string }
         Returns: undefined
       }
-      is_org_member: {
-        Args: { _org_id: string; _user_id: string }
-        Returns: boolean
-      }
-      shares_org: { Args: { _a: string; _b: string }; Returns: boolean }
     }
     Enums: {
       automation_action:
