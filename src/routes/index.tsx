@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { useEffect } from "react";
 
+import metaPartnerBadge from "@/assets/meta-business-partner.png.asset.json";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -109,6 +110,41 @@ const forWho = [
     icon: Bot,
     title: "Agencies",
     body: "Run every client from separate workspaces with clean role-based access.",
+  },
+];
+
+const plans = [
+  {
+    name: "Free",
+    price: "₹9",
+    cadence: "One-time payment, lifetime access",
+    popular: false,
+    features: [
+      { text: "1× Instagram account", included: true },
+      { text: "1× Facebook page", included: true },
+      { text: "1× YouTube channel", included: true },
+      { text: "AI content analysis", included: true },
+      { text: "DM & comment automation", included: true },
+      { text: "Multi-account publish", included: false },
+      { text: "Priority support", included: false },
+    ],
+    cta: "Start with Free",
+  },
+  {
+    name: "Pro",
+    price: "₹59",
+    cadence: "per month · or ₹299 / 6 months · ₹599 / year",
+    popular: true,
+    features: [
+      { text: "5× Instagram accounts", included: true },
+      { text: "5× Facebook pages", included: true },
+      { text: "5× YouTube channels", included: true },
+      { text: "AI content analysis", included: true },
+      { text: "DM & comment automation", included: true },
+      { text: "Publish to all accounts at once", included: true },
+      { text: "Priority support", included: true },
+    ],
+    cta: "Upgrade to Pro",
   },
 ];
 
