@@ -139,9 +139,8 @@ export const sendReply = createServerFn({ method: "POST" })
     if (convError || !conversation) throw new Error("Conversation not found");
 
     // Only agents and above may send replies.
-    const { data: allowed } = await context.supabase.rpc("has_org_role", {
+    const { data: allowed } = await context.supabase.rpc("current_user_has_org_role", {
       _org_id: conversation.organization_id,
-      _user_id: context.userId,
       _roles: [...WRITE_ROLES],
     });
     if (!allowed) throw new Error("not_allowed");
@@ -252,9 +251,8 @@ export const replyToComment = createServerFn({ method: "POST" })
       .single();
     if (convError || !conversation) throw new Error("Conversation not found");
 
-    const { data: allowed } = await context.supabase.rpc("has_org_role", {
+    const { data: allowed } = await context.supabase.rpc("current_user_has_org_role", {
       _org_id: conversation.organization_id,
-      _user_id: context.userId,
       _roles: [...WRITE_ROLES],
     });
     if (!allowed) throw new Error("not_allowed");
@@ -367,9 +365,8 @@ export const setCommentHidden = createServerFn({ method: "POST" })
     if (error || !conversation) throw new Error("Conversation not found");
     if (conversation.channel !== "comment") throw new Error("not_a_comment");
 
-    const { data: allowed } = await context.supabase.rpc("has_org_role", {
+    const { data: allowed } = await context.supabase.rpc("current_user_has_org_role", {
       _org_id: conversation.organization_id,
-      _user_id: context.userId,
       _roles: [...WRITE_ROLES],
     });
     if (!allowed) throw new Error("not_allowed");

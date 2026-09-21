@@ -207,9 +207,8 @@ export const runDuePosts = createServerFn({ method: "POST" })
     z.object({ organizationId: z.string().uuid() }).parse(input),
   )
   .handler(async ({ data, context }) => {
-    const { data: member } = await context.supabase.rpc("is_org_member", {
+    const { data: member } = await context.supabase.rpc("current_user_is_org_member", {
       _org_id: data.organizationId,
-      _user_id: context.userId,
     });
     if (!member) throw new Error("not_allowed");
 
