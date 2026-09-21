@@ -635,10 +635,23 @@ function LandingPage() {
             />
             <p>DM FB-IG-YT by Techaasvik</p>
           </div>
-          <p className="text-xs">
-            Instagram and Facebook are trademarks of Meta Platforms, Inc. YouTube is a
-            trademark of Google LLC.
-          </p>
+          <div className="text-xs">
+            <div className="flex flex-wrap gap-4">
+              <Link to="/privacy" className="hover:text-foreground">
+                Privacy Policy
+              </Link>
+              <Link to="/terms" className="hover:text-foreground">
+                Terms of Service
+              </Link>
+              <Link to="/data-deletion" className="hover:text-foreground">
+                Data Deletion
+              </Link>
+            </div>
+            <p className="mt-3">
+              Instagram and Facebook are trademarks of Meta Platforms, Inc. YouTube is a
+              trademark of Google LLC.
+            </p>
+          </div>
         </div>
       </footer>
     </div>
