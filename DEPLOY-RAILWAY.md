@@ -34,7 +34,7 @@ Minimum to boot: `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`,
 `DATABASE_URL`.
 
 Feature keys: `META_APP_ID`, `META_APP_SECRET`, `META_WEBHOOK_VERIFY_TOKEN`
-(Instagram/Facebook), `YOUTUBE_CLIENT_ID` / `YOUTUBE_CLIENT_SECRET` (YouTube),
+(Instagram/Facebook), `GOOGLE_OAUTH_CLIENT_ID` / `GOOGLE_OAUTH_CLIENT_SECRET` (YouTube),
 `LOVABLE_API_KEY` (AI assistant), `CRON_SECRET` (scheduled publishing).
 
 ## 4. Migrations
