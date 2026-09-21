@@ -8,7 +8,6 @@ import { lovable } from "@/integrations/lovable/index";
 import { getMyPlatformRole } from "@/lib/admin.functions";
 
 export const Route = createFileRoute("/auth")({
-  ssr: false,
   head: () => ({
     meta: [
       { title: "Sign in — DM FB-IG-YT by Techaasvik" },
