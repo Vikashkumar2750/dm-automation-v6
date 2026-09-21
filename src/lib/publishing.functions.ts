@@ -31,11 +31,10 @@ const SELECT =
 async function assertWriter(
   supabase: import("@supabase/supabase-js").SupabaseClient,
   organizationId: string,
-  userId: string,
+  _userId: string,
 ) {
-  const { data: allowed } = await supabase.rpc("has_org_role", {
+  const { data: allowed } = await supabase.rpc("current_user_has_org_role", {
     _org_id: organizationId,
-    _user_id: userId,
     _roles: [...WRITE_ROLES],
   });
   if (!allowed) throw new Error("not_allowed");
