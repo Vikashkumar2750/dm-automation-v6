@@ -74,7 +74,16 @@ function AuthPage() {
     setError(null);
     setNotice(null);
 
-    if (mode === "signup") {
+    if (mode === "forgot") {
+      const { error: err } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (err) setError(err.message);
+      else
+        setNotice(
+          "If that email has an account, a password reset link is on its way. Check your inbox.",
+        );
+    } else if (mode === "signup") {
       const { data, error: err } = await supabase.auth.signUp({
         email,
         password,
@@ -138,28 +147,39 @@ function AuthPage() {
 
         <div className="panel p-6">
           <h1 className="text-xl font-semibold">
-            {mode === "signin" ? "Sign in to your workspace" : "Create your workspace"}
+            {mode === "signin"
+              ? "Sign in to your workspace"
+              : mode === "signup"
+                ? "Create your workspace"
+                : "Reset your password"}
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {mode === "signin"
               ? "Welcome back. Enter your details to continue."
-              : "Start automating Instagram, Facebook and YouTube."}
+              : mode === "signup"
+                ? "Start automating Instagram, Facebook and YouTube."
+                : "Enter your email and we will send you a reset link."}
           </p>
 
-          <Button
-            type="button"
-            variant="outline"
-            className="mt-5 w-full"
-            onClick={handleGoogle}
-          >
-            Continue with Google
-          </Button>
+          {mode !== "forgot" && (
+            <>
+              <Button
+                type="button"
+                variant="outline"
+                className="mt-5 w-full"
+                onClick={handleGoogle}
+              >
+                Continue with Google
+              </Button>
 
-          <div className="my-5 flex items-center gap-3 text-xs text-subtle-foreground">
-            <span className="h-px flex-1 bg-border" />
-            or
-            <span className="h-px flex-1 bg-border" />
-          </div>
+              <div className="my-5 flex items-center gap-3 text-xs text-subtle-foreground">
+                <span className="h-px flex-1 bg-border" />
+                or
+                <span className="h-px flex-1 bg-border" />
+              </div>
+            </>
+          )}
+
 
           <form onSubmit={handleSubmit} className="space-y-3">
             {mode === "signup" && (

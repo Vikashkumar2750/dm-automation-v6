@@ -14,6 +14,7 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as DataDeletionRouteImport } from './routes/data-deletion'
 import { Route as PrivacyRouteImport } from './routes/privacy'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as AuthenticatedAccountHealthRouteImport } from './routes/_authenticated/account-health'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
@@ -71,6 +72,11 @@ const DataDeletionRoute = DataDeletionRouteImport.update({
 const PrivacyRoute = PrivacyRouteImport.update({
   id: '/privacy',
   path: '/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TermsRoute = TermsRouteImport.update({
@@ -263,6 +269,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/data-deletion': typeof DataDeletionRoute
   '/privacy': typeof PrivacyRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/terms': typeof TermsRoute
   '/account-health': typeof AuthenticatedAccountHealthRoute
   '/admin': typeof AuthenticatedAdminRouteWithChildren
@@ -303,6 +310,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/data-deletion': typeof DataDeletionRoute
   '/privacy': typeof PrivacyRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/terms': typeof TermsRoute
   '/account-health': typeof AuthenticatedAccountHealthRoute
   '/ai-assistant': typeof AuthenticatedAiAssistantRoute
@@ -344,6 +352,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/data-deletion': typeof DataDeletionRoute
   '/privacy': typeof PrivacyRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/terms': typeof TermsRoute
   '/_authenticated/account-health': typeof AuthenticatedAccountHealthRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
@@ -386,6 +395,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/data-deletion'
     | '/privacy'
+    | '/reset-password'
     | '/terms'
     | '/account-health'
     | '/admin'
@@ -426,6 +436,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/data-deletion'
     | '/privacy'
+    | '/reset-password'
     | '/terms'
     | '/account-health'
     | '/ai-assistant'
@@ -466,6 +477,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/data-deletion'
     | '/privacy'
+    | '/reset-password'
     | '/terms'
     | '/_authenticated/account-health'
     | '/_authenticated/admin'
@@ -508,6 +520,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   DataDeletionRoute: typeof DataDeletionRoute
   PrivacyRoute: typeof PrivacyRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
   TermsRoute: typeof TermsRoute
   ApiPublicCronPublishDueRoute: typeof ApiPublicCronPublishDueRoute
   ApiPublicWebhooksMetaRoute: typeof ApiPublicWebhooksMetaRoute
@@ -549,6 +562,13 @@ declare module '@tanstack/react-router' {
       path: '/privacy'
       fullPath: '/privacy'
       preLoaderRoute: typeof PrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/terms': {
@@ -876,6 +896,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   DataDeletionRoute: DataDeletionRoute,
   PrivacyRoute: PrivacyRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
   TermsRoute: TermsRoute,
   ApiPublicCronPublishDueRoute: ApiPublicCronPublishDueRoute,
   ApiPublicWebhooksMetaRoute: ApiPublicWebhooksMetaRoute,
