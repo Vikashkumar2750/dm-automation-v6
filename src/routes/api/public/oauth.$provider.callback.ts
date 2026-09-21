@@ -15,12 +15,25 @@ function backTo(origin: string, path: string, params: Record<string, string>) {
   return new Response(null, { status: 302, headers: { location: url.toString() } });
 }
 
+function publicOrigin(request: Request) {
+  const requestUrl = new URL(request.url);
+  const forwardedHost = request.headers.get("x-forwarded-host")?.split(",")[0]?.trim();
+  const forwardedProto = request.headers.get("x-forwarded-proto")?.split(",")[0]?.trim();
+  if (!forwardedHost) return requestUrl.origin;
+
+  const protocol = forwardedProto === "http" ? "http" : "https";
+  return `${protocol}://${forwardedHost}`;
+}
+
 export const Route = createFileRoute("/api/public/oauth/$provider/callback")({
   server: {
     handlers: {
       GET: async ({ request, params }) => {
         const url = new URL(request.url);
-        const origin = url.origin;
+        // Railway terminates HTTPS before forwarding the request. Rebuild the
+        // browser-facing origin so Meta receives the same redirect_uri during
+        // authorization and code exchange.
+        const origin = publicOrigin(request);
         const provider = params.provider;
         const code = url.searchParams.get("code");
         const state = url.searchParams.get("state");
