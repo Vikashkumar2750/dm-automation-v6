@@ -177,6 +177,10 @@ grant execute on function public.increment_unread(uuid) to service_role;
   let count = 0;
   for (const file of files) {
     if (applied.has(file)) continue;
+    if (file.startsWith("0004_")) {
+      console.log("[migrate] ensuring inbox core (conversations, messages)");
+      await sql.unsafe(INBOX_BOOTSTRAP);
+    }
     const body = await readFile(path.join(MIGRATIONS_DIR, file), "utf8");
     if (!body.trim()) continue;
     console.log(`[migrate] applying ${file}`);
