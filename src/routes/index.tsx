@@ -232,6 +232,9 @@ function LandingPage() {
             <a className="hover:text-foreground" href="#safety">
               Safety
             </a>
+            <a className="hover:text-foreground" href="#pricing">
+              Pricing
+            </a>
             <a className="hover:text-foreground" href="#faq">
               FAQ
             </a>
@@ -287,6 +290,18 @@ function LandingPage() {
                   </li>
                 ))}
               </ul>
+              <div className="mt-8 inline-flex items-center gap-3 rounded-xl border bg-surface px-4 py-3">
+                <img
+                  src={metaPartnerBadge.url}
+                  alt="Meta Business Partner"
+                  className="h-9 w-auto"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Built on the official Meta platform
+                  <br />
+                  as a Meta Business Partner
+                </p>
+              </div>
             </div>
 
             <div className="panel p-5">
