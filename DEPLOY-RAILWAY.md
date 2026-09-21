@@ -89,7 +89,7 @@ on conflict do nothing;
 
 To run it by hand: `DATABASE_URL=postgres://... bun run scripts/migrate.mjs`.
 
-## 5. After the first deploy
+## 6. After the first deploy
 
 1. Note the Railway domain, e.g. `https://app.up.railway.app` (or your custom
    domain, `https://contentengineer.techaasvik.in`).
@@ -111,14 +111,14 @@ To run it by hand: `DATABASE_URL=postgres://... bun run scripts/migrate.mjs`.
      https://<domain>/api/public/cron/publish-due
    ```
 
-## 6. Local production check
+## 7. Local production check
 
 ```bash
 NITRO_PRESET=node-server bun run build
 PORT=3000 bun dist/server/index.mjs
 ```
 
-## 7. Known gaps
+## 8. Known gaps
 
 - YouTube: connecting a channel works; uploading videos to YouTube is not
   implemented yet (Instagram and Facebook publishing are).
