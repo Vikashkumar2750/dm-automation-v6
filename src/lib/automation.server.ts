@@ -835,12 +835,17 @@ export async function handleFollowGateReply(
       .maybeSingle(),
     admin
       .from("social_accounts")
-      .select("external_id")
+      .select("external_id, metadata")
       .eq("id", args.socialAccountId)
       .maybeSingle(),
   ]);
   const token = tokenRow?.access_token as string | undefined;
   if (!token || !account?.external_id) return true;
+  const sendId = messagingAccountId(
+    args.platform,
+    account.external_id as string,
+    account.metadata,
+  );
 
   const follows = await checkFollows(args.platform, args.externalUserId, token);
   const attempts = (gate.attempts ?? 0) + 1;
