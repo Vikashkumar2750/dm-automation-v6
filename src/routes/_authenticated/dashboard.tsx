@@ -13,6 +13,7 @@ import {
   Sparkles,
   TrendingUp,
   UserCheck,
+  Zap,
 } from "lucide-react";
 import {
   Area,
@@ -37,7 +38,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { useTenant } from "@/hooks/useTenant";
 import { getAnalytics } from "@/lib/analytics.functions";
-import { getAutomationUsage } from "@/lib/automations.functions";
+import { getAutomationUsage, listOrgActivityFeed } from "@/lib/automations.functions";
 import { listConversations } from "@/lib/inbox.functions";
 import { listPosts } from "@/lib/publishing.functions";
 import { listSocialAccounts } from "@/lib/social-accounts.functions";
@@ -109,6 +110,14 @@ function Dashboard() {
     enabled: !!orgId,
     queryFn: () => fetchUsage({ data: { organizationId: orgId! } }),
   });
+  const fetchActivity = useServerFn(listOrgActivityFeed);
+  const activity = useQuery({
+    queryKey: ["org-activity", orgId],
+    enabled: !!orgId,
+    refetchInterval: 30_000,
+    queryFn: () => fetchActivity({ data: { organizationId: orgId! } }),
+  });
+  const activityItems = activity.data ?? [];
 
   const a = analytics.data;
   const accountRows = accounts.data ?? [];
@@ -306,6 +315,40 @@ function Dashboard() {
                 </Link>
               </Button>
             </div>
+          </Panel>
+
+          <Panel
+            title="Live automation activity"
+            action={
+              <Link to="/automations" className="inline-flex items-center gap-1 text-sm font-medium text-primary">
+                Automations <ArrowRight className="size-4" />
+              </Link>
+            }
+          >
+            {activityItems.length === 0 ? (
+              <EmptyState
+                icon={Zap}
+                title="No activity yet"
+                description="Every comment, DM, auto-reply, skip and failure shows up here in real time."
+              />
+            ) : (
+              <ul className="space-y-3">
+                {activityItems.slice(0, 10).map((item) => (
+                  <li key={item.id} className="flex items-start gap-3">
+                    <StatusBadge tone={item.tone}>{item.kind === "run" ? "rule" : "event"}</StatusBadge>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium leading-snug">{item.title}</p>
+                      {item.hint && (
+                        <p className="text-xs text-muted-foreground">{item.hint}</p>
+                      )}
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(item.at).toLocaleString()}
+                      </p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
           </Panel>
         </div>
       </div>

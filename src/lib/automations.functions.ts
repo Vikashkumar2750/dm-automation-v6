@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { explainReason, webhookEventLabel } from "@/lib/activity-explain";
 
 export type AutomationRule = {
   id: string;
@@ -219,6 +220,90 @@ export const listAutomationRuns = createServerFn({ method: "GET" })
       .limit(40);
     if (error) throw new Error(error.message);
     return (rows ?? []) as AutomationRun[];
+  });
+
+// ---------------------------------------------------------- activity feed
+
+export type ActivityFeedItem = {
+  id: string;
+  kind: "run" | "webhook";
+  tone: "success" | "info" | "warning" | "danger" | "neutral";
+  title: string;
+  detail: string | null;
+  hint: string;
+  at: string;
+};
+
+/**
+ * Org-scoped live activity: every automation fire/skip/fail plus the raw
+ * comment/DM events Meta delivers, in one timeline. RLS restricts both
+ * tables to members of the workspace.
+ */
+export const listOrgActivityFeed = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) =>
+    z.object({ organizationId: z.string().uuid() }).parse(data),
+  )
+  .handler(async ({ data, context }): Promise<ActivityFeedItem[]> => {
+    const [runs, hooks, rules] = await Promise.all([
+      context.supabase
+        .from("automation_runs")
+        .select("id, rule_id, status, detail, created_at")
+        .eq("organization_id", data.organizationId)
+        .order("created_at", { ascending: false })
+        .limit(25),
+      context.supabase
+        .from("webhook_events")
+        .select("id, platform, event_type, status, error, received_at")
+        .eq("organization_id", data.organizationId)
+        .order("received_at", { ascending: false })
+        .limit(25),
+      context.supabase
+        .from("automation_rules")
+        .select("id, name")
+        .eq("organization_id", data.organizationId),
+    ]);
+    if (runs.error) throw new Error(runs.error.message);
+    if (hooks.error) throw new Error(hooks.error.message);
+
+    const ruleName = new Map((rules.data ?? []).map((r) => [r.id, r.name]));
+    const items: ActivityFeedItem[] = [];
+
+    for (const r of runs.data ?? []) {
+      const { title, hint } = explainReason(r.detail);
+      const rule = r.rule_id ? (ruleName.get(r.rule_id) ?? "Automation") : null;
+      const sent = r.status === "sent" || r.status === "matched";
+      items.push({
+        id: `run-${r.id}`,
+        kind: "run",
+        tone: r.status === "failed" ? "danger" : r.status === "skipped" ? "warning" : "success",
+        title: sent
+          ? `${rule ?? "Automation"}: reply sent`
+          : rule
+            ? `${title} — ${rule}`
+            : title,
+        detail: r.detail,
+        hint: sent ? "" : hint,
+        at: r.created_at,
+      });
+    }
+
+    for (const h of hooks.data ?? []) {
+      const label = webhookEventLabel(h.event_type, h.platform);
+      const failed = h.status === "failed";
+      items.push({
+        id: `hook-${h.id}`,
+        kind: "webhook",
+        tone: failed ? "danger" : h.status === "ignored" ? "neutral" : "info",
+        title: failed ? `${label} — processing failed` : label,
+        detail: h.error,
+        hint: failed ? "This event could not be processed — reconnect the account if it repeats." : "",
+        at: h.received_at,
+      });
+    }
+
+    items.sort((a, b) => (a.at < b.at ? 1 : -1));
+    return items.slice(0, 30);
   });
 
 // ---------------------------------------------------------------- safety

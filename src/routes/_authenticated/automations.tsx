@@ -27,6 +27,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useTenant } from "@/hooks/useTenant";
+import { explainReason } from "@/lib/activity-explain";
 import {
   createAutomationRule,
   deleteAutomationRule,
@@ -494,18 +495,26 @@ function AutomationsPage() {
             </div>
           ) : (
             <ul className="divide-y">
-              {runs.map((run) => (
-                <li key={run.id} className="flex items-start gap-3 px-5 py-3">
-                  <StatusBadge tone={runTone[run.status]}>{run.status}</StatusBadge>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium">{ruleName(run.rule_id)}</p>
-                    <p className="truncate text-xs text-muted-foreground">
-                      {run.detail ?? "—"} ·{" "}
-                      {new Date(run.created_at).toLocaleString()}
-                    </p>
-                  </div>
-                </li>
-              ))}
+              {runs.map((run) => {
+                const sent = run.status === "sent" || run.status === "matched";
+                const explained = sent ? null : explainReason(run.detail);
+                return (
+                  <li key={run.id} className="flex items-start gap-3 px-5 py-3">
+                    <StatusBadge tone={runTone[run.status]}>{run.status}</StatusBadge>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium">
+                        {sent ? `${ruleName(run.rule_id)}: reply sent` : `${explained!.title} — ${ruleName(run.rule_id)}`}
+                      </p>
+                      {explained?.hint && (
+                        <p className="truncate text-xs text-muted-foreground">{explained.hint}</p>
+                      )}
+                      <p className="truncate text-xs text-muted-foreground">
+                        {run.detail ?? "—"} · {new Date(run.created_at).toLocaleString()}
+                      </p>
+                    </div>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </Panel>
