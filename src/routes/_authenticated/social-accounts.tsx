@@ -73,6 +73,23 @@ function SocialAccountsPage() {
     queryFn: () => fetchEvents({ data: { organizationId: orgId! } }),
   });
 
+  const checkDelivery = useServerFn(checkWebhookDelivery);
+  const fixNotifications = useMutation({
+    mutationFn: () => checkDelivery({ data: { organizationId: orgId!, repair: true } }),
+    onSuccess: (rows) => {
+      const bad = rows.filter((r) => !r.subscribed);
+      if (rows.length === 0) toast("Connect an Instagram or Facebook account first");
+      else if (bad.length === 0)
+        toast.success("Notifications are on — comments and DMs will now trigger rules");
+      else
+        toast.error(
+          `Still off for ${bad.map((r) => r.name).join(", ")}${bad[0]?.error ? `: ${bad[0].error}` : ""}`,
+        );
+      accountsQuery.refetch();
+    },
+    onError: () => toast.error("Could not check notifications"),
+  });
+
   const webhookConfigQuery = useQuery({
     queryKey: ["webhook-config"],
     queryFn: () => fetchWebhookConfig(),
