@@ -357,6 +357,10 @@ function AutomationsPage() {
     ? ["reply_dm", "comment_public_reply", "comment_private_reply"].includes(draft.action)
     : false;
 
+  const needsDm = draft
+    ? ["reply_dm", "comment_private_reply"].includes(draft.action)
+    : false;
+
   return (
     <AppShell>
       <PageHeader
