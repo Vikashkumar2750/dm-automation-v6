@@ -75,7 +75,7 @@ object and the **Instagram** object. A green callback verification alone does
 not mean either object is subscribed. After deploying this version, open
 Social Accounts and press **Check & repair Meta**. It verifies the Page fields
 (`feed`, `messages`, `messaging_postbacks`) and Instagram fields (`comments`,
-`messages`, `messaging_postbacks`) separately, and reports any missing field.
+`messages`) separately, and reports any missing field.
 
 **Access Token Debugger check**
 - Inspect the user token created by Connect and confirm the App ID is this app.
@@ -112,6 +112,35 @@ do the full run with your own test Page and IG Business account:
 6. **Create Post** → publish one Instagram photo and one Facebook photo now,
    and schedule one for later → check the Calendar and confirm it goes live.
 7. Note the login email/password of the test workspace — the reviewer needs it.
+
+### If a new comment produces no activity
+
+Check in this order; stop at the first failed step:
+
+1. **Deploy the latest code.** The live Social Accounts page must show
+   **Check & repair Meta** beside Refresh.
+2. **Verify callback:** Meta Webhooks must show the callback as verified for
+   both the Page and Instagram objects.
+3. **Verify subscriptions:** press **Check & repair Meta**. It must return a
+   green confirmation. A missing field usually means the login did not grant
+   the matching permission; disconnect the account, remove the app from the
+   Facebook user's Business Integrations, then connect again and grant all.
+4. **Watch Live event feed:** add a brand-new comment from a second account.
+   If no event appears, the problem is Meta delivery/subscription, before the
+   automation engine. If an event appears but no automation activity appears,
+   check the rule's platform, trigger, keywords, selected post and active state.
+5. **Use a valid test identity:** while the app is in Development mode, the
+   Facebook user who connected the business and the testing user/assets must
+   be permitted by the app's roles/test setup. External customers require
+   Advanced Access and Live mode.
+6. **Check safety controls:** automation pause, quiet hours, cooldown, daily
+   limits, contact opt-out and selected-post matching can deliberately skip a
+   reply. Recent activity shows the skip reason once a webhook was received.
+
+Expected event names in Live event feed:
+- Instagram post comment: `instagram.comments`
+- Facebook Page post comment: `page.feed`
+- Instagram/Facebook DM: `instagram.message` or `page.message`
 
 ---
 

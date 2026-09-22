@@ -13,7 +13,7 @@ const GRAPH = "https://graph.facebook.com/v21.0";
 export const PAGE_SUBSCRIBED_FIELDS = ["feed", "messages", "messaging_postbacks"];
 
 /** Instagram professional-account fields are a separate subscription. */
-export const INSTAGRAM_SUBSCRIBED_FIELDS = ["comments", "messages", "messaging_postbacks"];
+export const INSTAGRAM_SUBSCRIBED_FIELDS = ["comments", "messages"];
 
 export type SubscribeResult = { ok: boolean; error?: string };
 
