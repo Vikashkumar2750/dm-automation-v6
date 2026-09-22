@@ -448,6 +448,41 @@ export type TargetablePost = {
   publishedAt: string | null;
 };
 
+export type RemotePostItem = {
+  id: string;
+  externalPostId: string;
+  platform: "instagram" | "facebook";
+  accountName: string;
+  caption: string;
+  mediaUrl: string | null;
+  permalink: string | null;
+  publishedAt: string | null;
+};
+
+/** Recent posts pulled live from the connected Instagram / Facebook accounts. */
+export const listRecentRemotePosts = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) =>
+    z.object({ organizationId: z.string().uuid() }).parse(data),
+  )
+  .handler(async ({ data, context }) => {
+    // RLS check: the caller must be able to see this org's accounts.
+    const { data: visible, error } = await context.supabase
+      .from("social_accounts")
+      .select("id")
+      .eq("organization_id", data.organizationId)
+      .limit(1);
+    if (error) throw new Error(error.message);
+    if (!visible || visible.length === 0) {
+      return { posts: [] as RemotePostItem[], warnings: [] as string[] };
+    }
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { fetchRemotePosts } = await import("@/lib/remote-posts.server");
+    const result = await fetchRemotePosts(supabaseAdmin, data.organizationId, 20);
+    return { posts: result.posts as RemotePostItem[], warnings: result.warnings };
+  });
+
 /** Published posts that can be used to scope an automation to one post. */
 export const listTargetablePosts = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
