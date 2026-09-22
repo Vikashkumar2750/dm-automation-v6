@@ -162,7 +162,23 @@ async function ingestIntoInbox(
 
   // Automation engine (Phase 8) — evaluate rules for this inbound message.
   try {
-    const { runAutomations } = await import("@/lib/automation.server");
+    const { runAutomations, handleFollowGateReply } = await import(
+      "@/lib/automation.server"
+    );
+
+    // "I followed" tap — verify the follow and release the held DM.
+    if (followPayload) {
+      const handled = await handleFollowGateReply(admin, {
+        organizationId,
+        conversationId: conversation.id,
+        socialAccountId,
+        platform,
+        externalUserId,
+        payload: followPayload,
+      });
+      if (handled) return;
+    }
+
     await runAutomations(admin, {
       organizationId,
       conversationId: conversation.id,
@@ -172,6 +188,7 @@ async function ingestIntoInbox(
       body,
       externalUserId,
       externalId,
+      postExternalId,
     });
   } catch (automationError) {
     console.error("automation run failed", automationError);
