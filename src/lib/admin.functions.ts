@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { explainReason } from "@/lib/activity-explain";
 
 export type AdminOrgRow = {
   id: string;
@@ -806,34 +807,6 @@ export type AlertsFeed = {
   topReasons: { reason: string; count: number }[];
   items: AlertItem[];
 };
-
-/** Human wording for the raw reason codes the automation engine records. */
-function explainReason(detail: string | null): { title: string; hint: string } {
-  const code = (detail ?? "").toLowerCase();
-  const map: [string, string, string][] = [
-    ["no_token", "Account credentials missing", "Reconnect the social account from Social Accounts."],
-    ["window_expired", "24-hour reply window closed", "Meta blocks DMs after 24h of silence — nothing to fix."],
-    ["no_comment_id", "Comment reference missing", "The comment was deleted before the reply was sent."],
-    ["no_account", "No social account linked", "Connect an account for this workspace."],
-    ["comment_reply", "Public comment reply rejected", "Usually a permission or deleted-comment issue."],
-    ["follow_prompt", "Follow request message rejected", "Instagram refused the prompt format or the 24h window closed."],
-    ["attachment", "Attachment could not be delivered", "Check the attachment URL is public and the right type."],
-    ["not_a_follower", "Skipped: contact does not follow", "Rule is set to followers only."],
-    ["already_a_follower", "Skipped: contact already follows", "Rule targets non-followers only."],
-    ["paused", "Skipped: automation paused", "Automation is paused for this workspace."],
-    ["quiet_hours", "Skipped: quiet hours", "Outside the workspace's sending hours."],
-    ["daily_limit", "Skipped: daily limit reached", "Raise the rule's daily cap if this is unexpected."],
-    ["cooldown", "Skipped: cooldown active", "The same contact was messaged very recently."],
-    ["opt_out", "Skipped: contact opted out", "Contact asked to stop receiving messages."],
-    ["blocked_keyword", "Skipped: blocked word", "Message matched a blocked keyword."],
-    ["no_response_text", "Rule has no message written", "Open the rule and add the reply text."],
-    ["unknown_action", "Rule action not supported", "Edit the rule and pick a valid action."],
-  ];
-  for (const [key, title, hint] of map) {
-    if (code.startsWith(key) || code.includes(key)) return { title, hint };
-  }
-  return { title: "Automation could not complete", hint: "Open the rule's recent activity for details." };
-}
 
 export const listAutomationAlerts = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
