@@ -622,6 +622,35 @@ function AutomationsPage() {
                     )}
                   </SelectContent>
                 </Select>
+                {draft.trigger === "comment_received" &&
+                  draft.action === "comment_public_reply" && (
+                    <p className="text-xs text-muted-foreground">
+                      This posts a public reply only. To also send a DM with a link,
+                      button or attachment, choose “{actionLabel.comment_private_reply}”.
+                    </p>
+                  )}
+                {draft.trigger === "comment_received" &&
+                  draft.action === "comment_private_reply" && (
+                    <div className="rounded-lg border bg-muted/40 p-3 text-xs text-muted-foreground">
+                      <p className="font-medium text-foreground">What happens</p>
+                      <ol className="mt-1 list-decimal space-y-0.5 pl-4">
+                        <li>Comment arrives on a selected post and matches your keywords.</li>
+                        <li>A public reply is posted under the comment.</li>
+                        <li>
+                          Follower status is checked (Instagram). Followers get the DM with
+                          your link or attachment right away.
+                        </li>
+                        <li>
+                          Non-followers get a “Follow us” + “I followed ✅” message; tapping it
+                          re-checks the follow.
+                        </li>
+                        <li>
+                          Once the follow is confirmed, the DM with the link is sent
+                          automatically (up to 3 checks).
+                        </li>
+                      </ol>
+                    </div>
+                  )}
               </div>
 
               <PostPicker
