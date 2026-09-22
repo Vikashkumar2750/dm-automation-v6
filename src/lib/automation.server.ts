@@ -843,7 +843,7 @@ export async function handleFollowGateReply(
   if (!token || !account?.external_id) return true;
   const sendId = messagingAccountId(
     args.platform,
-    account.external_id as string,
+    sendId,
     account.metadata,
   );
 
@@ -856,7 +856,7 @@ export async function handleFollowGateReply(
       .update({ attempts, last_checked_at: new Date().toISOString() })
       .eq("id", gate.id);
     const retry = (typedRule.follow_prompt_text ?? "").trim() || DEFAULT_FOLLOW_PROMPT;
-    await callMessaging(args.platform, account.external_id as string, {
+    await callMessaging(args.platform, sendId, {
       recipient: { id: args.externalUserId },
       message: {
         text: `We can't see the follow yet. ${retry}`,
@@ -896,7 +896,7 @@ export async function handleFollowGateReply(
     ctx,
     { ...typedRule, action: "reply_dm" },
     token,
-    account.external_id as string,
+    sendId,
     text,
   );
   return true;
