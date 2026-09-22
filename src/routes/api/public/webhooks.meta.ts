@@ -52,7 +52,13 @@ type MessagingEvent = {
   sender?: { id?: string };
   recipient?: { id?: string };
   timestamp?: number;
-  message?: { mid?: string; text?: string; is_echo?: boolean };
+  message?: {
+    mid?: string;
+    text?: string;
+    is_echo?: boolean;
+    quick_reply?: { payload?: string };
+  };
+  postback?: { payload?: string; title?: string; mid?: string };
 };
 
 type CommentValue = {
@@ -61,6 +67,10 @@ type CommentValue = {
   id?: string;
   text?: string;
   message?: string;
+  post_id?: string;
+  parent_id?: string;
+  media?: { id?: string };
+  post?: { id?: string };
   from?: { id?: string; username?: string; name?: string };
 };
 
