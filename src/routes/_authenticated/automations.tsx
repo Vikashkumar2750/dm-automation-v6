@@ -239,6 +239,16 @@ function toDraft(rule: AutomationRule): Draft {
     setStatus: rule.set_status ?? "pending",
     cooldownSeconds: rule.cooldown_seconds,
     dailyLimit: rule.daily_limit,
+    targetPostIds: rule.target_post_ids ?? [],
+    commentReplyText: rule.comment_reply_text ?? "",
+    commentReplyVariations: (rule.comment_reply_variations ?? []).join("\n"),
+    dmLinkUrl: rule.dm_link_url ?? "",
+    dmButtonLabel: rule.dm_button_label ?? "",
+    dmAttachmentUrl: rule.dm_attachment_url ?? "",
+    dmAttachmentType: rule.dm_attachment_type ?? "none",
+    followerCondition: rule.follower_condition ?? "any",
+    requireFollow: rule.require_follow ?? false,
+    followPromptText: rule.follow_prompt_text ?? "",
   };
 }
 
