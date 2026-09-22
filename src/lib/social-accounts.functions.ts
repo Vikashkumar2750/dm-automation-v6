@@ -143,9 +143,14 @@ export const checkWebhookDelivery = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { subscribePageWebhooks, readPageSubscription } = await import(
-      "@/lib/meta-webhooks.server"
-    );
+    const {
+      INSTAGRAM_SUBSCRIBED_FIELDS,
+      PAGE_SUBSCRIBED_FIELDS,
+      readInstagramSubscription,
+      readPageSubscription,
+      subscribeInstagramWebhooks,
+      subscribePageWebhooks,
+    } = await import("@/lib/meta-webhooks.server");
 
     const results: Array<{
       id: string;
@@ -153,6 +158,7 @@ export const checkWebhookDelivery = createServerFn({ method: "POST" })
       platform: string;
       subscribed: boolean;
       fields: string[];
+      missingFields: string[];
       error?: string;
     }> = [];
 
@@ -174,29 +180,56 @@ export const checkWebhookDelivery = createServerFn({ method: "POST" })
           platform: account.platform,
           subscribed: false,
           fields: [],
+          missingFields:
+            account.platform === "instagram"
+              ? [...PAGE_SUBSCRIBED_FIELDS, ...INSTAGRAM_SUBSCRIBED_FIELDS]
+              : [...PAGE_SUBSCRIBED_FIELDS],
           error: "No stored token — reconnect this account.",
         });
         continue;
       }
 
-      let read = await readPageSubscription(pageId, tokenRow.access_token);
-      if (data.repair && read.fields.length === 0) {
+      let pageRead = await readPageSubscription(pageId, tokenRow.access_token);
+      let instagramRead =
+        account.platform === "instagram"
+          ? await readInstagramSubscription(account.external_id, tokenRow.access_token)
+          : { fields: [] as string[] };
+      const missingPage = PAGE_SUBSCRIBED_FIELDS.filter((field) => !pageRead.fields.includes(field));
+      const missingInstagram =
+        account.platform === "instagram"
+          ? INSTAGRAM_SUBSCRIBED_FIELDS.filter(
+              (field) => !instagramRead.fields.includes(field),
+            )
+          : [];
+
+      const repairErrors: string[] = [];
+      if (data.repair && missingPage.length > 0) {
         const sub = await subscribePageWebhooks(pageId, tokenRow.access_token);
-        if (!sub.ok) {
-          results.push({
-            id: account.id,
-            name: account.name,
-            platform: account.platform,
-            subscribed: false,
-            fields: [],
-            error: sub.error ?? "Subscribe failed",
-          });
-          continue;
-        }
-        read = await readPageSubscription(pageId, tokenRow.access_token);
+        if (!sub.ok) repairErrors.push(`Page: ${sub.error ?? "subscribe failed"}`);
+        pageRead = await readPageSubscription(pageId, tokenRow.access_token);
+      }
+      if (data.repair && account.platform === "instagram" && missingInstagram.length > 0) {
+        const sub = await subscribeInstagramWebhooks(
+          account.external_id,
+          tokenRow.access_token,
+        );
+        if (!sub.ok) repairErrors.push(`Instagram: ${sub.error ?? "subscribe failed"}`);
+        instagramRead = await readInstagramSubscription(
+          account.external_id,
+          tokenRow.access_token,
+        );
       }
 
-      const subscribed = read.fields.length > 0;
+      const fields = [...new Set([...pageRead.fields, ...instagramRead.fields])];
+      const missingFields = [
+        ...PAGE_SUBSCRIBED_FIELDS.filter((field) => !pageRead.fields.includes(field)),
+        ...(account.platform === "instagram"
+          ? INSTAGRAM_SUBSCRIBED_FIELDS.filter(
+              (field) => !instagramRead.fields.includes(field),
+            )
+          : []),
+      ];
+      const subscribed = missingFields.length === 0;
       await supabaseAdmin
         .from("social_accounts")
         .update({ metadata: { ...meta, page_id: pageId, webhook_subscribed: subscribed } })
@@ -207,8 +240,15 @@ export const checkWebhookDelivery = createServerFn({ method: "POST" })
         name: account.name,
         platform: account.platform,
         subscribed,
-        fields: read.fields,
-        ...(read.error ? { error: read.error } : {}),
+        fields,
+        missingFields,
+        ...(repairErrors.length > 0
+          ? { error: repairErrors.join("; ") }
+          : pageRead.error
+            ? { error: pageRead.error }
+            : instagramRead.error
+              ? { error: instagramRead.error }
+              : {}),
       });
     }
 

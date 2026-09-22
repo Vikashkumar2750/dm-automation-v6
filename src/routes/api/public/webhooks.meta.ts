@@ -192,6 +192,7 @@ async function ingestIntoInbox(
     });
   } catch (automationError) {
     console.error("automation run failed", automationError);
+    throw automationError;
   }
 }
 
@@ -244,11 +245,12 @@ export const Route = createFileRoute("/api/public/webhooks/meta")({
           // Resolve which workspace this account belongs to (page id or IG user id).
           let organizationId: string | null = null;
           let socialAccountId: string | null = null;
-          if (externalId) {
+          if (externalId && platform) {
             const { data: account } = await supabaseAdmin
               .from("social_accounts")
               .select("id, organization_id")
               .eq("external_id", externalId)
+              .eq("platform", platform)
               .maybeSingle();
             organizationId = account?.organization_id ?? null;
             socialAccountId = account?.id ?? null;
@@ -271,24 +273,28 @@ export const Route = createFileRoute("/api/public/webhooks/meta")({
 
           for (const [index, item] of items.entries()) {
             const dedupeKey = `meta:${externalId ?? "unknown"}:${entry.time ?? 0}:${item.type}:${index}`;
-            const { error } = await supabaseAdmin.from("webhook_events").insert({
-              provider: "meta",
-              platform,
-              organization_id: organizationId,
-              social_account_id: socialAccountId,
-              external_account_id: externalId,
-              event_type: item.type,
-              dedupe_key: dedupeKey,
-              payload: item.value as never,
-              signature_valid: true,
-              status: organizationId ? "received" : "ignored",
-              ...(organizationId ? {} : { error: "No connected account matched this id" }),
-            });
+            const { data: webhookEvent, error } = await supabaseAdmin
+              .from("webhook_events")
+              .insert({
+                provider: "meta",
+                platform,
+                organization_id: organizationId,
+                social_account_id: socialAccountId,
+                external_account_id: externalId,
+                event_type: item.type,
+                dedupe_key: dedupeKey,
+                payload: item.value as never,
+                signature_valid: true,
+                status: organizationId ? "received" : "ignored",
+                ...(organizationId ? {} : { error: "No connected account matched this id" }),
+              })
+              .select("id")
+              .maybeSingle();
             // Duplicate delivery (Meta retries) — safe to skip.
             if (error && error.code !== "23505") console.error("webhook insert failed", error);
 
             // Mirror into the inbox (conversations/messages).
-            if (organizationId && platform && (!error || error.code === "23505")) {
+            if (organizationId && platform && webhookEvent?.id) {
               try {
                 await ingestIntoInbox(supabaseAdmin, {
                   organizationId,
@@ -298,8 +304,22 @@ export const Route = createFileRoute("/api/public/webhooks/meta")({
                   type: item.type,
                   value: item.value,
                 });
+                await supabaseAdmin
+                  .from("webhook_events")
+                  .update({ status: "processed", error: null })
+                  .eq("id", webhookEvent.id);
               } catch (ingestError) {
                 console.error("inbox ingest failed", ingestError);
+                await supabaseAdmin
+                  .from("webhook_events")
+                  .update({
+                    status: "failed",
+                    error:
+                      ingestError instanceof Error
+                        ? ingestError.message.slice(0, 500)
+                        : "Inbox or automation processing failed",
+                  })
+                  .eq("id", webhookEvent.id);
               }
             }
           }

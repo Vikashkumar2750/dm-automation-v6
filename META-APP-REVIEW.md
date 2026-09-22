@@ -4,8 +4,7 @@ Everything you need to take the Meta app from Development mode to Live:
 exact permissions, app settings, the dev-mode test run, the screen recordings,
 and ready answers for the review form.
 
-App domain used below: `https://contentengineer.techaasvik.in`
-(preview host works for testing too).
+Production domain used below: `https://dm-automation.up.railway.app`.
 
 ---
 
@@ -53,24 +52,39 @@ no data on people who did not message the business.
 
 **Settings → Basic**
 - App name, contact email, category: Business
-- Privacy Policy URL: `https://contentengineer.techaasvik.in/privacy`
-- Terms of Service URL: `https://contentengineer.techaasvik.in/terms`
-- Data Deletion Instructions URL: `https://contentengineer.techaasvik.in/data-deletion`
-- App icon (1024×1024), App domains: `contentengineer.techaasvik.in`
+- Privacy Policy URL: `https://dm-automation.up.railway.app/privacy`
+- Terms of Service URL: `https://dm-automation.up.railway.app/terms`
+- Data Deletion Instructions URL: `https://dm-automation.up.railway.app/data-deletion`
+- App icon (1024×1024), App domains: `dm-automation.up.railway.app`
 - Business account: link the verified Business
 
 **Facebook Login for Business → Settings**
 - Client OAuth Login: ON, Web OAuth Login: ON
 - Enforce HTTPS: ON
 - Valid OAuth Redirect URIs:
-  `https://contentengineer.techaasvik.in/api/public/oauth/meta/callback`
-  (add the preview URL too while testing)
+  `https://dm-automation.up.railway.app/api/public/oauth/meta/callback`
 
 **Webhooks (on each use case)**
-- Callback URL: `https://contentengineer.techaasvik.in/api/public/webhooks/meta`
+- Callback URL: `https://dm-automation.up.railway.app/api/public/webhooks/meta`
 - Verify token: the value in `META_WEBHOOK_VERIFY_TOKEN`
 - Page fields: `messages`, `messaging_postbacks`, `feed`
 - Instagram fields: `messages`, `comments`, `live_comments`
+
+**Important: subscribe both objects.** In Webhooks, configure the **Page**
+object and the **Instagram** object. A green callback verification alone does
+not mean either object is subscribed. After deploying this version, open
+Social Accounts and press **Check & repair Meta**. It verifies the Page fields
+(`feed`, `messages`, `messaging_postbacks`) and Instagram fields (`comments`,
+`messages`) separately, and reports any missing field.
+
+**Access Token Debugger check**
+- Inspect the user token created by Connect and confirm the App ID is this app.
+- Confirm these granted scopes are present: `pages_show_list`,
+  `pages_manage_metadata`, `pages_read_engagement`, `pages_manage_engagement`,
+  `pages_messaging`, `instagram_basic`, `instagram_manage_comments`, and
+  `instagram_manage_messages`.
+- If any are absent, remove the app from the Facebook user's Business
+  Integrations, reconnect in this platform, and grant every requested item.
 
 **Roles → Add people**
 - Add the reviewer-facing test account as **Administrator** or **Tester**
@@ -98,6 +112,35 @@ do the full run with your own test Page and IG Business account:
 6. **Create Post** → publish one Instagram photo and one Facebook photo now,
    and schedule one for later → check the Calendar and confirm it goes live.
 7. Note the login email/password of the test workspace — the reviewer needs it.
+
+### If a new comment produces no activity
+
+Check in this order; stop at the first failed step:
+
+1. **Deploy the latest code.** The live Social Accounts page must show
+   **Check & repair Meta** beside Refresh.
+2. **Verify callback:** Meta Webhooks must show the callback as verified for
+   both the Page and Instagram objects.
+3. **Verify subscriptions:** press **Check & repair Meta**. It must return a
+   green confirmation. A missing field usually means the login did not grant
+   the matching permission; disconnect the account, remove the app from the
+   Facebook user's Business Integrations, then connect again and grant all.
+4. **Watch Live event feed:** add a brand-new comment from a second account.
+   If no event appears, the problem is Meta delivery/subscription, before the
+   automation engine. If an event appears but no automation activity appears,
+   check the rule's platform, trigger, keywords, selected post and active state.
+5. **Use a valid test identity:** while the app is in Development mode, the
+   Facebook user who connected the business and the testing user/assets must
+   be permitted by the app's roles/test setup. External customers require
+   Advanced Access and Live mode.
+6. **Check safety controls:** automation pause, quiet hours, cooldown, daily
+   limits, contact opt-out and selected-post matching can deliberately skip a
+   reply. Recent activity shows the skip reason once a webhook was received.
+
+Expected event names in Live event feed:
+- Instagram post comment: `instagram.comments`
+- Facebook Page post comment: `page.feed`
+- Instagram/Facebook DM: `instagram.message` or `page.message`
 
 ---
 
@@ -134,7 +177,7 @@ working only inside their own workspace. Only people the business invites can
 see that business's messages."
 
 **Step-by-step for the reviewer (paste into the instructions box):**
-1. Go to `https://contentengineer.techaasvik.in/auth` and sign in with the
+1. Go to `https://dm-automation.up.railway.app/auth` and sign in with the
    test credentials supplied below.
 2. Open **Social Accounts** and click **Connect Instagram** (or Facebook).
    Complete Facebook Login and select the test Page/Instagram account.
