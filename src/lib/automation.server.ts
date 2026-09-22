@@ -388,7 +388,7 @@ export async function runAutomations(admin: AdminClient, ctx: AutomationContext)
         .maybeSingle(),
       admin
         .from("social_accounts")
-        .select("external_id")
+        .select("external_id, metadata")
         .eq("id", ctx.socialAccountId)
         .maybeSingle(),
     ]);
@@ -397,7 +397,11 @@ export async function runAutomations(admin: AdminClient, ctx: AutomationContext)
       await log(admin, ctx, rule.id, "failed", "no_token");
       return;
     }
-    const accountId = account.external_id as string;
+    const accountId = messagingAccountId(
+      ctx.platform,
+      account.external_id as string,
+      account.metadata,
+    );
 
     if (rule.action === "hide_comment") {
       if (!ctx.externalId) {
@@ -831,12 +835,17 @@ export async function handleFollowGateReply(
       .maybeSingle(),
     admin
       .from("social_accounts")
-      .select("external_id")
+      .select("external_id, metadata")
       .eq("id", args.socialAccountId)
       .maybeSingle(),
   ]);
   const token = tokenRow?.access_token as string | undefined;
   if (!token || !account?.external_id) return true;
+  const sendId = messagingAccountId(
+    args.platform,
+    account.external_id as string,
+    account.metadata,
+  );
 
   const follows = await checkFollows(args.platform, args.externalUserId, token);
   const attempts = (gate.attempts ?? 0) + 1;
@@ -847,7 +856,7 @@ export async function handleFollowGateReply(
       .update({ attempts, last_checked_at: new Date().toISOString() })
       .eq("id", gate.id);
     const retry = (typedRule.follow_prompt_text ?? "").trim() || DEFAULT_FOLLOW_PROMPT;
-    await callMessaging(args.platform, account.external_id as string, {
+    await callMessaging(args.platform, sendId, {
       recipient: { id: args.externalUserId },
       message: {
         text: `We can't see the follow yet. ${retry}`,
@@ -887,7 +896,7 @@ export async function handleFollowGateReply(
     ctx,
     { ...typedRule, action: "reply_dm" },
     token,
-    account.external_id as string,
+    sendId,
     text,
   );
   return true;
@@ -914,21 +923,37 @@ async function call(url: string, payload: Record<string, unknown>) {
 }
 
 /**
- * Facebook Login uses graph.facebook.com, while Instagram Business Login uses
- * graph.instagram.com. Retry only capability error #3 on the alternate host;
- * all other provider errors are returned unchanged.
+ * Instagram messaging through Facebook Login for Business is sent on the linked
+ * Facebook Page id, not the IG user id — the IG id returns capability error #3.
+ */
+export function messagingAccountId(
+  platform: AutomationContext["platform"],
+  externalId: string,
+  metadata: unknown,
+): string {
+  if (platform !== "instagram") return externalId;
+  const pageId = (metadata as { page_id?: string } | null)?.page_id;
+  return typeof pageId === "string" && pageId ? pageId : externalId;
+}
+
+/**
+ * Sends a message, walking the host/id shapes Meta accepts: the Page id on
+ * graph.facebook.com, the page-scoped "me" alias, and finally
+ * graph.instagram.com for Instagram Business Login apps. Only capability error
+ * #3 advances to the next shape; every other provider error is returned as is.
  */
 async function callMessaging(
   platform: AutomationContext["platform"],
   accountId: string,
   payload: Record<string, unknown>,
 ) {
-  const first = await call(`${GRAPH}/${accountId}/messages`, payload);
-  if (platform !== "instagram" || first.errorCode !== 3) return first;
-  const retry = await call(`${IG_GRAPH}/${accountId}/messages`, payload);
-  if (!retry.error) return retry;
-  return {
-    error: `${first.error} | Instagram endpoint: ${retry.error}`,
-    errorCode: retry.errorCode,
-  };
+  const urls = [`${GRAPH}/${accountId}/messages`, `${GRAPH}/me/messages`];
+  if (platform === "instagram") urls.push(`${IG_GRAPH}/${accountId}/messages`);
+
+  let last = await call(urls[0]!, payload);
+  for (const url of urls.slice(1)) {
+    if (!last.error || last.errorCode !== 3) return last;
+    last = await call(url, payload);
+  }
+  return last;
 }
