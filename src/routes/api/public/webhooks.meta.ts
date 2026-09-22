@@ -160,7 +160,7 @@ async function ingestIntoInbox(
 
   if (!body) return;
 
-  const { data: conversation } = await admin
+  const { data: conversation, error: conversationError } = await admin
     .from("conversations")
     .upsert(
       {
@@ -179,7 +179,9 @@ async function ingestIntoInbox(
     .select("id")
     .single();
 
-  if (!conversation) return;
+  if (conversationError || !conversation) {
+    throw new Error(`conversation_upsert:${conversationError?.message ?? "no row returned"}`);
+  }
 
   const { error: msgError } = await admin.from("messages").insert({
     conversation_id: conversation.id,
@@ -190,7 +192,9 @@ async function ingestIntoInbox(
     sent_at: sentAt.toISOString(),
   });
   // Duplicate external_id — already ingested.
-  if (msgError && msgError.code !== "23505") return;
+  if (msgError && msgError.code !== "23505") {
+    throw new Error(`message_insert:${msgError.message}`);
+  }
   if (msgError) return;
 
   await admin.rpc("increment_unread", { p_conversation_id: conversation.id });
