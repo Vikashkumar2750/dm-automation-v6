@@ -19,6 +19,8 @@ export type AutomationContext = {
   externalUserId: string;
   /** Comment id for comment channel, message id for DMs. */
   externalId: string | null;
+  /** Post/media id the comment belongs to (comment channel only). */
+  postExternalId?: string | null;
 };
 
 type Rule = {
@@ -34,7 +36,20 @@ type Rule = {
   set_status: string | null;
   cooldown_seconds: number;
   daily_limit: number;
+  target_post_ids: string[] | null;
+  comment_reply_text: string | null;
+  comment_reply_variations: string[] | null;
+  dm_link_url: string | null;
+  dm_button_label: string | null;
+  dm_attachment_url: string | null;
+  dm_attachment_type: string;
+  follower_condition: string;
+  require_follow: boolean;
+  follow_prompt_text: string | null;
 };
+
+const RULE_SELECT =
+  "id, name, platform, trigger, match_type, keywords, action, response_text, response_variations, set_status, cooldown_seconds, daily_limit, target_post_ids, comment_reply_text, comment_reply_variations, dm_link_url, dm_button_label, dm_attachment_url, dm_attachment_type, follower_condition, require_follow, follow_prompt_text";
 
 type Settings = {
   is_paused: boolean;
