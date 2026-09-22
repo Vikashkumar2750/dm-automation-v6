@@ -1440,11 +1440,22 @@ function PostPicker({
               : `${selected.length} post${selected.length > 1 ? "s" : ""} selected.`}
           </p>
         </div>
-        {selected.length > 0 && (
-          <Button type="button" variant="ghost" size="sm" onClick={() => onChange([])}>
-            Use all posts
+        <div className="flex items-center gap-1">
+          {selected.length > 0 && (
+            <Button type="button" variant="ghost" size="sm" onClick={() => onChange([])}>
+              Use all posts
+            </Button>
+          )}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={remoteQuery.isFetching}
+            onClick={() => void remoteQuery.refetch()}
+          >
+            {remoteQuery.isFetching ? "Refreshing…" : "Refresh"}
           </Button>
-        )}
+        </div>
       </div>
 
       {trigger === "dm_received" && (
@@ -1455,12 +1466,18 @@ function PostPicker({
         </p>
       )}
 
-      {postsQuery.isLoading ? (
-        <p className="text-sm text-muted-foreground">Loading posts…</p>
+      {warnings.length > 0 && (
+        <p className="rounded-md bg-muted/50 p-2 text-xs text-muted-foreground">
+          {warnings.join(" · ")}
+        </p>
+      )}
+
+      {postsQuery.isLoading || remoteQuery.isLoading ? (
+        <p className="text-sm text-muted-foreground">Loading your latest posts…</p>
       ) : posts.length === 0 ? (
         <p className="text-sm text-muted-foreground">
-          No posts published from this app yet. Paste a post link below to target a post
-          you published directly on Instagram or Facebook.
+          No posts found. Connect an Instagram or Facebook account, or add a post link
+          manually below.
         </p>
       ) : (
         <div className="grid max-h-64 gap-2 overflow-y-auto pr-1">
