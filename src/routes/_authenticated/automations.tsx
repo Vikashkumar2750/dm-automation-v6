@@ -588,13 +588,12 @@ function AutomationsPage() {
                 </Select>
               </div>
 
-              {draft.trigger === "comment_received" && (
-                <PostPicker
-                  orgId={orgId}
-                  selected={draft.targetPostIds}
-                  onChange={(ids) => setDraft({ ...draft, targetPostIds: ids })}
-                />
-              )}
+              <PostPicker
+                orgId={orgId}
+                trigger={draft.trigger}
+                selected={draft.targetPostIds}
+                onChange={(ids) => setDraft({ ...draft, targetPostIds: ids })}
+              />
 
               {draft.trigger === "comment_received" && (
                 <div className="grid gap-2">
