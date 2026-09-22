@@ -583,6 +583,76 @@ function AutomationsPage() {
                 </Select>
               </div>
 
+              {draft.trigger === "comment_received" && (
+                <PostPicker
+                  orgId={orgId}
+                  selected={draft.targetPostIds}
+                  onChange={(ids) => setDraft({ ...draft, targetPostIds: ids })}
+                />
+              )}
+
+              {draft.trigger === "comment_received" && (
+                <div className="grid gap-2">
+                  <Label>Public reply under the comment (optional)</Label>
+                  <Textarea
+                    rows={2}
+                    value={draft.commentReplyText}
+                    placeholder="Just sent you the details in DM 📩"
+                    onChange={(e) =>
+                      setDraft({ ...draft, commentReplyText: e.target.value })
+                    }
+                  />
+                  <Textarea
+                    rows={3}
+                    value={draft.commentReplyVariations}
+                    placeholder={"Check your inbox 📩\nDM kar diya hai 📩\nSent you a message 📩"}
+                    onChange={(e) =>
+                      setDraft({ ...draft, commentReplyVariations: e.target.value })
+                    }
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    One line per alternate reply — a random one is posted, then the DM is
+                    sent.
+                  </p>
+                </div>
+              )}
+
+              {needsText && (
+                <div className="grid gap-2">
+                  <Label>Ready-made messages</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {MESSAGE_TEMPLATES.map((template) => (
+                      <Button
+                        key={template.label}
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          setDraft({
+                            ...draft,
+                            responseText: template.text,
+                            responseVariations: template.variations.join("\n"),
+                            commentReplyText:
+                              draft.trigger === "comment_received"
+                                ? template.comment
+                                : draft.commentReplyText,
+                            commentReplyVariations:
+                              draft.trigger === "comment_received"
+                                ? template.commentVariations.join("\n")
+                                : draft.commentReplyVariations,
+                          })
+                        }
+                      >
+                        {template.label}
+                      </Button>
+                    ))}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    One tap fills the message plus three alternates — edit them as you like.
+                  </p>
+                </div>
+              )}
+
               {needsText && (
                 <div className="grid gap-2">
                   <Label>Message</Label>
