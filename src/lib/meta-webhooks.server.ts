@@ -62,7 +62,7 @@ export async function readPageSubscription(
       data?: Array<{ subscribed_fields?: string[] }>;
       error?: { message?: string };
     };
-    if (json.error) return { fields: [], error: json.error.message };
+    if (json.error) return { fields: [], error: json.error.message ?? "Request failed" };
     return { fields: json.data?.[0]?.subscribed_fields ?? [] };
   } catch (error) {
     return {
