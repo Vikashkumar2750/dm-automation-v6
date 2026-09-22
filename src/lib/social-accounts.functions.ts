@@ -193,10 +193,13 @@ export const checkWebhookDelivery = createServerFn({ method: "POST" })
       let instagramRead =
         account.platform === "instagram"
           ? await readInstagramSubscription(account.external_id, tokenRow.access_token)
-          : { fields: [] as string[] };
+          : { fields: [] as string[], unsupported: false as boolean | undefined };
+      // Facebook-Login apps cannot manage per-account Instagram subscriptions;
+      // Page subscription + app-level Instagram webhook object covers delivery.
+      const igUnsupported = Boolean(instagramRead.unsupported);
       const missingPage = PAGE_SUBSCRIBED_FIELDS.filter((field) => !pageRead.fields.includes(field));
       const missingInstagram =
-        account.platform === "instagram"
+        account.platform === "instagram" && !igUnsupported
           ? INSTAGRAM_SUBSCRIBED_FIELDS.filter(
               (field) => !instagramRead.fields.includes(field),
             )
@@ -208,7 +211,12 @@ export const checkWebhookDelivery = createServerFn({ method: "POST" })
         if (!sub.ok) repairErrors.push(`Page: ${sub.error ?? "subscribe failed"}`);
         pageRead = await readPageSubscription(pageId, tokenRow.access_token);
       }
-      if (data.repair && account.platform === "instagram" && missingInstagram.length > 0) {
+      if (
+        data.repair &&
+        account.platform === "instagram" &&
+        !igUnsupported &&
+        missingInstagram.length > 0
+      ) {
         const sub = await subscribeInstagramWebhooks(
           account.external_id,
           tokenRow.access_token,
@@ -223,7 +231,7 @@ export const checkWebhookDelivery = createServerFn({ method: "POST" })
       const fields = [...new Set([...pageRead.fields, ...instagramRead.fields])];
       const missingFields = [
         ...PAGE_SUBSCRIBED_FIELDS.filter((field) => !pageRead.fields.includes(field)),
-        ...(account.platform === "instagram"
+        ...(account.platform === "instagram" && !igUnsupported
           ? INSTAGRAM_SUBSCRIBED_FIELDS.filter(
               (field) => !instagramRead.fields.includes(field),
             )
