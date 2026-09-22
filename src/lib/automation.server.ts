@@ -505,6 +505,36 @@ async function recordOutbound(
     .eq("id", ctx.conversationId);
 }
 
+/**
+ * Sends a message and, when the rich payload (template / quick replies) is
+ * rejected by the platform, retries once as plain text so the contact still
+ * receives the DM.
+ */
+async function sendWithFallback(
+  accountId: string,
+  token: string,
+  recipient: Record<string, unknown>,
+  message: Record<string, unknown>,
+  fallbackText: string,
+): Promise<{ id?: string | undefined; error?: string | undefined }> {
+  const first = await call(`${GRAPH}/${accountId}/messages`, {
+    recipient,
+    message,
+    access_token: token,
+  });
+  if (!first.error) return first;
+  if (typeof (message as { text?: unknown }).text === "string" && !("quick_replies" in message)) {
+    return first;
+  }
+  const retry = await call(`${GRAPH}/${accountId}/messages`, {
+    recipient,
+    message: { text: fallbackText },
+    access_token: token,
+  });
+  if (retry.error) return { error: `${first.error} | fallback: ${retry.error}` };
+  return retry;
+}
+
 /** Send the rule's DM: text (+link), optional button, optional attachment. */
 async function deliverDm(
   admin: AdminClient,
@@ -539,32 +569,38 @@ async function deliverDm(
 
   const link = (rule.dm_link_url ?? "").trim();
   const buttonLabel = (rule.dm_button_label ?? "").trim();
-  const withLink = link && !buttonLabel ? `${text}\n${link}` : text;
+  // Instagram messaging does not accept the Messenger "button" template, so the
+  // link always travels inside the text there.
+  const useButton = Boolean(link && buttonLabel && ctx.platform === "facebook");
+  const plainText = link && !useButton ? `${text}\n${link}` : text;
 
-  const message =
-    link && buttonLabel
-      ? {
-          attachment: {
-            type: "template",
-            payload: {
-              template_type: "button",
-              text: withLink,
-              buttons: [{ type: "web_url", url: link, title: buttonLabel.slice(0, 20) }],
-            },
+  const message = useButton
+    ? {
+        attachment: {
+          type: "template",
+          payload: {
+            template_type: "button",
+            text,
+            buttons: [{ type: "web_url", url: link, title: buttonLabel.slice(0, 20) }],
           },
-        }
-      : { text: withLink };
+        },
+      }
+    : { text: plainText };
 
   const recipient = actionRecipient(ctx, rule.action);
-  const first = await call(`${GRAPH}/${accountId}/messages`, {
+  const first = await sendWithFallback(
+    accountId,
+    token,
     recipient,
     message,
-    access_token: token,
-  });
+    link ? `${text}\n${link}` : text,
+  );
   if (first.error) {
     await log(admin, ctx, rule.id, "failed", first.error.slice(0, 300));
     return;
   }
+  const withLink = plainText;
+
 
   const attachmentUrl = (rule.dm_attachment_url ?? "").trim();
   if (attachmentUrl && rule.dm_attachment_type && rule.dm_attachment_type !== "none") {
@@ -670,31 +706,39 @@ async function openFollowGate(
     },
   ];
 
-  const message = profileUrl
-    ? {
-        attachment: {
-          type: "template",
-          payload: {
-            template_type: "button",
-            text: prompt,
-            buttons: [
-              { type: "web_url", url: profileUrl, title: "Follow us" },
-              {
-                type: "postback",
-                title: "I followed ✅",
-                payload: `${FOLLOW_PAYLOAD}:${gate?.id ?? ""}`,
-              },
-            ],
-          },
-        },
-      }
-    : { text: prompt, quick_replies: quickReplies };
+  const promptText = profileUrl ? `${prompt}\n${profileUrl}` : prompt;
 
-  const res = await call(`${GRAPH}/${accountId}/messages`, {
-    recipient: actionRecipient(ctx, rule.action),
+  // Instagram rejects the Messenger button template; quick replies are supported
+  // on both platforms, so they are the primary shape there.
+  const message =
+    profileUrl && ctx.platform === "facebook"
+      ? {
+          attachment: {
+            type: "template",
+            payload: {
+              template_type: "button",
+              text: prompt,
+              buttons: [
+                { type: "web_url", url: profileUrl, title: "Follow us" },
+                {
+                  type: "postback",
+                  title: "I followed ✅",
+                  payload: `${FOLLOW_PAYLOAD}:${gate?.id ?? ""}`,
+                },
+              ],
+            },
+          },
+        }
+      : { text: promptText, quick_replies: quickReplies };
+
+  const res = await sendWithFallback(
+    accountId,
+    token,
+    actionRecipient(ctx, rule.action),
     message,
-    access_token: token,
-  });
+    promptText,
+  );
+
 
   if (res.error) {
     await log(admin, ctx, rule.id, "failed", `follow_prompt:${res.error.slice(0, 200)}`);
