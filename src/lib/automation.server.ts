@@ -676,31 +676,39 @@ async function openFollowGate(
     },
   ];
 
-  const message = profileUrl
-    ? {
-        attachment: {
-          type: "template",
-          payload: {
-            template_type: "button",
-            text: prompt,
-            buttons: [
-              { type: "web_url", url: profileUrl, title: "Follow us" },
-              {
-                type: "postback",
-                title: "I followed ✅",
-                payload: `${FOLLOW_PAYLOAD}:${gate?.id ?? ""}`,
-              },
-            ],
-          },
-        },
-      }
-    : { text: prompt, quick_replies: quickReplies };
+  const promptText = profileUrl ? `${prompt}\n${profileUrl}` : prompt;
 
-  const res = await call(`${GRAPH}/${accountId}/messages`, {
-    recipient: actionRecipient(ctx, rule.action),
+  // Instagram rejects the Messenger button template; quick replies are supported
+  // on both platforms, so they are the primary shape there.
+  const message =
+    profileUrl && ctx.platform === "facebook"
+      ? {
+          attachment: {
+            type: "template",
+            payload: {
+              template_type: "button",
+              text: prompt,
+              buttons: [
+                { type: "web_url", url: profileUrl, title: "Follow us" },
+                {
+                  type: "postback",
+                  title: "I followed ✅",
+                  payload: `${FOLLOW_PAYLOAD}:${gate?.id ?? ""}`,
+                },
+              ],
+            },
+          },
+        }
+      : { text: promptText, quick_replies: quickReplies };
+
+  const res = await sendWithFallback(
+    accountId,
+    token,
+    actionRecipient(ctx, rule.action),
     message,
-    access_token: token,
-  });
+    promptText,
+  );
+
 
   if (res.error) {
     await log(admin, ctx, rule.id, "failed", `follow_prompt:${res.error.slice(0, 200)}`);
