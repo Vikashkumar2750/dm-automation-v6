@@ -38,6 +38,7 @@ import {
   removeOptOut,
   resumeAutomations,
   saveAutomationSettings,
+  listTargetablePosts,
   updateAutomationRule,
   type AutomationRule,
   type AutomationSettings,
@@ -86,6 +87,16 @@ type Draft = {
   setStatus: "open" | "pending" | "resolved";
   cooldownSeconds: number;
   dailyLimit: number;
+  targetPostIds: string[];
+  commentReplyText: string;
+  commentReplyVariations: string;
+  dmLinkUrl: string;
+  dmButtonLabel: string;
+  dmAttachmentUrl: string;
+  dmAttachmentType: "none" | "image" | "video" | "file";
+  followerCondition: "any" | "followers_only" | "non_followers";
+  requireFollow: boolean;
+  followPromptText: string;
 };
 
 const emptyDraft: Draft = {
@@ -102,7 +113,87 @@ const emptyDraft: Draft = {
   setStatus: "pending",
   cooldownSeconds: 60,
   dailyLimit: 200,
+  targetPostIds: [],
+  commentReplyText: "",
+  commentReplyVariations: "",
+  dmLinkUrl: "",
+  dmButtonLabel: "",
+  dmAttachmentUrl: "",
+  dmAttachmentType: "none",
+  followerCondition: "any",
+  requireFollow: false,
+  followPromptText: "",
 };
+
+/** One-click message packs: a main reply plus three ready variations. */
+const MESSAGE_TEMPLATES: Array<{
+  label: string;
+  text: string;
+  variations: string[];
+  comment: string;
+  commentVariations: string[];
+}> = [
+  {
+    label: "Price enquiry",
+    text: "Thanks for asking! Sharing our pricing and packages with you right now 👇",
+    variations: [
+      "Hi! Here are our current plans and prices — have a look 👇",
+      "Happy to help! Sending the price list your way 👇",
+      "Thanks for your interest — full pricing details below 👇",
+    ],
+    comment: "Just sent you the pricing in DM 📩",
+    commentVariations: [
+      "Check your inbox — details sent 📩",
+      "DM kar diya hai, please check 📩",
+      "Sent you everything in a message 📩",
+    ],
+  },
+  {
+    label: "Send the link",
+    text: "Here you go! Tap the link below to see everything.",
+    variations: [
+      "All the details are on this link 👇",
+      "Sharing the link — take a look and tell me what you think.",
+      "Link niche hai, koi bhi sawal ho to bataiye!",
+    ],
+    comment: "Link bhej diya hai DM me 📩",
+    commentVariations: [
+      "Sent the link in your inbox 📩",
+      "Check DM — link shared 📩",
+      "Just messaged you the link 📩",
+    ],
+  },
+  {
+    label: "Thanks + follow up",
+    text: "Thank you so much for reaching out! How can we help you today?",
+    variations: [
+      "Hey, thanks for the message! What would you like to know?",
+      "Thanks for getting in touch — tell us what you need 🙂",
+      "Hi! We're here to help. What are you looking for?",
+    ],
+    comment: "Thanks for commenting! Replied in DM 📩",
+    commentVariations: [
+      "Appreciate it! Check your inbox 📩",
+      "Thanks 🙏 sent you a message",
+      "Answered you in DM 📩",
+    ],
+  },
+  {
+    label: "Order / booking",
+    text: "Great choice! Share your name and city and we'll confirm your order.",
+    variations: [
+      "Awesome — send your name + city and we'll book it for you.",
+      "Let's get you started! Reply with your name and city.",
+      "Sure! Bas apna naam aur city bhej dijiye, hum confirm kar denge.",
+    ],
+    comment: "Details DM me bhej diye hain 📩",
+    commentVariations: [
+      "Sent the booking steps in DM 📩",
+      "Check inbox to place your order 📩",
+      "Messaged you how to order 📩",
+    ],
+  },
+];
 
 const triggerLabel: Record<Trigger, string> = {
   dm_received: "New DM",
@@ -149,6 +240,16 @@ function toDraft(rule: AutomationRule): Draft {
     setStatus: rule.set_status ?? "pending",
     cooldownSeconds: rule.cooldown_seconds,
     dailyLimit: rule.daily_limit,
+    targetPostIds: rule.target_post_ids ?? [],
+    commentReplyText: rule.comment_reply_text ?? "",
+    commentReplyVariations: (rule.comment_reply_variations ?? []).join("\n"),
+    dmLinkUrl: rule.dm_link_url ?? "",
+    dmButtonLabel: rule.dm_button_label ?? "",
+    dmAttachmentUrl: rule.dm_attachment_url ?? "",
+    dmAttachmentType: rule.dm_attachment_type ?? "none",
+    followerCondition: rule.follower_condition ?? "any",
+    requireFollow: rule.require_follow ?? false,
+    followPromptText: rule.follow_prompt_text ?? "",
   };
 }
 
@@ -205,6 +306,19 @@ function AutomationsPage() {
         setStatus: value.action === "set_status" ? value.setStatus : null,
         cooldownSeconds: Number(value.cooldownSeconds) || 0,
         dailyLimit: Number(value.dailyLimit) || 1,
+        targetPostIds: value.targetPostIds,
+        commentReplyText: value.commentReplyText.trim() || null,
+        commentReplyVariations: value.commentReplyVariations
+          .split("\n")
+          .map((t) => t.trim())
+          .filter(Boolean),
+        dmLinkUrl: value.dmLinkUrl.trim() || null,
+        dmButtonLabel: value.dmButtonLabel.trim() || null,
+        dmAttachmentUrl: value.dmAttachmentUrl.trim() || null,
+        dmAttachmentType: value.dmAttachmentType,
+        followerCondition: value.followerCondition,
+        requireFollow: value.requireFollow,
+        followPromptText: value.followPromptText.trim() || null,
       };
       if (value.id) {
         return updateFn({ data: { id: value.id, ...payload } });
@@ -242,6 +356,10 @@ function AutomationsPage() {
 
   const needsText = draft
     ? ["reply_dm", "comment_public_reply", "comment_private_reply"].includes(draft.action)
+    : false;
+
+  const needsDm = draft
+    ? ["reply_dm", "comment_private_reply"].includes(draft.action)
     : false;
 
   return (
@@ -470,6 +588,76 @@ function AutomationsPage() {
                 </Select>
               </div>
 
+              {draft.trigger === "comment_received" && (
+                <PostPicker
+                  orgId={orgId}
+                  selected={draft.targetPostIds}
+                  onChange={(ids) => setDraft({ ...draft, targetPostIds: ids })}
+                />
+              )}
+
+              {draft.trigger === "comment_received" && (
+                <div className="grid gap-2">
+                  <Label>Public reply under the comment (optional)</Label>
+                  <Textarea
+                    rows={2}
+                    value={draft.commentReplyText}
+                    placeholder="Just sent you the details in DM 📩"
+                    onChange={(e) =>
+                      setDraft({ ...draft, commentReplyText: e.target.value })
+                    }
+                  />
+                  <Textarea
+                    rows={3}
+                    value={draft.commentReplyVariations}
+                    placeholder={"Check your inbox 📩\nDM kar diya hai 📩\nSent you a message 📩"}
+                    onChange={(e) =>
+                      setDraft({ ...draft, commentReplyVariations: e.target.value })
+                    }
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    One line per alternate reply — a random one is posted, then the DM is
+                    sent.
+                  </p>
+                </div>
+              )}
+
+              {needsText && (
+                <div className="grid gap-2">
+                  <Label>Ready-made messages</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {MESSAGE_TEMPLATES.map((template) => (
+                      <Button
+                        key={template.label}
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          setDraft({
+                            ...draft,
+                            responseText: template.text,
+                            responseVariations: template.variations.join("\n"),
+                            commentReplyText:
+                              draft.trigger === "comment_received"
+                                ? template.comment
+                                : draft.commentReplyText,
+                            commentReplyVariations:
+                              draft.trigger === "comment_received"
+                                ? template.commentVariations.join("\n")
+                                : draft.commentReplyVariations,
+                          })
+                        }
+                      >
+                        {template.label}
+                      </Button>
+                    ))}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    One tap fills the message plus three alternates — edit them as you like.
+                  </p>
+                </div>
+              )}
+
               {needsText && (
                 <div className="grid gap-2">
                   <Label>Message</Label>
@@ -495,6 +683,127 @@ function AutomationsPage() {
                   />
                   <p className="text-xs text-muted-foreground">
                     One is picked at random each time, so replies never look robotic.
+                  </p>
+                </div>
+              )}
+
+              {needsDm && (
+                <div className="grid gap-4 rounded-lg border p-4">
+                  <p className="text-sm font-medium">Link & attachment (optional)</p>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="grid gap-2">
+                      <Label>Link URL</Label>
+                      <Input
+                        value={draft.dmLinkUrl}
+                        placeholder="https://your-site.com/offer"
+                        onChange={(e) => setDraft({ ...draft, dmLinkUrl: e.target.value })}
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label>Button text</Label>
+                      <Input
+                        value={draft.dmButtonLabel}
+                        maxLength={20}
+                        placeholder="View offer"
+                        onChange={(e) =>
+                          setDraft({ ...draft, dmButtonLabel: e.target.value })
+                        }
+                      />
+                    </div>
+                  </div>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="grid gap-2">
+                      <Label>Attachment type</Label>
+                      <Select
+                        value={draft.dmAttachmentType}
+                        onValueChange={(v) =>
+                          setDraft({
+                            ...draft,
+                            dmAttachmentType: v as Draft["dmAttachmentType"],
+                          })
+                        }
+                      >
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">No attachment</SelectItem>
+                          <SelectItem value="image">Image</SelectItem>
+                          <SelectItem value="video">Video</SelectItem>
+                          <SelectItem value="file">File</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="grid gap-2">
+                      <Label>Attachment URL</Label>
+                      <Input
+                        value={draft.dmAttachmentUrl}
+                        disabled={draft.dmAttachmentType === "none"}
+                        placeholder="https://your-site.com/catalogue.pdf"
+                        onChange={(e) =>
+                          setDraft({ ...draft, dmAttachmentUrl: e.target.value })
+                        }
+                      />
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Leave both empty for a plain text reply. With a button text the link
+                    is shown as a tappable button.
+                  </p>
+                </div>
+              )}
+
+              {needsDm && (
+                <div className="grid gap-4 rounded-lg border p-4">
+                  <p className="text-sm font-medium">Follower check</p>
+                  <div className="grid gap-2">
+                    <Label>Reply to</Label>
+                    <Select
+                      value={draft.followerCondition}
+                      onValueChange={(v) =>
+                        setDraft({
+                          ...draft,
+                          followerCondition: v as Draft["followerCondition"],
+                        })
+                      }
+                    >
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="any">Everyone</SelectItem>
+                        <SelectItem value="followers_only">Followers only</SelectItem>
+                        <SelectItem value="non_followers">Non-followers only</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex items-center justify-between rounded-lg border px-4 py-3">
+                    <div className="pr-4">
+                      <p className="text-sm font-medium">Ask to follow first</p>
+                      <p className="text-xs text-muted-foreground">
+                        Non-followers get a follow request with an “I followed” button.
+                        The main reply is sent only after the follow is confirmed.
+                      </p>
+                    </div>
+                    <Switch
+                      checked={draft.requireFollow}
+                      onCheckedChange={(checked) =>
+                        setDraft({ ...draft, requireFollow: checked })
+                      }
+                    />
+                  </div>
+                  {draft.requireFollow && (
+                    <div className="grid gap-2">
+                      <Label>Follow request message</Label>
+                      <Textarea
+                        rows={2}
+                        value={draft.followPromptText}
+                        placeholder="Please follow us first, then tap the button below and we'll send the details."
+                        onChange={(e) =>
+                          setDraft({ ...draft, followPromptText: e.target.value })
+                        }
+                      />
+                    </div>
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    Follower status is available on Instagram. On Facebook the reply is
+                    always sent.
                   </p>
                 </div>
               )}
@@ -991,3 +1300,95 @@ function Stat({ label, value }: { label: string; value: string }) {
   );
 }
 
+
+function PostPicker({
+  orgId,
+  selected,
+  onChange,
+}: {
+  orgId: string | undefined;
+  selected: string[];
+  onChange: (ids: string[]) => void;
+}) {
+  const fetchPosts = useServerFn(listTargetablePosts);
+  const postsQuery = useQuery({
+    queryKey: ["targetable-posts", orgId],
+    enabled: Boolean(orgId),
+    queryFn: () => fetchPosts({ data: { organizationId: orgId! } }),
+  });
+  const posts = postsQuery.data ?? [];
+
+  const toggle = (externalId: string) => {
+    onChange(
+      selected.includes(externalId)
+        ? selected.filter((id) => id !== externalId)
+        : [...selected, externalId],
+    );
+  };
+
+  return (
+    <div className="grid gap-3 rounded-lg border p-4">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-sm font-medium">Which posts?</p>
+          <p className="text-xs text-muted-foreground">
+            {selected.length === 0
+              ? "Running on all posts. Pick one or more to limit this rule."
+              : `${selected.length} post${selected.length > 1 ? "s" : ""} selected.`}
+          </p>
+        </div>
+        {selected.length > 0 && (
+          <Button type="button" variant="ghost" size="sm" onClick={() => onChange([])}>
+            All posts
+          </Button>
+        )}
+      </div>
+
+      {postsQuery.isLoading ? (
+        <p className="text-sm text-muted-foreground">Loading posts…</p>
+      ) : posts.length === 0 ? (
+        <p className="text-sm text-muted-foreground">
+          No published posts yet. Publish a post to target it here.
+        </p>
+      ) : (
+        <div className="grid max-h-64 gap-2 overflow-y-auto pr-1">
+          {posts.map((post) => {
+            const isOn = selected.includes(post.externalPostId);
+            return (
+              <button
+                key={post.id}
+                type="button"
+                onClick={() => toggle(post.externalPostId)}
+                className={`flex items-center gap-3 rounded-md border p-2 text-left transition ${
+                  isOn ? "border-primary bg-primary/5" : "hover:bg-muted/50"
+                }`}
+              >
+                {post.mediaUrl ? (
+                  <img
+                    src={post.mediaUrl}
+                    alt=""
+                    className="h-10 w-10 shrink-0 rounded object-cover"
+                  />
+                ) : (
+                  <div className="h-10 w-10 shrink-0 rounded bg-muted" />
+                )}
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm">
+                    {post.caption || "Untitled post"}
+                  </span>
+                  <span className="block text-xs capitalize text-muted-foreground">
+                    {post.platform}
+                    {post.publishedAt
+                      ? ` · ${new Date(post.publishedAt).toLocaleDateString()}`
+                      : ""}
+                  </span>
+                </span>
+                {isOn && <StatusBadge tone="success">Selected</StatusBadge>}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}

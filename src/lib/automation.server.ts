@@ -19,6 +19,8 @@ export type AutomationContext = {
   externalUserId: string;
   /** Comment id for comment channel, message id for DMs. */
   externalId: string | null;
+  /** Post/media id the comment belongs to (comment channel only). */
+  postExternalId?: string | null;
 };
 
 type Rule = {
@@ -34,7 +36,20 @@ type Rule = {
   set_status: string | null;
   cooldown_seconds: number;
   daily_limit: number;
+  target_post_ids: string[] | null;
+  comment_reply_text: string | null;
+  comment_reply_variations: string[] | null;
+  dm_link_url: string | null;
+  dm_button_label: string | null;
+  dm_attachment_url: string | null;
+  dm_attachment_type: string;
+  follower_condition: string;
+  require_follow: boolean;
+  follow_prompt_text: string | null;
 };
+
+const RULE_SELECT =
+  "id, name, platform, trigger, match_type, keywords, action, response_text, response_variations, set_status, cooldown_seconds, daily_limit, target_post_ids, comment_reply_text, comment_reply_variations, dm_link_url, dm_button_label, dm_attachment_url, dm_attachment_type, follower_condition, require_follow, follow_prompt_text";
 
 type Settings = {
   is_paused: boolean;
@@ -90,13 +105,26 @@ function hitsKeyword(list: string[] | null | undefined, body: string) {
     .find((k) => text.includes(k));
 }
 
-/** Rotate deterministically-random across the available response texts. */
-function pickResponse(rule: Rule) {
-  const options = [rule.response_text, ...(rule.response_variations ?? [])]
+/** Pick one text at random from a primary text plus its variations. */
+function pickFrom(primary: string | null, variations: string[] | null | undefined) {
+  const options = [primary, ...(variations ?? [])]
     .map((t) => (t ?? "").trim())
     .filter(Boolean);
   if (options.length === 0) return null;
   return options[Math.floor(Math.random() * options.length)]!;
+}
+
+/** Rotate deterministically-random across the available response texts. */
+function pickResponse(rule: Rule) {
+  return pickFrom(rule.response_text, rule.response_variations);
+}
+
+/** A rule with no selected posts applies everywhere. */
+function targetsPost(rule: Rule, postExternalId: string | null) {
+  const targets = (rule.target_post_ids ?? []).map((t) => t.trim()).filter(Boolean);
+  if (targets.length === 0) return true;
+  if (!postExternalId) return false;
+  return targets.some((t) => t === postExternalId || postExternalId.endsWith(`_${t}`));
 }
 
 function matches(rule: Rule, body: string) {
@@ -283,16 +311,17 @@ export async function runAutomations(admin: AdminClient, ctx: AutomationContext)
 
   const { data: rules } = await admin
     .from("automation_rules")
-    .select(
-      "id, name, platform, trigger, match_type, keywords, action, response_text, response_variations, set_status, cooldown_seconds, daily_limit",
-    )
+    .select(RULE_SELECT)
     .eq("organization_id", ctx.organizationId)
     .eq("is_active", true)
     .eq("trigger", trigger)
     .order("priority", { ascending: true });
 
   const candidates = ((rules ?? []) as Rule[]).filter(
-    (r) => (!r.platform || r.platform === ctx.platform) && matches(r, ctx.body),
+    (r) =>
+      (!r.platform || r.platform === ctx.platform) &&
+      targetsPost(r, ctx.postExternalId ?? null) &&
+      matches(r, ctx.body),
   );
   if (candidates.length === 0) return;
 
@@ -358,8 +387,7 @@ export async function runAutomations(admin: AdminClient, ctx: AutomationContext)
       await log(admin, ctx, rule.id, "failed", "no_token");
       return;
     }
-
-    const text = pickResponse(rule);
+    const accountId = account.external_id as string;
 
     if (rule.action === "hide_comment") {
       if (!ctx.externalId) {
@@ -375,70 +403,49 @@ export async function runAutomations(admin: AdminClient, ctx: AutomationContext)
       return;
     }
 
+    // 1) Public reply under the comment (runs alongside the DM action).
+    let commentReplied = false;
+    if (ctx.channel === "comment" && ctx.externalId) {
+      const commentText = pickFrom(rule.comment_reply_text, rule.comment_reply_variations);
+      if (commentText) {
+        const res = await call(`${GRAPH}/${ctx.externalId}/replies`, {
+          message: commentText,
+          access_token: token,
+        });
+        if (res.error) {
+          await log(admin, ctx, rule.id, "failed", `comment_reply:${res.error.slice(0, 200)}`);
+        } else {
+          commentReplied = true;
+          await recordOutbound(admin, ctx, rule, `[public reply] ${commentText}`, res.id ?? null);
+          await log(admin, ctx, rule.id, "sent", "comment_reply");
+        }
+      }
+    }
+
+    const text = pickResponse(rule);
     if (!text) {
-      await log(admin, ctx, rule.id, "failed", "no_response_text");
+      if (!commentReplied) await log(admin, ctx, rule.id, "failed", "no_response_text");
       return;
     }
 
-    let result: { id?: string | undefined; error?: string | undefined };
-    let prefix = "";
-
-    if (rule.action === "reply_dm") {
-      result = await call(`${GRAPH}/${account.external_id}/messages`, {
-        recipient: { id: ctx.externalUserId },
-        message: { text },
-        access_token: token,
-      });
-    } else if (rule.action === "comment_public_reply") {
-      if (!ctx.externalId) {
-        await log(admin, ctx, rule.id, "failed", "no_comment_id");
+    // 2) Follower conditions and follow gate.
+    if (rule.follower_condition !== "any" || rule.require_follow) {
+      const follows = await checkFollows(ctx.platform, ctx.externalUserId, token);
+      if (follows === false && rule.follower_condition === "followers_only") {
+        await log(admin, ctx, rule.id, "skipped", "not_a_follower");
         return;
       }
-      prefix = "[public reply] ";
-      result = await call(`${GRAPH}/${ctx.externalId}/replies`, {
-        message: text,
-        access_token: token,
-      });
-    } else if (rule.action === "comment_private_reply") {
-      if (!ctx.externalId) {
-        await log(admin, ctx, rule.id, "failed", "no_comment_id");
+      if (follows === true && rule.follower_condition === "non_followers") {
+        await log(admin, ctx, rule.id, "skipped", "already_a_follower");
         return;
       }
-      prefix = "[private reply] ";
-      result = await call(`${GRAPH}/${account.external_id}/messages`, {
-        recipient: { comment_id: ctx.externalId },
-        message: { text },
-        access_token: token,
-      });
-    } else {
-      await log(admin, ctx, rule.id, "skipped", "unknown_action");
-      return;
+      if (follows === false && rule.require_follow) {
+        await openFollowGate(admin, ctx, rule, token, accountId);
+        return;
+      }
     }
 
-    if (result.error) {
-      await log(admin, ctx, rule.id, "failed", result.error.slice(0, 300));
-      return;
-    }
-
-    const now = new Date().toISOString();
-    await admin.from("messages").insert({
-      conversation_id: ctx.conversationId,
-      direction: "outbound",
-      body: `${prefix}${text}`,
-      external_id: result.id ?? null,
-      sender_name: `Automation · ${rule.name}`,
-      sent_at: now,
-    });
-    await admin
-      .from("conversations")
-      .update({
-        last_message_at: now,
-        last_message_preview: `${prefix}${text}`.slice(0, 140),
-        status: "pending",
-      })
-      .eq("id", ctx.conversationId);
-
-    await log(admin, ctx, rule.id, "sent", rule.action);
+    await deliverDm(admin, ctx, rule, token, accountId, text);
   } catch (error) {
     await log(
       admin,
@@ -448,6 +455,323 @@ export async function runAutomations(admin: AdminClient, ctx: AutomationContext)
       error instanceof Error ? error.message.slice(0, 300) : "unknown_error",
     );
   }
+}
+
+// ------------------------------------------------------------- delivery
+
+function actionRecipient(ctx: AutomationContext, action: string) {
+  if (action === "comment_private_reply" && ctx.externalId) {
+    return { comment_id: ctx.externalId };
+  }
+  return { id: ctx.externalUserId };
+}
+
+async function recordOutbound(
+  admin: AdminClient,
+  ctx: AutomationContext,
+  rule: Pick<Rule, "name">,
+  body: string,
+  externalId: string | null,
+) {
+  const now = new Date().toISOString();
+  await admin.from("messages").insert({
+    conversation_id: ctx.conversationId,
+    direction: "outbound",
+    body,
+    external_id: externalId,
+    sender_name: `Automation · ${rule.name}`,
+    sent_at: now,
+  });
+  await admin
+    .from("conversations")
+    .update({
+      last_message_at: now,
+      last_message_preview: body.slice(0, 140),
+      status: "pending",
+    })
+    .eq("id", ctx.conversationId);
+}
+
+/** Send the rule's DM: text (+link), optional button, optional attachment. */
+async function deliverDm(
+  admin: AdminClient,
+  ctx: AutomationContext,
+  rule: Rule,
+  token: string,
+  accountId: string,
+  text: string,
+) {
+  if (rule.action === "comment_public_reply") {
+    if (!ctx.externalId) {
+      await log(admin, ctx, rule.id, "failed", "no_comment_id");
+      return;
+    }
+    const res = await call(`${GRAPH}/${ctx.externalId}/replies`, {
+      message: text,
+      access_token: token,
+    });
+    if (res.error) {
+      await log(admin, ctx, rule.id, "failed", res.error.slice(0, 300));
+      return;
+    }
+    await recordOutbound(admin, ctx, rule, `[public reply] ${text}`, res.id ?? null);
+    await log(admin, ctx, rule.id, "sent", rule.action);
+    return;
+  }
+
+  if (rule.action !== "reply_dm" && rule.action !== "comment_private_reply") {
+    await log(admin, ctx, rule.id, "skipped", "unknown_action");
+    return;
+  }
+
+  const link = (rule.dm_link_url ?? "").trim();
+  const buttonLabel = (rule.dm_button_label ?? "").trim();
+  const withLink = link && !buttonLabel ? `${text}\n${link}` : text;
+
+  const message =
+    link && buttonLabel
+      ? {
+          attachment: {
+            type: "template",
+            payload: {
+              template_type: "button",
+              text: withLink,
+              buttons: [{ type: "web_url", url: link, title: buttonLabel.slice(0, 20) }],
+            },
+          },
+        }
+      : { text: withLink };
+
+  const recipient = actionRecipient(ctx, rule.action);
+  const first = await call(`${GRAPH}/${accountId}/messages`, {
+    recipient,
+    message,
+    access_token: token,
+  });
+  if (first.error) {
+    await log(admin, ctx, rule.id, "failed", first.error.slice(0, 300));
+    return;
+  }
+
+  const attachmentUrl = (rule.dm_attachment_url ?? "").trim();
+  if (attachmentUrl && rule.dm_attachment_type && rule.dm_attachment_type !== "none") {
+    const media = await call(`${GRAPH}/${accountId}/messages`, {
+      recipient: { id: ctx.externalUserId },
+      message: {
+        attachment: {
+          type: rule.dm_attachment_type,
+          payload: { url: attachmentUrl, is_reusable: true },
+        },
+      },
+      access_token: token,
+    });
+    if (media.error) {
+      await log(admin, ctx, rule.id, "failed", `attachment:${media.error.slice(0, 200)}`);
+    }
+  }
+
+  const prefix = rule.action === "comment_private_reply" ? "[private reply] " : "";
+  await recordOutbound(admin, ctx, rule, `${prefix}${withLink}`, first.id ?? null);
+  await log(admin, ctx, rule.id, "sent", rule.action);
+}
+
+// ------------------------------------------------------------- follow gate
+
+/**
+ * Instagram exposes whether the contact follows the business on the
+ * conversation user profile. Facebook has no equivalent field, so unknown
+ * (null) never blocks a send.
+ */
+async function checkFollows(
+  platform: "instagram" | "facebook",
+  externalUserId: string,
+  token: string,
+): Promise<boolean | null> {
+  if (platform !== "instagram") return null;
+  try {
+    const response = await fetch(
+      `${GRAPH}/${externalUserId}?fields=is_user_follow_business&access_token=${encodeURIComponent(token)}`,
+    );
+    const json = (await response.json()) as {
+      is_user_follow_business?: boolean;
+      error?: unknown;
+    };
+    if (!response.ok || typeof json.is_user_follow_business !== "boolean") return null;
+    return json.is_user_follow_business;
+  } catch {
+    return null;
+  }
+}
+
+const FOLLOW_PAYLOAD = "AUTOMATION_FOLLOW_CHECK";
+const DEFAULT_FOLLOW_PROMPT =
+  "Please follow us first so we can send you the details — then tap the button below.";
+
+/** Ask the contact to follow, with a one-tap "I followed" button. */
+async function openFollowGate(
+  admin: AdminClient,
+  ctx: AutomationContext,
+  rule: Rule,
+  token: string,
+  accountId: string,
+) {
+  const { data: gate } = await admin
+    .from("automation_follow_gates")
+    .insert({
+      organization_id: ctx.organizationId,
+      rule_id: rule.id,
+      conversation_id: ctx.conversationId,
+      social_account_id: ctx.socialAccountId,
+      platform: ctx.platform,
+      external_user_id: ctx.externalUserId,
+      comment_external_id: ctx.channel === "comment" ? ctx.externalId : null,
+      status: "waiting",
+    })
+    .select("id")
+    .single();
+
+  const prompt = (rule.follow_prompt_text ?? "").trim() || DEFAULT_FOLLOW_PROMPT;
+  const res = await call(`${GRAPH}/${accountId}/messages`, {
+    recipient: actionRecipient(ctx, rule.action),
+    message: {
+      text: prompt,
+      quick_replies: [
+        {
+          content_type: "text",
+          title: "I followed ✅",
+          payload: `${FOLLOW_PAYLOAD}:${gate?.id ?? ""}`,
+        },
+      ],
+    },
+    access_token: token,
+  });
+
+  if (res.error) {
+    await log(admin, ctx, rule.id, "failed", `follow_prompt:${res.error.slice(0, 200)}`);
+    return;
+  }
+  await recordOutbound(admin, ctx, rule, prompt, res.id ?? null);
+  await log(admin, ctx, rule.id, "sent", "follow_prompt");
+}
+
+/**
+ * Called from the webhook when the contact taps "I followed" (quick reply or
+ * postback). Re-checks the follow status and releases the held DM.
+ */
+export async function handleFollowGateReply(
+  admin: AdminClient,
+  args: {
+    organizationId: string;
+    conversationId: string;
+    socialAccountId: string | null;
+    platform: "instagram" | "facebook";
+    externalUserId: string;
+    payload: string;
+  },
+) {
+  if (!args.payload.startsWith(FOLLOW_PAYLOAD)) return false;
+  const gateId = args.payload.split(":")[1] ?? "";
+
+  const query = admin
+    .from("automation_follow_gates")
+    .select("id, rule_id, attempts, comment_external_id")
+    .eq("organization_id", args.organizationId)
+    .eq("external_user_id", args.externalUserId)
+    .eq("status", "waiting")
+    .order("created_at", { ascending: false })
+    .limit(1);
+  const { data: gates } = gateId ? await query.eq("id", gateId) : await query;
+  const gate = gates?.[0];
+  if (!gate?.rule_id) return true;
+
+  const { data: rule } = await admin
+    .from("automation_rules")
+    .select(RULE_SELECT)
+    .eq("id", gate.rule_id)
+    .maybeSingle();
+  if (!rule) return true;
+  const typedRule = rule as unknown as Rule;
+
+  const ctx: AutomationContext = {
+    organizationId: args.organizationId,
+    conversationId: args.conversationId,
+    socialAccountId: args.socialAccountId,
+    platform: args.platform,
+    channel: "dm",
+    body: "",
+    externalUserId: args.externalUserId,
+    externalId: null,
+  };
+
+  if (!args.socialAccountId) return true;
+  const [{ data: tokenRow }, { data: account }] = await Promise.all([
+    admin
+      .from("social_account_tokens")
+      .select("access_token")
+      .eq("social_account_id", args.socialAccountId)
+      .maybeSingle(),
+    admin
+      .from("social_accounts")
+      .select("external_id")
+      .eq("id", args.socialAccountId)
+      .maybeSingle(),
+  ]);
+  const token = tokenRow?.access_token as string | undefined;
+  if (!token || !account?.external_id) return true;
+
+  const follows = await checkFollows(args.platform, args.externalUserId, token);
+  const attempts = (gate.attempts ?? 0) + 1;
+
+  if (follows === false && attempts < 3) {
+    await admin
+      .from("automation_follow_gates")
+      .update({ attempts, last_checked_at: new Date().toISOString() })
+      .eq("id", gate.id);
+    const retry = (typedRule.follow_prompt_text ?? "").trim() || DEFAULT_FOLLOW_PROMPT;
+    await call(`${GRAPH}/${account.external_id}/messages`, {
+      recipient: { id: args.externalUserId },
+      message: {
+        text: `We can't see the follow yet. ${retry}`,
+        quick_replies: [
+          {
+            content_type: "text",
+            title: "I followed ✅",
+            payload: `${FOLLOW_PAYLOAD}:${gate.id}`,
+          },
+        ],
+      },
+      access_token: token,
+    });
+    await log(admin, ctx, typedRule.id, "skipped", "follow_not_confirmed");
+    return true;
+  }
+
+  await admin
+    .from("automation_follow_gates")
+    .update({
+      attempts,
+      status: follows === false ? "expired" : "completed",
+      last_checked_at: new Date().toISOString(),
+      completed_at: new Date().toISOString(),
+    })
+    .eq("id", gate.id);
+
+  if (follows === false) {
+    await log(admin, ctx, typedRule.id, "skipped", "follow_gate_expired");
+    return true;
+  }
+
+  const text = pickResponse(typedRule);
+  if (!text) return true;
+  await deliverDm(
+    admin,
+    ctx,
+    { ...typedRule, action: "reply_dm" },
+    token,
+    account.external_id as string,
+    text,
+  );
+  return true;
 }
 
 async function call(url: string, payload: Record<string, unknown>) {

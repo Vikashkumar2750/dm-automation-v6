@@ -14,6 +14,83 @@ export type Database = {
   }
   public: {
     Tables: {
+      automation_follow_gates: {
+        Row: {
+          attempts: number
+          comment_external_id: string | null
+          completed_at: string | null
+          conversation_id: string | null
+          created_at: string
+          external_user_id: string
+          id: string
+          last_checked_at: string | null
+          organization_id: string
+          platform: Database["public"]["Enums"]["social_platform"]
+          rule_id: string | null
+          social_account_id: string | null
+          status: string
+        }
+        Insert: {
+          attempts?: number
+          comment_external_id?: string | null
+          completed_at?: string | null
+          conversation_id?: string | null
+          created_at?: string
+          external_user_id: string
+          id?: string
+          last_checked_at?: string | null
+          organization_id: string
+          platform: Database["public"]["Enums"]["social_platform"]
+          rule_id?: string | null
+          social_account_id?: string | null
+          status?: string
+        }
+        Update: {
+          attempts?: number
+          comment_external_id?: string | null
+          completed_at?: string | null
+          conversation_id?: string | null
+          created_at?: string
+          external_user_id?: string
+          id?: string
+          last_checked_at?: string | null
+          organization_id?: string
+          platform?: Database["public"]["Enums"]["social_platform"]
+          rule_id?: string | null
+          social_account_id?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_follow_gates_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "automation_follow_gates_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "automation_follow_gates_rule_id_fkey"
+            columns: ["rule_id"]
+            isOneToOne: false
+            referencedRelation: "automation_rules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "automation_follow_gates_social_account_id_fkey"
+            columns: ["social_account_id"]
+            isOneToOne: false
+            referencedRelation: "social_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       automation_opt_outs: {
         Row: {
           created_at: string
@@ -52,10 +129,18 @@ export type Database = {
       automation_rules: {
         Row: {
           action: Database["public"]["Enums"]["automation_action"]
+          comment_reply_text: string | null
+          comment_reply_variations: string[]
           cooldown_seconds: number
           created_at: string
           created_by: string | null
           daily_limit: number
+          dm_attachment_type: string
+          dm_attachment_url: string | null
+          dm_button_label: string | null
+          dm_link_url: string | null
+          follow_prompt_text: string | null
+          follower_condition: string
           id: string
           is_active: boolean
           keywords: string[]
@@ -64,18 +149,28 @@ export type Database = {
           organization_id: string
           platform: Database["public"]["Enums"]["social_platform"] | null
           priority: number
+          require_follow: boolean
           response_text: string | null
           response_variations: string[]
           set_status: Database["public"]["Enums"]["conversation_status"] | null
+          target_post_ids: string[]
           trigger: Database["public"]["Enums"]["automation_trigger"]
           updated_at: string
         }
         Insert: {
           action: Database["public"]["Enums"]["automation_action"]
+          comment_reply_text?: string | null
+          comment_reply_variations?: string[]
           cooldown_seconds?: number
           created_at?: string
           created_by?: string | null
           daily_limit?: number
+          dm_attachment_type?: string
+          dm_attachment_url?: string | null
+          dm_button_label?: string | null
+          dm_link_url?: string | null
+          follow_prompt_text?: string | null
+          follower_condition?: string
           id?: string
           is_active?: boolean
           keywords?: string[]
@@ -84,18 +179,28 @@ export type Database = {
           organization_id: string
           platform?: Database["public"]["Enums"]["social_platform"] | null
           priority?: number
+          require_follow?: boolean
           response_text?: string | null
           response_variations?: string[]
           set_status?: Database["public"]["Enums"]["conversation_status"] | null
+          target_post_ids?: string[]
           trigger: Database["public"]["Enums"]["automation_trigger"]
           updated_at?: string
         }
         Update: {
           action?: Database["public"]["Enums"]["automation_action"]
+          comment_reply_text?: string | null
+          comment_reply_variations?: string[]
           cooldown_seconds?: number
           created_at?: string
           created_by?: string | null
           daily_limit?: number
+          dm_attachment_type?: string
+          dm_attachment_url?: string | null
+          dm_button_label?: string | null
+          dm_link_url?: string | null
+          follow_prompt_text?: string | null
+          follower_condition?: string
           id?: string
           is_active?: boolean
           keywords?: string[]
@@ -104,9 +209,11 @@ export type Database = {
           organization_id?: string
           platform?: Database["public"]["Enums"]["social_platform"] | null
           priority?: number
+          require_follow?: boolean
           response_text?: string | null
           response_variations?: string[]
           set_status?: Database["public"]["Enums"]["conversation_status"] | null
+          target_post_ids?: string[]
           trigger?: Database["public"]["Enums"]["automation_trigger"]
           updated_at?: string
         }

@@ -141,6 +141,13 @@
       "when": 1789999678040,
       "tag": "0019_private_security_definer_helpers",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1790055122026,
+      "tag": "0020_automation_post_targeting_and_follow_gate",
+      "breakpoints": true
     }
   ]
 }

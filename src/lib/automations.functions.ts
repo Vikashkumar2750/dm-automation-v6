@@ -25,6 +25,16 @@ export type AutomationRule = {
   cooldown_seconds: number;
   daily_limit: number;
   created_at: string;
+  target_post_ids: string[];
+  comment_reply_text: string | null;
+  comment_reply_variations: string[];
+  dm_link_url: string | null;
+  dm_button_label: string | null;
+  dm_attachment_url: string | null;
+  dm_attachment_type: "none" | "image" | "video" | "file";
+  follower_condition: "any" | "followers_only" | "non_followers";
+  require_follow: boolean;
+  follow_prompt_text: string | null;
 };
 
 export type AutomationRun = {
@@ -37,7 +47,7 @@ export type AutomationRun = {
 };
 
 const SELECT =
-  "id, organization_id, name, is_active, priority, platform, trigger, match_type, keywords, action, response_text, response_variations, set_status, cooldown_seconds, daily_limit, created_at";
+  "id, organization_id, name, is_active, priority, platform, trigger, match_type, keywords, action, response_text, response_variations, set_status, cooldown_seconds, daily_limit, created_at, target_post_ids, comment_reply_text, comment_reply_variations, dm_link_url, dm_button_label, dm_attachment_url, dm_attachment_type, follower_condition, require_follow, follow_prompt_text";
 
 const ruleInput = z.object({
   name: z.string().trim().min(1).max(80),
@@ -59,6 +69,22 @@ const ruleInput = z.object({
   setStatus: z.enum(["open", "pending", "resolved"]).nullable(),
   cooldownSeconds: z.number().int().min(0).max(86400),
   dailyLimit: z.number().int().min(1).max(5000),
+  targetPostIds: z.array(z.string().trim().min(1).max(120)).max(50),
+  commentReplyText: z.string().trim().max(1000).nullable(),
+  commentReplyVariations: z.array(z.string().trim().min(1).max(1000)).max(10),
+  dmLinkUrl: z.string().trim().url().max(500).nullable().or(z.literal("").transform(() => null)),
+  dmButtonLabel: z.string().trim().max(20).nullable(),
+  dmAttachmentUrl: z
+    .string()
+    .trim()
+    .url()
+    .max(500)
+    .nullable()
+    .or(z.literal("").transform(() => null)),
+  dmAttachmentType: z.enum(["none", "image", "video", "file"]),
+  followerCondition: z.enum(["any", "followers_only", "non_followers"]),
+  requireFollow: z.boolean(),
+  followPromptText: z.string().trim().max(1000).nullable(),
 });
 
 function toRow(input: z.infer<typeof ruleInput>) {
@@ -76,6 +102,16 @@ function toRow(input: z.infer<typeof ruleInput>) {
     set_status: input.setStatus,
     cooldown_seconds: input.cooldownSeconds,
     daily_limit: input.dailyLimit,
+    target_post_ids: input.targetPostIds,
+    comment_reply_text: input.commentReplyText,
+    comment_reply_variations: input.commentReplyVariations,
+    dm_link_url: input.dmLinkUrl,
+    dm_button_label: input.dmButtonLabel,
+    dm_attachment_url: input.dmAttachmentUrl,
+    dm_attachment_type: input.dmAttachmentType,
+    follower_condition: input.followerCondition,
+    require_follow: input.requireFollow,
+    follow_prompt_text: input.followPromptText,
   };
 }
 
@@ -133,6 +169,21 @@ export const updateAutomationRule = createServerFn({ method: "POST" })
     if (rest.setStatus !== undefined) patch.set_status = rest.setStatus;
     if (rest.cooldownSeconds !== undefined) patch.cooldown_seconds = rest.cooldownSeconds;
     if (rest.dailyLimit !== undefined) patch.daily_limit = rest.dailyLimit;
+    if (rest.targetPostIds !== undefined) patch.target_post_ids = rest.targetPostIds;
+    if (rest.commentReplyText !== undefined)
+      patch.comment_reply_text = rest.commentReplyText;
+    if (rest.commentReplyVariations !== undefined)
+      patch.comment_reply_variations = rest.commentReplyVariations;
+    if (rest.dmLinkUrl !== undefined) patch.dm_link_url = rest.dmLinkUrl;
+    if (rest.dmButtonLabel !== undefined) patch.dm_button_label = rest.dmButtonLabel;
+    if (rest.dmAttachmentUrl !== undefined) patch.dm_attachment_url = rest.dmAttachmentUrl;
+    if (rest.dmAttachmentType !== undefined)
+      patch.dm_attachment_type = rest.dmAttachmentType;
+    if (rest.followerCondition !== undefined)
+      patch.follower_condition = rest.followerCondition;
+    if (rest.requireFollow !== undefined) patch.require_follow = rest.requireFollow;
+    if (rest.followPromptText !== undefined)
+      patch.follow_prompt_text = rest.followPromptText;
 
     const { error } = await context.supabase
       .from("automation_rules")
@@ -383,4 +434,43 @@ export const removeOptOut = createServerFn({ method: "POST" })
       .eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
+  });
+
+// ------------------------------------------------------- post targeting
+
+export type TargetablePost = {
+  id: string;
+  externalPostId: string;
+  platform: "instagram" | "facebook" | "youtube";
+  caption: string;
+  mediaUrl: string | null;
+  permalink: string | null;
+  publishedAt: string | null;
+};
+
+/** Published posts that can be used to scope an automation to one post. */
+export const listTargetablePosts = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) =>
+    z.object({ organizationId: z.string().uuid() }).parse(data),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: rows, error } = await context.supabase
+      .from("posts")
+      .select("id, platform, caption, media_url, media_urls, permalink, external_post_id, published_at")
+      .eq("organization_id", data.organizationId)
+      .eq("status", "published")
+      .not("external_post_id", "is", null)
+      .order("published_at", { ascending: false })
+      .limit(60);
+    if (error) throw new Error(error.message);
+    return (rows ?? []).map((row) => ({
+      id: row.id,
+      externalPostId: row.external_post_id as string,
+      platform: row.platform,
+      caption: row.caption ?? "",
+      mediaUrl: row.media_url ?? row.media_urls?.[0] ?? null,
+      permalink: row.permalink,
+      publishedAt: row.published_at,
+    })) as TargetablePost[];
   });
