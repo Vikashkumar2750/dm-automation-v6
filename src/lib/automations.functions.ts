@@ -435,3 +435,42 @@ export const removeOptOut = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+// ------------------------------------------------------- post targeting
+
+export type TargetablePost = {
+  id: string;
+  externalPostId: string;
+  platform: "instagram" | "facebook" | "youtube";
+  caption: string;
+  mediaUrl: string | null;
+  permalink: string | null;
+  publishedAt: string | null;
+};
+
+/** Published posts that can be used to scope an automation to one post. */
+export const listTargetablePosts = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) =>
+    z.object({ organizationId: z.string().uuid() }).parse(data),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: rows, error } = await context.supabase
+      .from("posts")
+      .select("id, platform, caption, media_url, media_urls, permalink, external_post_id, published_at")
+      .eq("organization_id", data.organizationId)
+      .eq("status", "published")
+      .not("external_post_id", "is", null)
+      .order("published_at", { ascending: false })
+      .limit(60);
+    if (error) throw new Error(error.message);
+    return (rows ?? []).map((row) => ({
+      id: row.id,
+      externalPostId: row.external_post_id as string,
+      platform: row.platform,
+      caption: row.caption ?? "",
+      mediaUrl: row.media_url ?? row.media_urls?.[0] ?? null,
+      permalink: row.permalink,
+      publishedAt: row.published_at,
+    })) as TargetablePost[];
+  });
