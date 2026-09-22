@@ -612,6 +612,127 @@ function AutomationsPage() {
                 </div>
               )}
 
+              {needsDm && (
+                <div className="grid gap-4 rounded-lg border p-4">
+                  <p className="text-sm font-medium">Link & attachment (optional)</p>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="grid gap-2">
+                      <Label>Link URL</Label>
+                      <Input
+                        value={draft.dmLinkUrl}
+                        placeholder="https://your-site.com/offer"
+                        onChange={(e) => setDraft({ ...draft, dmLinkUrl: e.target.value })}
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label>Button text</Label>
+                      <Input
+                        value={draft.dmButtonLabel}
+                        maxLength={20}
+                        placeholder="View offer"
+                        onChange={(e) =>
+                          setDraft({ ...draft, dmButtonLabel: e.target.value })
+                        }
+                      />
+                    </div>
+                  </div>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="grid gap-2">
+                      <Label>Attachment type</Label>
+                      <Select
+                        value={draft.dmAttachmentType}
+                        onValueChange={(v) =>
+                          setDraft({
+                            ...draft,
+                            dmAttachmentType: v as Draft["dmAttachmentType"],
+                          })
+                        }
+                      >
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">No attachment</SelectItem>
+                          <SelectItem value="image">Image</SelectItem>
+                          <SelectItem value="video">Video</SelectItem>
+                          <SelectItem value="file">File</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="grid gap-2">
+                      <Label>Attachment URL</Label>
+                      <Input
+                        value={draft.dmAttachmentUrl}
+                        disabled={draft.dmAttachmentType === "none"}
+                        placeholder="https://your-site.com/catalogue.pdf"
+                        onChange={(e) =>
+                          setDraft({ ...draft, dmAttachmentUrl: e.target.value })
+                        }
+                      />
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Leave both empty for a plain text reply. With a button text the link
+                    is shown as a tappable button.
+                  </p>
+                </div>
+              )}
+
+              {needsDm && (
+                <div className="grid gap-4 rounded-lg border p-4">
+                  <p className="text-sm font-medium">Follower check</p>
+                  <div className="grid gap-2">
+                    <Label>Reply to</Label>
+                    <Select
+                      value={draft.followerCondition}
+                      onValueChange={(v) =>
+                        setDraft({
+                          ...draft,
+                          followerCondition: v as Draft["followerCondition"],
+                        })
+                      }
+                    >
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="any">Everyone</SelectItem>
+                        <SelectItem value="followers_only">Followers only</SelectItem>
+                        <SelectItem value="non_followers">Non-followers only</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex items-center justify-between rounded-lg border px-4 py-3">
+                    <div className="pr-4">
+                      <p className="text-sm font-medium">Ask to follow first</p>
+                      <p className="text-xs text-muted-foreground">
+                        Non-followers get a follow request with an “I followed” button.
+                        The main reply is sent only after the follow is confirmed.
+                      </p>
+                    </div>
+                    <Switch
+                      checked={draft.requireFollow}
+                      onCheckedChange={(checked) =>
+                        setDraft({ ...draft, requireFollow: checked })
+                      }
+                    />
+                  </div>
+                  {draft.requireFollow && (
+                    <div className="grid gap-2">
+                      <Label>Follow request message</Label>
+                      <Textarea
+                        rows={2}
+                        value={draft.followPromptText}
+                        placeholder="Please follow us first, then tap the button below and we'll send the details."
+                        onChange={(e) =>
+                          setDraft({ ...draft, followPromptText: e.target.value })
+                        }
+                      />
+                    </div>
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    Follower status is available on Instagram. On Facebook the reply is
+                    always sent.
+                  </p>
+                </div>
+              )}
+
               {draft.action === "set_status" && (
                 <div className="grid gap-2">
                   <Label>Set status to</Label>
