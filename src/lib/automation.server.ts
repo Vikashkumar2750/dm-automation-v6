@@ -388,7 +388,7 @@ export async function runAutomations(admin: AdminClient, ctx: AutomationContext)
         .maybeSingle(),
       admin
         .from("social_accounts")
-        .select("external_id")
+        .select("external_id, metadata")
         .eq("id", ctx.socialAccountId)
         .maybeSingle(),
     ]);
@@ -397,7 +397,11 @@ export async function runAutomations(admin: AdminClient, ctx: AutomationContext)
       await log(admin, ctx, rule.id, "failed", "no_token");
       return;
     }
-    const accountId = account.external_id as string;
+    const accountId = messagingAccountId(
+      ctx.platform,
+      account.external_id as string,
+      account.metadata,
+    );
 
     if (rule.action === "hide_comment") {
       if (!ctx.externalId) {
