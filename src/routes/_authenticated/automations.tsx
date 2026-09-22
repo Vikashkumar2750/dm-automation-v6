@@ -1300,3 +1300,95 @@ function Stat({ label, value }: { label: string; value: string }) {
   );
 }
 
+
+function PostPicker({
+  orgId,
+  selected,
+  onChange,
+}: {
+  orgId: string | undefined;
+  selected: string[];
+  onChange: (ids: string[]) => void;
+}) {
+  const fetchPosts = useServerFn(listTargetablePosts);
+  const postsQuery = useQuery({
+    queryKey: ["targetable-posts", orgId],
+    enabled: Boolean(orgId),
+    queryFn: () => fetchPosts({ data: { organizationId: orgId! } }),
+  });
+  const posts = postsQuery.data ?? [];
+
+  const toggle = (externalId: string) => {
+    onChange(
+      selected.includes(externalId)
+        ? selected.filter((id) => id !== externalId)
+        : [...selected, externalId],
+    );
+  };
+
+  return (
+    <div className="grid gap-3 rounded-lg border p-4">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-sm font-medium">Which posts?</p>
+          <p className="text-xs text-muted-foreground">
+            {selected.length === 0
+              ? "Running on all posts. Pick one or more to limit this rule."
+              : `${selected.length} post${selected.length > 1 ? "s" : ""} selected.`}
+          </p>
+        </div>
+        {selected.length > 0 && (
+          <Button type="button" variant="ghost" size="sm" onClick={() => onChange([])}>
+            All posts
+          </Button>
+        )}
+      </div>
+
+      {postsQuery.isLoading ? (
+        <p className="text-sm text-muted-foreground">Loading posts…</p>
+      ) : posts.length === 0 ? (
+        <p className="text-sm text-muted-foreground">
+          No published posts yet. Publish a post to target it here.
+        </p>
+      ) : (
+        <div className="grid max-h-64 gap-2 overflow-y-auto pr-1">
+          {posts.map((post) => {
+            const isOn = selected.includes(post.externalPostId);
+            return (
+              <button
+                key={post.id}
+                type="button"
+                onClick={() => toggle(post.externalPostId)}
+                className={`flex items-center gap-3 rounded-md border p-2 text-left transition ${
+                  isOn ? "border-primary bg-primary/5" : "hover:bg-muted/50"
+                }`}
+              >
+                {post.mediaUrl ? (
+                  <img
+                    src={post.mediaUrl}
+                    alt=""
+                    className="h-10 w-10 shrink-0 rounded object-cover"
+                  />
+                ) : (
+                  <div className="h-10 w-10 shrink-0 rounded bg-muted" />
+                )}
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm">
+                    {post.caption || "Untitled post"}
+                  </span>
+                  <span className="block text-xs capitalize text-muted-foreground">
+                    {post.platform}
+                    {post.publishedAt
+                      ? ` · ${new Date(post.publishedAt).toLocaleDateString()}`
+                      : ""}
+                  </span>
+                </span>
+                {isOn && <StatusBadge tone="success">Selected</StatusBadge>}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
