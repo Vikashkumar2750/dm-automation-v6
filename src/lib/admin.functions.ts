@@ -786,3 +786,212 @@ export const listPlanOrders = createServerFn({ method: "GET" })
     if (error) throw new Error(error.message);
     return data ?? [];
   });
+
+// ---------------------------------------------------------------- alerts
+
+export type AlertItem = {
+  id: string;
+  severity: "critical" | "warning" | "info";
+  category: "automation" | "delivery" | "account" | "publishing" | "safety";
+  title: string;
+  detail: string | null;
+  hint: string;
+  organizationName: string;
+  at: string;
+};
+
+export type AlertsFeed = {
+  generatedAt: string;
+  counts: { critical: number; warning: number; info: number; total: number };
+  topReasons: { reason: string; count: number }[];
+  items: AlertItem[];
+};
+
+/** Human wording for the raw reason codes the automation engine records. */
+function explainReason(detail: string | null): { title: string; hint: string } {
+  const code = (detail ?? "").toLowerCase();
+  const map: [string, string, string][] = [
+    ["no_token", "Account credentials missing", "Reconnect the social account from Social Accounts."],
+    ["window_expired", "24-hour reply window closed", "Meta blocks DMs after 24h of silence — nothing to fix."],
+    ["no_comment_id", "Comment reference missing", "The comment was deleted before the reply was sent."],
+    ["no_account", "No social account linked", "Connect an account for this workspace."],
+    ["comment_reply", "Public comment reply rejected", "Usually a permission or deleted-comment issue."],
+    ["follow_prompt", "Follow request message rejected", "Instagram refused the prompt format or the 24h window closed."],
+    ["attachment", "Attachment could not be delivered", "Check the attachment URL is public and the right type."],
+    ["not_a_follower", "Skipped: contact does not follow", "Rule is set to followers only."],
+    ["already_a_follower", "Skipped: contact already follows", "Rule targets non-followers only."],
+    ["paused", "Skipped: automation paused", "Automation is paused for this workspace."],
+    ["quiet_hours", "Skipped: quiet hours", "Outside the workspace's sending hours."],
+    ["daily_limit", "Skipped: daily limit reached", "Raise the rule's daily cap if this is unexpected."],
+    ["cooldown", "Skipped: cooldown active", "The same contact was messaged very recently."],
+    ["opt_out", "Skipped: contact opted out", "Contact asked to stop receiving messages."],
+    ["blocked_keyword", "Skipped: blocked word", "Message matched a blocked keyword."],
+    ["no_response_text", "Rule has no message written", "Open the rule and add the reply text."],
+    ["unknown_action", "Rule action not supported", "Edit the rule and pick a valid action."],
+  ];
+  for (const [key, title, hint] of map) {
+    if (code.startsWith(key) || code.includes(key)) return { title, hint };
+  }
+  return { title: "Automation could not complete", hint: "Open the rule's recent activity for details." };
+}
+
+export const listAutomationAlerts = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<AlertsFeed> => {
+    await assertSuperAdmin(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const soon = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+
+    const [orgs, runs, hooks, accounts, posts, settings, gates, rules] = await Promise.all([
+      supabaseAdmin.from("organizations").select("id, name"),
+      supabaseAdmin
+        .from("automation_runs")
+        .select("id, organization_id, rule_id, status, detail, created_at")
+        .in("status", ["failed", "skipped"])
+        .gte("created_at", since)
+        .order("created_at", { ascending: false })
+        .limit(200),
+      supabaseAdmin
+        .from("webhook_events")
+        .select("id, organization_id, platform, event_type, status, signature_valid, error, received_at")
+        .gte("received_at", since)
+        .order("received_at", { ascending: false })
+        .limit(200),
+      supabaseAdmin
+        .from("social_accounts")
+        .select("id, organization_id, platform, name, status, token_expires_at, updated_at"),
+      supabaseAdmin
+        .from("posts")
+        .select("id, organization_id, platform, caption, error, updated_at")
+        .eq("status", "failed")
+        .order("updated_at", { ascending: false })
+        .limit(50),
+      supabaseAdmin
+        .from("automation_settings")
+        .select("organization_id, is_paused, auto_paused_until, auto_pause_reason, updated_at"),
+      supabaseAdmin
+        .from("automation_follow_gates")
+        .select("id, organization_id, status, created_at, platform")
+        .eq("status", "expired")
+        .gte("created_at", since)
+        .limit(50),
+      supabaseAdmin.from("automation_rules").select("id, name"),
+    ]);
+
+    const orgName = new Map((orgs.data ?? []).map((o) => [o.id, o.name]));
+    const ruleName = new Map((rules.data ?? []).map((r) => [r.id, r.name]));
+    const name = (id: string | null) => (id ? (orgName.get(id) ?? "Unknown workspace") : "Platform");
+    const items: AlertItem[] = [];
+    const reasonCount = new Map<string, number>();
+
+    for (const r of runs.data ?? []) {
+      const { title, hint } = explainReason(r.detail);
+      const failed = r.status === "failed";
+      reasonCount.set(title, (reasonCount.get(title) ?? 0) + 1);
+      items.push({
+        id: `run-${r.id}`,
+        severity: failed ? "critical" : "info",
+        category: "automation",
+        title: `${title}${r.rule_id ? ` — ${ruleName.get(r.rule_id) ?? "rule"}` : ""}`,
+        detail: r.detail,
+        hint,
+        organizationName: name(r.organization_id),
+        at: r.created_at,
+      });
+    }
+
+    for (const h of hooks.data ?? []) {
+      if (h.status !== "failed" && h.signature_valid !== false) continue;
+      const bad = h.signature_valid === false;
+      const title = bad ? "Event rejected: signature invalid" : "Incoming event could not be processed";
+      reasonCount.set(title, (reasonCount.get(title) ?? 0) + 1);
+      items.push({
+        id: `hook-${h.id}`,
+        severity: "critical",
+        category: "delivery",
+        title: `${title} (${h.event_type})`,
+        detail: h.error,
+        hint: bad
+          ? "The app secret in Meta does not match the one configured here."
+          : "Open Webhooks to inspect the raw event payload.",
+        organizationName: name(h.organization_id),
+        at: h.received_at,
+      });
+    }
+
+    for (const a of accounts.data ?? []) {
+      const expiring = a.token_expires_at && a.token_expires_at < soon;
+      if (a.status === "connected" && !expiring) continue;
+      const disconnected = a.status !== "connected";
+      items.push({
+        id: `acct-${a.id}`,
+        severity: disconnected ? "critical" : "warning",
+        category: "account",
+        title: disconnected
+          ? `${a.name} is ${a.status} — automations will not run`
+          : `${a.name} access expires soon`,
+        detail: a.token_expires_at ? `Expires ${new Date(a.token_expires_at).toLocaleString()}` : null,
+        hint: "Ask the workspace to reconnect the account from Social Accounts.",
+        organizationName: name(a.organization_id),
+        at: a.updated_at,
+      });
+    }
+
+    for (const p of posts.data ?? []) {
+      items.push({
+        id: `post-${p.id}`,
+        severity: "warning",
+        category: "publishing",
+        title: `Scheduled post failed (${p.platform})`,
+        detail: p.error ?? p.caption?.slice(0, 120) ?? null,
+        hint: "Retry it from Jobs & Queue once the cause is fixed.",
+        organizationName: name(p.organization_id),
+        at: p.updated_at,
+      });
+    }
+
+    for (const s of settings.data ?? []) {
+      const autoPaused = s.auto_paused_until && s.auto_paused_until > new Date().toISOString();
+      if (!s.is_paused && !autoPaused) continue;
+      items.push({
+        id: `pause-${s.organization_id}`,
+        severity: autoPaused ? "critical" : "warning",
+        category: "safety",
+        title: autoPaused ? "Sending auto-paused by safety guard" : "Automations paused manually",
+        detail: s.auto_pause_reason ?? null,
+        hint: autoPaused
+          ? "A sudden spike in activity triggered the guard; it resumes automatically."
+          : "Someone in the workspace turned automations off.",
+        organizationName: name(s.organization_id),
+        at: s.updated_at,
+      });
+    }
+
+    for (const g of gates.data ?? []) {
+      items.push({
+        id: `gate-${g.id}`,
+        severity: "info",
+        category: "automation",
+        title: "Contact never completed the follow step",
+        detail: `${g.platform} · follow request expired`,
+        hint: "Expected for some contacts; frequent cases mean the prompt is unclear.",
+        organizationName: name(g.organization_id),
+        at: g.created_at,
+      });
+    }
+
+    items.sort((a, b) => (a.at < b.at ? 1 : -1));
+    const counts = {
+      critical: items.filter((i) => i.severity === "critical").length,
+      warning: items.filter((i) => i.severity === "warning").length,
+      info: items.filter((i) => i.severity === "info").length,
+      total: items.length,
+    };
+    const topReasons = [...reasonCount.entries()]
+      .map(([reason, count]) => ({ reason, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+
+    return { generatedAt: new Date().toISOString(), counts, topReasons, items: items.slice(0, 200) };
+  });

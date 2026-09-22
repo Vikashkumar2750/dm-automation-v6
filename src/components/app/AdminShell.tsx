@@ -12,6 +12,7 @@ import {
   Menu,
   Settings,
   Share2,
+  Siren,
   ShieldCheck,
   Users,
   Webhook,
@@ -36,6 +37,7 @@ const opsNav: NavItem[] = [
 ];
 
 const healthNav: NavItem[] = [
+  { label: "Live Alerts", to: "/admin/alerts", icon: Siren },
   { label: "Jobs & Queue", to: "/admin/jobs", icon: Gauge },
   { label: "Webhooks", to: "/admin/webhooks", icon: Webhook },
   { label: "API Health", to: "/admin/health", icon: Activity },
