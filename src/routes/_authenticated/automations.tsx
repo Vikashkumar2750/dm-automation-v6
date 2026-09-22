@@ -305,6 +305,19 @@ function AutomationsPage() {
         setStatus: value.action === "set_status" ? value.setStatus : null,
         cooldownSeconds: Number(value.cooldownSeconds) || 0,
         dailyLimit: Number(value.dailyLimit) || 1,
+        targetPostIds: value.targetPostIds,
+        commentReplyText: value.commentReplyText.trim() || null,
+        commentReplyVariations: value.commentReplyVariations
+          .split("\n")
+          .map((t) => t.trim())
+          .filter(Boolean),
+        dmLinkUrl: value.dmLinkUrl.trim() || null,
+        dmButtonLabel: value.dmButtonLabel.trim() || null,
+        dmAttachmentUrl: value.dmAttachmentUrl.trim() || null,
+        dmAttachmentType: value.dmAttachmentType,
+        followerCondition: value.followerCondition,
+        requireFollow: value.requireFollow,
+        followPromptText: value.followPromptText.trim() || null,
       };
       if (value.id) {
         return updateFn({ data: { id: value.id, ...payload } });
