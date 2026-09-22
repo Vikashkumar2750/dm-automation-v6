@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
-import { Loader2, Plus, ShieldCheck, Trash2, Workflow, Zap } from "lucide-react";
+import { ChevronDown, ChevronUp, Loader2, Plus, ShieldCheck, Trash2, Workflow, Zap } from "lucide-react";
 import { toast } from "sonner";
 
 import { AppShell } from "@/components/app/AppShell";
@@ -267,6 +267,7 @@ function AutomationsPage() {
   const deleteFn = useServerFn(deleteAutomationRule);
 
   const [draft, setDraft] = useState<Draft | null>(null);
+  const [showAllRuns, setShowAllRuns] = useState(false);
 
   const rulesQuery = useQuery({
     queryKey: ["automation-rules", orgId],
@@ -353,6 +354,7 @@ function AutomationsPage() {
 
   const rules = rulesQuery.data ?? [];
   const runs = runsQuery.data ?? [];
+  const visibleRuns = showAllRuns ? runs : runs.slice(0, 5);
   const ruleName = (id: string | null) =>
     rules.find((r) => r.id === id)?.name ?? "Deleted rule";
 
@@ -494,8 +496,9 @@ function AutomationsPage() {
               />
             </div>
           ) : (
-            <ul className="divide-y">
-              {runs.map((run) => {
+            <>
+              <ul className="divide-y">
+              {visibleRuns.map((run) => {
                 const sent = run.status === "sent" || run.status === "matched";
                 const explained = sent ? null : explainReason(run.detail);
                 return (
@@ -515,7 +518,25 @@ function AutomationsPage() {
                   </li>
                 );
               })}
-            </ul>
+              </ul>
+              {runs.length > 5 && (
+                <div className="border-t p-3 text-center">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowAllRuns((current) => !current)}
+                  >
+                    {showAllRuns ? (
+                      <ChevronUp className="size-4" />
+                    ) : (
+                      <ChevronDown className="size-4" />
+                    )}
+                    {showAllRuns ? "Show latest 5" : `View more (${runs.length - 5})`}
+                  </Button>
+                </div>
+              )}
+            </>
           )}
         </Panel>
       </div>

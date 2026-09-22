@@ -8,6 +8,7 @@
 type AdminClient = import("@supabase/supabase-js").SupabaseClient;
 
 const GRAPH = "https://graph.facebook.com/v21.0";
+const IG_GRAPH = "https://graph.instagram.com/v21.0";
 
 export type AutomationContext = {
   organizationId: string;
@@ -452,7 +453,11 @@ export async function runAutomations(admin: AdminClient, ctx: AutomationContext)
         await log(admin, ctx, rule.id, "skipped", "already_a_follower");
         return;
       }
-      if (follows === false && rule.require_follow) {
+      // A commenter has not granted Instagram profile consent until they send
+      // a message or tap a quick reply. Treat an unreadable follow state as
+      // gated as well; otherwise the final DM is attempted before consent and
+      // Meta rejects it with capability error (#3).
+      if ((follows === false || follows === null) && rule.require_follow) {
         await openFollowGate(admin, ctx, rule, token, accountId);
         return;
       }
@@ -516,8 +521,9 @@ async function sendWithFallback(
   recipient: Record<string, unknown>,
   message: Record<string, unknown>,
   fallbackText: string,
+  platform: AutomationContext["platform"],
 ): Promise<{ id?: string | undefined; error?: string | undefined }> {
-  const first = await call(`${GRAPH}/${accountId}/messages`, {
+  const first = await callMessaging(platform, accountId, {
     recipient,
     message,
     access_token: token,
@@ -526,7 +532,7 @@ async function sendWithFallback(
   if (typeof (message as { text?: unknown }).text === "string" && !("quick_replies" in message)) {
     return first;
   }
-  const retry = await call(`${GRAPH}/${accountId}/messages`, {
+  const retry = await callMessaging(platform, accountId, {
     recipient,
     message: { text: fallbackText },
     access_token: token,
@@ -594,6 +600,7 @@ async function deliverDm(
     recipient,
     message,
     link ? `${text}\n${link}` : text,
+    ctx.platform,
   );
   if (first.error) {
     await log(admin, ctx, rule.id, "failed", first.error.slice(0, 300));
@@ -604,7 +611,7 @@ async function deliverDm(
 
   const attachmentUrl = (rule.dm_attachment_url ?? "").trim();
   if (attachmentUrl && rule.dm_attachment_type && rule.dm_attachment_type !== "none") {
-    const media = await call(`${GRAPH}/${accountId}/messages`, {
+    const media = await callMessaging(ctx.platform, accountId, {
       recipient: { id: ctx.externalUserId },
       message: {
         attachment: {
@@ -638,18 +645,30 @@ async function checkFollows(
 ): Promise<boolean | null> {
   if (platform !== "instagram") return null;
   try {
-    const response = await fetch(
-      `${GRAPH}/${externalUserId}?fields=is_user_follow_business&access_token=${encodeURIComponent(token)}`,
-    );
-    const json = (await response.json()) as {
-      is_user_follow_business?: boolean;
-      error?: unknown;
-    };
-    if (!response.ok || typeof json.is_user_follow_business !== "boolean") return null;
-    return json.is_user_follow_business;
+    const path = `${externalUserId}?fields=is_user_follow_business&access_token=${encodeURIComponent(token)}`;
+    const first = await readFollowState(`${GRAPH}/${path}`);
+    if (typeof first.follows === "boolean") return first.follows;
+    if (first.errorCode !== 3) return null;
+    const retry = await readFollowState(`${IG_GRAPH}/${path}`);
+    return typeof retry.follows === "boolean" ? retry.follows : null;
   } catch {
     return null;
   }
+}
+
+async function readFollowState(url: string): Promise<{
+  follows?: boolean;
+  errorCode?: number;
+}> {
+  const response = await fetch(url);
+  const json = (await response.json()) as {
+    is_user_follow_business?: boolean;
+    error?: { code?: number };
+  };
+  if (response.ok && typeof json.is_user_follow_business === "boolean") {
+    return { follows: json.is_user_follow_business };
+  }
+  return typeof json.error?.code === "number" ? { errorCode: json.error.code } : {};
 }
 
 const FOLLOW_PAYLOAD = "AUTOMATION_FOLLOW_CHECK";
@@ -664,7 +683,7 @@ async function openFollowGate(
   token: string,
   accountId: string,
 ) {
-  const { data: gate } = await admin
+  const { data: gate, error: gateError } = await admin
     .from("automation_follow_gates")
     .insert({
       organization_id: ctx.organizationId,
@@ -678,6 +697,11 @@ async function openFollowGate(
     })
     .select("id")
     .single();
+
+  if (gateError || !gate) {
+    await log(admin, ctx, rule.id, "failed", `follow_gate:${gateError?.message ?? "not_created"}`);
+    return;
+  }
 
   const prompt = (rule.follow_prompt_text ?? "").trim() || DEFAULT_FOLLOW_PROMPT;
 
@@ -702,7 +726,7 @@ async function openFollowGate(
     {
       content_type: "text",
       title: "I followed ✅",
-      payload: `${FOLLOW_PAYLOAD}:${gate?.id ?? ""}`,
+      payload: `${FOLLOW_PAYLOAD}:${gate.id}`,
     },
   ];
 
@@ -723,7 +747,7 @@ async function openFollowGate(
                 {
                   type: "postback",
                   title: "I followed ✅",
-                  payload: `${FOLLOW_PAYLOAD}:${gate?.id ?? ""}`,
+                  payload: `${FOLLOW_PAYLOAD}:${gate.id}`,
                 },
               ],
             },
@@ -737,6 +761,7 @@ async function openFollowGate(
     actionRecipient(ctx, rule.action),
     message,
     promptText,
+    ctx.platform,
   );
 
 
@@ -822,7 +847,7 @@ export async function handleFollowGateReply(
       .update({ attempts, last_checked_at: new Date().toISOString() })
       .eq("id", gate.id);
     const retry = (typedRule.follow_prompt_text ?? "").trim() || DEFAULT_FOLLOW_PROMPT;
-    await call(`${GRAPH}/${account.external_id}/messages`, {
+    await callMessaging(args.platform, account.external_id as string, {
       recipient: { id: args.externalUserId },
       message: {
         text: `We can't see the follow yet. ${retry}`,
@@ -877,10 +902,33 @@ async function call(url: string, payload: Record<string, unknown>) {
   const json = (await response.json()) as {
     id?: string;
     message_id?: string;
-    error?: { message?: string };
+    error?: { message?: string; code?: number };
   };
   if (!response.ok || json.error) {
-    return { error: json.error?.message ?? `HTTP ${response.status}` };
+    return {
+      error: json.error?.message ?? `HTTP ${response.status}`,
+      errorCode: json.error?.code,
+    };
   }
   return { id: json.id ?? json.message_id };
+}
+
+/**
+ * Facebook Login uses graph.facebook.com, while Instagram Business Login uses
+ * graph.instagram.com. Retry only capability error #3 on the alternate host;
+ * all other provider errors are returned unchanged.
+ */
+async function callMessaging(
+  platform: AutomationContext["platform"],
+  accountId: string,
+  payload: Record<string, unknown>,
+) {
+  const first = await call(`${GRAPH}/${accountId}/messages`, payload);
+  if (platform !== "instagram" || first.errorCode !== 3) return first;
+  const retry = await call(`${IG_GRAPH}/${accountId}/messages`, payload);
+  if (!retry.error) return retry;
+  return {
+    error: `${first.error} | Instagram endpoint: ${retry.error}`,
+    errorCode: retry.errorCode,
+  };
 }
