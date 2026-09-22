@@ -203,8 +203,8 @@ const triggerLabel: Record<Trigger, string> = {
 
 const actionLabel: Record<Action, string> = {
   reply_dm: "Send a DM reply",
-  comment_public_reply: "Public reply under comment",
-  comment_private_reply: "Private DM from comment",
+  comment_public_reply: "Public reply only (no DM)",
+  comment_private_reply: "Public reply + DM with link (recommended)",
   hide_comment: "Hide the comment",
   set_status: "Change conversation status",
 };
@@ -539,7 +539,7 @@ function AutomationsPage() {
                       setDraft({
                         ...draft,
                         trigger: v as Trigger,
-                        action: v === "comment_received" ? "comment_public_reply" : "reply_dm",
+                        action: v === "comment_received" ? "comment_private_reply" : "reply_dm",
                       })
                     }
                   >
