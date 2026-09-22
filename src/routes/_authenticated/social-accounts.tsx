@@ -268,7 +268,9 @@ function SocialAccountsPage() {
             />
             Refresh
           </Button>
+          </div>
         </div>
+
 
         {accountsQuery.isLoading ? (
           <div className="flex items-center justify-center py-12 text-sm text-muted-foreground">
