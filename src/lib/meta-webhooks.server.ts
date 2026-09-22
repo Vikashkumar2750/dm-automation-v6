@@ -65,11 +65,12 @@ async function postSubscribedApps(
       error?: { message?: string; code?: number };
     };
     if (!res.ok || json.error) {
-      return {
+      const result: { ok: boolean; error?: string; errorCode?: number } = {
         ok: false,
         error: json.error?.message ?? `HTTP ${res.status}`,
-        errorCode: typeof json.error?.code === "number" ? json.error.code : undefined,
       };
+      if (typeof json.error?.code === "number") result.errorCode = json.error.code;
+      return result;
     }
     return { ok: Boolean(json.success ?? true) };
   } catch (error) {
