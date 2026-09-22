@@ -86,6 +86,16 @@ type Draft = {
   setStatus: "open" | "pending" | "resolved";
   cooldownSeconds: number;
   dailyLimit: number;
+  targetPostIds: string[];
+  commentReplyText: string;
+  commentReplyVariations: string;
+  dmLinkUrl: string;
+  dmButtonLabel: string;
+  dmAttachmentUrl: string;
+  dmAttachmentType: "none" | "image" | "video" | "file";
+  followerCondition: "any" | "followers_only" | "non_followers";
+  requireFollow: boolean;
+  followPromptText: string;
 };
 
 const emptyDraft: Draft = {
@@ -102,7 +112,87 @@ const emptyDraft: Draft = {
   setStatus: "pending",
   cooldownSeconds: 60,
   dailyLimit: 200,
+  targetPostIds: [],
+  commentReplyText: "",
+  commentReplyVariations: "",
+  dmLinkUrl: "",
+  dmButtonLabel: "",
+  dmAttachmentUrl: "",
+  dmAttachmentType: "none",
+  followerCondition: "any",
+  requireFollow: false,
+  followPromptText: "",
 };
+
+/** One-click message packs: a main reply plus three ready variations. */
+const MESSAGE_TEMPLATES: Array<{
+  label: string;
+  text: string;
+  variations: string[];
+  comment: string;
+  commentVariations: string[];
+}> = [
+  {
+    label: "Price enquiry",
+    text: "Thanks for asking! Sharing our pricing and packages with you right now 👇",
+    variations: [
+      "Hi! Here are our current plans and prices — have a look 👇",
+      "Happy to help! Sending the price list your way 👇",
+      "Thanks for your interest — full pricing details below 👇",
+    ],
+    comment: "Just sent you the pricing in DM 📩",
+    commentVariations: [
+      "Check your inbox — details sent 📩",
+      "DM kar diya hai, please check 📩",
+      "Sent you everything in a message 📩",
+    ],
+  },
+  {
+    label: "Send the link",
+    text: "Here you go! Tap the link below to see everything.",
+    variations: [
+      "All the details are on this link 👇",
+      "Sharing the link — take a look and tell me what you think.",
+      "Link niche hai, koi bhi sawal ho to bataiye!",
+    ],
+    comment: "Link bhej diya hai DM me 📩",
+    commentVariations: [
+      "Sent the link in your inbox 📩",
+      "Check DM — link shared 📩",
+      "Just messaged you the link 📩",
+    ],
+  },
+  {
+    label: "Thanks + follow up",
+    text: "Thank you so much for reaching out! How can we help you today?",
+    variations: [
+      "Hey, thanks for the message! What would you like to know?",
+      "Thanks for getting in touch — tell us what you need 🙂",
+      "Hi! We're here to help. What are you looking for?",
+    ],
+    comment: "Thanks for commenting! Replied in DM 📩",
+    commentVariations: [
+      "Appreciate it! Check your inbox 📩",
+      "Thanks 🙏 sent you a message",
+      "Answered you in DM 📩",
+    ],
+  },
+  {
+    label: "Order / booking",
+    text: "Great choice! Share your name and city and we'll confirm your order.",
+    variations: [
+      "Awesome — send your name + city and we'll book it for you.",
+      "Let's get you started! Reply with your name and city.",
+      "Sure! Bas apna naam aur city bhej dijiye, hum confirm kar denge.",
+    ],
+    comment: "Details DM me bhej diye hain 📩",
+    commentVariations: [
+      "Sent the booking steps in DM 📩",
+      "Check inbox to place your order 📩",
+      "Messaged you how to order 📩",
+    ],
+  },
+];
 
 const triggerLabel: Record<Trigger, string> = {
   dm_received: "New DM",
