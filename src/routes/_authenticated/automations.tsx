@@ -1535,22 +1535,32 @@ function PostPicker({
         </div>
       )}
 
-      <div className="flex gap-2">
-        <Input
-          value={manual}
-          placeholder="Paste post link or post ID"
-          onChange={(e) => setManual(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              addManual();
-            }
-          }}
-        />
-        <Button type="button" variant="outline" onClick={addManual}>
-          Add
-        </Button>
-      </div>
+      {showManual ? (
+        <div className="flex gap-2">
+          <Input
+            value={manual}
+            placeholder="Paste post link or post ID"
+            onChange={(e) => setManual(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                addManual();
+              }
+            }}
+          />
+          <Button type="button" variant="outline" onClick={addManual}>
+            Add
+          </Button>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setShowManual(true)}
+          className="justify-self-start text-xs text-muted-foreground underline"
+        >
+          Can’t find a post? Add it by link or ID
+        </button>
+      )}
     </div>
   );
 }
