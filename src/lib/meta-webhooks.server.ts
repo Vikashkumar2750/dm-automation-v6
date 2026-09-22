@@ -112,22 +112,33 @@ export async function subscribeInstagramWebhooks(
   };
 }
 
-/** Reads back which fields the app is currently subscribed to for a Page. */
-export async function readPageSubscription(
-  pageId: string,
-  pageAccessToken: string,
-): Promise<{ fields: string[]; error?: string }> {
+export type ReadResult = { fields: string[]; error?: string; unsupported?: boolean };
+
+/** Error codes Meta returns when this app/flow simply cannot call the endpoint. */
+const UNSUPPORTED_CODES = new Set([3, 100, 200, 803]);
+
+async function readSubscribedApps(
+  base: string,
+  objectId: string,
+  accessToken: string,
+): Promise<ReadResult> {
   try {
     const res = await fetch(
-      `${GRAPH}/${pageId}/subscribed_apps?${new URLSearchParams({
-        access_token: pageAccessToken,
+      `${base}/${objectId}/subscribed_apps?${new URLSearchParams({
+        access_token: accessToken,
       })}`,
     );
     const json = (await res.json()) as {
       data?: Array<{ subscribed_fields?: string[] }>;
-      error?: { message?: string };
+      error?: { message?: string; code?: number };
     };
-    if (json.error) return { fields: [], error: json.error.message ?? "Request failed" };
+    if (json.error) {
+      const out: ReadResult = { fields: [], error: json.error.message ?? "Request failed" };
+      if (typeof json.error.code === "number" && UNSUPPORTED_CODES.has(json.error.code)) {
+        out.unsupported = true;
+      }
+      return out;
+    }
     return { fields: json.data?.[0]?.subscribed_fields ?? [] };
   } catch (error) {
     return {
@@ -137,9 +148,28 @@ export async function readPageSubscription(
   }
 }
 
+/** Reads back which fields the app is currently subscribed to for a Page. */
+export async function readPageSubscription(
+  pageId: string,
+  pageAccessToken: string,
+): Promise<ReadResult> {
+  return readSubscribedApps(GRAPH, pageId, pageAccessToken);
+}
+
+/**
+ * Reads the Instagram-account subscription.
+ *
+ * With Facebook Login for Business the per-account endpoint is not callable
+ * (error #3) — Instagram comment/DM events are delivered through the Page
+ * subscription plus the app-level Instagram webhook object instead. In that
+ * case this returns `unsupported` so callers do not flag the account broken.
+ */
 export async function readInstagramSubscription(
   instagramUserId: string,
-  pageAccessToken: string,
-) {
-  return readPageSubscription(instagramUserId, pageAccessToken);
+  accessToken: string,
+): Promise<ReadResult> {
+  const viaGraph = await readSubscribedApps(GRAPH, instagramUserId, accessToken);
+  if (!viaGraph.unsupported) return viaGraph;
+  const viaIg = await readSubscribedApps(IG_GRAPH, instagramUserId, accessToken);
+  return viaIg.error ? { ...viaIg, unsupported: true } : viaIg;
 }
