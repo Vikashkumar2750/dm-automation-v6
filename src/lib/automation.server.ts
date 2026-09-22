@@ -843,7 +843,7 @@ export async function handleFollowGateReply(
   if (!token || !account?.external_id) return true;
   const sendId = messagingAccountId(
     args.platform,
-    sendId,
+    account.external_id as string,
     account.metadata,
   );
 
