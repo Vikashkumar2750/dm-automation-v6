@@ -98,16 +98,34 @@ type MessagingEvent = {
 
 type CommentValue = {
   item?: string;
+  verb?: string;
   comment_id?: string;
   id?: string;
   text?: string;
   message?: string;
   post_id?: string;
-  parent_id?: string;
   media?: { id?: string };
   post?: { id?: string };
   from?: { id?: string; username?: string; name?: string };
 };
+
+function eventIdentity(item: { type: string; value: unknown }, fallback: string) {
+  const raw = item.value as {
+    value?: CommentValue;
+    comment_id?: string;
+    id?: string;
+    message?: { mid?: string };
+    postback?: { mid?: string };
+  };
+  const comment = raw.value ?? raw;
+  return (
+    comment.comment_id ??
+    comment.id ??
+    raw.message?.mid ??
+    raw.postback?.mid ??
+    fallback
+  );
+}
 
 /**
  * Mirror a webhook item into the inbox (conversations + messages).
@@ -147,12 +165,13 @@ async function ingestIntoInbox(
   } else if (type.endsWith(".comments") || type.endsWith(".feed")) {
     const c = (value as { value?: CommentValue }).value ?? (value as CommentValue);
     if (c.item && c.item !== "comment") return;
+    if (c.verb === "remove") return;
     externalUserId = c.from?.id ?? null;
-    if (!externalUserId) return;
+    if (!externalUserId || externalUserId === args.accountExternalId) return;
     externalUserName = c.from?.username ?? c.from?.name ?? null;
     body = c.text ?? c.message ?? null;
     externalId = c.comment_id ?? c.id ?? null;
-    postExternalId = c.media?.id ?? c.post?.id ?? c.post_id ?? c.parent_id ?? null;
+    postExternalId = c.media?.id ?? c.post?.id ?? c.post_id ?? null;
     channel = "comment";
   } else {
     return;
@@ -312,7 +331,8 @@ export const Route = createFileRoute("/api/public/webhooks/meta")({
           }
 
           for (const [index, item] of items.entries()) {
-            const dedupeKey = `meta:${externalId ?? "unknown"}:${entry.time ?? 0}:${item.type}:${index}`;
+            const identity = eventIdentity(item, `${entry.time ?? 0}:${index}`);
+            const dedupeKey = `meta:${externalId ?? "unknown"}:${item.type}:${identity}`;
             const { data: webhookEvent, error } = await supabaseAdmin
               .from("webhook_events")
               .insert({
