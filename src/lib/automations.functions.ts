@@ -169,6 +169,21 @@ export const updateAutomationRule = createServerFn({ method: "POST" })
     if (rest.setStatus !== undefined) patch.set_status = rest.setStatus;
     if (rest.cooldownSeconds !== undefined) patch.cooldown_seconds = rest.cooldownSeconds;
     if (rest.dailyLimit !== undefined) patch.daily_limit = rest.dailyLimit;
+    if (rest.targetPostIds !== undefined) patch.target_post_ids = rest.targetPostIds;
+    if (rest.commentReplyText !== undefined)
+      patch.comment_reply_text = rest.commentReplyText;
+    if (rest.commentReplyVariations !== undefined)
+      patch.comment_reply_variations = rest.commentReplyVariations;
+    if (rest.dmLinkUrl !== undefined) patch.dm_link_url = rest.dmLinkUrl;
+    if (rest.dmButtonLabel !== undefined) patch.dm_button_label = rest.dmButtonLabel;
+    if (rest.dmAttachmentUrl !== undefined) patch.dm_attachment_url = rest.dmAttachmentUrl;
+    if (rest.dmAttachmentType !== undefined)
+      patch.dm_attachment_type = rest.dmAttachmentType;
+    if (rest.followerCondition !== undefined)
+      patch.follower_condition = rest.followerCondition;
+    if (rest.requireFollow !== undefined) patch.require_follow = rest.requireFollow;
+    if (rest.followPromptText !== undefined)
+      patch.follow_prompt_text = rest.followPromptText;
 
     const { error } = await context.supabase
       .from("automation_rules")
