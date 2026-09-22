@@ -1300,16 +1300,39 @@ function Stat({ label, value }: { label: string; value: string }) {
 }
 
 
+/** Pull a post/media id out of a pasted link or raw id. */
+function parsePostId(raw: string): string | null {
+  const value = raw.trim();
+  if (!value) return null;
+  if (/^[A-Za-z0-9_\-]+$/.test(value)) return value;
+  try {
+    const url = new URL(value);
+    const fromQuery =
+      url.searchParams.get("story_fbid") ??
+      url.searchParams.get("post_id") ??
+      url.searchParams.get("v");
+    if (fromQuery) return fromQuery;
+    const parts = url.pathname.split("/").filter(Boolean);
+    const last = parts[parts.length - 1];
+    return last && /^[A-Za-z0-9_\-]+$/.test(last) ? last : null;
+  } catch {
+    return null;
+  }
+}
+
 function PostPicker({
   orgId,
+  trigger,
   selected,
   onChange,
 }: {
   orgId: string | undefined;
+  trigger: Trigger;
   selected: string[];
   onChange: (ids: string[]) => void;
 }) {
   const fetchPosts = useServerFn(listTargetablePosts);
+  const [manual, setManual] = useState("");
   const postsQuery = useQuery({
     queryKey: ["targetable-posts", orgId],
     enabled: Boolean(orgId),
@@ -1325,6 +1348,20 @@ function PostPicker({
     );
   };
 
+  const addManual = () => {
+    const id = parsePostId(manual);
+    if (!id) {
+      toast.error("Paste a post link or post ID.");
+      return;
+    }
+    if (!selected.includes(id)) onChange([...selected, id]);
+    setManual("");
+  };
+
+  const extraIds = selected.filter(
+    (id) => !posts.some((post) => post.externalPostId === id),
+  );
+
   return (
     <div className="grid gap-3 rounded-lg border p-4">
       <div className="flex items-center justify-between gap-3">
@@ -1332,22 +1369,31 @@ function PostPicker({
           <p className="text-sm font-medium">Which posts?</p>
           <p className="text-xs text-muted-foreground">
             {selected.length === 0
-              ? "Running on all posts. Pick one or more to limit this rule."
+              ? "All posts — this rule runs on every post."
               : `${selected.length} post${selected.length > 1 ? "s" : ""} selected.`}
           </p>
         </div>
         {selected.length > 0 && (
           <Button type="button" variant="ghost" size="sm" onClick={() => onChange([])}>
-            All posts
+            Use all posts
           </Button>
         )}
       </div>
+
+      {trigger === "dm_received" && (
+        <p className="rounded-md bg-muted/50 p-2 text-xs text-muted-foreground">
+          Direct messages don’t come from a single post, so this only applies when the
+          rule is triggered by a comment. Switch “When” to <b>New comment</b> to limit a
+          rule to one post.
+        </p>
+      )}
 
       {postsQuery.isLoading ? (
         <p className="text-sm text-muted-foreground">Loading posts…</p>
       ) : posts.length === 0 ? (
         <p className="text-sm text-muted-foreground">
-          No published posts yet. Publish a post to target it here.
+          No posts published from this app yet. Paste a post link below to target a post
+          you published directly on Instagram or Facebook.
         </p>
       ) : (
         <div className="grid max-h-64 gap-2 overflow-y-auto pr-1">
@@ -1388,6 +1434,39 @@ function PostPicker({
           })}
         </div>
       )}
+
+      {extraIds.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {extraIds.map((id) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => toggle(id)}
+              className="rounded-full border px-3 py-1 text-xs hover:bg-muted"
+              title="Remove"
+            >
+              {id} ✕
+            </button>
+          ))}
+        </div>
+      )}
+
+      <div className="flex gap-2">
+        <Input
+          value={manual}
+          placeholder="Paste post link or post ID"
+          onChange={(e) => setManual(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              addManual();
+            }
+          }}
+        />
+        <Button type="button" variant="outline" onClick={addManual}>
+          Add
+        </Button>
+      </div>
     </div>
   );
 }
