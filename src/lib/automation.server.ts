@@ -323,7 +323,16 @@ export async function runAutomations(admin: AdminClient, ctx: AutomationContext)
       targetsPost(r, ctx.postExternalId ?? null) &&
       matches(r, ctx.body),
   );
-  if (candidates.length === 0) return;
+  if (candidates.length === 0) {
+    await log(
+      admin,
+      ctx,
+      null,
+      "skipped",
+      rules?.length ? "no_matching_rule" : `no_active_${trigger}_rule`,
+    );
+    return;
+  }
 
 
   // Only the highest-priority matching rule fires (anti-spam).

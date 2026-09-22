@@ -46,6 +46,41 @@ function platformFor(object: string | undefined) {
   return null;
 }
 
+type MatchedAccount = {
+  id: string;
+  organization_id: string;
+  platform: "instagram" | "facebook";
+};
+
+/**
+ * Page feed webhooks carry the Facebook Page id even when the connected row is
+ * an Instagram account. Fall back to the linked page_id stored at connection
+ * time so Instagram comment events are not silently ignored.
+ */
+async function findSocialAccount(
+  admin: AdminClient,
+  externalId: string,
+  payloadPlatform: "instagram" | "facebook",
+): Promise<MatchedAccount | null> {
+  const { data: exact } = await admin
+    .from("social_accounts")
+    .select("id, organization_id, platform")
+    .eq("external_id", externalId)
+    .eq("platform", payloadPlatform)
+    .maybeSingle();
+  if (exact) return exact as MatchedAccount;
+
+  if (payloadPlatform !== "facebook") return null;
+  const { data: linked } = await admin
+    .from("social_accounts")
+    .select("id, organization_id, platform")
+    .eq("platform", "instagram")
+    .contains("metadata", { page_id: externalId })
+    .limit(1)
+    .maybeSingle();
+  return (linked as MatchedAccount | null) ?? null;
+}
+
 type AdminClient = import("@supabase/supabase-js").SupabaseClient;
 
 type MessagingEvent = {
@@ -63,16 +98,34 @@ type MessagingEvent = {
 
 type CommentValue = {
   item?: string;
+  verb?: string;
   comment_id?: string;
   id?: string;
   text?: string;
   message?: string;
   post_id?: string;
-  parent_id?: string;
   media?: { id?: string };
   post?: { id?: string };
   from?: { id?: string; username?: string; name?: string };
 };
+
+function eventIdentity(item: { type: string; value: unknown }, fallback: string) {
+  const raw = item.value as {
+    value?: CommentValue;
+    comment_id?: string;
+    id?: string;
+    message?: { mid?: string };
+    postback?: { mid?: string };
+  };
+  const comment = raw.value ?? raw;
+  return (
+    comment.comment_id ??
+    comment.id ??
+    raw.message?.mid ??
+    raw.postback?.mid ??
+    fallback
+  );
+}
 
 /**
  * Mirror a webhook item into the inbox (conversations + messages).
@@ -112,12 +165,13 @@ async function ingestIntoInbox(
   } else if (type.endsWith(".comments") || type.endsWith(".feed")) {
     const c = (value as { value?: CommentValue }).value ?? (value as CommentValue);
     if (c.item && c.item !== "comment") return;
+    if (c.verb === "remove") return;
     externalUserId = c.from?.id ?? null;
-    if (!externalUserId) return;
+    if (!externalUserId || externalUserId === args.accountExternalId) return;
     externalUserName = c.from?.username ?? c.from?.name ?? null;
     body = c.text ?? c.message ?? null;
     externalId = c.comment_id ?? c.id ?? null;
-    postExternalId = c.media?.id ?? c.post?.id ?? c.post_id ?? c.parent_id ?? null;
+    postExternalId = c.media?.id ?? c.post?.id ?? c.post_id ?? null;
     channel = "comment";
   } else {
     return;
@@ -125,7 +179,7 @@ async function ingestIntoInbox(
 
   if (!body) return;
 
-  const { data: conversation } = await admin
+  const { data: conversation, error: conversationError } = await admin
     .from("conversations")
     .upsert(
       {
@@ -144,7 +198,9 @@ async function ingestIntoInbox(
     .select("id")
     .single();
 
-  if (!conversation) return;
+  if (conversationError || !conversation) {
+    throw new Error(`conversation_upsert:${conversationError?.message ?? "no row returned"}`);
+  }
 
   const { error: msgError } = await admin.from("messages").insert({
     conversation_id: conversation.id,
@@ -155,7 +211,9 @@ async function ingestIntoInbox(
     sent_at: sentAt.toISOString(),
   });
   // Duplicate external_id — already ingested.
-  if (msgError && msgError.code !== "23505") return;
+  if (msgError && msgError.code !== "23505") {
+    throw new Error(`message_insert:${msgError.message}`);
+  }
   if (msgError) return;
 
   await admin.rpc("increment_unread", { p_conversation_id: conversation.id });
@@ -236,7 +294,7 @@ export const Route = createFileRoute("/api/public/webhooks/meta")({
           return new Response("Bad payload", { status: 400 });
         }
 
-        const platform = platformFor(payload.object);
+        const payloadPlatform = platformFor(payload.object);
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
         for (const entry of payload.entry ?? []) {
@@ -245,15 +303,16 @@ export const Route = createFileRoute("/api/public/webhooks/meta")({
           // Resolve which workspace this account belongs to (page id or IG user id).
           let organizationId: string | null = null;
           let socialAccountId: string | null = null;
-          if (externalId && platform) {
-            const { data: account } = await supabaseAdmin
-              .from("social_accounts")
-              .select("id, organization_id")
-              .eq("external_id", externalId)
-              .eq("platform", platform)
-              .maybeSingle();
+          let platform = payloadPlatform;
+          if (externalId && payloadPlatform) {
+            const account = await findSocialAccount(
+              supabaseAdmin,
+              externalId,
+              payloadPlatform,
+            );
             organizationId = account?.organization_id ?? null;
             socialAccountId = account?.id ?? null;
+            platform = account?.platform ?? payloadPlatform;
           }
 
           const items: Array<{ type: string; value: unknown }> = [
@@ -272,7 +331,8 @@ export const Route = createFileRoute("/api/public/webhooks/meta")({
           }
 
           for (const [index, item] of items.entries()) {
-            const dedupeKey = `meta:${externalId ?? "unknown"}:${entry.time ?? 0}:${item.type}:${index}`;
+            const identity = eventIdentity(item, `${entry.time ?? 0}:${index}`);
+            const dedupeKey = `meta:${externalId ?? "unknown"}:${item.type}:${identity}`;
             const { data: webhookEvent, error } = await supabaseAdmin
               .from("webhook_events")
               .insert({
