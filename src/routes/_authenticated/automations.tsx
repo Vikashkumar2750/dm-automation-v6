@@ -355,8 +355,10 @@ function AutomationsPage() {
   const rules = rulesQuery.data ?? [];
   const runs = runsQuery.data ?? [];
   const visibleRuns = showAllRuns ? runs : runs.slice(0, 5);
-  const ruleName = (id: string | null) =>
-    rules.find((r) => r.id === id)?.name ?? "Deleted rule";
+  const ruleName = (id: string | null) => {
+    if (!id) return "Safety settings";
+    return rules.find((r) => r.id === id)?.name ?? "Deleted rule";
+  };
 
   const needsText = draft
     ? ["reply_dm", "comment_public_reply", "comment_private_reply"].includes(draft.action)
