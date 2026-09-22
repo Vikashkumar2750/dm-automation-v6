@@ -918,21 +918,37 @@ async function call(url: string, payload: Record<string, unknown>) {
 }
 
 /**
- * Facebook Login uses graph.facebook.com, while Instagram Business Login uses
- * graph.instagram.com. Retry only capability error #3 on the alternate host;
- * all other provider errors are returned unchanged.
+ * Instagram messaging through Facebook Login for Business is sent on the linked
+ * Facebook Page id, not the IG user id — the IG id returns capability error #3.
+ */
+export function messagingAccountId(
+  platform: AutomationContext["platform"],
+  externalId: string,
+  metadata: unknown,
+): string {
+  if (platform !== "instagram") return externalId;
+  const pageId = (metadata as { page_id?: string } | null)?.page_id;
+  return typeof pageId === "string" && pageId ? pageId : externalId;
+}
+
+/**
+ * Sends a message, walking the host/id shapes Meta accepts: the Page id on
+ * graph.facebook.com, the page-scoped "me" alias, and finally
+ * graph.instagram.com for Instagram Business Login apps. Only capability error
+ * #3 advances to the next shape; every other provider error is returned as is.
  */
 async function callMessaging(
   platform: AutomationContext["platform"],
   accountId: string,
   payload: Record<string, unknown>,
 ) {
-  const first = await call(`${GRAPH}/${accountId}/messages`, payload);
-  if (platform !== "instagram" || first.errorCode !== 3) return first;
-  const retry = await call(`${IG_GRAPH}/${accountId}/messages`, payload);
-  if (!retry.error) return retry;
-  return {
-    error: `${first.error} | Instagram endpoint: ${retry.error}`,
-    errorCode: retry.errorCode,
-  };
+  const urls = [`${GRAPH}/${accountId}/messages`, `${GRAPH}/me/messages`];
+  if (platform === "instagram") urls.push(`${IG_GRAPH}/${accountId}/messages`);
+
+  let last = await call(urls[0]!, payload);
+  for (const url of urls.slice(1)) {
+    if (!last.error || last.errorCode !== 3) return last;
+    last = await call(url, payload);
+  }
+  return last;
 }
