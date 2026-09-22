@@ -374,6 +374,41 @@ function AutomationsPage() {
         }
       />
 
+      <Panel title="How an automation works">
+        <ol className="grid gap-2 text-sm text-muted-foreground sm:grid-cols-2 lg:grid-cols-4">
+          <li>
+            <span className="font-medium text-foreground">1. When</span>
+            <br />
+            Someone sends a DM, or comments on your post. Choose “New comment” to pick
+            one specific post (or leave it on all posts).
+          </li>
+          <li>
+            <span className="font-medium text-foreground">2. Match</span>
+            <br />
+            The rule fires if their text matches your keywords — or on every message if
+            you choose “Any message”.
+          </li>
+          <li>
+            <span className="font-medium text-foreground">3. Reply</span>
+            <br />
+            A public reply can go under the comment, then the DM is sent with your text,
+            link button or attachment.
+          </li>
+          <li>
+            <span className="font-medium text-foreground">4. Guardrails</span>
+            <br />
+            Follower check, cooldown, daily cap, quiet hours and opt-out words all run
+            before anything is sent.
+          </li>
+        </ol>
+        <p className="mt-3 text-xs text-muted-foreground">
+          Automations only run on connected accounts, and only for messages received
+          after the rule is switched on. Every fire, skip and failure is listed under
+          Recent activity.
+        </p>
+      </Panel>
+
+
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
         <Panel title="Rules" bodyClassName="p-0">
           {rulesQuery.isLoading ? (
@@ -588,13 +623,12 @@ function AutomationsPage() {
                 </Select>
               </div>
 
-              {draft.trigger === "comment_received" && (
-                <PostPicker
-                  orgId={orgId}
-                  selected={draft.targetPostIds}
-                  onChange={(ids) => setDraft({ ...draft, targetPostIds: ids })}
-                />
-              )}
+              <PostPicker
+                orgId={orgId}
+                trigger={draft.trigger}
+                selected={draft.targetPostIds}
+                onChange={(ids) => setDraft({ ...draft, targetPostIds: ids })}
+              />
 
               {draft.trigger === "comment_received" && (
                 <div className="grid gap-2">
@@ -1301,16 +1335,39 @@ function Stat({ label, value }: { label: string; value: string }) {
 }
 
 
+/** Pull a post/media id out of a pasted link or raw id. */
+function parsePostId(raw: string): string | null {
+  const value = raw.trim();
+  if (!value) return null;
+  if (/^[A-Za-z0-9_\-]+$/.test(value)) return value;
+  try {
+    const url = new URL(value);
+    const fromQuery =
+      url.searchParams.get("story_fbid") ??
+      url.searchParams.get("post_id") ??
+      url.searchParams.get("v");
+    if (fromQuery) return fromQuery;
+    const parts = url.pathname.split("/").filter(Boolean);
+    const last = parts[parts.length - 1];
+    return last && /^[A-Za-z0-9_\-]+$/.test(last) ? last : null;
+  } catch {
+    return null;
+  }
+}
+
 function PostPicker({
   orgId,
+  trigger,
   selected,
   onChange,
 }: {
   orgId: string | undefined;
+  trigger: Trigger;
   selected: string[];
   onChange: (ids: string[]) => void;
 }) {
   const fetchPosts = useServerFn(listTargetablePosts);
+  const [manual, setManual] = useState("");
   const postsQuery = useQuery({
     queryKey: ["targetable-posts", orgId],
     enabled: Boolean(orgId),
@@ -1326,6 +1383,20 @@ function PostPicker({
     );
   };
 
+  const addManual = () => {
+    const id = parsePostId(manual);
+    if (!id) {
+      toast.error("Paste a post link or post ID.");
+      return;
+    }
+    if (!selected.includes(id)) onChange([...selected, id]);
+    setManual("");
+  };
+
+  const extraIds = selected.filter(
+    (id) => !posts.some((post) => post.externalPostId === id),
+  );
+
   return (
     <div className="grid gap-3 rounded-lg border p-4">
       <div className="flex items-center justify-between gap-3">
@@ -1333,22 +1404,31 @@ function PostPicker({
           <p className="text-sm font-medium">Which posts?</p>
           <p className="text-xs text-muted-foreground">
             {selected.length === 0
-              ? "Running on all posts. Pick one or more to limit this rule."
+              ? "All posts — this rule runs on every post."
               : `${selected.length} post${selected.length > 1 ? "s" : ""} selected.`}
           </p>
         </div>
         {selected.length > 0 && (
           <Button type="button" variant="ghost" size="sm" onClick={() => onChange([])}>
-            All posts
+            Use all posts
           </Button>
         )}
       </div>
+
+      {trigger === "dm_received" && (
+        <p className="rounded-md bg-muted/50 p-2 text-xs text-muted-foreground">
+          Direct messages don’t come from a single post, so this only applies when the
+          rule is triggered by a comment. Switch “When” to <b>New comment</b> to limit a
+          rule to one post.
+        </p>
+      )}
 
       {postsQuery.isLoading ? (
         <p className="text-sm text-muted-foreground">Loading posts…</p>
       ) : posts.length === 0 ? (
         <p className="text-sm text-muted-foreground">
-          No published posts yet. Publish a post to target it here.
+          No posts published from this app yet. Paste a post link below to target a post
+          you published directly on Instagram or Facebook.
         </p>
       ) : (
         <div className="grid max-h-64 gap-2 overflow-y-auto pr-1">
@@ -1389,6 +1469,39 @@ function PostPicker({
           })}
         </div>
       )}
+
+      {extraIds.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {extraIds.map((id) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => toggle(id)}
+              className="rounded-full border px-3 py-1 text-xs hover:bg-muted"
+              title="Remove"
+            >
+              {id} ✕
+            </button>
+          ))}
+        </div>
+      )}
+
+      <div className="flex gap-2">
+        <Input
+          value={manual}
+          placeholder="Paste post link or post ID"
+          onChange={(e) => setManual(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              addManual();
+            }
+          }}
+        />
+        <Button type="button" variant="outline" onClick={addManual}>
+          Add
+        </Button>
+      </div>
     </div>
   );
 }
