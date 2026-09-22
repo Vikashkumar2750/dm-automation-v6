@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Loader2, Plus, ShieldCheck, Trash2, Workflow, Zap } from "lucide-react";
 import { toast } from "sonner";
 
@@ -39,6 +39,7 @@ import {
   resumeAutomations,
   saveAutomationSettings,
   listTargetablePosts,
+  listRecentRemotePosts,
   updateAutomationRule,
   type AutomationRule,
   type AutomationSettings,
@@ -1367,13 +1368,44 @@ function PostPicker({
   onChange: (ids: string[]) => void;
 }) {
   const fetchPosts = useServerFn(listTargetablePosts);
+  const fetchRemote = useServerFn(listRecentRemotePosts);
   const [manual, setManual] = useState("");
+  const [showManual, setShowManual] = useState(false);
   const postsQuery = useQuery({
     queryKey: ["targetable-posts", orgId],
     enabled: Boolean(orgId),
     queryFn: () => fetchPosts({ data: { organizationId: orgId! } }),
   });
-  const posts = postsQuery.data ?? [];
+  const remoteQuery = useQuery({
+    queryKey: ["remote-posts", orgId],
+    enabled: Boolean(orgId),
+    staleTime: 60_000,
+    queryFn: () => fetchRemote({ data: { organizationId: orgId! } }),
+  });
+
+  const posts = useMemo(() => {
+    const merged = new Map<
+      string,
+      {
+        id: string;
+        externalPostId: string;
+        platform: string;
+        caption: string;
+        mediaUrl: string | null;
+        publishedAt: string | null;
+      }
+    >();
+    for (const post of remoteQuery.data?.posts ?? []) {
+      merged.set(post.externalPostId, post);
+    }
+    for (const post of postsQuery.data ?? []) {
+      if (!merged.has(post.externalPostId)) merged.set(post.externalPostId, post);
+    }
+    return [...merged.values()].sort((a, b) =>
+      (b.publishedAt ?? "").localeCompare(a.publishedAt ?? ""),
+    );
+  }, [remoteQuery.data, postsQuery.data]);
+  const warnings = remoteQuery.data?.warnings ?? [];
 
   const toggle = (externalId: string) => {
     onChange(
@@ -1408,11 +1440,22 @@ function PostPicker({
               : `${selected.length} post${selected.length > 1 ? "s" : ""} selected.`}
           </p>
         </div>
-        {selected.length > 0 && (
-          <Button type="button" variant="ghost" size="sm" onClick={() => onChange([])}>
-            Use all posts
+        <div className="flex items-center gap-1">
+          {selected.length > 0 && (
+            <Button type="button" variant="ghost" size="sm" onClick={() => onChange([])}>
+              Use all posts
+            </Button>
+          )}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={remoteQuery.isFetching}
+            onClick={() => void remoteQuery.refetch()}
+          >
+            {remoteQuery.isFetching ? "Refreshing…" : "Refresh"}
           </Button>
-        )}
+        </div>
       </div>
 
       {trigger === "dm_received" && (
@@ -1423,12 +1466,18 @@ function PostPicker({
         </p>
       )}
 
-      {postsQuery.isLoading ? (
-        <p className="text-sm text-muted-foreground">Loading posts…</p>
+      {warnings.length > 0 && (
+        <p className="rounded-md bg-muted/50 p-2 text-xs text-muted-foreground">
+          {warnings.join(" · ")}
+        </p>
+      )}
+
+      {postsQuery.isLoading || remoteQuery.isLoading ? (
+        <p className="text-sm text-muted-foreground">Loading your latest posts…</p>
       ) : posts.length === 0 ? (
         <p className="text-sm text-muted-foreground">
-          No posts published from this app yet. Paste a post link below to target a post
-          you published directly on Instagram or Facebook.
+          No posts found. Connect an Instagram or Facebook account, or add a post link
+          manually below.
         </p>
       ) : (
         <div className="grid max-h-64 gap-2 overflow-y-auto pr-1">
@@ -1486,22 +1535,32 @@ function PostPicker({
         </div>
       )}
 
-      <div className="flex gap-2">
-        <Input
-          value={manual}
-          placeholder="Paste post link or post ID"
-          onChange={(e) => setManual(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              addManual();
-            }
-          }}
-        />
-        <Button type="button" variant="outline" onClick={addManual}>
-          Add
-        </Button>
-      </div>
+      {showManual ? (
+        <div className="flex gap-2">
+          <Input
+            value={manual}
+            placeholder="Paste post link or post ID"
+            onChange={(e) => setManual(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                addManual();
+              }
+            }}
+          />
+          <Button type="button" variant="outline" onClick={addManual}>
+            Add
+          </Button>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setShowManual(true)}
+          className="justify-self-start text-xs text-muted-foreground underline"
+        >
+          Can’t find a post? Add it by link or ID
+        </button>
+      )}
     </div>
   );
 }
