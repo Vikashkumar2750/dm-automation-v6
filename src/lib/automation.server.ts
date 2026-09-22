@@ -405,7 +405,11 @@ export async function runAutomations(admin: AdminClient, ctx: AutomationContext)
 
     // 1) Public reply under the comment (runs alongside the DM action).
     let commentReplied = false;
-    if (ctx.channel === "comment" && ctx.externalId) {
+    if (
+      ctx.channel === "comment" &&
+      ctx.externalId &&
+      rule.action !== "comment_public_reply" // that action posts its own reply below
+    ) {
       const commentText = pickFrom(rule.comment_reply_text, rule.comment_reply_variations);
       if (commentText) {
         const res = await call(`${GRAPH}/${ctx.externalId}/replies`, {
@@ -631,18 +635,55 @@ async function openFollowGate(
     .single();
 
   const prompt = (rule.follow_prompt_text ?? "").trim() || DEFAULT_FOLLOW_PROMPT;
+
+  // Give the contact a direct way to open the profile, next to the confirm tap.
+  let profileUrl: string | null = null;
+  if (ctx.socialAccountId) {
+    const { data: acc } = await admin
+      .from("social_accounts")
+      .select("handle")
+      .eq("id", ctx.socialAccountId)
+      .maybeSingle();
+    const handle = (acc?.handle ?? "").replace(/^@/, "").trim();
+    if (handle) {
+      profileUrl =
+        ctx.platform === "instagram"
+          ? `https://www.instagram.com/${handle}`
+          : `https://www.facebook.com/${handle}`;
+    }
+  }
+
+  const quickReplies = [
+    {
+      content_type: "text",
+      title: "I followed ✅",
+      payload: `${FOLLOW_PAYLOAD}:${gate?.id ?? ""}`,
+    },
+  ];
+
+  const message = profileUrl
+    ? {
+        attachment: {
+          type: "template",
+          payload: {
+            template_type: "button",
+            text: prompt,
+            buttons: [
+              { type: "web_url", url: profileUrl, title: "Follow us" },
+              {
+                type: "postback",
+                title: "I followed ✅",
+                payload: `${FOLLOW_PAYLOAD}:${gate?.id ?? ""}`,
+              },
+            ],
+          },
+        },
+      }
+    : { text: prompt, quick_replies: quickReplies };
+
   const res = await call(`${GRAPH}/${accountId}/messages`, {
     recipient: actionRecipient(ctx, rule.action),
-    message: {
-      text: prompt,
-      quick_replies: [
-        {
-          content_type: "text",
-          title: "I followed ✅",
-          payload: `${FOLLOW_PAYLOAD}:${gate?.id ?? ""}`,
-        },
-      ],
-    },
+    message,
     access_token: token,
   });
 
