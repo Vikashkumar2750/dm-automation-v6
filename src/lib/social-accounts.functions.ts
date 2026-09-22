@@ -122,3 +122,95 @@ export const startSocialConnect = createServerFn({ method: "POST" })
 
     return { url };
   });
+
+/**
+ * Checks (and optionally repairs) the Page-level webhook subscription that makes
+ * Meta deliver comment and DM events for a connected account.
+ */
+export const checkWebhookDelivery = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) =>
+    z
+      .object({ organizationId: z.string().uuid(), repair: z.boolean().optional() })
+      .parse(data),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: accounts, error } = await context.supabase
+      .from("social_accounts")
+      .select("id, platform, external_id, name, metadata")
+      .eq("organization_id", data.organizationId)
+      .in("platform", ["instagram", "facebook"]);
+    if (error) throw new Error(error.message);
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { subscribePageWebhooks, readPageSubscription } = await import(
+      "@/lib/meta-webhooks.server"
+    );
+
+    const results: Array<{
+      id: string;
+      name: string;
+      platform: string;
+      subscribed: boolean;
+      fields: string[];
+      error?: string;
+    }> = [];
+
+    for (const account of accounts ?? []) {
+      const meta = (account.metadata ?? {}) as Record<string, unknown>;
+      const pageId =
+        typeof meta["page_id"] === "string" ? (meta["page_id"] as string) : account.external_id;
+
+      const { data: tokenRow } = await supabaseAdmin
+        .from("social_account_tokens")
+        .select("access_token")
+        .eq("social_account_id", account.id)
+        .maybeSingle();
+
+      if (!tokenRow?.access_token) {
+        results.push({
+          id: account.id,
+          name: account.name,
+          platform: account.platform,
+          subscribed: false,
+          fields: [],
+          error: "No stored token — reconnect this account.",
+        });
+        continue;
+      }
+
+      let read = await readPageSubscription(pageId, tokenRow.access_token);
+      if (data.repair && read.fields.length === 0) {
+        const sub = await subscribePageWebhooks(pageId, tokenRow.access_token);
+        if (!sub.ok) {
+          results.push({
+            id: account.id,
+            name: account.name,
+            platform: account.platform,
+            subscribed: false,
+            fields: [],
+            error: sub.error ?? "Subscribe failed",
+          });
+          continue;
+        }
+        read = await readPageSubscription(pageId, tokenRow.access_token);
+      }
+
+      const subscribed = read.fields.length > 0;
+      await supabaseAdmin
+        .from("social_accounts")
+        .update({ metadata: { ...meta, page_id: pageId, webhook_subscribed: subscribed } })
+        .eq("id", account.id);
+
+      results.push({
+        id: account.id,
+        name: account.name,
+        platform: account.platform,
+        subscribed,
+        fields: read.fields,
+        ...(read.error ? { error: read.error } : {}),
+      });
+    }
+
+    return results;
+  });

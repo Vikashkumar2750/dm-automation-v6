@@ -196,10 +196,14 @@ async function connectMeta(args: {
   if (!pagesJson.data) throw new Error(JSON.stringify(pagesJson));
 
   const { metaScopes } = await import("@/lib/social");
+  const { subscribePageWebhooks } = await import("@/lib/meta-webhooks.server");
   let saved = 0;
 
   for (const page of pagesJson.data) {
     if (stateRow.platform === "facebook" || stateRow.platform === "instagram") {
+      // Install the app on the Page so Meta actually delivers comment/DM webhooks.
+      const sub = await subscribePageWebhooks(page.id, page.access_token);
+      if (!sub.ok) console.error("page webhook subscribe failed", page.id, sub.error);
       if (stateRow.platform === "facebook") {
         await saveAccount(supabaseAdmin, stateRow, {
           platform: "facebook",
@@ -208,7 +212,7 @@ async function connectMeta(args: {
           handle: page.username ?? null,
           avatar_url: page.picture?.data?.url ?? null,
           scopes: metaScopes,
-          metadata: { page_id: page.id },
+          metadata: { page_id: page.id, webhook_subscribed: sub.ok },
           access_token: page.access_token,
           expires_at: expiresAt,
         });
@@ -222,7 +226,7 @@ async function connectMeta(args: {
           handle: ig.username ? `@${ig.username}` : null,
           avatar_url: ig.profile_picture_url ?? null,
           scopes: metaScopes,
-          metadata: { page_id: page.id, ig_user_id: ig.id },
+          metadata: { page_id: page.id, ig_user_id: ig.id, webhook_subscribed: sub.ok },
           access_token: page.access_token,
           expires_at: expiresAt,
         });

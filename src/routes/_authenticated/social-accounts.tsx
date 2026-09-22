@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { useTenant } from "@/hooks/useTenant";
 import { platformMeta, type SocialPlatform } from "@/lib/social";
 import {
+  checkWebhookDelivery,
   disconnectSocialAccount,
   getProviderReadiness,
   listSocialAccounts,
@@ -70,6 +71,23 @@ function SocialAccountsPage() {
     enabled: Boolean(orgId),
     refetchInterval: 30_000,
     queryFn: () => fetchEvents({ data: { organizationId: orgId! } }),
+  });
+
+  const checkDelivery = useServerFn(checkWebhookDelivery);
+  const fixNotifications = useMutation({
+    mutationFn: () => checkDelivery({ data: { organizationId: orgId!, repair: true } }),
+    onSuccess: (rows) => {
+      const bad = rows.filter((r) => !r.subscribed);
+      if (rows.length === 0) toast("Connect an Instagram or Facebook account first");
+      else if (bad.length === 0)
+        toast.success("Notifications are on — comments and DMs will now trigger rules");
+      else
+        toast.error(
+          `Still off for ${bad.map((r) => r.name).join(", ")}${bad[0]?.error ? `: ${bad[0].error}` : ""}`,
+        );
+      accountsQuery.refetch();
+    },
+    onError: () => toast.error("Could not check notifications"),
   });
 
   const webhookConfigQuery = useQuery({
@@ -225,6 +243,20 @@ function SocialAccountsPage() {
               Access tokens are stored securely on the server and never sent to the browser.
             </p>
           </div>
+          <div className="flex items-center gap-1">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => fixNotifications.mutate()}
+            disabled={!orgId || fixNotifications.isPending}
+          >
+            {fixNotifications.isPending ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <CheckCircle2 className="size-4" />
+            )}
+            Fix notifications
+          </Button>
           <Button
             variant="ghost"
             size="sm"
@@ -236,7 +268,9 @@ function SocialAccountsPage() {
             />
             Refresh
           </Button>
+          </div>
         </div>
+
 
         {accountsQuery.isLoading ? (
           <div className="flex items-center justify-center py-12 text-sm text-muted-foreground">
