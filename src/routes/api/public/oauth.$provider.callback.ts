@@ -235,7 +235,9 @@ async function connectMeta(args: {
           metadata: {
             page_id: page.id,
             ig_user_id: ig.id,
-            webhook_subscribed: sub.ok && igSub.ok,
+            // Page subscription is what actually gates delivery; the per-account
+            // Instagram call is unavailable on Facebook-Login apps.
+            webhook_subscribed: sub.ok,
           },
           access_token: page.access_token,
           expires_at: expiresAt,
