@@ -212,7 +212,7 @@ async function connectMeta(args: {
           handle: page.username ?? null,
           avatar_url: page.picture?.data?.url ?? null,
           scopes: metaScopes,
-          metadata: { page_id: page.id },
+          metadata: { page_id: page.id, webhook_subscribed: sub.ok },
           access_token: page.access_token,
           expires_at: expiresAt,
         });
@@ -226,7 +226,7 @@ async function connectMeta(args: {
           handle: ig.username ? `@${ig.username}` : null,
           avatar_url: ig.profile_picture_url ?? null,
           scopes: metaScopes,
-          metadata: { page_id: page.id, ig_user_id: ig.id },
+          metadata: { page_id: page.id, ig_user_id: ig.id, webhook_subscribed: sub.ok },
           access_token: page.access_token,
           expires_at: expiresAt,
         });
