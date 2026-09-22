@@ -46,6 +46,41 @@ function platformFor(object: string | undefined) {
   return null;
 }
 
+type MatchedAccount = {
+  id: string;
+  organization_id: string;
+  platform: "instagram" | "facebook";
+};
+
+/**
+ * Page feed webhooks carry the Facebook Page id even when the connected row is
+ * an Instagram account. Fall back to the linked page_id stored at connection
+ * time so Instagram comment events are not silently ignored.
+ */
+async function findSocialAccount(
+  admin: AdminClient,
+  externalId: string,
+  payloadPlatform: "instagram" | "facebook",
+): Promise<MatchedAccount | null> {
+  const { data: exact } = await admin
+    .from("social_accounts")
+    .select("id, organization_id, platform")
+    .eq("external_id", externalId)
+    .eq("platform", payloadPlatform)
+    .maybeSingle();
+  if (exact) return exact as MatchedAccount;
+
+  if (payloadPlatform !== "facebook") return null;
+  const { data: linked } = await admin
+    .from("social_accounts")
+    .select("id, organization_id, platform")
+    .eq("platform", "instagram")
+    .contains("metadata", { page_id: externalId })
+    .limit(1)
+    .maybeSingle();
+  return (linked as MatchedAccount | null) ?? null;
+}
+
 type AdminClient = import("@supabase/supabase-js").SupabaseClient;
 
 type MessagingEvent = {
@@ -236,7 +271,7 @@ export const Route = createFileRoute("/api/public/webhooks/meta")({
           return new Response("Bad payload", { status: 400 });
         }
 
-        const platform = platformFor(payload.object);
+        const payloadPlatform = platformFor(payload.object);
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
         for (const entry of payload.entry ?? []) {
@@ -245,15 +280,16 @@ export const Route = createFileRoute("/api/public/webhooks/meta")({
           // Resolve which workspace this account belongs to (page id or IG user id).
           let organizationId: string | null = null;
           let socialAccountId: string | null = null;
-          if (externalId && platform) {
-            const { data: account } = await supabaseAdmin
-              .from("social_accounts")
-              .select("id, organization_id")
-              .eq("external_id", externalId)
-              .eq("platform", platform)
-              .maybeSingle();
+          let platform = payloadPlatform;
+          if (externalId && payloadPlatform) {
+            const account = await findSocialAccount(
+              supabaseAdmin,
+              externalId,
+              payloadPlatform,
+            );
             organizationId = account?.organization_id ?? null;
             socialAccountId = account?.id ?? null;
+            platform = account?.platform ?? payloadPlatform;
           }
 
           const items: Array<{ type: string; value: unknown }> = [
