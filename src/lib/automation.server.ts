@@ -298,16 +298,17 @@ export async function runAutomations(admin: AdminClient, ctx: AutomationContext)
 
   const { data: rules } = await admin
     .from("automation_rules")
-    .select(
-      "id, name, platform, trigger, match_type, keywords, action, response_text, response_variations, set_status, cooldown_seconds, daily_limit",
-    )
+    .select(RULE_SELECT)
     .eq("organization_id", ctx.organizationId)
     .eq("is_active", true)
     .eq("trigger", trigger)
     .order("priority", { ascending: true });
 
   const candidates = ((rules ?? []) as Rule[]).filter(
-    (r) => (!r.platform || r.platform === ctx.platform) && matches(r, ctx.body),
+    (r) =>
+      (!r.platform || r.platform === ctx.platform) &&
+      targetsPost(r, ctx.postExternalId ?? null) &&
+      matches(r, ctx.body),
   );
   if (candidates.length === 0) return;
 
