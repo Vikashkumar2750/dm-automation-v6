@@ -196,6 +196,7 @@ async function connectMeta(args: {
   if (!pagesJson.data) throw new Error(JSON.stringify(pagesJson));
 
   const { metaScopes } = await import("@/lib/social");
+  const { subscribePageWebhooks } = await import("@/lib/meta-webhooks.server");
   let saved = 0;
 
   for (const page of pagesJson.data) {
