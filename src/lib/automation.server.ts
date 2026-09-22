@@ -105,13 +105,26 @@ function hitsKeyword(list: string[] | null | undefined, body: string) {
     .find((k) => text.includes(k));
 }
 
-/** Rotate deterministically-random across the available response texts. */
-function pickResponse(rule: Rule) {
-  const options = [rule.response_text, ...(rule.response_variations ?? [])]
+/** Pick one text at random from a primary text plus its variations. */
+function pickFrom(primary: string | null, variations: string[] | null | undefined) {
+  const options = [primary, ...(variations ?? [])]
     .map((t) => (t ?? "").trim())
     .filter(Boolean);
   if (options.length === 0) return null;
   return options[Math.floor(Math.random() * options.length)]!;
+}
+
+/** Rotate deterministically-random across the available response texts. */
+function pickResponse(rule: Rule) {
+  return pickFrom(rule.response_text, rule.response_variations);
+}
+
+/** A rule with no selected posts applies everywhere. */
+function targetsPost(rule: Rule, postExternalId: string | null) {
+  const targets = (rule.target_post_ids ?? []).map((t) => t.trim()).filter(Boolean);
+  if (targets.length === 0) return true;
+  if (!postExternalId) return false;
+  return targets.some((t) => t === postExternalId || postExternalId.endsWith(`_${t}`));
 }
 
 function matches(rule: Rule, body: string) {
