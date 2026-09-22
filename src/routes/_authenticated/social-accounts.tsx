@@ -243,6 +243,20 @@ function SocialAccountsPage() {
               Access tokens are stored securely on the server and never sent to the browser.
             </p>
           </div>
+          <div className="flex items-center gap-1">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => fixNotifications.mutate()}
+            disabled={!orgId || fixNotifications.isPending}
+          >
+            {fixNotifications.isPending ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <CheckCircle2 className="size-4" />
+            )}
+            Fix notifications
+          </Button>
           <Button
             variant="ghost"
             size="sm"
