@@ -97,14 +97,17 @@ async function ingestIntoInbox(
   let externalId: string | null = null;
   let channel = "dm";
   let sentAt = new Date();
+  let postExternalId: string | null = null;
+  let followPayload: string | null = null;
 
-  if (type.endsWith(".message")) {
+  if (type.endsWith(".message") || type.endsWith(".messaging_postbacks")) {
     const m = value as MessagingEvent;
     if (m.message?.is_echo) return; // our own outbound echo
     externalUserId = m.sender?.id ?? null;
     if (!externalUserId || externalUserId === args.accountExternalId) return;
-    body = m.message?.text ?? null;
-    externalId = m.message?.mid ?? null;
+    followPayload = m.message?.quick_reply?.payload ?? m.postback?.payload ?? null;
+    body = m.message?.text ?? m.postback?.title ?? null;
+    externalId = m.message?.mid ?? m.postback?.mid ?? null;
     if (m.timestamp) sentAt = new Date(m.timestamp);
   } else if (type.endsWith(".comments") || type.endsWith(".feed")) {
     const c = (value as { value?: CommentValue }).value ?? (value as CommentValue);
@@ -114,6 +117,7 @@ async function ingestIntoInbox(
     externalUserName = c.from?.username ?? c.from?.name ?? null;
     body = c.text ?? c.message ?? null;
     externalId = c.comment_id ?? c.id ?? null;
+    postExternalId = c.media?.id ?? c.post?.id ?? c.post_id ?? c.parent_id ?? null;
     channel = "comment";
   } else {
     return;
