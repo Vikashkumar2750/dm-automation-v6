@@ -38,6 +38,7 @@ import {
   removeOptOut,
   resumeAutomations,
   saveAutomationSettings,
+  listTargetablePosts,
   updateAutomationRule,
   type AutomationRule,
   type AutomationSettings,
