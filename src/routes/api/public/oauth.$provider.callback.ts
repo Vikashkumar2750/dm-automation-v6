@@ -201,6 +201,9 @@ async function connectMeta(args: {
 
   for (const page of pagesJson.data) {
     if (stateRow.platform === "facebook" || stateRow.platform === "instagram") {
+      // Install the app on the Page so Meta actually delivers comment/DM webhooks.
+      const sub = await subscribePageWebhooks(page.id, page.access_token);
+      if (!sub.ok) console.error("page webhook subscribe failed", page.id, sub.error);
       if (stateRow.platform === "facebook") {
         await saveAccount(supabaseAdmin, stateRow, {
           platform: "facebook",
