@@ -505,6 +505,36 @@ async function recordOutbound(
     .eq("id", ctx.conversationId);
 }
 
+/**
+ * Sends a message and, when the rich payload (template / quick replies) is
+ * rejected by the platform, retries once as plain text so the contact still
+ * receives the DM.
+ */
+async function sendWithFallback(
+  accountId: string,
+  token: string,
+  recipient: Record<string, unknown>,
+  message: Record<string, unknown>,
+  fallbackText: string,
+): Promise<{ id?: string; error?: string }> {
+  const first = await call(`${GRAPH}/${accountId}/messages`, {
+    recipient,
+    message,
+    access_token: token,
+  });
+  if (!first.error) return first;
+  if (typeof (message as { text?: unknown }).text === "string" && !("quick_replies" in message)) {
+    return first;
+  }
+  const retry = await call(`${GRAPH}/${accountId}/messages`, {
+    recipient,
+    message: { text: fallbackText },
+    access_token: token,
+  });
+  if (retry.error) return { error: `${first.error} | fallback: ${retry.error}` };
+  return retry;
+}
+
 /** Send the rule's DM: text (+link), optional button, optional attachment. */
 async function deliverDm(
   admin: AdminClient,
