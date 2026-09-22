@@ -1367,13 +1367,44 @@ function PostPicker({
   onChange: (ids: string[]) => void;
 }) {
   const fetchPosts = useServerFn(listTargetablePosts);
+  const fetchRemote = useServerFn(listRecentRemotePosts);
   const [manual, setManual] = useState("");
+  const [showManual, setShowManual] = useState(false);
   const postsQuery = useQuery({
     queryKey: ["targetable-posts", orgId],
     enabled: Boolean(orgId),
     queryFn: () => fetchPosts({ data: { organizationId: orgId! } }),
   });
-  const posts = postsQuery.data ?? [];
+  const remoteQuery = useQuery({
+    queryKey: ["remote-posts", orgId],
+    enabled: Boolean(orgId),
+    staleTime: 60_000,
+    queryFn: () => fetchRemote({ data: { organizationId: orgId! } }),
+  });
+
+  const posts = useMemo(() => {
+    const merged = new Map<
+      string,
+      {
+        id: string;
+        externalPostId: string;
+        platform: string;
+        caption: string;
+        mediaUrl: string | null;
+        publishedAt: string | null;
+      }
+    >();
+    for (const post of remoteQuery.data?.posts ?? []) {
+      merged.set(post.externalPostId, post);
+    }
+    for (const post of postsQuery.data ?? []) {
+      if (!merged.has(post.externalPostId)) merged.set(post.externalPostId, post);
+    }
+    return [...merged.values()].sort((a, b) =>
+      (b.publishedAt ?? "").localeCompare(a.publishedAt ?? ""),
+    );
+  }, [remoteQuery.data, postsQuery.data]);
+  const warnings = remoteQuery.data?.warnings ?? [];
 
   const toggle = (externalId: string) => {
     onChange(
