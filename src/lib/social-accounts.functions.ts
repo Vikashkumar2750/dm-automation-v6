@@ -193,7 +193,7 @@ export const checkWebhookDelivery = createServerFn({ method: "POST" })
       let instagramRead =
         account.platform === "instagram"
           ? await readInstagramSubscription(account.external_id, tokenRow.access_token)
-          : { fields: [] as string[], unsupported: false as boolean | undefined };
+          : ({ fields: [] } as import("@/lib/meta-webhooks.server").ReadResult);
       // Facebook-Login apps cannot manage per-account Instagram subscriptions;
       // Page subscription + app-level Instagram webhook object covers delivery.
       const igUnsupported = Boolean(instagramRead.unsupported);
