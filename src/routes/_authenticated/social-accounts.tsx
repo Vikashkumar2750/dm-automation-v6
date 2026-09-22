@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { useTenant } from "@/hooks/useTenant";
 import { platformMeta, type SocialPlatform } from "@/lib/social";
 import {
+  checkWebhookDelivery,
   disconnectSocialAccount,
   getProviderReadiness,
   listSocialAccounts,
