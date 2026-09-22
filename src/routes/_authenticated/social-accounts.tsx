@@ -83,7 +83,7 @@ function SocialAccountsPage() {
         toast.success("Notifications are on — comments and DMs will now trigger rules");
       else
         toast.error(
-          `Still off for ${bad.map((r) => r.name).join(", ")}${bad[0]?.error ? `: ${bad[0].error}` : ""}`,
+          `Still off for ${bad.map((r) => r.name).join(", ")}${bad[0]?.missingFields.length ? ` — missing: ${bad[0].missingFields.join(", ")}` : ""}${bad[0]?.error ? `: ${bad[0].error}` : ""}`,
         );
       accountsQuery.refetch();
     },
@@ -255,7 +255,7 @@ function SocialAccountsPage() {
             ) : (
               <CheckCircle2 className="size-4" />
             )}
-            Fix notifications
+            Check & repair Meta
           </Button>
           <Button
             variant="ghost"

@@ -196,7 +196,9 @@ async function connectMeta(args: {
   if (!pagesJson.data) throw new Error(JSON.stringify(pagesJson));
 
   const { metaScopes } = await import("@/lib/social");
-  const { subscribePageWebhooks } = await import("@/lib/meta-webhooks.server");
+  const { subscribeInstagramWebhooks, subscribePageWebhooks } = await import(
+    "@/lib/meta-webhooks.server"
+  );
   let saved = 0;
 
   for (const page of pagesJson.data) {
@@ -219,6 +221,10 @@ async function connectMeta(args: {
         saved++;
       } else if (page.instagram_business_account) {
         const ig = page.instagram_business_account;
+        const igSub = await subscribeInstagramWebhooks(ig.id, page.access_token);
+        if (!igSub.ok) {
+          console.error("instagram webhook subscribe failed", ig.id, igSub.error);
+        }
         await saveAccount(supabaseAdmin, stateRow, {
           platform: "instagram",
           external_id: ig.id,
@@ -226,7 +232,11 @@ async function connectMeta(args: {
           handle: ig.username ? `@${ig.username}` : null,
           avatar_url: ig.profile_picture_url ?? null,
           scopes: metaScopes,
-          metadata: { page_id: page.id, ig_user_id: ig.id, webhook_subscribed: sub.ok },
+          metadata: {
+            page_id: page.id,
+            ig_user_id: ig.id,
+            webhook_subscribed: sub.ok && igSub.ok,
+          },
           access_token: page.access_token,
           expires_at: expiresAt,
         });
