@@ -43,31 +43,72 @@ export async function subscribePageWebhooks(
   }
 }
 
-/** Installs this app on an Instagram professional account for comments and DMs. */
-export async function subscribeInstagramWebhooks(
-  instagramUserId: string,
-  pageAccessToken: string,
-): Promise<SubscribeResult> {
+const IG_GRAPH = "https://graph.instagram.com";
+
+async function postSubscribedApps(
+  base: string,
+  objectId: string,
+  fields: string[],
+  accessToken: string,
+): Promise<{ ok: boolean; error?: string; errorCode?: number }> {
   try {
-    const res = await fetch(`${GRAPH}/${instagramUserId}/subscribed_apps`, {
+    const res = await fetch(`${base}/${objectId}/subscribed_apps`, {
       method: "POST",
       headers: { "content-type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({
-        subscribed_fields: INSTAGRAM_SUBSCRIBED_FIELDS.join(","),
-        access_token: pageAccessToken,
+        subscribed_fields: fields.join(","),
+        access_token: accessToken,
       }),
     });
     const json = (await res.json()) as {
       success?: boolean;
-      error?: { message?: string };
+      error?: { message?: string; code?: number };
     };
     if (!res.ok || json.error) {
-      return { ok: false, error: json.error?.message ?? `HTTP ${res.status}` };
+      return {
+        ok: false,
+        error: json.error?.message ?? `HTTP ${res.status}`,
+        errorCode: typeof json.error?.code === "number" ? json.error.code : undefined,
+      };
     }
     return { ok: Boolean(json.success ?? true) };
   } catch (error) {
     return { ok: false, error: error instanceof Error ? error.message : "Request failed" };
   }
+}
+
+/**
+ * Installs this app on an Instagram professional account for comments and DMs.
+ *
+ * Subscribes field-by-field so a partially granted app (e.g. comments allowed,
+ * messages not yet approved) still picks up what it can. Meta rejects this call
+ * with error (#3) when the token belongs to an Instagram-Business-Login flow;
+ * in that case the same call is retried against graph.instagram.com.
+ */
+export async function subscribeInstagramWebhooks(
+  instagramUserId: string,
+  accessToken: string,
+): Promise<SubscribeResult> {
+  const errors: string[] = [];
+  let subscribedAny = false;
+
+  for (const field of INSTAGRAM_SUBSCRIBED_FIELDS) {
+    let attempt = await postSubscribedApps(GRAPH, instagramUserId, [field], accessToken);
+    if (!attempt.ok && attempt.errorCode === 3) {
+      attempt = await postSubscribedApps(IG_GRAPH, instagramUserId, [field], accessToken);
+    }
+    if (attempt.ok) {
+      subscribedAny = true;
+    } else {
+      errors.push(`${field}: ${attempt.error ?? "subscribe failed"}`);
+    }
+  }
+
+  if (errors.length === 0) return { ok: true };
+  return {
+    ok: subscribedAny ? true : false,
+    error: errors.join("; "),
+  };
 }
 
 /** Reads back which fields the app is currently subscribed to for a Page. */
