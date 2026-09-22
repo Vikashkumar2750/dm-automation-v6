@@ -296,20 +296,6 @@ export async function runAutomations(admin: AdminClient, ctx: AutomationContext)
     return;
   }
 
-  // Safety: per-contact daily cap across all rules.
-  const contactSince = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-  const { count: contactSends } = await admin
-    .from("automation_runs")
-    .select("id", { count: "exact", head: true })
-    .eq("organization_id", ctx.organizationId)
-    .eq("conversation_id", ctx.conversationId)
-    .eq("status", "sent")
-    .gte("created_at", contactSince);
-  if ((contactSends ?? 0) >= settings.per_contact_daily_limit) {
-    await log(admin, ctx, null, "skipped", "per_contact_limit");
-    return;
-  }
-
   const { data: rules } = await admin
     .from("automation_rules")
     .select(RULE_SELECT)
@@ -338,6 +324,24 @@ export async function runAutomations(admin: AdminClient, ctx: AutomationContext)
 
   // Only the highest-priority matching rule fires (anti-spam).
   const rule = candidates[0]!;
+
+  // Safety: cap completed automated replies per contact across all rules.
+  // A comment + follow-gate flow records intermediate steps (public reply and
+  // follow prompt) as sent too. Counting every sent log exhausted the cap
+  // before the held DM could be released, so only terminal reply actions count.
+  const contactSince = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const { count: contactSends } = await admin
+    .from("automation_runs")
+    .select("id", { count: "exact", head: true })
+    .eq("organization_id", ctx.organizationId)
+    .eq("conversation_id", ctx.conversationId)
+    .eq("status", "sent")
+    .in("detail", ["reply_dm", "comment_private_reply", "comment_public_reply"])
+    .gte("created_at", contactSince);
+  if ((contactSends ?? 0) >= settings.per_contact_daily_limit) {
+    await log(admin, ctx, rule.id, "skipped", "per_contact_limit");
+    return;
+  }
 
   // Cooldown: skip if this rule already acted on this conversation recently.
   const since = new Date(Date.now() - rule.cooldown_seconds * 1000).toISOString();
