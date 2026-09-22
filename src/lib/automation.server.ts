@@ -516,7 +516,7 @@ async function sendWithFallback(
   recipient: Record<string, unknown>,
   message: Record<string, unknown>,
   fallbackText: string,
-): Promise<{ id?: string; error?: string }> {
+): Promise<{ id?: string | undefined; error?: string | undefined }> {
   const first = await call(`${GRAPH}/${accountId}/messages`, {
     recipient,
     message,
