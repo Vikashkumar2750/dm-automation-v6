@@ -374,6 +374,41 @@ function AutomationsPage() {
         }
       />
 
+      <Panel title="How an automation works">
+        <ol className="grid gap-2 text-sm text-muted-foreground sm:grid-cols-2 lg:grid-cols-4">
+          <li>
+            <span className="font-medium text-foreground">1. When</span>
+            <br />
+            Someone sends a DM, or comments on your post. Choose “New comment” to pick
+            one specific post (or leave it on all posts).
+          </li>
+          <li>
+            <span className="font-medium text-foreground">2. Match</span>
+            <br />
+            The rule fires if their text matches your keywords — or on every message if
+            you choose “Any message”.
+          </li>
+          <li>
+            <span className="font-medium text-foreground">3. Reply</span>
+            <br />
+            A public reply can go under the comment, then the DM is sent with your text,
+            link button or attachment.
+          </li>
+          <li>
+            <span className="font-medium text-foreground">4. Guardrails</span>
+            <br />
+            Follower check, cooldown, daily cap, quiet hours and opt-out words all run
+            before anything is sent.
+          </li>
+        </ol>
+        <p className="mt-3 text-xs text-muted-foreground">
+          Automations only run on connected accounts, and only for messages received
+          after the rule is switched on. Every fire, skip and failure is listed under
+          Recent activity.
+        </p>
+      </Panel>
+
+
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
         <Panel title="Rules" bodyClassName="p-0">
           {rulesQuery.isLoading ? (
