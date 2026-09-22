@@ -245,7 +245,7 @@ export const Route = createFileRoute("/api/public/webhooks/meta")({
           // Resolve which workspace this account belongs to (page id or IG user id).
           let organizationId: string | null = null;
           let socialAccountId: string | null = null;
-          if (externalId) {
+          if (externalId && platform) {
             const { data: account } = await supabaseAdmin
               .from("social_accounts")
               .select("id, organization_id")
