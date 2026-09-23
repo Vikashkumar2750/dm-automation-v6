@@ -461,11 +461,13 @@ export async function runAutomations(admin: AdminClient, ctx: AutomationContext)
         await log(admin, ctx, rule.id, "skipped", "already_a_follower");
         return;
       }
-      // A commenter has not granted Instagram profile consent until they send
-      // a message or tap a quick reply. Treat an unreadable follow state as
-      // gated as well; otherwise the final DM is attempted before consent and
-      // Meta rejects it with capability error (#3).
-      if ((follows === false || follows === null) && rule.require_follow) {
+      // Meta does not expose a commenter's follow relationship until that
+      // person has granted messaging-profile consent. Unknown must not be
+      // treated as "not following" — doing so sends follow prompts to people
+      // who already follow the account. Gate only a confirmed non-follower;
+      // otherwise use Meta's comment private-reply delivery, which Meta routes
+      // to Inbox or Requests as appropriate.
+      if (follows === false && rule.require_follow) {
         await openFollowGate(admin, ctx, rule, token, accountId);
         return;
       }
@@ -642,9 +644,10 @@ async function deliverDm(
 // ------------------------------------------------------------- follow gate
 
 /**
- * Instagram exposes whether the contact follows the business on the
- * conversation user profile. Facebook has no equivalent field, so unknown
- * (null) never blocks a send.
+ * Instagram exposes whether the contact follows the business only after the
+ * contact grants messaging-profile consent (for example by sending a DM or
+ * tapping a messaging control). A comment alone does not grant that consent,
+ * so null means "Meta did not reveal it", never "not following".
  */
 async function checkFollows(
   platform: "instagram" | "facebook",
@@ -656,7 +659,9 @@ async function checkFollows(
     const path = `${externalUserId}?fields=is_user_follow_business&access_token=${encodeURIComponent(token)}`;
     const first = await readFollowState(`${GRAPH}/${path}`);
     if (typeof first.follows === "boolean") return first.follows;
-    if (first.errorCode !== 3) return null;
+    // Facebook Login and Instagram Login use different Graph hosts. Try both
+    // whenever the first host cannot return the consent-gated field; limiting
+    // this fallback to error #3 misses permission/consent error variants.
     const retry = await readFollowState(`${IG_GRAPH}/${path}`);
     return typeof retry.follows === "boolean" ? retry.follows : null;
   } catch {
