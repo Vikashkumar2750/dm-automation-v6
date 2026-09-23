@@ -669,12 +669,12 @@ function AutomationsPage() {
                         <li>Comment arrives on a selected post and matches your keywords.</li>
                         <li>A public reply is posted under the comment.</li>
                         <li>
-                          Follower status is checked (Instagram). Followers get the DM with
-                          your link or attachment right away.
+                          Instagram checks follower status when the commenter has previously
+                          granted messaging access.
                         </li>
                         <li>
-                          Non-followers get a “Follow us” + “I followed ✅” message; tapping it
-                          re-checks the follow.
+                          Confirmed non-followers get a “Follow us” + “I followed ✅” message;
+                          otherwise the DM is sent as a private reply.
                         </li>
                         <li>
                           Once the follow is confirmed, the DM with the link is sent
@@ -873,8 +873,9 @@ function AutomationsPage() {
                     <div className="pr-4">
                       <p className="text-sm font-medium">Ask to follow first</p>
                       <p className="text-xs text-muted-foreground">
-                        Non-followers get a follow request with an “I followed” button.
-                        The main reply is sent only after the follow is confirmed.
+                        Confirmed non-followers get a follow request with an “I followed”
+                        button. Instagram may hide follower status until someone has messaged
+                        the account; those commenters receive the private reply normally.
                       </p>
                     </div>
                     <Switch
@@ -898,8 +899,8 @@ function AutomationsPage() {
                     </div>
                   )}
                   <p className="text-xs text-muted-foreground">
-                    Follower status is available on Instagram. On Facebook the reply is
-                    always sent.
+                    Instagram only reveals follower status after messaging access is granted.
+                    On Facebook, and when Instagram does not reveal it, the reply is sent.
                   </p>
                 </div>
               )}
