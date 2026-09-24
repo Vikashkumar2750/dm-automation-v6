@@ -6,6 +6,8 @@
 export function explainReason(detail: string | null): { title: string; hint: string } {
   const code = (detail ?? "").toLowerCase().replace(/^trace:[^:]+:/, "");
   const map: [string, string, string][] = [
+    ["already_replied_on_post", "Skipped: this person was already answered on this post", "One reply per person per post (7 days). Comments on other posts still get a reply."],
+    ["post_reply:", "Comment on this post accepted", "First comment by this person on this post — reply is being sent."],
     ["duplicate_comment", "Skipped: this comment was already answered", "Meta allows one private reply per comment, so repeats are ignored."],
     ["gate_not_found", "Button tap not linked to a comment", "The tap arrived but its follow check had already finished or expired. Ask the contact to comment again."],
     ["gate_account_mismatch", "Button tap reached the wrong account", "The tap arrived from an account that does not own this follow check. Reconnect the intended Instagram account."],

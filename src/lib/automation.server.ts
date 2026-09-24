@@ -372,17 +372,21 @@ export async function runAutomations(admin: AdminClient, ctx: AutomationContext)
   }
 
   // Cooldown: skip if this rule already acted on this conversation recently.
-  const since = new Date(Date.now() - rule.cooldown_seconds * 1000).toISOString();
-  const { count: recent } = await admin
-    .from("automation_runs")
-    .select("id", { count: "exact", head: true })
-    .eq("rule_id", rule.id)
-    .eq("conversation_id", ctx.conversationId)
-    .eq("status", "sent")
-    .gte("created_at", since);
-  if ((recent ?? 0) > 0) {
-    await log(admin, ctx, rule.id, "skipped", "cooldown");
-    return;
+  // Comments use "one reply per person per post" instead (checked before the
+  // gate opens), so a comment on a DIFFERENT post is never blocked here.
+  if (ctx.channel !== "comment") {
+    const since = new Date(Date.now() - rule.cooldown_seconds * 1000).toISOString();
+    const { count: recent } = await admin
+      .from("automation_runs")
+      .select("id", { count: "exact", head: true })
+      .eq("rule_id", rule.id)
+      .eq("conversation_id", ctx.conversationId)
+      .eq("status", "sent")
+      .gte("created_at", since);
+    if ((recent ?? 0) > 0) {
+      await log(admin, ctx, rule.id, "skipped", "cooldown");
+      return;
+    }
   }
 
   // Daily cap per rule.
@@ -509,6 +513,24 @@ export async function runAutomations(admin: AdminClient, ctx: AutomationContext)
       if ((priorGate ?? 0) > 0) {
         await log(admin, ctx, rule.id, "skipped", "duplicate_comment");
         return;
+      }
+      // One reply per person per post (7 days): a second comment by the same
+      // person on the SAME post is skipped; other posts still get a reply.
+      if (ctx.postExternalId) {
+        const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+        const postMarker = `post_reply:${ctx.postExternalId}`.slice(0, 200);
+        const { count: samePost, error: samePostErr } = await admin
+          .from("automation_runs")
+          .select("id", { count: "exact", head: true })
+          .eq("organization_id", ctx.organizationId)
+          .eq("conversation_id", ctx.conversationId)
+          .eq("detail", postMarker)
+          .gte("created_at", weekAgo);
+        if (!samePostErr && (samePost ?? 0) > 0) {
+          await log(admin, ctx, rule.id, "skipped", "already_replied_on_post");
+          return;
+        }
+        await log(admin, ctx, rule.id, "matched", postMarker);
       }
       await openGate(admin, ctx, rule, token, accountId, "opener");
       return;
