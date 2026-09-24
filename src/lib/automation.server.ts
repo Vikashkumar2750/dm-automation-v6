@@ -792,6 +792,10 @@ const OPENER_TEXT =
 /** One opener tap + three "I followed" checks. */
 const MAX_GATE_TAPS = 4;
 
+export function followGatePayload(gateId: string, stage: "opener" | "confirm", nonce: string) {
+  return `${FOLLOW_PAYLOAD}:${gateId}:${stage}:${nonce}`;
+}
+
 async function profileUrlFor(admin: AdminClient, ctx: AutomationContext) {
   if (!ctx.socialAccountId) return null;
   const { data: acc } = await admin
@@ -818,7 +822,11 @@ async function followPromptShapes(
   const profileUrl = await profileUrlFor(admin, ctx);
   const buttons: Button[] = [];
   if (profileUrl) buttons.push({ type: "web_url", url: profileUrl, title: "Visit profile" });
-  buttons.push({ type: "postback", title: "I followed ✅", payload: `${FOLLOW_PAYLOAD}:${gateId}` });
+  buttons.push({
+    type: "postback",
+    title: "I followed ✅",
+    payload: followGatePayload(gateId, "confirm", crypto.randomUUID()),
+  });
   return { text, shapes: gateButtonMessages(text, buttons) };
 }
 
@@ -866,7 +874,11 @@ async function openGate(
     // a quick reply so Instagram can grant messaging-profile consent.
     shapes = gateButtonMessages(
       text,
-      [{ type: "postback", title, payload: `${FOLLOW_PAYLOAD}:${gate.id}` }],
+      [{
+        type: "postback",
+        title,
+        payload: followGatePayload(gate.id, "opener", crypto.randomUUID()),
+      }],
       false,
     );
   } else {
@@ -906,6 +918,7 @@ export async function handleFollowGateReply(
     externalUserId: string;
     payload: string;
     messageText?: string | null;
+    receivingExternalId?: string | null;
   },
 ) {
   const hasPayload = args.payload.startsWith(`${FOLLOW_PAYLOAD}:`);
@@ -993,6 +1006,16 @@ export async function handleFollowGateReply(
   const token = tokenRow?.access_token as string | undefined;
   if (!token || !account?.external_id) {
     await log(admin, ctx, typedRule.id, "failed", "no_token");
+    return true;
+  }
+  const metadata = account.metadata as { page_id?: unknown } | null;
+  const linkedPageId = typeof metadata?.page_id === "string" ? metadata.page_id : null;
+  if (
+    args.receivingExternalId &&
+    args.receivingExternalId !== account.external_id &&
+    args.receivingExternalId !== linkedPageId
+  ) {
+    await log(admin, ctx, typedRule.id, "failed", "gate_account_mismatch");
     return true;
   }
   const sendId = messagingAccountId(

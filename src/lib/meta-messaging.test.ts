@@ -66,6 +66,7 @@ describe("Instagram button delivery", () => {
 
   it("extracts only a non-empty follow gate id", () => {
     expect(followGateId("AUTOMATION_FOLLOW_CHECK:gate-1")).toBe("gate-1");
+    expect(followGateId("AUTOMATION_FOLLOW_CHECK:gate-1:confirm:nonce-2")).toBe("gate-1");
     expect(followGateId("AUTOMATION_FOLLOW_CHECK:  ")).toBeNull();
     expect(followGateId("OTHER:gate-1")).toBeNull();
   });

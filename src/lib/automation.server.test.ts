@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { followGateVerdict, followVerdict, gateButtonMessages } from "./automation.server";
+import {
+  followGatePayload,
+  followGateVerdict,
+  followVerdict,
+  gateButtonMessages,
+} from "./automation.server";
 
 describe("required-follow link delivery", () => {
   const rule = { require_follow: true, follower_condition: "non_followers" };
@@ -53,5 +58,15 @@ describe("gate button delivery order", () => {
     const messages = gateButtonMessages("Confirm below", [button]);
     expect(messages[0]).toHaveProperty("quick_replies.0.payload", button.payload);
     expect(messages[1]).toHaveProperty("attachment.payload.template_type", "button");
+  });
+});
+
+describe("gate payload identity", () => {
+  it("separates opener and confirmation taps for the same gate", () => {
+    const opener = followGatePayload("gate-1", "opener", "nonce-1");
+    const confirm = followGatePayload("gate-1", "confirm", "nonce-2");
+    expect(opener).not.toBe(confirm);
+    expect(opener).toContain("AUTOMATION_FOLLOW_CHECK:gate-1:opener:");
+    expect(confirm).toContain("AUTOMATION_FOLLOW_CHECK:gate-1:confirm:");
   });
 });

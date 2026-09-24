@@ -51,6 +51,6 @@ export function messagingContent(event: MetaMessagingEvent) {
 export function followGateId(payload: string | null | undefined) {
   const prefix = "AUTOMATION_FOLLOW_CHECK:";
   if (!payload?.startsWith(prefix)) return null;
-  const id = payload.slice(prefix.length).trim();
+  const id = payload.slice(prefix.length).split(":", 1)[0]?.trim();
   return id || null;
 }

@@ -312,6 +312,7 @@ async function ingestIntoInbox(
         externalUserId,
         payload: followPayload ?? "",
         messageText: body,
+        receivingExternalId: args.receivingExternalId,
       });
       if (handled) return;
     }
