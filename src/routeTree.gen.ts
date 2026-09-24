@@ -51,6 +51,7 @@ import { Route as AuthenticatedInviteTokenRouteImport } from './routes/_authenti
 import { Route as AuthenticatedAdminOrgOrgIdRouteImport } from './routes/_authenticated/admin.org.$orgId'
 import { Route as AuthenticatedAutomationsActivityRunIdRouteImport } from './routes/_authenticated/automations_.activity_.$runId'
 import { Route as ApiPublicCronPublishDueRouteImport } from './routes/api/public/cron.publish-due'
+import { Route as ApiPublicTTokenRouteImport } from './routes/api/public/t.$token'
 import { Route as ApiPublicWebhooksMetaRouteImport } from './routes/api/public/webhooks.meta'
 import { Route as ApiPublicOauthProviderCallbackRouteImport } from './routes/api/public/oauth.$provider.callback'
 
@@ -280,6 +281,11 @@ const ApiPublicCronPublishDueRoute = ApiPublicCronPublishDueRouteImport.update({
   path: '/api/public/cron/publish-due',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicTTokenRoute = ApiPublicTTokenRouteImport.update({
+  id: '/api/public/t/$token',
+  path: '/api/public/t/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicWebhooksMetaRoute = ApiPublicWebhooksMetaRouteImport.update({
   id: '/api/public/webhooks/meta',
   path: '/api/public/webhooks/meta',
@@ -334,6 +340,7 @@ export interface FileRoutesByFullPath {
   '/admin/org/$orgId': typeof AuthenticatedAdminOrgOrgIdRoute
   '/automations/activity/$runId': typeof AuthenticatedAutomationsActivityRunIdRoute
   '/api/public/cron/publish-due': typeof ApiPublicCronPublishDueRoute
+  '/api/public/t/$token': typeof ApiPublicTTokenRoute
   '/api/public/webhooks/meta': typeof ApiPublicWebhooksMetaRoute
   '/api/public/oauth/$provider/callback': typeof ApiPublicOauthProviderCallbackRoute
 }
@@ -378,6 +385,7 @@ export interface FileRoutesByTo {
   '/admin/org/$orgId': typeof AuthenticatedAdminOrgOrgIdRoute
   '/automations/activity/$runId': typeof AuthenticatedAutomationsActivityRunIdRoute
   '/api/public/cron/publish-due': typeof ApiPublicCronPublishDueRoute
+  '/api/public/t/$token': typeof ApiPublicTTokenRoute
   '/api/public/webhooks/meta': typeof ApiPublicWebhooksMetaRoute
   '/api/public/oauth/$provider/callback': typeof ApiPublicOauthProviderCallbackRoute
 }
@@ -425,6 +433,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/org/$orgId': typeof AuthenticatedAdminOrgOrgIdRoute
   '/_authenticated/automations_/activity_/$runId': typeof AuthenticatedAutomationsActivityRunIdRoute
   '/api/public/cron/publish-due': typeof ApiPublicCronPublishDueRoute
+  '/api/public/t/$token': typeof ApiPublicTTokenRoute
   '/api/public/webhooks/meta': typeof ApiPublicWebhooksMetaRoute
   '/api/public/oauth/$provider/callback': typeof ApiPublicOauthProviderCallbackRoute
 }
@@ -472,6 +481,7 @@ export interface FileRouteTypes {
     | '/admin/org/$orgId'
     | '/automations/activity/$runId'
     | '/api/public/cron/publish-due'
+    | '/api/public/t/$token'
     | '/api/public/webhooks/meta'
     | '/api/public/oauth/$provider/callback'
   fileRoutesByTo: FileRoutesByTo
@@ -516,6 +526,7 @@ export interface FileRouteTypes {
     | '/admin/org/$orgId'
     | '/automations/activity/$runId'
     | '/api/public/cron/publish-due'
+    | '/api/public/t/$token'
     | '/api/public/webhooks/meta'
     | '/api/public/oauth/$provider/callback'
   id:
@@ -562,6 +573,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/org/$orgId'
     | '/_authenticated/automations_/activity_/$runId'
     | '/api/public/cron/publish-due'
+    | '/api/public/t/$token'
     | '/api/public/webhooks/meta'
     | '/api/public/oauth/$provider/callback'
   fileRoutesById: FileRoutesById
@@ -575,6 +587,7 @@ export interface RootRouteChildren {
   ResetPasswordRoute: typeof ResetPasswordRoute
   TermsRoute: typeof TermsRoute
   ApiPublicCronPublishDueRoute: typeof ApiPublicCronPublishDueRoute
+  ApiPublicTTokenRoute: typeof ApiPublicTTokenRoute
   ApiPublicWebhooksMetaRoute: typeof ApiPublicWebhooksMetaRoute
   ApiPublicOauthProviderCallbackRoute: typeof ApiPublicOauthProviderCallbackRoute
 }
@@ -875,6 +888,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicCronPublishDueRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/t/$token': {
+      id: '/api/public/t/$token'
+      path: '/api/public/t/$token'
+      fullPath: '/api/public/t/$token'
+      preLoaderRoute: typeof ApiPublicTTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/webhooks/meta': {
       id: '/api/public/webhooks/meta'
       path: '/api/public/webhooks/meta'
@@ -989,6 +1009,7 @@ const rootRouteChildren: RootRouteChildren = {
   ResetPasswordRoute: ResetPasswordRoute,
   TermsRoute: TermsRoute,
   ApiPublicCronPublishDueRoute: ApiPublicCronPublishDueRoute,
+  ApiPublicTTokenRoute: ApiPublicTTokenRoute,
   ApiPublicWebhooksMetaRoute: ApiPublicWebhooksMetaRoute,
   ApiPublicOauthProviderCallbackRoute: ApiPublicOauthProviderCallbackRoute,
 }
