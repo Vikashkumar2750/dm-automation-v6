@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { followGateVerdict, followVerdict } from "./automation.server";
+import { followGateVerdict, followVerdict, gateButtonMessages } from "./automation.server";
 
 describe("required-follow link delivery", () => {
   const rule = { require_follow: true, follower_condition: "non_followers" };
@@ -33,5 +33,25 @@ describe("Everyone audience follows the plan", () => {
   it("an unavailable profile cannot silently bypass the follow prompt", () => {
     expect(followGateVerdict(rule, null, 0)).toBe("ask_follow");
     expect(followGateVerdict(rule, null, 1)).toBe("ask_follow");
+  });
+});
+
+describe("gate button delivery order", () => {
+  const button = {
+    type: "postback" as const,
+    title: "Send me the link",
+    payload: "AUTOMATION_FOLLOW_CHECK:gate-1",
+  };
+
+  it("uses a template postback first for the comment opener", () => {
+    const messages = gateButtonMessages("Tap below", [button], false);
+    expect(messages[0]).toHaveProperty("attachment.payload.template_type", "button");
+    expect(messages[1]).toHaveProperty("quick_replies.0.payload", button.payload);
+  });
+
+  it("uses a quick reply first for follow confirmation", () => {
+    const messages = gateButtonMessages("Confirm below", [button]);
+    expect(messages[0]).toHaveProperty("quick_replies.0.payload", button.payload);
+    expect(messages[1]).toHaveProperty("attachment.payload.template_type", "button");
   });
 });
