@@ -1,5 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { messagingContent } from "@/lib/meta-messaging";
+import {
+  isMessagingEventType,
+  messagingContent,
+  normalizeMessagingEvent,
+} from "@/lib/meta-messaging";
 
 type MetaChange = {
   field?: string;
@@ -113,6 +117,12 @@ type CommentValue = {
 };
 
 function eventIdentity(item: { type: string; value: unknown }, fallback: string) {
+  if (isMessagingEventType(item.type)) {
+    const event = normalizeMessagingEvent(item.value);
+    const content = messagingContent(event);
+    if (content.externalId) return content.externalId;
+    if (content.payload) return `tap:${content.payload}:${event.timestamp ?? fallback}`;
+  }
   const raw = item.value as {
     value?: CommentValue;
     comment_id?: string;
@@ -155,8 +165,8 @@ async function ingestIntoInbox(
   let postExternalId: string | null = null;
   let followPayload: string | null = null;
 
-  if (type.endsWith(".message") || type.endsWith(".messaging_postbacks")) {
-    const m = value as MessagingEvent;
+  if (isMessagingEventType(type)) {
+    const m = normalizeMessagingEvent(value) as MessagingEvent;
     if (m.message?.is_echo) return; // our own outbound echo
     externalUserId = m.sender?.id ?? null;
     if (!externalUserId || externalUserId === args.accountExternalId) return;
