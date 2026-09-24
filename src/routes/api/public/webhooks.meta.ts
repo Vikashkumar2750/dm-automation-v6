@@ -114,17 +114,16 @@ function eventIdentity(item: { type: string; value: unknown }, fallback: string)
     value?: CommentValue;
     comment_id?: string;
     id?: string;
+    timestamp?: number;
     message?: { mid?: string };
-    postback?: { mid?: string };
+    postback?: { mid?: string; payload?: string };
   };
+  // Each tap is its own event even when Instagram repeats the button's mid.
+  if (raw.postback) {
+    return `postback:${raw.postback.mid ?? ""}:${raw.postback.payload ?? ""}:${raw.timestamp ?? fallback}`;
+  }
   const comment = raw.value ?? raw;
-  return (
-    comment.comment_id ??
-    comment.id ??
-    raw.message?.mid ??
-    raw.postback?.mid ??
-    fallback
-  );
+  return comment.comment_id ?? comment.id ?? raw.message?.mid ?? fallback;
 }
 
 /**
@@ -160,7 +159,12 @@ async function ingestIntoInbox(
     if (!externalUserId || externalUserId === args.accountExternalId) return;
     followPayload = m.message?.quick_reply?.payload ?? m.postback?.payload ?? null;
     body = m.message?.text ?? m.postback?.title ?? null;
-    externalId = m.message?.mid ?? m.postback?.mid ?? null;
+    // Instagram reuses the mid of the message that carried the button for
+    // postback taps. That mid is already stored for our outbound prompt, so it
+    // must not be used as the inbound id or the tap is dropped as a duplicate.
+    externalId = m.postback
+      ? `postback:${m.postback.mid ?? "x"}:${m.timestamp ?? Date.now()}`
+      : (m.message?.mid ?? null);
     if (m.timestamp) sentAt = new Date(m.timestamp);
   } else if (type.endsWith(".comments") || type.endsWith(".feed")) {
     const c = (value as { value?: CommentValue }).value ?? (value as CommentValue);

@@ -962,10 +962,16 @@ export async function handleFollowGateReply(
       await log(admin, ctx, typedRule.id, "skipped", "follow_gate_expired");
       return true;
     }
-    await admin
+    // Claim this tap atomically: the same tap can arrive via both the Page and
+    // Instagram webhook objects, and only one copy may answer it.
+    const { data: claimed } = await admin
       .from("automation_follow_gates")
       .update({ attempts, external_user_id: args.externalUserId, last_checked_at: now })
-      .eq("id", gate.id);
+      .eq("id", gate.id)
+      .eq("status", "waiting")
+      .eq("attempts", previousTaps)
+      .select("id");
+    if (!claimed?.length) return true;
     const isRetry = previousTaps >= 1;
     const { text, shapes } = await followPromptShapes(admin, ctx, typedRule, gate.id, isRetry);
     const res = await sendChain(args.platform, sendId, token, { id: args.externalUserId }, shapes);
@@ -973,7 +979,7 @@ export async function handleFollowGateReply(
       await log(admin, ctx, typedRule.id, "failed", `follow_prompt:${res.error.slice(0, 200)}`);
       return true;
     }
-    await recordOutbound(admin, ctx, typedRule, text, res.id ?? null);
+    await recordOutbound(admin, ctx, typedRule, text, null);
     await log(
       admin,
       ctx,
@@ -984,12 +990,23 @@ export async function handleFollowGateReply(
     return true;
   }
 
-  await finish("completed");
-  const text = pickResponse(typedRule);
-  if (!text) {
-    await log(admin, ctx, typedRule.id, "failed", "no_response_text");
-    return true;
-  }
+  const { data: won } = await admin
+    .from("automation_follow_gates")
+    .update({
+      attempts,
+      status: "completed",
+      external_user_id: args.externalUserId,
+      last_checked_at: now,
+      completed_at: now,
+    })
+    .eq("id", gate.id)
+    .eq("status", "waiting")
+    .select("id");
+  if (!won?.length) return true; // another copy of this tap already delivered
+  // Never leave a tapped contact empty-handed when the DM text is blank.
+  const text =
+    pickResponse(typedRule) ||
+    ((typedRule.dm_link_url ?? "").trim() ? "Here you go 👇" : "Thanks for following! 🙌");
   await deliverDm(admin, ctx, { ...typedRule, action: "reply_dm" }, token, sendId, text);
   return true;
 }
