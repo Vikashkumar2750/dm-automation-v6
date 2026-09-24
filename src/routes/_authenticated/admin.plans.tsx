@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/select";
 import { getPlatformOverview, grantOrganizationPlan, listPlanOrders } from "@/lib/admin.functions";
 import { formatPaise } from "@/lib/plans";
+import { PlanEditorPanel } from "@/components/app/PlatformConfigPanels";
 
 export const Route = createFileRoute("/_authenticated/admin/plans")({
   head: () => ({
@@ -121,6 +122,8 @@ function PlansPage() {
           ))}
         </div>
       </Panel>
+
+      <PlanEditorPanel />
 
       <Panel title="Give a plan without payment">
         <div className="grid gap-3 sm:grid-cols-2">
