@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { ShieldCheck, Webhook } from "lucide-react";
 
 import { AppShell } from "@/components/app/AppShell";
+import { DeliveryHealth } from "@/components/app/DeliveryHealth";
 import {
   EmptyState,
   PageHeader,
@@ -131,6 +132,8 @@ function AccountHealthPage() {
             </div>
           )}
         </Panel>
+
+        {orgId && <DeliveryHealth orgId={orgId} />}
 
         <Panel title="Incoming event problems">
           {failing.length === 0 ? (

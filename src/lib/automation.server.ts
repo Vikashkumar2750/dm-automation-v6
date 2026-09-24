@@ -5,7 +5,17 @@
  * outbound/automated messages, and every attempt is logged in automation_runs.
  */
 
+import { AsyncLocalStorage } from "node:async_hooks";
+
 import { followGateId } from "@/lib/meta-messaging";
+
+/** Dry-run context: captures Meta requests instead of sending them. */
+export type SimulationCapture = { url: string; payload: Record<string, unknown> };
+export type SimulationState = { follows: boolean | null; calls: SimulationCapture[] };
+export const simulationStore = new AsyncLocalStorage<SimulationState>();
+export function runSimulated<T>(state: SimulationState, fn: () => Promise<T>) {
+  return simulationStore.run(state, fn);
+}
 
 type AdminClient = import("@supabase/supabase-js").SupabaseClient;
 
@@ -759,6 +769,8 @@ async function checkFollows(
   externalUserId: string,
   token: string,
 ): Promise<boolean | null> {
+  const sim = simulationStore.getStore();
+  if (sim) return sim.follows;
   if (platform !== "instagram") return null;
   try {
     const path = `${externalUserId}?fields=is_user_follow_business&access_token=${encodeURIComponent(token)}`;
@@ -1162,6 +1174,14 @@ export async function handleFollowGateReply(
 }
 
 async function call(url: string, payload: Record<string, unknown>) {
+  const sim = simulationStore.getStore();
+  if (sim) {
+    const clean = url.replace(/access_token=[^&]+/, "access_token=***");
+    const { access_token: _omit, ...safe } = payload;
+    void _omit;
+    sim.calls.push({ url: clean, payload: safe });
+    return { id: `sim_${sim.calls.length}` } as { id?: string; error?: string; errorCode?: number };
+  }
   const response = await fetch(url, {
     method: "POST",
     headers: { "content-type": "application/json" },
