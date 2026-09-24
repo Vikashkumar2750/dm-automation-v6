@@ -10,7 +10,7 @@
 const GRAPH = "https://graph.facebook.com/v21.0";
 
 /** Minimum Page fields required by this app's comment and Messenger flows. */
-export const PAGE_SUBSCRIBED_FIELDS = ["feed", "messages", "messaging_postbacks"];
+export const PAGE_SUBSCRIBED_FIELDS = ["feed", "messages", "messaging_postbacks", "standby"];
 
 /**
  * Instagram professional-account fields are a separate subscription.
