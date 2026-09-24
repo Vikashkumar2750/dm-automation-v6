@@ -209,7 +209,12 @@ export const deleteAutomationRule = createServerFn({ method: "POST" })
 export const listAutomationRuns = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) =>
-    z.object({ organizationId: z.string().uuid() }).parse(data),
+    z
+      .object({
+        organizationId: z.string().uuid(),
+        limit: z.number().int().min(1).max(500).optional(),
+      })
+      .parse(data),
   )
   .handler(async ({ data, context }) => {
     const { data: rows, error } = await context.supabase
@@ -217,7 +222,7 @@ export const listAutomationRuns = createServerFn({ method: "GET" })
       .select("id, rule_id, conversation_id, status, detail, created_at")
       .eq("organization_id", data.organizationId)
       .order("created_at", { ascending: false })
-      .limit(40);
+      .limit(data.limit ?? 40);
     if (error) throw new Error(error.message);
     return (rows ?? []) as AutomationRun[];
   });
@@ -593,4 +598,118 @@ export const listTargetablePosts = createServerFn({ method: "GET" })
       permalink: row.permalink,
       publishedAt: row.published_at,
     })) as TargetablePost[];
+  });
+
+// ---------------------------------------------------------- run detail
+
+export type AutomationRunDetail = {
+  run: AutomationRun;
+  rule: {
+    id: string;
+    name: string;
+    trigger: string;
+    action: string;
+    match_type: string;
+    keywords: string[];
+    follower_condition: string;
+    require_follow: boolean;
+    dm_link_url: string | null;
+    dm_button_label: string | null;
+    dm_attachment_type: string;
+  } | null;
+  contact: {
+    name: string | null;
+    externalUserId: string;
+    platform: string;
+    channel: string;
+    status: string;
+  } | null;
+  timeline: AutomationRun[];
+  messages: { id: string; direction: string; body: string; sent_at: string }[];
+};
+
+/** One automation step plus its rule, contact, surrounding steps and messages. */
+export const getAutomationRunDetail = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) =>
+    z.object({ organizationId: z.string().uuid(), runId: z.string().uuid() }).parse(data),
+  )
+  .handler(async ({ data, context }): Promise<AutomationRunDetail> => {
+    const sb = context.supabase;
+    const { data: run, error } = await sb
+      .from("automation_runs")
+      .select("id, rule_id, conversation_id, status, detail, created_at")
+      .eq("organization_id", data.organizationId)
+      .eq("id", data.runId)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!run) throw new Error("Activity not found");
+
+    const at = new Date(run.created_at).getTime();
+    const from = new Date(at - 30 * 60 * 1000).toISOString();
+    const to = new Date(at + 30 * 60 * 1000).toISOString();
+
+    const [ruleRes, convRes, timelineRes, msgRes] = await Promise.all([
+      run.rule_id
+        ? sb
+            .from("automation_rules")
+            .select(
+              "id, name, trigger, action, match_type, keywords, follower_condition, require_follow, dm_link_url, dm_button_label, dm_attachment_type",
+            )
+            .eq("id", run.rule_id)
+            .maybeSingle()
+        : Promise.resolve({ data: null }),
+      run.conversation_id
+        ? sb
+            .from("conversations")
+            .select("external_user_name, external_user_id, platform, channel, status")
+            .eq("id", run.conversation_id)
+            .maybeSingle()
+        : Promise.resolve({ data: null }),
+      run.conversation_id
+        ? sb
+            .from("automation_runs")
+            .select("id, rule_id, conversation_id, status, detail, created_at")
+            .eq("organization_id", data.organizationId)
+            .eq("conversation_id", run.conversation_id)
+            .gte("created_at", from)
+            .lte("created_at", to)
+            .order("created_at", { ascending: true })
+            .limit(50)
+        : Promise.resolve({ data: [run] }),
+      run.conversation_id
+        ? sb
+            .from("messages")
+            .select("id, direction, body, sent_at")
+            .eq("conversation_id", run.conversation_id)
+            .gte("sent_at", from)
+            .lte("sent_at", to)
+            .order("sent_at", { ascending: true })
+            .limit(50)
+        : Promise.resolve({ data: [] }),
+    ]);
+
+    const conv = convRes.data as {
+      external_user_name: string | null;
+      external_user_id: string;
+      platform: string;
+      channel: string;
+      status: string;
+    } | null;
+
+    return {
+      run: run as AutomationRun,
+      rule: (ruleRes.data as AutomationRunDetail["rule"]) ?? null,
+      contact: conv
+        ? {
+            name: conv.external_user_name,
+            externalUserId: conv.external_user_id,
+            platform: conv.platform,
+            channel: conv.channel,
+            status: conv.status,
+          }
+        : null,
+      timeline: ((timelineRes.data ?? []) as AutomationRun[]),
+      messages: (msgRes.data ?? []) as AutomationRunDetail["messages"],
+    };
   });
