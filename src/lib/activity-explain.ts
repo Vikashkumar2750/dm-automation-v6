@@ -82,6 +82,8 @@ export function stepLabel(detail: string | null): string {
     reply_dm: "Final DM delivered",
     dm_link: "Final DM with link button delivered",
     attachment: "Attachment delivered",
+    "click:link": "Contact opened the link 🔗",
+    "click:attachment": "Contact opened the attachment 📎",
   };
   for (const [k, v] of Object.entries(map)) if (code.startsWith(k)) return v;
   return code ? `Step completed: ${code}` : "Reply sent";

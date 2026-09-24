@@ -204,7 +204,7 @@ export const getAnalytics = createServerFn({ method: "GET" })
     for (const r of runs) {
       if (r.status === "sent" && r.rule_id) {
         ruleCounts.set(r.rule_id, (ruleCounts.get(r.rule_id) ?? 0) + 1);
-      } else if (r.status !== "sent") {
+      } else if (r.status === "skipped" || r.status === "failed") {
         automationBlocked += 1;
       }
     }

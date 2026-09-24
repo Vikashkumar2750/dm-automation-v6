@@ -24,6 +24,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { useTenant } from "@/hooks/useTenant";
 import { getAnalytics } from "@/lib/analytics.functions";
+import { AutomationReportPanel } from "@/components/app/AutomationReportPanel";
 
 export const Route = createFileRoute("/_authenticated/analytics")({
   head: () => ({
@@ -279,6 +280,11 @@ function AnalyticsPage() {
           )}
         </Panel>
       </div>
+      {activeOrg?.id && (
+        <div className="mt-6">
+          <AutomationReportPanel orgId={activeOrg.id} />
+        </div>
+      )}
     </AppShell>
   );
 }

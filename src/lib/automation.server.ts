@@ -13,6 +13,7 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 
 import { followGateId } from "@/lib/meta-messaging";
+import { trackedUrl } from "@/lib/click-tracking.server";
 
 /** Dry-run context: captures Meta requests instead of sending them. */
 export type SimulationCapture = { url: string; payload: Record<string, unknown> };
@@ -791,8 +792,20 @@ async function deliverDm(
 
   const link = (rule.dm_link_url ?? "").trim();
   const buttonLabel = (rule.dm_button_label ?? "").trim() || "Open link";
+  const track = (k: "link" | "attachment", u: string) =>
+    simulationStore.getStore()
+      ? null
+      : trackedUrl({ o: ctx.organizationId, r: rule.id, c: ctx.conversationId ?? null, k, u });
+  const trackedLink = link ? track("link", link) : null;
+  // Tracked button first; the original link shapes stay as a fallback so a
+  // tracking problem can never block delivery.
   const shapes = link
-    ? buttonMessages(text, [{ type: "web_url", url: link, title: buttonLabel }])
+    ? [
+        ...(trackedLink
+          ? buttonMessages(text, [{ type: "web_url", url: trackedLink, title: buttonLabel }])
+          : []),
+        ...buttonMessages(text, [{ type: "web_url", url: link, title: buttonLabel }]),
+      ]
     : [{ text }];
 
   const recipient = actionRecipient(ctx, rule.action);
@@ -823,7 +836,7 @@ async function deliverDm(
         // Some file types are refused as native media — send the link instead.
         await callMessaging(ctx.platform, accountId, {
           recipient: { id: ctx.externalUserId },
-          message: { text: attachment.url },
+          message: { text: track("attachment", attachment.url) ?? attachment.url },
           access_token: token,
         });
         await log(admin, ctx, rule.id, "failed", `attachment:${media.error.slice(0, 200)}`);
