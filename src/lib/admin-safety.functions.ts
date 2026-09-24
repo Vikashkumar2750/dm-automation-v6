@@ -102,13 +102,3 @@ export const saveOrgSafety = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-/** Used by the workspace side: is the safety section locked by the super admin? */
-export async function isSafetyLocked(orgId: string): Promise<boolean> {
-  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const { data } = await supabaseAdmin
-    .from("platform_settings")
-    .select("feature_flags")
-    .eq("id", true)
-    .maybeSingle();
-  return ((data?.feature_flags as Record<string, unknown> | null) ?? {})[safetyLockFlag(orgId)] === true;
-}

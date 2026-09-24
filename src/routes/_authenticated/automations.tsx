@@ -1276,11 +1276,16 @@ function SafetyPanel({ orgId }: { orgId: string | undefined }) {
             <div>
               <Button
                 onClick={() => form && saveMutation.mutate(form)}
-                disabled={saveMutation.isPending || !orgId}
+                disabled={saveMutation.isPending || !orgId || Boolean((settingsQuery.data as { locked?: boolean } | undefined)?.locked)}
               >
                 {saveMutation.isPending && <Loader2 className="size-4 animate-spin" />}
                 Save safety settings
               </Button>
+              {(settingsQuery.data as { locked?: boolean } | undefined)?.locked && (
+                <p className="mt-2 text-xs text-muted-foreground">
+                  These settings are locked by the platform admin.
+                </p>
+              )}
             </div>
           </div>
         )}
