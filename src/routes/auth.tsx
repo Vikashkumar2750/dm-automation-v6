@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
 import { getMyPlatformRole } from "@/lib/admin.functions";
 import { getPlatformStatus } from "@/lib/platform-status.functions";
+import { requestPasswordReset } from "@/lib/platform-config.functions";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
@@ -33,6 +34,7 @@ function AuthPage() {
   const navigate = useNavigate();
   const fetchPlatformRole = useServerFn(getMyPlatformRole);
   const fetchStatus = useServerFn(getPlatformStatus);
+  const requestReset = useServerFn(requestPasswordReset);
   const redirectingRef = useRef(false);
   const [mode, setMode] = useState<"signin" | "signup" | "forgot">("signin");
   const [email, setEmail] = useState("");
@@ -77,10 +79,12 @@ function AuthPage() {
     setNotice(null);
 
     if (mode === "forgot") {
-      const { error: err } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`,
-      });
-      if (err) setError(err.message);
+      const res = await requestReset({ data: { email, origin: window.location.origin } }).catch(
+        () => ({ ok: false as const, reason: "error" as const }),
+      );
+      if (!res.ok && res.reason === "rate_limited")
+        setError("Too many reset requests for this email. Please try again later.");
+      else if (!res.ok) setError("Could not send the reset link. Please try again.");
       else
         setNotice(
           "If that email has an account, a password reset link is on its way. Check your inbox.",

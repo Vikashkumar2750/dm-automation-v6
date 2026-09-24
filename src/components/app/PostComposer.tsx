@@ -114,9 +114,9 @@ export function PostComposer({
   const [when, setWhen] = useState("");
   const [uploading, setUploading] = useState(false);
 
-  // Instagram and Facebook can publish; YouTube posting arrives with the YouTube phase.
+  // Instagram, Facebook and YouTube (video only) can publish.
   const publishable = accounts.filter(
-    (a) => a.platform === "instagram" || a.platform === "facebook",
+    (a) => a.platform === "instagram" || a.platform === "facebook" || a.platform === "youtube",
   );
 
   useEffect(() => {

@@ -8,6 +8,7 @@ import { PageHeader, Panel, StatusBadge } from "@/components/app/primitives";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import { EmailAndResetPanels } from "@/components/app/PlatformConfigPanels";
 import { getPlatformSettings, updatePlatformSettings } from "@/lib/admin.functions";
 
 export const Route = createFileRoute("/_authenticated/admin/settings")({
@@ -28,7 +29,6 @@ const FLAGS: { key: string; label: string; description: string }[] = [
   { key: "maintenance_mode", label: "Maintenance mode", description: "Everyone except super admins sees a maintenance page." },
   { key: "registration_blocked", label: "Block new registrations", description: "Sign-up form is closed for new users." },
   { key: "ai_assistant", label: "AI assistant", description: "Caption and reply generation." },
-  { key: "youtube", label: "YouTube publishing", description: "Not live yet — keep off." },
   { key: "white_label", label: "White-label branding", description: "Agency plan branding." },
   { key: "self_serve_billing", label: "Self-serve billing", description: "Online plan upgrades." },
 ];
@@ -138,6 +138,8 @@ function SystemSettingsPage() {
           ))}
         </div>
       </Panel>
+
+      <EmailAndResetPanels />
     </div>
   );
 }

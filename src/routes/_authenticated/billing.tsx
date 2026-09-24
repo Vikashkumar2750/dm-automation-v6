@@ -12,7 +12,8 @@ import { useTenant } from "@/hooks/useTenant";
 import { getAutomationUsage } from "@/lib/automations.functions";
 import { listSocialAccounts } from "@/lib/social-accounts.functions";
 import { confirmPlanPayment, createPlanOrder, getBillingState } from "@/lib/billing.functions";
-import { PLANS, formatPaise, type BillingCycle, type PlanKey } from "@/lib/plans";
+import { getPublicPlans } from "@/lib/platform-config.functions";
+import { PLANS as DEFAULT_PLANS, formatPaise, type BillingCycle, type PlanKey } from "@/lib/plans";
 
 export const Route = createFileRoute("/_authenticated/billing")({
   head: () => ({
@@ -59,6 +60,9 @@ function BillingPage() {
   const [busy, setBusy] = useState<string | null>(null);
   const [cycles, setCycles] = useState<Record<string, BillingCycle>>({ pro: "monthly" });
 
+  const fetchPlans = useServerFn(getPublicPlans);
+  const plansQuery = useQuery({ queryKey: ["public-plans"], queryFn: () => fetchPlans(), retry: false });
+  const PLANS = plansQuery.data ?? DEFAULT_PLANS;
   const fetchUsage = useServerFn(getAutomationUsage);
   const fetchAccounts = useServerFn(listSocialAccounts);
   const fetchBilling = useServerFn(getBillingState);

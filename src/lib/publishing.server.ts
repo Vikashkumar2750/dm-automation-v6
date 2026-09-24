@@ -86,9 +86,6 @@ export async function publishPost(
   if (post.status === "published") {
     return { ok: false, error: "Already published" };
   }
-  if (post.platform === "youtube") {
-    return { ok: false, error: "YouTube publishing arrives in the next phase" };
-  }
   if (!post.social_account_id) {
     return { ok: false, error: "No connected account selected for this post" };
   }
@@ -145,6 +142,15 @@ export async function publishPost(
     const media = await resolveMedia(admin, mediaRefs(post));
     const isVideo = post.media_type === "video";
     const format = post.post_format || "feed";
+
+    if (post.platform === "youtube") {
+      if (!isVideo || media.length === 0) return fail("YouTube needs a video file");
+      const ytToken = await freshGoogleToken(admin, post.social_account_id, token);
+      if (!ytToken) return fail("Reconnect YouTube to allow uploads");
+      const result = await uploadYouTube(ytToken, media[0]!, post.caption, format);
+      if (!result.ok) return fail(result.error);
+      return succeed(result.id, `https://www.youtube.com/watch?v=${result.id}`);
+    }
 
     if (post.platform === "instagram") {
       if (media.length === 0) {
@@ -318,4 +324,99 @@ export async function publishDuePosts(
     if (result.ok) published += 1;
   }
   return { attempted: due.length, published };
+}
+
+
+/** Refresh the Google access token when it is close to expiring. */
+async function freshGoogleToken(
+  admin: AdminClient,
+  accountId: string,
+  current: string,
+): Promise<string | null> {
+  const { data } = await admin
+    .from("social_account_tokens")
+    .select("refresh_token, expires_at")
+    .eq("social_account_id", accountId)
+    .maybeSingle();
+  const row = data as { refresh_token?: string | null; expires_at?: string | null } | null;
+  const expiresAt = row?.expires_at ? new Date(row.expires_at).getTime() : 0;
+  if (expiresAt > Date.now() + 120_000) return current;
+  if (!row?.refresh_token) return expiresAt ? null : current;
+  const res = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      client_id: (process.env["GOOGLE_OAUTH_CLIENT_ID"] ?? process.env["YOUTUBE_CLIENT_ID"]) ?? "",
+      client_secret:
+        (process.env["GOOGLE_OAUTH_CLIENT_SECRET"] ?? process.env["YOUTUBE_CLIENT_SECRET"]) ?? "",
+      refresh_token: row.refresh_token,
+      grant_type: "refresh_token",
+    }),
+  });
+  const json = (await res.json().catch(() => ({}))) as { access_token?: string; expires_in?: number };
+  if (!json.access_token) return null;
+  const expires = new Date(Date.now() + (json.expires_in ?? 3600) * 1000).toISOString();
+  await admin
+    .from("social_account_tokens")
+    .update({ access_token: json.access_token, expires_at: expires })
+    .eq("social_account_id", accountId);
+  await admin.from("social_accounts").update({ token_expires_at: expires }).eq("id", accountId);
+  return json.access_token;
+}
+
+/** Resumable upload to YouTube. Shorts get #Shorts in the title. */
+async function uploadYouTube(
+  token: string,
+  videoUrl: string,
+  caption: string,
+  format: string,
+): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
+  const firstLine = (caption.split("\n")[0] ?? "").trim() || "New video";
+  const isShort = format === "reel" || format === "story" || format === "short";
+  let title = firstLine.replace(/[<>]/g, "").slice(0, isShort ? 90 : 100);
+  if (isShort && !/#shorts/i.test(title)) title = `${title} #Shorts`;
+  const tags = Array.from(caption.matchAll(/#(\w+)/g)).map((m) => m[1]!).slice(0, 15);
+
+  const video = await fetch(videoUrl);
+  if (!video.ok) return { ok: false, error: "Could not read the video file" };
+  const bytes = await video.arrayBuffer();
+  const contentType = video.headers.get("content-type") || "video/mp4";
+
+  const init = await fetch(
+    "https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status",
+    {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${token}`,
+        "content-type": "application/json; charset=UTF-8",
+        "x-upload-content-type": contentType,
+        "x-upload-content-length": String(bytes.byteLength),
+      },
+      body: JSON.stringify({
+        snippet: { title, description: caption.slice(0, 5000), tags, categoryId: "22" },
+        status: { privacyStatus: "public", selfDeclaredMadeForKids: false },
+      }),
+    },
+  );
+  if (!init.ok) {
+    const err = (await init.json().catch(() => ({}))) as { error?: { message?: string } };
+    const msg = err.error?.message ?? `YouTube refused the upload (${init.status})`;
+    return {
+      ok: false,
+      error: /insufficient|scope|permission/i.test(msg)
+        ? "Reconnect YouTube and allow video uploads"
+        : msg,
+    };
+  }
+  const location = init.headers.get("location");
+  if (!location) return { ok: false, error: "YouTube did not start the upload" };
+
+  const put = await fetch(location, {
+    method: "PUT",
+    headers: { "content-type": contentType, "content-length": String(bytes.byteLength) },
+    body: bytes,
+  });
+  const json = (await put.json().catch(() => ({}))) as { id?: string; error?: { message?: string } };
+  if (!put.ok || !json.id) return { ok: false, error: json.error?.message ?? "YouTube upload failed" };
+  return { ok: true, id: json.id };
 }

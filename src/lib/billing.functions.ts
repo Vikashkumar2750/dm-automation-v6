@@ -72,7 +72,11 @@ export const createPlanOrder = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertBillingRole(context.supabase as never, data.organizationId, context.userId);
 
-    const option = findPlanOption(data.plan as PlanKey, data.cycle as BillingCycle);
+    const { supabaseAdmin: adminForPlans } = await import("@/integrations/supabase/client.server");
+    const { findConfiguredOption } = await import("@/lib/platform-config.server");
+    const option =
+      (await findConfiguredOption(adminForPlans, data.plan, data.cycle)) ??
+      findPlanOption(data.plan as PlanKey, data.cycle as BillingCycle);
     if (!option) throw new Error("invalid_plan_option");
 
     const keyId = process.env["RAZORPAY_KEY_ID"] ?? "";
@@ -195,7 +199,10 @@ export const confirmPlanPayment = createServerFn({ method: "POST" })
       }
     }
 
-    const option = findPlanOption(order.plan as PlanKey, order.billing_cycle as BillingCycle);
+    const { findConfiguredOption } = await import("@/lib/platform-config.server");
+    const option =
+      (await findConfiguredOption(supabaseAdmin, order.plan as string, order.billing_cycle as string)) ??
+      findPlanOption(order.plan as PlanKey, order.billing_cycle as BillingCycle);
     const { data: org } = await supabaseAdmin
       .from("organizations")
       .select("plan_expires_at")
