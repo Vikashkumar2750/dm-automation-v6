@@ -1039,3 +1039,54 @@ export const listAutomationAlerts = createServerFn({ method: "GET" })
 
     return { generatedAt: new Date().toISOString(), counts, topReasons, items: items.slice(0, 200) };
   });
+
+/** Super-admin user controls: suspend (auth ban), unsuspend, send password reset. */
+export const adminUserAction = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) =>
+    z
+      .object({
+        userId: z.string().uuid(),
+        action: z.enum(["suspend", "unsuspend", "send_reset"]),
+        redirectTo: z.string().url().max(300).optional(),
+      })
+      .parse(data),
+  )
+  .handler(async ({ data, context }) => {
+    await assertSuperAdmin(context);
+    if (data.userId === context.userId && data.action === "suspend") {
+      throw new Error("You cannot suspend yourself");
+    }
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    if (data.action === "send_reset") {
+      const { data: u } = await supabaseAdmin.auth.admin.getUserById(data.userId);
+      const email = u?.user?.email;
+      if (!email) throw new Error("User has no email");
+      const { error } = await supabaseAdmin.auth.resetPasswordForEmail(email, {
+        redirectTo: data.redirectTo,
+      });
+      if (error) throw new Error(error.message);
+    } else {
+      const { error } = await supabaseAdmin.auth.admin.updateUserById(data.userId, {
+        ban_duration: data.action === "suspend" ? "876000h" : "none",
+      } as never);
+      if (error) throw new Error(error.message);
+    }
+    await audit(context, `user.${data.action}`, { type: "user", id: data.userId });
+    return { ok: true };
+  });
+
+export const listSuspendedUserIds = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<string[]> => {
+    await assertSuperAdmin(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 });
+    const now = Date.now();
+    return (data?.users ?? [])
+      .filter((u) => {
+        const until = (u as { banned_until?: string | null }).banned_until;
+        return until ? new Date(until).getTime() > now : false;
+      })
+      .map((u) => u.id);
+  });
