@@ -34,4 +34,4 @@ COPY --from=build /app/package.json ./package.json
 COPY --from=build /app/node_modules/postgres ./node_modules/postgres
 
 EXPOSE 3000
-CMD ["sh", "-c", "bun run scripts/migrate.mjs && bun dist/server/index.mjs"]
+CMD ["sh", "-c", "bun run scripts/migrate.mjs && (bun scripts/scheduler.mjs &) && bun dist/server/index.mjs"]

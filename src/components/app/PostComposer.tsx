@@ -24,7 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { savePost, type Post } from "@/lib/publishing.functions";
+import { savePost, publishNow, type Post } from "@/lib/publishing.functions";
 import { previewUrl, uploadPostMedia } from "@/lib/media-upload";
 import type { SocialAccountRow } from "@/lib/social";
 
