@@ -942,7 +942,10 @@ export async function handleFollowGateReply(
     .select(RULE_SELECT)
     .eq("id", gate.rule_id)
     .maybeSingle();
-  if (!rule) return true;
+  if (!rule) {
+    await log(admin, { organizationId: args.organizationId, conversationId: args.conversationId } as AutomationContext, null, "skipped", "gate_rule_missing");
+    return true;
+  }
   const typedRule = rule as unknown as Rule;
 
   const socialAccountId = args.socialAccountId ?? (gate.social_account_id as string | null);
@@ -1064,7 +1067,10 @@ export async function handleFollowGateReply(
     .eq("id", gate.id)
     .eq("status", "waiting")
     .select("id");
-  if (!won?.length) return true; // another copy of this tap already delivered
+  if (!won?.length) {
+    await log(admin, ctx, typedRule.id, "skipped", "duplicate_tap");
+    return true;
+  } // another copy of this tap already delivered
   // Never leave a tapped contact empty-handed when the DM text is blank.
   const text =
     pickResponse(typedRule) ||
