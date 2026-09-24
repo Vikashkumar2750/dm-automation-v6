@@ -669,16 +669,17 @@ function AutomationsPage() {
                         <li>Comment arrives on a selected post and matches your keywords.</li>
                         <li>A public reply is posted under the comment.</li>
                         <li>
-                          Instagram checks follower status when the commenter has previously
-                          granted messaging access.
+                          With a follower check or attachment, the commenter gets a DM with a
+                          “Send me the link” button. Tapping it opens the chat so Instagram
+                          can tell us whether they follow you.
                         </li>
                         <li>
-                          Confirmed non-followers get a “Follow us” + “I followed ✅” message;
-                          otherwise the DM is sent as a private reply.
+                          Followers instantly get your message with the link as a button, plus
+                          the attachment.
                         </li>
                         <li>
-                          Once the follow is confirmed, the DM with the link is sent
-                          automatically (up to 3 checks).
+                          Non-followers get “Visit profile” + “I followed ✅”. After they
+                          follow and tap, the link DM is sent automatically (up to 3 checks).
                         </li>
                       </ol>
                     </div>
@@ -873,9 +874,9 @@ function AutomationsPage() {
                     <div className="pr-4">
                       <p className="text-sm font-medium">Ask to follow first</p>
                       <p className="text-xs text-muted-foreground">
-                        Confirmed non-followers get a follow request with an “I followed”
-                        button. Instagram may hide follower status until someone has messaged
-                        the account; those commenters receive the private reply normally.
+                        Commenters first tap “Send me the link”. Followers then get the link
+                        right away; non-followers get “Visit profile” + “I followed ✅” and
+                        receive the link once the follow is confirmed.
                       </p>
                     </div>
                     <Switch
@@ -899,8 +900,9 @@ function AutomationsPage() {
                     </div>
                   )}
                   <p className="text-xs text-muted-foreground">
-                    Instagram only reveals follower status after messaging access is granted.
-                    On Facebook, and when Instagram does not reveal it, the reply is sent.
+                    Instagram reveals follower status only after the person taps a button or
+                    messages you. Facebook never reveals it, so Facebook contacts always get
+                    the reply after their tap.
                   </p>
                 </div>
               )}

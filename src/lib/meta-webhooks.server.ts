@@ -12,8 +12,11 @@ const GRAPH = "https://graph.facebook.com/v21.0";
 /** Minimum Page fields required by this app's comment and Messenger flows. */
 export const PAGE_SUBSCRIBED_FIELDS = ["feed", "messages", "messaging_postbacks"];
 
-/** Instagram professional-account fields are a separate subscription. */
-export const INSTAGRAM_SUBSCRIBED_FIELDS = ["comments", "messages"];
+/**
+ * Instagram professional-account fields are a separate subscription.
+ * messaging_postbacks carries the "Send me the link" / "I followed ✅" taps.
+ */
+export const INSTAGRAM_SUBSCRIBED_FIELDS = ["comments", "messages", "messaging_postbacks"];
 
 export type SubscribeResult = { ok: boolean; error?: string };
 
