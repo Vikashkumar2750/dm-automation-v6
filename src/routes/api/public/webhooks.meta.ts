@@ -317,7 +317,7 @@ async function ingestIntoInbox(
         messageText: body,
         receivingExternalId: args.receivingExternalId,
       });
-      if (handled) return;
+      if (handled) return null;
     }
 
     await runAutomations(admin, {
@@ -335,6 +335,7 @@ async function ingestIntoInbox(
     console.error("automation run failed", automationError);
     throw automationError;
   }
+  return null;
 }
 
 export const Route = createFileRoute("/api/public/webhooks/meta")({
