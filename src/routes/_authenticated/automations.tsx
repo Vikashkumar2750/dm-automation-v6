@@ -842,8 +842,9 @@ function AutomationsPage() {
                     </div>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Leave both empty for a plain text reply. With a button text the link
-                    is shown as a tappable button.
+                    The link is sent as a tappable button (label “Open link” if left empty).
+                    For comments, the attachment is sent after the person taps “Send me the
+                    link”, because a comment reply can carry only one message.
                   </p>
                 </div>
               )}
