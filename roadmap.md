@@ -24,3 +24,4 @@ Real Meta + YouTube credentials are available when we reach OAuth phases.
 - [x] Phase 15 — Super admin / operations console (own shell: overview, organizations + tenant detail, users, accounts, automations, messages, jobs/queue, webhooks, API health, plans, security & audit, system settings with global pause + incident banner + feature flags)
 - [x] Phase 16 — Agency / white label (workspace branding, logo, brand colour, support email, client workspaces)
 - [x] Phase 17 — Export pack for Railway (Dockerfile, .dockerignore, railway.json, .env.example, scripts/migrate.mjs, DEPLOY-RAILWAY.md)
+- [ ] Fix follow-confirmation delivery after “I followed”, test it, and sync to railway-ready-love (live Meta retest needs user account).

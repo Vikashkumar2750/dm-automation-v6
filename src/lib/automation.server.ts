@@ -521,6 +521,16 @@ function followVerdict(rule: Rule, follows: boolean | null): FollowVerdict {
   return "deliver";
 }
 
+/** A non-follower who was asked to follow remains eligible after doing so. */
+export function followGateVerdict(
+  rule: Pick<Rule, "require_follow" | "follower_condition">,
+  follows: boolean | null,
+  previousTaps: number,
+): FollowVerdict {
+  if (previousTaps > 0 && follows === true && rule.require_follow) return "deliver";
+  return followVerdict(rule as Rule, follows);
+}
+
 // ------------------------------------------------------------- delivery
 
 type Button =
@@ -931,7 +941,9 @@ export async function handleFollowGateReply(
   const previousTaps = (gate.attempts as number | null) ?? 0;
   const attempts = previousTaps + 1;
   const now = new Date().toISOString();
-  const verdict = followVerdict(typedRule, follows);
+  // The opener checks initial eligibility. Later taps confirm the requested
+  // follow; applying "non_followers" again would reject a successful follow.
+  const verdict = followGateVerdict(typedRule, follows, previousTaps);
 
   const finish = (status: "completed" | "expired") =>
     admin
