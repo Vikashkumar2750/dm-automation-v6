@@ -161,15 +161,12 @@ async function log(
   status: "matched" | "sent" | "skipped" | "failed",
   detail?: string,
 ) {
-  const traceDetail = ctx.correlationId
-    ? `trace:${ctx.correlationId}:${detail ?? status}`
-    : detail ?? null;
   await admin.from("automation_runs").insert({
     organization_id: ctx.organizationId,
     rule_id: ruleId,
     conversation_id: ctx.conversationId,
     status,
-    detail: traceDetail,
+    detail: detail ?? null,
   });
 }
 

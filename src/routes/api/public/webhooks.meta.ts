@@ -338,6 +338,7 @@ async function ingestIntoInbox(
         payload: followPayload ?? "",
         messageText: body,
         receivingExternalId: args.receivingExternalId,
+                  correlationId: args.correlationId,
       });
       if (handled) {
         trace("follow_gate", "handled", followPayload ? "payload_tap" : "text_tap");
@@ -355,6 +356,7 @@ async function ingestIntoInbox(
       externalUserId,
       externalId,
       postExternalId,
+      correlationId: args.correlationId,
     });
     trace("automation", "completed", "rules_evaluated");
   } catch (automationError) {
@@ -398,7 +400,22 @@ export const Route = createFileRoute("/api/public/webhooks/meta")({
         const provided = header.startsWith("sha256=") ? header.slice(7) : "";
         const expected = await hmacSha256Hex(appSecret, body);
         if (!provided || !safeEqual(provided, expected)) {
-          traceLog(traceId, "signature", "rejected", provided ? "app_secret_mismatch" : "signature_header_missing");
+          const reason = provided ? "app_secret_mismatch" : "signature_header_missing";
+          traceLog(traceId, "signature", "rejected", reason);
+          try {
+            const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+            await supabaseAdmin.from("webhook_events").insert({
+              provider: "meta",
+              event_type: "meta.signature_rejected",
+              dedupe_key: `meta:signature:${traceId}`,
+              payload: {},
+              signature_valid: false,
+              status: "failed",
+              error: `trace:${traceId}:${reason}`,
+            });
+          } catch (auditError) {
+            console.error("signature audit failed", auditError);
+          }
           return new Response("Invalid signature", { status: 401 });
         }
         traceLog(traceId, "signature", "accepted");
