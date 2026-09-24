@@ -14,8 +14,8 @@ describe("required-follow link delivery", () => {
     expect(followGateVerdict(rule, true, 1)).toBe("deliver");
   });
 
-  it("does not misclassify unknown follow status as non-follower", () => {
-    expect(followGateVerdict(rule, null, 0)).toBe("deliver");
+  it("does not leak a gated link when Meta cannot verify follow status", () => {
+    expect(followGateVerdict(rule, null, 0)).toBe("ask_follow");
   });
 
   it("preserves a strict non-follower-only rule without follow requirement", () => {
@@ -28,5 +28,8 @@ describe("Everyone audience follows the plan", () => {
   it("non-follower is asked to follow, then gets the DM", () => {
     expect(followGateVerdict(rule, false, 0)).toBe("ask_follow");
     expect(followGateVerdict(rule, true, 1)).toBe("deliver");
+  });
+  it("an unavailable profile cannot silently bypass the follow prompt", () => {
+    expect(followGateVerdict(rule, null, 0)).toBe("ask_follow");
   });
 });
