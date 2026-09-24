@@ -468,11 +468,10 @@ export async function runAutomations(admin: AdminClient, ctx: AutomationContext)
     //    opens the conversation (24h window + profile consent); the webhook then
     //    checks the follow and sends the link button and attachment.
     if (isCommentDm) {
-      if (needsFollowCheck || attachmentOf(rule)) {
-        await openGate(admin, ctx, rule, token, accountId, "opener");
-        return;
-      }
-      await deliverDm(admin, ctx, rule, token, accountId, text);
+      // Every comment → DM goes through the opener tap so the follower check
+      // can run: followers get the final DM directly, non-followers are asked
+      // to follow first (plan behaviour for "Everyone").
+      await openGate(admin, ctx, rule, token, accountId, "opener");
       return;
     }
 
@@ -512,15 +511,20 @@ type FollowVerdict = "deliver" | "ask_follow" | "skip_not_follower" | "skip_foll
  * Decides what to do for a known/unknown follow state. Unknown (null) never
  * counts as "not following" — that sent follow prompts to real followers.
  */
+/** "Everyone" in a gated comment flow means: followers direct, non-followers follow first. */
+function requiresFollow(rule: Pick<Rule, "require_follow" | "follower_condition">) {
+  return rule.require_follow || rule.follower_condition === "any";
+}
+
 export function followVerdict(rule: Pick<Rule, "require_follow" | "follower_condition">, follows: boolean | null): FollowVerdict {
-  if (follows === false && rule.require_follow) return "ask_follow";
+  if (follows === false && requiresFollow(rule)) return "ask_follow";
   if (follows === false && rule.follower_condition === "followers_only") {
     return "skip_not_follower";
   }
   // Requiring a follow means both existing and newly confirmed followers get
   // the final DM. A legacy "non_followers" audience must not reject someone
   // who has already followed before tapping the opener.
-  if (follows === true && rule.require_follow) return "deliver";
+  if (follows === true && requiresFollow(rule)) return "deliver";
   if (follows === true && rule.follower_condition === "non_followers") return "skip_follower";
   return "deliver";
 }
@@ -531,7 +535,7 @@ export function followGateVerdict(
   follows: boolean | null,
   previousTaps: number,
 ): FollowVerdict {
-  if (previousTaps > 0 && follows === true && rule.require_follow) return "deliver";
+  if (previousTaps > 0 && follows === true && requiresFollow(rule)) return "deliver";
   return followVerdict(rule, follows);
 }
 
@@ -905,8 +909,33 @@ export async function handleFollowGateReply(
     if (args.socialAccountId) query = query.eq("social_account_id", args.socialAccountId);
   }
   const { data: gates } = await query.order("created_at", { ascending: false }).limit(1);
-  const gate = gates?.[0];
-  if (!gate?.rule_id) return hasPayload; // never swallow an unrelated plain DM
+  let gate = gates?.[0];
+  // Text-only taps: the comment author id can differ from the DM sender id.
+  // Accept the single waiting gate on this account from the last hour.
+  if (!gate && isTextTap && args.socialAccountId) {
+    const { data: recent } = await admin
+      .from("automation_follow_gates")
+      .select("id, rule_id, attempts, social_account_id")
+      .eq("organization_id", args.organizationId)
+      .eq("social_account_id", args.socialAccountId)
+      .eq("status", "waiting")
+      .gte("created_at", new Date(Date.now() - 60 * 60 * 1000).toISOString())
+      .order("created_at", { ascending: false })
+      .limit(2);
+    if (recent?.length === 1) gate = recent[0];
+  }
+  if (!gate?.rule_id) {
+    if (hasPayload) {
+      await log(
+        admin,
+        { organizationId: args.organizationId, conversationId: args.conversationId } as AutomationContext,
+        null,
+        "skipped",
+        "gate_not_found",
+      );
+    }
+    return hasPayload; // never swallow an unrelated plain DM
+  }
 
   const { data: rule } = await admin
     .from("automation_rules")
@@ -1001,7 +1030,10 @@ export async function handleFollowGateReply(
       .eq("status", "waiting")
       .eq("attempts", previousTaps)
       .select("id");
-    if (!claimed?.length) return true;
+    if (!claimed?.length) {
+      await log(admin, ctx, typedRule.id, "skipped", "duplicate_tap");
+      return true;
+    }
     const isRetry = previousTaps >= 1;
     const { text, shapes } = await followPromptShapes(admin, ctx, typedRule, gate.id, isRetry);
     const res = await sendChain(args.platform, sendId, token, { id: args.externalUserId }, shapes);
