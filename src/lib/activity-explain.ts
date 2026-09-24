@@ -6,6 +6,9 @@
 export function explainReason(detail: string | null): { title: string; hint: string } {
   const code = (detail ?? "").toLowerCase();
   const map: [string, string, string][] = [
+    ["gate_not_found", "Button tap not linked to a comment", "The tap arrived but its follow check had already finished or expired. Ask the contact to comment again."],
+    ["duplicate_tap", "Duplicate tap ignored", "Meta delivered the same tap twice — only one copy was answered."],
+    ["no_active_dm_received_rule", "DM did not match any DM rule", "A plain message arrived with no active “New DM” rule. Normal for chat replies."],
     ["no_matching_rule", "No rule matched", "The message did not match any active rule — normal if testing keywords."],
     ["no_token", "Account credentials missing", "Reconnect the social account from Social Accounts."],
     ["window_expired", "24-hour reply window closed", "Meta blocks DMs after 24h of silence — nothing to fix."],
@@ -46,4 +49,19 @@ export function webhookEventLabel(eventType: string, platform: string | null): s
   if (t.includes("postback")) return `${where} button tap received`;
   if (t.includes("message")) return `${where} DM received`;
   return `${where} event received`;
+}
+
+/** Friendly label for a successful step code like "tap_prompt". */
+export function stepLabel(detail: string | null): string {
+  const code = (detail ?? "").toLowerCase();
+  const map: Record<string, string> = {
+    comment_reply: "Public reply posted under the comment",
+    tap_prompt: "“Send me the link” button sent in DM",
+    follow_prompt: "Follow request sent (Visit profile + I followed)",
+    reply_dm: "Final DM delivered",
+    dm_link: "Final DM with link button delivered",
+    attachment: "Attachment delivered",
+  };
+  for (const [k, v] of Object.entries(map)) if (code.startsWith(k)) return v;
+  return code ? `Step completed: ${code}` : "Reply sent";
 }

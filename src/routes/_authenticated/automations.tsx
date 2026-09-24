@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
@@ -27,7 +27,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useTenant } from "@/hooks/useTenant";
-import { explainReason } from "@/lib/activity-explain";
+import { explainReason, stepLabel } from "@/lib/activity-explain";
 import {
   createAutomationRule,
   deleteAutomationRule,
@@ -267,7 +267,6 @@ function AutomationsPage() {
   const deleteFn = useServerFn(deleteAutomationRule);
 
   const [draft, setDraft] = useState<Draft | null>(null);
-  const [showAllRuns, setShowAllRuns] = useState(false);
 
   const rulesQuery = useQuery({
     queryKey: ["automation-rules", orgId],
@@ -354,7 +353,7 @@ function AutomationsPage() {
 
   const rules = rulesQuery.data ?? [];
   const runs = runsQuery.data ?? [];
-  const visibleRuns = showAllRuns ? runs : runs.slice(0, 5);
+  const visibleRuns = runs.slice(0, 5);
   const ruleName = (id: string | null) => {
     if (!id) return "Safety settings";
     return rules.find((r) => r.id === id)?.name ?? "Deleted rule";
@@ -504,11 +503,16 @@ function AutomationsPage() {
                 const sent = run.status === "sent" || run.status === "matched";
                 const explained = sent ? null : explainReason(run.detail);
                 return (
-                  <li key={run.id} className="flex items-start gap-3 px-5 py-3">
+                  <li key={run.id}>
+                    <Link
+                      to="/automations/activity/$runId"
+                      params={{ runId: run.id }}
+                      className="flex items-start gap-3 px-5 py-3 hover:bg-muted/50"
+                    >
                     <StatusBadge tone={runTone[run.status]}>{run.status}</StatusBadge>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium">
-                        {sent ? `${ruleName(run.rule_id)}: reply sent` : `${explained!.title} — ${ruleName(run.rule_id)}`}
+                        {sent ? `${ruleName(run.rule_id)}: ${stepLabel(run.detail)}` : `${explained!.title} — ${ruleName(run.rule_id)}`}
                       </p>
                       {explained?.hint && (
                         <p className="truncate text-xs text-muted-foreground">{explained.hint}</p>
@@ -517,24 +521,18 @@ function AutomationsPage() {
                         {run.detail ?? "—"} · {new Date(run.created_at).toLocaleString()}
                       </p>
                     </div>
+                    </Link>
                   </li>
                 );
               })}
               </ul>
               {runs.length > 5 && (
                 <div className="border-t p-3 text-center">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setShowAllRuns((current) => !current)}
-                  >
-                    {showAllRuns ? (
-                      <ChevronUp className="size-4" />
-                    ) : (
+                  <Button asChild variant="ghost" size="sm">
+                    <Link to="/automations/activity">
                       <ChevronDown className="size-4" />
-                    )}
-                    {showAllRuns ? "Show latest 5" : `View more (${runs.length - 5})`}
+                      View all activity
+                    </Link>
                   </Button>
                 </div>
               )}
@@ -865,7 +863,7 @@ function AutomationsPage() {
                     >
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="any">Everyone</SelectItem>
+                        <SelectItem value="any">Everyone (followers get it directly, others follow first)</SelectItem>
                         <SelectItem value="followers_only">Followers only</SelectItem>
                         <SelectItem value="non_followers">Non-followers only</SelectItem>
                       </SelectContent>
