@@ -158,6 +158,13 @@ function matches(rule: Rule, body: string) {
   });
 }
 
+/** Comment automations are deduplicated per person + post below. Applying the
+ * DM contact cap here would incorrectly block a legitimate comment on another
+ * post after the contact has interacted with earlier posts. */
+export function usesPerContactDailyLimit(channel: string) {
+  return channel !== "comment";
+}
+
 
 async function log(
   admin: AdminClient,
@@ -353,22 +360,26 @@ export async function runAutomations(admin: AdminClient, ctx: AutomationContext)
   // Only the highest-priority matching rule fires (anti-spam).
   const rule = candidates[0]!;
 
-  // Safety: cap completed automated replies per contact across all rules.
+  // Safety: cap completed automated DM replies per contact across all rules.
   // A comment + follow-gate flow records intermediate steps (public reply and
   // follow prompt) as sent too. Counting every sent log exhausted the cap
   // before the held DM could be released, so only terminal reply actions count.
-  const contactSince = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-  const { count: contactSends } = await admin
-    .from("automation_runs")
-    .select("id", { count: "exact", head: true })
-    .eq("organization_id", ctx.organizationId)
-    .eq("conversation_id", ctx.conversationId)
-    .eq("status", "sent")
-    .in("detail", ["reply_dm", "comment_private_reply", "comment_public_reply"])
-    .gte("created_at", contactSince);
-  if ((contactSends ?? 0) >= settings.per_contact_daily_limit) {
-    await log(admin, ctx, rule.id, "skipped", "per_contact_limit");
-    return;
+  // Comment triggers instead use the stricter per-person + per-post marker,
+  // allowing the same person to comment once on each different post.
+  if (usesPerContactDailyLimit(ctx.channel)) {
+    const contactSince = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const { count: contactSends } = await admin
+      .from("automation_runs")
+      .select("id", { count: "exact", head: true })
+      .eq("organization_id", ctx.organizationId)
+      .eq("conversation_id", ctx.conversationId)
+      .eq("status", "sent")
+      .in("detail", ["reply_dm", "comment_private_reply", "comment_public_reply"])
+      .gte("created_at", contactSince);
+    if ((contactSends ?? 0) >= settings.per_contact_daily_limit) {
+      await log(admin, ctx, rule.id, "skipped", "per_contact_limit");
+      return;
+    }
   }
 
   // Cooldown: skip if this rule already acted on this conversation recently.
