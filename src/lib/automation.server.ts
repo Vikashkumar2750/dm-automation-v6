@@ -1,4 +1,9 @@
 /**
+ * LOCKED — DM automation core. Follower + non-follower flows are verified live.
+ * Do NOT change without reading docs/DM-AUTOMATION-LOGIC.md and running
+ * `bunx vitest run`. Every regression test must stay green.
+ */
+/**
  * Automation engine V1 (Phase 8).
  * Runs server-side right after an inbound message is ingested from a webhook.
  * Safety: rule cooldown per conversation, daily cap per rule, never reacts to
@@ -874,7 +879,9 @@ async function followPromptShapes(
     title: "I followed ✅",
     payload: followGatePayload(gateId, "confirm", crypto.randomUUID()),
   });
-  return { text, shapes: gateButtonMessages(text, buttons) };
+  // LOCKED: non-follower follow prompt sends attached buttons first (visible in
+  // Message Requests), quick-reply shape kept only as fallback.
+  return { text, shapes: gateButtonMessages(text, buttons, false) };
 }
 
 /**

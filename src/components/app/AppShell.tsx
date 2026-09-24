@@ -46,7 +46,6 @@ const primaryNav: NavItem[] = [
   { label: "Inbox", to: "/inbox", icon: Inbox },
   { label: "Comments", to: "/comments", icon: MessageSquare },
   { label: "Automations", to: "/automations", icon: Workflow },
-  { label: "Contacts", to: "/contacts", icon: Users },
   { label: "Analytics", to: "/analytics", icon: BarChart3 },
   { label: "Social Accounts", to: "/social-accounts", icon: Share2 },
   { label: "AI Assistant", to: "/ai-assistant", icon: Sparkles },

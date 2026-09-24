@@ -149,7 +149,7 @@ async function hmacSha256Hex(secret: string, message: string) {
 }
 
 function nextExpiry(current: string | null, months: number | null): string | null {
-  if (months === null) return null; // lifetime
+  if (months === null) return new Date(Date.now() + 3 * 864e5).toISOString(); // 3-day trial
   const base = current && new Date(current) > new Date() ? new Date(current) : new Date();
   base.setMonth(base.getMonth() + months);
   return base.toISOString();
