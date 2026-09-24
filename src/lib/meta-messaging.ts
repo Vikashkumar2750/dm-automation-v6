@@ -16,20 +16,21 @@ export function normalizeMessagingEvent(value: unknown): MetaMessagingEvent {
   const outer = value && typeof value === "object"
     ? value as Record<string, unknown>
     : {};
-  const nested = outer.value && typeof outer.value === "object"
-    ? outer.value as Record<string, unknown>
+  const nested = outer["value"] && typeof outer["value"] === "object"
+    ? outer["value"] as Record<string, unknown>
     : null;
-  const raw = nested && (nested.message || nested.postback || nested.sender || nested.sender_id)
+  const raw = nested && (
+    nested["message"] || nested["postback"] || nested["sender"] || nested["sender_id"]
+  )
     ? nested
     : outer;
-  const senderId = typeof raw.sender_id === "string" ? raw.sender_id : undefined;
-  const recipientId = typeof raw.recipient_id === "string" ? raw.recipient_id : undefined;
+  const senderId = typeof raw["sender_id"] === "string" ? raw["sender_id"] : undefined;
+  const recipientId = typeof raw["recipient_id"] === "string" ? raw["recipient_id"] : undefined;
   const event = raw as MetaMessagingEvent;
-  return {
-    ...event,
-    sender: event.sender ?? (senderId ? { id: senderId } : undefined),
-    recipient: event.recipient ?? (recipientId ? { id: recipientId } : undefined),
-  };
+  const normalized: MetaMessagingEvent = { ...event };
+  if (!normalized.sender && senderId) normalized.sender = { id: senderId };
+  if (!normalized.recipient && recipientId) normalized.recipient = { id: recipientId };
+  return normalized;
 }
 
 export function isMessagingEventType(type: string) {
