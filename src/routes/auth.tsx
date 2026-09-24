@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
 import { getMyPlatformRole } from "@/lib/admin.functions";
 import { getPlatformStatus } from "@/lib/platform-status.functions";
+import { requestPasswordReset } from "@/lib/platform-config.functions";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
@@ -33,6 +34,7 @@ function AuthPage() {
   const navigate = useNavigate();
   const fetchPlatformRole = useServerFn(getMyPlatformRole);
   const fetchStatus = useServerFn(getPlatformStatus);
+  const requestReset = useServerFn(requestPasswordReset);
   const redirectingRef = useRef(false);
   const [mode, setMode] = useState<"signin" | "signup" | "forgot">("signin");
   const [email, setEmail] = useState("");

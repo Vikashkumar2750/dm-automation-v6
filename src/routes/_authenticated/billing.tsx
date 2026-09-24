@@ -60,6 +60,9 @@ function BillingPage() {
   const [busy, setBusy] = useState<string | null>(null);
   const [cycles, setCycles] = useState<Record<string, BillingCycle>>({ pro: "monthly" });
 
+  const fetchPlans = useServerFn(getPublicPlans);
+  const plansQuery = useQuery({ queryKey: ["public-plans"], queryFn: () => fetchPlans(), retry: false });
+  const PLANS = plansQuery.data ?? DEFAULT_PLANS;
   const fetchUsage = useServerFn(getAutomationUsage);
   const fetchAccounts = useServerFn(listSocialAccounts);
   const fetchBilling = useServerFn(getBillingState);
