@@ -33,7 +33,10 @@ export function AdminSafetyPanel({ orgId }: { orgId: string }) {
   const [form, setForm] = useState<Form | null>(null);
   useEffect(() => {
     if (!data) return;
-    const s = data.settings as Record<string, any>;
+    const s = data.settings as unknown as {
+      is_paused: boolean; per_contact_daily_limit: number; hourly_send_limit: number; daily_send_limit: number;
+      quiet_hours_enabled: boolean; viral_guard_enabled: boolean; viral_threshold_per_minute: number; viral_cooldown_minutes: number;
+    };
     setForm({
       locked: data.locked,
       isPaused: Boolean(s.is_paused),
