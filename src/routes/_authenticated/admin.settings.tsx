@@ -29,7 +29,6 @@ const FLAGS: { key: string; label: string; description: string }[] = [
   { key: "maintenance_mode", label: "Maintenance mode", description: "Everyone except super admins sees a maintenance page." },
   { key: "registration_blocked", label: "Block new registrations", description: "Sign-up form is closed for new users." },
   { key: "ai_assistant", label: "AI assistant", description: "Caption and reply generation." },
-  { key: "youtube_publishing_off", label: "Turn off YouTube publishing", description: "Hide YouTube in the post composer for everyone." },
   { key: "white_label", label: "White-label branding", description: "Agency plan branding." },
   { key: "self_serve_billing", label: "Self-serve billing", description: "Online plan upgrades." },
 ];
