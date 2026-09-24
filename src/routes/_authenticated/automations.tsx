@@ -45,6 +45,7 @@ import {
   type AutomationRule,
   type AutomationSettings,
 } from "@/lib/automations.functions";
+import { getSimulatorAccess } from "@/lib/simulation.functions";
 
 
 export const Route = createFileRoute("/_authenticated/automations")({
@@ -265,6 +266,7 @@ function AutomationsPage() {
   const createFn = useServerFn(createAutomationRule);
   const updateFn = useServerFn(updateAutomationRule);
   const deleteFn = useServerFn(deleteAutomationRule);
+  const fetchSimulatorAccess = useServerFn(getSimulatorAccess);
 
   const [draft, setDraft] = useState<Draft | null>(null);
 
@@ -279,6 +281,11 @@ function AutomationsPage() {
     enabled: Boolean(orgId),
     refetchInterval: 20000,
     queryFn: () => fetchRuns({ data: { organizationId: orgId! } }),
+  });
+  const simulatorAccess = useQuery({
+    queryKey: ["simulator-access", orgId],
+    enabled: Boolean(orgId),
+    queryFn: () => fetchSimulatorAccess({ data: { organizationId: orgId! } }),
   });
 
   const invalidate = () => {
@@ -374,9 +381,11 @@ function AutomationsPage() {
         description="Keyword rules that reply to DMs and comments automatically, with cooldowns and daily caps."
         actions={
           <div className="flex gap-2">
-            <Button asChild variant="outline">
-              <Link to="/automations/simulator">Test console</Link>
-            </Button>
+            {simulatorAccess.data?.allowed && (
+              <Button asChild variant="outline">
+                <Link to="/automations/simulator">Test console</Link>
+              </Button>
+            )}
             <Button onClick={() => setDraft({ ...emptyDraft })} disabled={!orgId}>
               <Plus className="size-4" /> New rule
             </Button>

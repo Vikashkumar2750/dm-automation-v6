@@ -17,6 +17,7 @@ import {
 import { Building2, MessageSquare, Share2, Workflow } from "lucide-react";
 import {
   getAdminOrganization,
+  setSimulatorAccess,
   setOrganizationAutomationPause,
   setOrganizationPlan,
 } from "@/lib/admin.functions";
@@ -42,6 +43,7 @@ function OrgDetailPage() {
   const fetchOrg = useServerFn(getAdminOrganization);
   const changePlan = useServerFn(setOrganizationPlan);
   const setPause = useServerFn(setOrganizationAutomationPause);
+  const setSimulator = useServerFn(setSimulatorAccess);
   const queryClient = useQueryClient();
 
   const { data, isLoading, error } = useQuery({
@@ -69,6 +71,16 @@ function OrgDetailPage() {
       invalidate();
     },
     onError: () => toast.error("Could not update the workspace"),
+  });
+
+  const simulatorMutation = useMutation({
+    mutationFn: (vars: { userId?: string; enabled: boolean | null }) =>
+      setSimulator({ data: { organizationId: orgId, userId: vars.userId ?? null, enabled: vars.enabled } }),
+    onSuccess: () => {
+      toast.success("Test console access updated");
+      invalidate();
+    },
+    onError: () => toast.error("Could not update test console access"),
   });
 
   if (isLoading) return <p className="text-sm text-muted-foreground">Loading…</p>;
@@ -160,6 +172,38 @@ function OrgDetailPage() {
             ]}
           />
         )}
+      </Panel>
+
+      <Panel title="Automation test console">
+        <div className="space-y-3 text-sm">
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border px-3 py-2">
+            <div>
+              <p className="font-medium">Workspace access</p>
+              <p className="text-xs text-muted-foreground">Allows owners, admins and managers in this workspace to run dry tests.</p>
+            </div>
+            <Button
+              variant={data.org.simulatorEnabled ? "default" : "outline"}
+              onClick={() => simulatorMutation.mutate({ enabled: !data.org.simulatorEnabled })}
+            >
+              {data.org.simulatorEnabled ? "Enabled" : "Disabled"}
+            </Button>
+          </div>
+          {data.members.map((member) => (
+            <div key={member.user_id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border px-3 py-2">
+              <div className="min-w-0">
+                <p className="truncate font-medium">{member.full_name ?? member.email ?? member.user_id}</p>
+                <p className="text-xs text-muted-foreground">Individual access override</p>
+              </div>
+              <Button
+                size="sm"
+                variant={member.simulatorEnabled ? "default" : "outline"}
+                onClick={() => simulatorMutation.mutate({ userId: member.user_id, enabled: !member.simulatorEnabled })}
+              >
+                {member.simulatorEnabled ? "Enabled for user" : "Enable for user"}
+              </Button>
+            </div>
+          ))}
+        </div>
       </Panel>
 
       <Panel title="Automations">

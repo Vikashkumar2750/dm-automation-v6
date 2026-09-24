@@ -16,6 +16,18 @@ const STEP_LABEL: Record<string, string> = {
 
 const pct = (a: number, b: number) => (b ? `${Math.round((a / b) * 100)}%` : "—");
 
+function traceLabel(detail: string) {
+  const labels: Record<string, string> = {
+    processed: "Real event completed",
+    app_secret_mismatch: "Rejected before processing: app secret mismatch",
+    signature_header_missing: "Rejected before processing: signature missing",
+    account_not_matched: "Connected account could not be matched",
+    "trace:duplicate_delivery": "Duplicate Meta delivery ignored",
+    "trace:echo": "Outgoing message echo ignored",
+  };
+  return labels[detail] ?? detail.replace(/^trace:/, "").replaceAll("_", " ");
+}
+
 function Funnel({ title, steps }: { title: string; steps: [string, number][] }) {
   const first = steps[0]?.[1] ?? 0;
   return (
@@ -78,6 +90,31 @@ export function DeliveryHealth({ orgId }: { orgId: string }) {
               </span>
             </div>
           )}
+          <div className="rounded-xl border p-4 text-sm">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <p className="font-medium">Live real-event trace</p>
+              <StatusBadge tone="info">Refreshes every 30s</StatusBadge>
+            </div>
+            {h.traces.length === 0 ? (
+              <p className="text-muted-foreground">No real webhook events in this period.</p>
+            ) : (
+              <div className="space-y-2">
+                {h.traces.map((trace) => (
+                  <div key={trace.id} className="grid gap-1 rounded border px-3 py-2 sm:grid-cols-[150px_1fr_auto] sm:items-center">
+                    <div>
+                      <p className="font-medium">{trace.eventType}</p>
+                      <p className="font-mono text-xs text-muted-foreground">Trace {trace.correlationId}</p>
+                    </div>
+                    <p className="text-xs text-muted-foreground">{traceLabel(trace.detail)}</p>
+                    <div className="flex items-center gap-2">
+                      <StatusBadge tone={trace.outcome === "processed" ? "success" : trace.outcome === "failed" ? "danger" : "warning"}>{trace.outcome}</StatusBadge>
+                      <span className="text-xs text-muted-foreground">{new Date(trace.at).toLocaleTimeString()}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <StatCard icon={Activity} label="Incoming events OK" value={pct(h.inbound.ok, h.inbound.total)} sub={`${h.inbound.total} events`} />
             <StatCard icon={Send} label="Outgoing success" value={pct(outSent, outSent + outFailed)} sub={`${outFailed} failed`} />

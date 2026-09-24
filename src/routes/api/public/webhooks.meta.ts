@@ -25,6 +25,14 @@ type MetaPayload = {
   entry?: MetaEntry[];
 };
 
+function correlationId() {
+  return crypto.randomUUID().slice(0, 8);
+}
+
+function traceLog(id: string, stage: string, outcome: string, detail?: string) {
+  console.info(JSON.stringify({ scope: "meta_webhook_trace", correlationId: id, stage, outcome, detail }));
+}
+
 /** Constant-time compare of two hex signatures. */
 function safeEqual(a: string, b: string) {
   if (a.length !== b.length) return false;
@@ -33,7 +41,7 @@ function safeEqual(a: string, b: string) {
   return diff === 0;
 }
 
-async function hmacSha256Hex(secret: string, body: string) {
+export async function hmacSha256Hex(secret: string, body: string) {
   const enc = new TextEncoder();
   const key = await crypto.subtle.importKey(
     "raw",
@@ -46,6 +54,12 @@ async function hmacSha256Hex(secret: string, body: string) {
   return Array.from(new Uint8Array(sig))
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("");
+}
+
+export async function verifyMetaSignature(secret: string, body: string, header: string) {
+  const provided = header.startsWith("sha256=") ? header.slice(7) : "";
+  if (!provided) return false;
+  return safeEqual(provided, await hmacSha256Hex(secret, body));
 }
 
 function platformFor(object: string | undefined) {
@@ -192,10 +206,14 @@ async function ingestIntoInbox(
     receivingExternalId: string | null;
     type: string;
     value: unknown;
+    correlationId: string;
   },
 ): Promise<string | null> {
   let { organizationId, socialAccountId, platform } = args;
   const { type, value } = args;
+  const trace = (stage: string, outcome: string, detail?: string) =>
+    traceLog(args.correlationId, stage, outcome, detail);
+  trace("inbox_ingest", "started", type);
 
   let externalUserId: string | null = null;
   let externalUserName: string | null = null;
@@ -208,7 +226,10 @@ async function ingestIntoInbox(
 
   if (isMessagingEventType(type)) {
     const m = normalizeMessagingEvent(value) as MessagingEvent;
-    if (m.message?.is_echo) return "trace:echo"; // our own outbound echo
+    if (m.message?.is_echo) {
+      trace("event_filter", "ignored", "trace:echo");
+      return "trace:echo";
+    }
     externalUserId = m.sender?.id ?? null;
     if (!externalUserId || externalUserId === args.accountExternalId)
       return "trace:self_or_unknown_sender";
@@ -222,6 +243,7 @@ async function ingestIntoInbox(
     if (m.timestamp) sentAt = new Date(m.timestamp);
 
     const gateId = followGateId(followPayload);
+    trace("button_payload", gateId ? "matched" : "missing", gateId ? "follow_gate_id_found" : "no_follow_gate_payload");
     if (gateId) {
       const gateAccount = await findGateAccount(admin, gateId, args.receivingExternalId);
       if (gateAccount) {
@@ -270,6 +292,7 @@ async function ingestIntoInbox(
   if (conversationError || !conversation) {
     throw new Error(`conversation_upsert:${conversationError?.message ?? "no row returned"}`);
   }
+  trace("conversation", "stored", conversation.id);
 
   const { error: msgError } = await admin.from("messages").insert({
     conversation_id: conversation.id,
@@ -283,7 +306,10 @@ async function ingestIntoInbox(
   if (msgError && msgError.code !== "23505") {
     throw new Error(`message_insert:${msgError.message}`);
   }
-  if (msgError) return "trace:duplicate_delivery";
+  if (msgError) {
+    trace("deduplication", "ignored", "trace:duplicate_delivery");
+    return "trace:duplicate_delivery";
+  }
 
   await admin.rpc("increment_unread", { p_conversation_id: conversation.id });
 
@@ -317,8 +343,12 @@ async function ingestIntoInbox(
         payload: followPayload ?? "",
         messageText: body,
         receivingExternalId: args.receivingExternalId,
+                  correlationId: args.correlationId,
       });
-      if (handled) return null;
+      if (handled) {
+        trace("follow_gate", "handled", followPayload ? "payload_tap" : "text_tap");
+        return null;
+      }
     }
 
     await runAutomations(admin, {
@@ -331,7 +361,9 @@ async function ingestIntoInbox(
       externalUserId,
       externalId,
       postExternalId,
+      correlationId: args.correlationId,
     });
+    trace("automation", "completed", "rules_evaluated");
   } catch (automationError) {
     console.error("automation run failed", automationError);
     throw automationError;
@@ -360,22 +392,43 @@ export const Route = createFileRoute("/api/public/webhooks/meta")({
       },
 
       POST: async ({ request }) => {
+        const traceId = correlationId();
         const body = await request.text();
         const appSecret = process.env["META_APP_SECRET"];
         const header = request.headers.get("x-hub-signature-256") ?? "";
 
-        if (!appSecret) return new Response("Not configured", { status: 503 });
+        if (!appSecret) {
+          traceLog(traceId, "signature", "rejected", "meta_app_secret_missing");
+          return new Response("Not configured", { status: 503 });
+        }
 
         const provided = header.startsWith("sha256=") ? header.slice(7) : "";
-        const expected = await hmacSha256Hex(appSecret, body);
-        if (!provided || !safeEqual(provided, expected)) {
+        if (!(await verifyMetaSignature(appSecret, body, header))) {
+          const reason = provided ? "app_secret_mismatch" : "signature_header_missing";
+          traceLog(traceId, "signature", "rejected", reason);
+          try {
+            const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+            await supabaseAdmin.from("webhook_events").insert({
+              provider: "meta",
+              event_type: "meta.signature_rejected",
+              dedupe_key: `meta:signature:${traceId}`,
+              payload: {},
+              signature_valid: false,
+              status: "failed",
+              error: `trace:${traceId}:${reason}`,
+            });
+          } catch (auditError) {
+            console.error("signature audit failed", auditError);
+          }
           return new Response("Invalid signature", { status: 401 });
         }
+        traceLog(traceId, "signature", "accepted");
 
         let payload: MetaPayload;
         try {
           payload = JSON.parse(body) as MetaPayload;
         } catch {
+          traceLog(traceId, "payload", "rejected", "invalid_json");
           return new Response("Bad payload", { status: 400 });
         }
 
@@ -445,12 +498,13 @@ export const Route = createFileRoute("/api/public/webhooks/meta")({
                 payload: item.value as never,
                 signature_valid: true,
                 status: itemOrganizationId ? "received" : "ignored",
-                ...(itemOrganizationId ? {} : { error: "No connected account or follow gate matched this id" }),
+                ...(itemOrganizationId ? {} : { error: `trace:${traceId}:account_not_matched` }),
               })
               .select("id")
               .maybeSingle();
             // Duplicate delivery (Meta retries) — safe to skip.
             if (error && error.code !== "23505") console.error("webhook insert failed", error);
+            traceLog(traceId, "webhook_event", error ? "deduplicated" : "stored", item.type);
 
             // Mirror into the inbox (conversations/messages).
             if (itemOrganizationId && itemPlatform && webhookEvent?.id) {
@@ -463,6 +517,7 @@ export const Route = createFileRoute("/api/public/webhooks/meta")({
                   receivingExternalId: externalId,
                   type: item.type,
                   value: item.value,
+                  correlationId: traceId,
                 });
                 // Trace codes explain why an event intentionally produced no
                 // automation run (echo, duplicate, unsupported type...).
@@ -470,8 +525,8 @@ export const Route = createFileRoute("/api/public/webhooks/meta")({
                   .from("webhook_events")
                   .update(
                     trace
-                      ? { status: "ignored", error: trace }
-                      : { status: "processed", error: null },
+                      ? { status: "ignored", error: `trace:${traceId}:${trace}` }
+                      : { status: "processed", error: `trace:${traceId}:processed` },
                   )
                   .eq("id", webhookEvent.id);
               } catch (ingestError) {
@@ -482,8 +537,8 @@ export const Route = createFileRoute("/api/public/webhooks/meta")({
                     status: "failed",
                     error:
                       ingestError instanceof Error
-                        ? ingestError.message.slice(0, 500)
-                        : "Inbox or automation processing failed",
+                        ? `trace:${traceId}:${ingestError.message.slice(0, 450)}`
+                        : `trace:${traceId}:Inbox or automation processing failed`,
                   })
                   .eq("id", webhookEvent.id);
               }

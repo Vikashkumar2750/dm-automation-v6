@@ -105,7 +105,7 @@ export type AdminJobRow = {
 };
 
 export type AdminOrgDetail = {
-  org: AdminOrgRow;
+  org: AdminOrgRow & { simulatorEnabled: boolean };
   settings: {
     is_paused: boolean;
     hourly_send_limit: number;
@@ -115,7 +115,7 @@ export type AdminOrgDetail = {
   } | null;
   accounts: AdminAccountRow[];
   automations: AdminAutomationRow[];
-  members: { user_id: string; role: string; email: string | null; full_name: string | null }[];
+  members: { user_id: string; role: string; email: string | null; full_name: string | null; simulatorEnabled: boolean }[];
   recentErrors: { id: string; source: string; detail: string; at: string }[];
   usage: { runs24h: number; messages24h: number; postsScheduled: number };
 };
@@ -314,7 +314,7 @@ export const getAdminOrganization = createServerFn({ method: "POST" })
     const id = data.organizationId;
     const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
-    const [org, settings, accounts, rules, members, runs, posts, hooks] = await Promise.all([
+    const [org, settings, accounts, rules, members, runs, posts, hooks, platformSettings] = await Promise.all([
       supabaseAdmin
         .from("organizations")
         .select("id, name, slug, plan, created_at")
@@ -346,6 +346,11 @@ export const getAdminOrganization = createServerFn({ method: "POST" })
         .eq("organization_id", id)
         .order("received_at", { ascending: false })
         .limit(10),
+      supabaseAdmin
+        .from("platform_settings")
+        .select("feature_flags")
+        .eq("id", true)
+        .maybeSingle(),
     ]);
 
     if (!org.data) throw new Error("not_found");
@@ -355,6 +360,7 @@ export const getAdminOrganization = createServerFn({ method: "POST" })
       ? await supabaseAdmin.from("profiles").select("id, email, full_name").in("id", userIds)
       : { data: [] as { id: string; email: string | null; full_name: string | null }[] };
     const profileMap = new Map((profiles.data ?? []).map((p) => [p.id, p]));
+    const simulatorFlags = (platformSettings.data?.feature_flags ?? {}) as Record<string, boolean>;
 
     const convs = await supabaseAdmin.from("conversations").select("id").eq("organization_id", id);
 
@@ -404,6 +410,7 @@ export const getAdminOrganization = createServerFn({ method: "POST" })
         conversations: (convs.data ?? []).length,
         posts: (posts.data ?? []).length,
         automationsPaused: Boolean(settings.data?.is_paused),
+        simulatorEnabled: Boolean(simulatorFlags[`simulator_org_${id}`]),
       },
       settings: settings.data ?? null,
       accounts: (accounts.data ?? []).map((a) => ({
@@ -420,6 +427,9 @@ export const getAdminOrganization = createServerFn({ method: "POST" })
         role: m.role,
         email: profileMap.get(m.user_id)?.email ?? null,
         full_name: profileMap.get(m.user_id)?.full_name ?? null,
+        simulatorEnabled: simulatorFlags[`simulator_user_deny_${id}_${m.user_id}`]
+          ? false
+          : Boolean(simulatorFlags[`simulator_user_${id}_${m.user_id}`]),
       })),
       recentErrors,
       usage: {
@@ -428,6 +438,63 @@ export const getAdminOrganization = createServerFn({ method: "POST" })
         postsScheduled: (posts.data ?? []).filter((p) => p.status === "scheduled").length,
       },
     };
+  });
+
+function simulatorOrgFlag(organizationId: string) {
+  return `simulator_org_${organizationId}`;
+}
+
+function simulatorUserFlag(organizationId: string, userId: string) {
+  return `simulator_user_${organizationId}_${userId}`;
+}
+
+function simulatorUserDenyFlag(organizationId: string, userId: string) {
+  return `simulator_user_deny_${organizationId}_${userId}`;
+}
+
+export const setSimulatorAccess = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) =>
+    z.object({
+      organizationId: z.string().uuid(),
+      userId: z.string().uuid().nullable().optional(),
+      enabled: z.boolean().nullable(),
+    }).parse(data),
+  )
+  .handler(async ({ data, context }) => {
+    await assertSuperAdmin(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: row, error: readError } = await supabaseAdmin
+      .from("platform_settings")
+      .select("feature_flags")
+      .eq("id", true)
+      .maybeSingle();
+    if (readError) throw new Error(readError.message);
+    const flags = { ...((row?.feature_flags ?? {}) as Record<string, boolean>) };
+    if (data.userId) {
+      const allowKey = simulatorUserFlag(data.organizationId, data.userId);
+      const denyKey = simulatorUserDenyFlag(data.organizationId, data.userId);
+      if (data.enabled === null) {
+        delete flags[allowKey];
+        delete flags[denyKey];
+      } else {
+        flags[allowKey] = data.enabled;
+        flags[denyKey] = !data.enabled;
+      }
+    } else {
+      flags[simulatorOrgFlag(data.organizationId)] = Boolean(data.enabled);
+    }
+    const { error } = await supabaseAdmin
+      .from("platform_settings")
+      .update({ feature_flags: flags, updated_at: new Date().toISOString() })
+      .eq("id", true);
+    if (error) throw new Error(error.message);
+    await audit(context, "simulator.access_changed", {
+      type: data.userId ? "user" : "organization",
+      id: data.userId ?? data.organizationId,
+      detail: { organizationId: data.organizationId, enabled: data.enabled },
+    });
+    return { ok: true };
   });
 
 export const setOrganizationAutomationPause = createServerFn({ method: "POST" })
