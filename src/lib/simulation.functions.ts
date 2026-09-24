@@ -42,7 +42,8 @@ async function readSimulatorAccess(
   const userKey = `simulator_user_${organizationId}_${context.userId}`;
   const denyKey = `simulator_user_deny_${organizationId}_${context.userId}`;
   const orgKey = `simulator_org_${organizationId}`;
-  const allowed = flags[denyKey] ? false : Boolean(flags[userKey] ?? flags[orgKey] ?? false);
+  // Enabled by default; a super admin can switch it off per workspace or user.
+  const allowed = flags[denyKey] ? false : Boolean(flags[userKey] ?? flags[orgKey] ?? true);
   return { allowed, isSuperAdmin: false };
 }
 
