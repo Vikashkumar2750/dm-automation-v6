@@ -534,7 +534,10 @@ export function followGateVerdict(
   follows: boolean | null,
   previousTaps: number,
 ): FollowVerdict {
-  if (previousTaps > 0 && follows === true && requiresFollow(rule)) return "deliver";
+  // A fresh opener and an "I followed" confirmation are separate stages:
+  // only a verified follow may release the held link in either stage.
+  if (follows === true && requiresFollow(rule)) return "deliver";
+  if (follows !== true && requiresFollow(rule)) return "ask_follow";
   return followVerdict(rule, follows);
 }
 
@@ -585,13 +588,12 @@ function buttonMessages(text: string, buttons: Button[]): Record<string, unknown
 }
 
 /** A quick reply generates an inbound message, which grants profile consent;
- * a template postback alone does not always do so on Instagram. */
+ * a template postback alone does not always do so on Instagram. Never report
+ * an opener as sent when it fell back to plain text without a tappable button. */
 function gateButtonMessages(text: string, buttons: Button[]): Record<string, unknown>[] {
   const shapes = buttonMessages(text, buttons);
-  const [template, quickReply, ...fallback] = shapes;
-  return template && quickReply && fallback.length > 0
-    ? [quickReply, template, ...fallback]
-    : shapes;
+  const [template, quickReply] = shapes;
+  return template && quickReply ? [quickReply, template] : template ? [template] : [];
 }
 
 /** Tries each message shape until the platform accepts one. */
@@ -919,20 +921,7 @@ export async function handleFollowGateReply(
   }
   const { data: gates } = await query.order("created_at", { ascending: false }).limit(1);
   let gate = gates?.[0];
-  // Text-only taps: the comment author id can differ from the DM sender id.
-  // Accept the single waiting gate on this account from the last hour.
-  if (!gate && isTextTap && args.socialAccountId) {
-    const { data: recent } = await admin
-      .from("automation_follow_gates")
-      .select("id, rule_id, attempts, social_account_id")
-      .eq("organization_id", args.organizationId)
-      .eq("social_account_id", args.socialAccountId)
-      .eq("status", "waiting")
-      .gte("created_at", new Date(Date.now() - 60 * 60 * 1000).toISOString())
-      .order("created_at", { ascending: false })
-      .limit(2);
-    if (recent?.length === 1) gate = recent[0];
-  }
+  // Never infer a text-only tap from another contact's waiting gate.
   if (!gate?.rule_id) {
     if (hasPayload) {
       await log(
@@ -1003,6 +992,9 @@ export async function handleFollowGateReply(
   // A required-follow flow delivers immediately for existing followers and
   // after confirmation for new followers, regardless of legacy audience filter.
   const verdict = followGateVerdict(typedRule, follows, previousTaps);
+  await log(admin, ctx, typedRule.id, "matched", follows === true
+    ? "gate_verified_follower"
+    : follows === false ? "gate_verified_non_follower" : "gate_follow_status_unavailable");
 
   const finish = (status: "completed" | "expired") =>
     admin
@@ -1046,7 +1038,7 @@ export async function handleFollowGateReply(
       await log(admin, ctx, typedRule.id, "skipped", "duplicate_tap");
       return true;
     }
-    const isRetry = previousTaps >= 1;
+    const isRetry = previousTaps >= 2;
     const { text, shapes } = await followPromptShapes(admin, ctx, typedRule, gate.id, isRetry);
     const res = await sendChain(args.platform, sendId, token, { id: args.externalUserId }, shapes);
     if (res.error) {

@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { messagingContent } from "@/lib/meta-messaging";
 
 type MetaChange = {
   field?: string;
@@ -159,14 +160,13 @@ async function ingestIntoInbox(
     if (m.message?.is_echo) return; // our own outbound echo
     externalUserId = m.sender?.id ?? null;
     if (!externalUserId || externalUserId === args.accountExternalId) return;
-    followPayload = m.message?.quick_reply?.payload ?? m.postback?.payload ?? null;
-    body = m.message?.text ?? m.postback?.title ?? null;
+    const content = messagingContent(m);
+    followPayload = content.payload;
+    body = content.body;
     // Instagram reuses the mid of the message that carried the button for
     // postback taps. That mid is already stored for our outbound prompt, so it
     // must not be used as the inbound id or the tap is dropped as a duplicate.
-    externalId = m.postback
-      ? `postback:${m.postback.mid ?? "x"}:${m.timestamp ?? Date.now()}`
-      : (m.message?.mid ?? null);
+    externalId = content.externalId;
     if (m.timestamp) sentAt = new Date(m.timestamp);
   } else if (type.endsWith(".comments") || type.endsWith(".feed")) {
     const c = (value as { value?: CommentValue }).value ?? (value as CommentValue);
@@ -229,6 +229,18 @@ async function ingestIntoInbox(
     const { runAutomations, handleFollowGateReply } = await import(
       "@/lib/automation.server"
     );
+
+    // Record that the button reached us independently of whether follow status
+    // can be checked or the next message can be delivered.
+    if (followPayload?.startsWith("AUTOMATION_FOLLOW_CHECK:")) {
+      await admin.from("automation_runs").insert({
+        organization_id: organizationId,
+        conversation_id: conversation.id,
+        rule_id: null,
+        status: "matched",
+        detail: "gate_tap_received",
+      });
+    }
 
     // Resolve both payload-bearing buttons and Instagram's text-only quick
     // reply delivery before trying ordinary DM keyword rules.
