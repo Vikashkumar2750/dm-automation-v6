@@ -512,11 +512,15 @@ type FollowVerdict = "deliver" | "ask_follow" | "skip_not_follower" | "skip_foll
  * Decides what to do for a known/unknown follow state. Unknown (null) never
  * counts as "not following" — that sent follow prompts to real followers.
  */
-function followVerdict(rule: Pick<Rule, "require_follow" | "follower_condition">, follows: boolean | null): FollowVerdict {
+export function followVerdict(rule: Pick<Rule, "require_follow" | "follower_condition">, follows: boolean | null): FollowVerdict {
   if (follows === false && rule.require_follow) return "ask_follow";
   if (follows === false && rule.follower_condition === "followers_only") {
     return "skip_not_follower";
   }
+  // Requiring a follow means both existing and newly confirmed followers get
+  // the final DM. A legacy "non_followers" audience must not reject someone
+  // who has already followed before tapping the opener.
+  if (follows === true && rule.require_follow) return "deliver";
   if (follows === true && rule.follower_condition === "non_followers") return "skip_follower";
   return "deliver";
 }
@@ -873,10 +877,17 @@ export async function handleFollowGateReply(
     platform: "instagram" | "facebook";
     externalUserId: string;
     payload: string;
+    messageText?: string | null;
   },
 ) {
-  if (!args.payload.startsWith(FOLLOW_PAYLOAD)) return false;
-  const gateId = args.payload.slice(FOLLOW_PAYLOAD.length + 1).trim();
+  const hasPayload = args.payload.startsWith(`${FOLLOW_PAYLOAD}:`);
+  // Some Instagram quick replies arrive as plain message text without their
+  // payload. Only resolve an exact button title against a gate for this sender;
+  // never associate a text-only tap with another contact's pending comment.
+  const isTextTap = !args.payload && ["Send me the link", "Send it to me", "I followed ✅"]
+    .includes((args.messageText ?? "").trim());
+  if (!hasPayload && !isTextTap) return false;
+  const gateId = hasPayload ? args.payload.slice(FOLLOW_PAYLOAD.length + 1).trim() : "";
 
   // The comment author id and the messaging sender id can differ, so a gate
   // referenced by the button payload is looked up by id alone.
@@ -885,10 +896,17 @@ export async function handleFollowGateReply(
     .select("id, rule_id, attempts, social_account_id")
     .eq("organization_id", args.organizationId)
     .eq("status", "waiting");
-  query = gateId ? query.eq("id", gateId) : query.eq("external_user_id", args.externalUserId);
+  if (gateId) {
+    query = query.eq("id", gateId);
+  } else {
+    query = query
+      .eq("external_user_id", args.externalUserId)
+      .gte("created_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
+    if (args.socialAccountId) query = query.eq("social_account_id", args.socialAccountId);
+  }
   const { data: gates } = await query.order("created_at", { ascending: false }).limit(1);
   const gate = gates?.[0];
-  if (!gate?.rule_id) return true; // already handled or expired — ignore the tap
+  if (!gate?.rule_id) return hasPayload; // never swallow an unrelated plain DM
 
   const { data: rule } = await admin
     .from("automation_rules")
@@ -941,8 +959,8 @@ export async function handleFollowGateReply(
   const previousTaps = (gate.attempts as number | null) ?? 0;
   const attempts = previousTaps + 1;
   const now = new Date().toISOString();
-  // The opener checks initial eligibility. Later taps confirm the requested
-  // follow; applying "non_followers" again would reject a successful follow.
+  // A required-follow flow delivers immediately for existing followers and
+  // after confirmation for new followers, regardless of legacy audience filter.
   const verdict = followGateVerdict(typedRule, follows, previousTaps);
 
   const finish = (status: "completed" | "expired") =>

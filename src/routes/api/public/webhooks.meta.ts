@@ -228,15 +228,17 @@ async function ingestIntoInbox(
       "@/lib/automation.server"
     );
 
-    // "I followed" tap — verify the follow and release the held DM.
-    if (followPayload) {
+    // Resolve both payload-bearing buttons and Instagram's text-only quick
+    // reply delivery before trying ordinary DM keyword rules.
+    if (followPayload || body) {
       const handled = await handleFollowGateReply(admin, {
         organizationId,
         conversationId: conversation.id,
         socialAccountId,
         platform,
         externalUserId,
-        payload: followPayload,
+        payload: followPayload ?? "",
+        messageText: body,
       });
       if (handled) return;
     }
