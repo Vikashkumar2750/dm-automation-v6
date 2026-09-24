@@ -454,7 +454,7 @@ export const Route = createFileRoute("/api/public/webhooks/meta")({
             // Mirror into the inbox (conversations/messages).
             if (itemOrganizationId && itemPlatform && webhookEvent?.id) {
               try {
-                await ingestIntoInbox(supabaseAdmin, {
+                const trace = await ingestIntoInbox(supabaseAdmin, {
                   organizationId: itemOrganizationId,
                   socialAccountId: itemSocialAccountId,
                   platform: itemPlatform,
@@ -463,9 +463,15 @@ export const Route = createFileRoute("/api/public/webhooks/meta")({
                   type: item.type,
                   value: item.value,
                 });
+                // Trace codes explain why an event intentionally produced no
+                // automation run (echo, duplicate, unsupported type...).
                 await supabaseAdmin
                   .from("webhook_events")
-                  .update({ status: "processed", error: null })
+                  .update(
+                    trace
+                      ? { status: "ignored", error: trace }
+                      : { status: "processed", error: null },
+                  )
                   .eq("id", webhookEvent.id);
               } catch (ingestError) {
                 console.error("inbox ingest failed", ingestError);
