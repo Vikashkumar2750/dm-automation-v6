@@ -928,7 +928,8 @@ export async function handleFollowGateReply(
   );
 
   const follows = await checkFollows(args.platform, args.externalUserId, token);
-  const attempts = (gate.attempts ?? 0) + 1;
+  const previousTaps = (gate.attempts as number | null) ?? 0;
+  const attempts = previousTaps + 1;
   const now = new Date().toISOString();
   const verdict = followVerdict(typedRule, follows);
 
@@ -965,7 +966,7 @@ export async function handleFollowGateReply(
       .from("automation_follow_gates")
       .update({ attempts, external_user_id: args.externalUserId, last_checked_at: now })
       .eq("id", gate.id);
-    const isRetry = (gate.attempts ?? 0) >= 1;
+    const isRetry = previousTaps >= 1;
     const { text, shapes } = await followPromptShapes(admin, ctx, typedRule, gate.id, isRetry);
     const res = await sendChain(args.platform, sendId, token, { id: args.externalUserId }, shapes);
     if (res.error) {
