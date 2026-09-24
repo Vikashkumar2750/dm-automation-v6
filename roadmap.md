@@ -30,3 +30,5 @@ Real Meta + YouTube credentials are available when we reach OAuth phases.
 - [ ] Verify both existing-follower and non-follower button flows on Railway after deployment (requires real Instagram taps).
 - [x] Bind Meta button taps to the original Instagram follow gate when Facebook and Instagram share a Page.
 - [x] Parse staged follow-gate payloads with the canonical UUID parser and expire superseded waiting gates.
+- [x] Add real Meta webhook tracing, provider error visibility, and super-admin-controlled simulator access.
+- [ ] Verify fresh follower and non-follower taps after Railway deploy using correlation IDs (external deploy required).

@@ -51,6 +51,14 @@ export type DeliveryHealth = {
     finalDms: number;
   };
   tapsMissing: boolean;
+  traces: {
+    id: string;
+    correlationId: string;
+    eventType: string;
+    outcome: string;
+    detail: string;
+    at: string;
+  }[];
 };
 
 export const getDeliveryHealth = createServerFn({ method: "GET" })
@@ -68,7 +76,7 @@ export const getDeliveryHealth = createServerFn({ method: "GET" })
     const since = new Date(Date.now() - data.hours * 3_600_000).toISOString();
     let ev = context.supabase
       .from("webhook_events")
-      .select("event_type, status, platform")
+      .select("id, event_type, status, platform, error, received_at")
       .eq("organization_id", data.organizationId)
       .gte("received_at", since)
       .limit(5000);
@@ -126,6 +134,17 @@ export const getDeliveryHealth = createServerFn({ method: "GET" })
     const openers = sentOf("tap_prompt");
     const taps = count("gate_tap_received");
     const gateRows = gates.data ?? [];
+    const traces = (events.data ?? []).slice(0, 50).map((event) => {
+      const match = (event.error ?? "").match(/^trace:([^:]+):(.*)$/);
+      return {
+        id: event.id,
+        correlationId: match?.[1] ?? event.id.slice(0, 8),
+        eventType: event.event_type,
+        outcome: event.status,
+        detail: match?.[2] ?? event.error ?? (event.status === "processed" ? "processed" : "received"),
+        at: event.received_at,
+      };
+    });
     const completedAfterPrompt = gateRows.filter((g) => g.status === "completed" && g.attempts > 1).length;
     const completedDirect = gateRows.filter((g) => g.status === "completed" && g.attempts <= 1).length;
 
@@ -151,5 +170,6 @@ export const getDeliveryHealth = createServerFn({ method: "GET" })
         finalDms: sentOf("reply_dm"),
       },
       tapsMissing: openers >= 2 && taps === 0,
+      traces,
     };
   });
