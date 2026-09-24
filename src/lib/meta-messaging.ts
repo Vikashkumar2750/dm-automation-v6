@@ -3,7 +3,39 @@ export type MetaMessagingEvent = {
   timestamp?: number;
   message?: { mid?: string; text?: string; is_echo?: boolean; quick_reply?: { payload?: string } };
   postback?: { mid?: string; payload?: string; title?: string };
+  sender?: { id?: string };
+  recipient?: { id?: string };
 };
+
+/**
+ * Meta delivers Instagram taps in two shapes: directly in `entry.messaging`
+ * and nested below `entry.changes[].value`. Normalize both, including the
+ * scalar sender/recipient ids used by some Instagram webhook versions.
+ */
+export function normalizeMessagingEvent(value: unknown): MetaMessagingEvent {
+  const outer = value && typeof value === "object"
+    ? value as Record<string, unknown>
+    : {};
+  const nested = outer.value && typeof outer.value === "object"
+    ? outer.value as Record<string, unknown>
+    : null;
+  const raw = nested && (nested.message || nested.postback || nested.sender || nested.sender_id)
+    ? nested
+    : outer;
+  const senderId = typeof raw.sender_id === "string" ? raw.sender_id : undefined;
+  const recipientId = typeof raw.recipient_id === "string" ? raw.recipient_id : undefined;
+  const event = raw as MetaMessagingEvent;
+  return {
+    ...event,
+    sender: event.sender ?? (senderId ? { id: senderId } : undefined),
+    recipient: event.recipient ?? (recipientId ? { id: recipientId } : undefined),
+  };
+}
+
+export function isMessagingEventType(type: string) {
+  return ["message", "messages", "messaging_postbacks", "standby"]
+    .some((field) => type.endsWith(`.${field}`));
+}
 
 export function messagingContent(event: MetaMessagingEvent) {
   const payload = event.message?.quick_reply?.payload ?? event.postback?.payload ?? null;

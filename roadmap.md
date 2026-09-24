@@ -26,5 +26,5 @@ Real Meta + YouTube credentials are available when we reach OAuth phases.
 - [x] Phase 17 — Export pack for Railway (Dockerfile, .dockerignore, railway.json, .env.example, scripts/migrate.mjs, DEPLOY-RAILWAY.md)
 - [x] Fix follow-confirmation delivery after “I followed” and test follower transitions.
 - [x] Deliver directly to existing followers on “Send me the link” while retaining the non-follower confirmation path.
-- [ ] Confirm delivery with a fresh Instagram comment after Railway deploy (requires a real account follow/tap).
+- [ ] Confirm delivery with a fresh Instagram comment after Railway deploy; plural/nested Meta tap payload handling is fixed (requires a real account follow/tap).
 - [ ] Verify both existing-follower and non-follower button flows on Railway after deployment (requires real Instagram taps).
