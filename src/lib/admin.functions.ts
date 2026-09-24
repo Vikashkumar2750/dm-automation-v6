@@ -410,7 +410,7 @@ export const getAdminOrganization = createServerFn({ method: "POST" })
         conversations: (convs.data ?? []).length,
         posts: (posts.data ?? []).length,
         automationsPaused: Boolean(settings.data?.is_paused),
-        simulatorEnabled: Boolean(simulatorFlags[`simulator_org_${id}`]),
+        simulatorEnabled: simulatorFlags[`simulator_org_${id}`] !== false,
       },
       settings: settings.data ?? null,
       accounts: (accounts.data ?? []).map((a) => ({
@@ -429,7 +429,11 @@ export const getAdminOrganization = createServerFn({ method: "POST" })
         full_name: profileMap.get(m.user_id)?.full_name ?? null,
         simulatorEnabled: simulatorFlags[`simulator_user_deny_${id}_${m.user_id}`]
           ? false
-          : Boolean(simulatorFlags[`simulator_user_${id}_${m.user_id}`]),
+          : Boolean(
+              simulatorFlags[`simulator_user_${id}_${m.user_id}`] ??
+                simulatorFlags[`simulator_org_${id}`] ??
+                true,
+            ),
       })),
       recentErrors,
       usage: {

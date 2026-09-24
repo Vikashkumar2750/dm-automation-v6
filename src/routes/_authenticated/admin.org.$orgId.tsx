@@ -199,7 +199,7 @@ function OrgDetailPage() {
                 variant={member.simulatorEnabled ? "default" : "outline"}
                 onClick={() => simulatorMutation.mutate({ userId: member.user_id, enabled: !member.simulatorEnabled })}
               >
-                {member.simulatorEnabled ? "Enabled for user" : "Enable for user"}
+                {member.simulatorEnabled ? "On — tap to disable" : "Off — tap to enable"}
               </Button>
             </div>
           ))}

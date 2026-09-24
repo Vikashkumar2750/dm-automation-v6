@@ -625,6 +625,28 @@ export function gateButtonMessages(
   return preferQuickReply ? [quickReply, template] : [template, quickReply];
 }
 
+/**
+ * Opener shapes: 1) attached button template + quick reply (visible in the
+ * bubble on every device and in Message Requests, quick reply kept for the
+ * proven follower path), 2) attached template only, 3) quick reply only.
+ */
+export function openerMessages(text: string, title: string, payload: string) {
+  const body = text.slice(0, 640);
+  const t = title.slice(0, 20);
+  const template = {
+    attachment: {
+      type: "template",
+      payload: { template_type: "button", text: body, buttons: [{ type: "postback", title: t, payload }] },
+    },
+  };
+  const quick = [{ content_type: "text", title: t, payload }];
+  return [
+    { ...template, quick_replies: quick },
+    template,
+    { text: body, quick_replies: quick },
+  ] as Record<string, unknown>[];
+}
+
 /** Tries each message shape until the platform accepts one. */
 async function sendChain(
   platform: AutomationContext["platform"],
@@ -877,7 +899,18 @@ async function openGate(
     .eq("external_user_id", ctx.externalUserId)
     .eq("status", "waiting");
   if (ctx.socialAccountId) staleGateQuery = staleGateQuery.eq("social_account_id", ctx.socialAccountId);
-  await staleGateQuery;
+  const { data: staleGates } = await staleGateQuery.select("id, attempts");
+  // Make silent drops visible: a previous button was never tapped (or Meta
+  // never delivered the tap to us) before this new comment arrived.
+  for (const g of staleGates ?? []) {
+    await log(
+      admin,
+      ctx,
+      rule.id,
+      "skipped",
+      g.attempts === 0 ? "gate:tap_never_received" : "gate:follow_confirm_never_received",
+    );
+  }
 
   const { data: gate, error: gateError } = await admin
     .from("automation_follow_gates")
@@ -905,18 +938,11 @@ async function openGate(
   if (stage === "opener") {
     text = OPENER_TEXT;
     const title = (rule.dm_link_url ?? "").trim() ? "Send me the link" : "Send it to me";
-    // This account's production history confirms Instagram quick replies emit
-    // a messages webhook reliably. Keep the template postback as a fallback
-    // only when Meta rejects the quick-reply shape.
-    shapes = gateButtonMessages(
-      text,
-      [{
-        type: "postback",
-        title,
-        payload: followGatePayload(gate.id, "opener", crypto.randomUUID()),
-      }],
-      true,
-    );
+    // LOCKED (follower flow verified in production): the quick-reply payload
+    // is kept on the opener. We add an attached template button to the same
+    // message so it stays visible in Message Requests (non-followers), where
+    // bottom-of-screen quick replies are hidden. Fallbacks follow.
+    shapes = openerMessages(text, title, followGatePayload(gate.id, "opener", crypto.randomUUID()));
   } else {
     ({ text, shapes } = await followPromptShapes(admin, ctx, rule, gate.id, false));
   }
