@@ -242,10 +242,10 @@ async function ingestIntoInbox(
     postExternalId = c.media?.id ?? c.post?.id ?? c.post_id ?? null;
     channel = "comment";
   } else {
-    return;
+    return "trace:unsupported_event";
   }
 
-  if (!body) return;
+  if (!body) return "trace:empty_body";
 
   const { data: conversation, error: conversationError } = await admin
     .from("conversations")
@@ -282,7 +282,7 @@ async function ingestIntoInbox(
   if (msgError && msgError.code !== "23505") {
     throw new Error(`message_insert:${msgError.message}`);
   }
-  if (msgError) return;
+  if (msgError) return "trace:duplicate_delivery";
 
   await admin.rpc("increment_unread", { p_conversation_id: conversation.id });
 
