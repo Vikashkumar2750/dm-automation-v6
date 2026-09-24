@@ -7,6 +7,7 @@ export function explainReason(detail: string | null): { title: string; hint: str
   const code = (detail ?? "").toLowerCase();
   const map: [string, string, string][] = [
     ["gate_not_found", "Button tap not linked to a comment", "The tap arrived but its follow check had already finished or expired. Ask the contact to comment again."],
+    ["gate_rule_missing", "Rule for this tap was deleted", "The automation rule behind this button no longer exists."],
     ["duplicate_tap", "Duplicate tap ignored", "Meta delivered the same tap twice — only one copy was answered."],
     ["no_active_dm_received_rule", "DM did not match any DM rule", "A plain message arrived with no active “New DM” rule. Normal for chat replies."],
     ["no_matching_rule", "No rule matched", "The message did not match any active rule — normal if testing keywords."],
