@@ -450,25 +450,46 @@ export async function runAutomations(admin: AdminClient, ctx: AutomationContext)
       return;
     }
 
-    // 2) Follower conditions and follow gate.
-    if (rule.follower_condition !== "any" || rule.require_follow) {
+    if (rule.action === "comment_public_reply") {
+      await deliverDm(admin, ctx, rule, token, accountId, text);
+      return;
+    }
+
+    const needsFollowCheck = rule.require_follow || rule.follower_condition !== "any";
+    const isCommentDm =
+      ctx.channel === "comment" &&
+      rule.action === "comment_private_reply" &&
+      Boolean(ctx.externalId);
+
+    // 2) Comment → DM. Meta allows exactly ONE private reply per comment and
+    //    does not reveal follower status for a commenter who never messaged the
+    //    account. So when a follow check or an attachment is needed, the private
+    //    reply is a "tap to continue" message with a postback button. The tap
+    //    opens the conversation (24h window + profile consent); the webhook then
+    //    checks the follow and sends the link button and attachment.
+    if (isCommentDm) {
+      if (needsFollowCheck || attachmentOf(rule)) {
+        await openGate(admin, ctx, rule, token, accountId, "opener");
+        return;
+      }
+      await deliverDm(admin, ctx, rule, token, accountId, text);
+      return;
+    }
+
+    // 3) DM trigger: the conversation is already open, so Meta reveals follows.
+    if (needsFollowCheck) {
       const follows = await checkFollows(ctx.platform, ctx.externalUserId, token);
-      if (follows === false && rule.follower_condition === "followers_only") {
+      const verdict = followVerdict(rule, follows);
+      if (verdict === "skip_not_follower") {
         await log(admin, ctx, rule.id, "skipped", "not_a_follower");
         return;
       }
-      if (follows === true && rule.follower_condition === "non_followers") {
+      if (verdict === "skip_follower") {
         await log(admin, ctx, rule.id, "skipped", "already_a_follower");
         return;
       }
-      // Meta does not expose a commenter's follow relationship until that
-      // person has granted messaging-profile consent. Unknown must not be
-      // treated as "not following" — doing so sends follow prompts to people
-      // who already follow the account. Gate only a confirmed non-follower;
-      // otherwise use Meta's comment private-reply delivery, which Meta routes
-      // to Inbox or Requests as appropriate.
-      if (follows === false && rule.require_follow) {
-        await openFollowGate(admin, ctx, rule, token, accountId);
+      if (verdict === "ask_follow") {
+        await openGate(admin, ctx, rule, token, accountId, "follow");
         return;
       }
     }
@@ -485,7 +506,94 @@ export async function runAutomations(admin: AdminClient, ctx: AutomationContext)
   }
 }
 
+type FollowVerdict = "deliver" | "ask_follow" | "skip_not_follower" | "skip_follower";
+
+/**
+ * Decides what to do for a known/unknown follow state. Unknown (null) never
+ * counts as "not following" — that sent follow prompts to real followers.
+ */
+function followVerdict(rule: Rule, follows: boolean | null): FollowVerdict {
+  if (follows === false && rule.require_follow) return "ask_follow";
+  if (follows === false && rule.follower_condition === "followers_only") {
+    return "skip_not_follower";
+  }
+  if (follows === true && rule.follower_condition === "non_followers") return "skip_follower";
+  return "deliver";
+}
+
 // ------------------------------------------------------------- delivery
+
+type Button =
+  | { type: "web_url"; url: string; title: string }
+  | { type: "postback"; payload: string; title: string };
+
+/**
+ * Message shapes to try in order: a button template (supported by Messenger
+ * and Instagram messaging), then quick replies for postback buttons, then
+ * plain text with any links appended so the contact always gets something.
+ */
+function buttonMessages(text: string, buttons: Button[]): Record<string, unknown>[] {
+  const body = text.slice(0, 640);
+  const links = buttons
+    .filter((b): b is Extract<Button, { type: "web_url" }> => b.type === "web_url")
+    .map((b) => b.url);
+  const postbacks = buttons.filter(
+    (b): b is Extract<Button, { type: "postback" }> => b.type === "postback",
+  );
+  const withLinks = [body, ...links].join("\n");
+  const shapes: Record<string, unknown>[] = [
+    {
+      attachment: {
+        type: "template",
+        payload: {
+          template_type: "button",
+          text: body,
+          buttons: buttons.slice(0, 3).map((b) => ({ ...b, title: b.title.slice(0, 20) })),
+        },
+      },
+    },
+  ];
+  if (postbacks.length > 0) {
+    shapes.push({
+      text: withLinks,
+      quick_replies: postbacks.map((b) => ({
+        content_type: "text",
+        title: b.title.slice(0, 20),
+        payload: b.payload,
+      })),
+    });
+  }
+  shapes.push({ text: withLinks });
+  return shapes;
+}
+
+/** Tries each message shape until the platform accepts one. */
+async function sendChain(
+  platform: AutomationContext["platform"],
+  accountId: string,
+  token: string,
+  recipient: Record<string, unknown>,
+  shapes: Record<string, unknown>[],
+): Promise<{ id?: string | undefined; error?: string | undefined }> {
+  const errors: string[] = [];
+  for (const message of shapes) {
+    const res = await callMessaging(platform, accountId, {
+      recipient,
+      message,
+      access_token: token,
+    });
+    if (!res.error) return { id: res.id };
+    errors.push(res.error);
+  }
+  return { error: errors.join(" | ") };
+}
+
+function attachmentOf(rule: Rule) {
+  const url = (rule.dm_attachment_url ?? "").trim();
+  const type = rule.dm_attachment_type;
+  if (!url || !type || type === "none") return null;
+  return { url, type };
+}
 
 function actionRecipient(ctx: AutomationContext, action: string) {
   if (action === "comment_private_reply" && ctx.externalId) {
@@ -520,38 +628,7 @@ async function recordOutbound(
     .eq("id", ctx.conversationId);
 }
 
-/**
- * Sends a message and, when the rich payload (template / quick replies) is
- * rejected by the platform, retries once as plain text so the contact still
- * receives the DM.
- */
-async function sendWithFallback(
-  accountId: string,
-  token: string,
-  recipient: Record<string, unknown>,
-  message: Record<string, unknown>,
-  fallbackText: string,
-  platform: AutomationContext["platform"],
-): Promise<{ id?: string | undefined; error?: string | undefined }> {
-  const first = await callMessaging(platform, accountId, {
-    recipient,
-    message,
-    access_token: token,
-  });
-  if (!first.error) return first;
-  if (typeof (message as { text?: unknown }).text === "string" && !("quick_replies" in message)) {
-    return first;
-  }
-  const retry = await callMessaging(platform, accountId, {
-    recipient,
-    message: { text: fallbackText },
-    access_token: token,
-  });
-  if (retry.error) return { error: `${first.error} | fallback: ${retry.error}` };
-  return retry;
-}
-
-/** Send the rule's DM: text (+link), optional button, optional attachment. */
+/** Send the rule's DM: text with the link as a tappable button, then attachment. */
 async function deliverDm(
   admin: AdminClient,
   ctx: AutomationContext,
@@ -584,60 +661,50 @@ async function deliverDm(
   }
 
   const link = (rule.dm_link_url ?? "").trim();
-  const buttonLabel = (rule.dm_button_label ?? "").trim();
-  // Instagram messaging does not accept the Messenger "button" template, so the
-  // link always travels inside the text there.
-  const useButton = Boolean(link && buttonLabel && ctx.platform === "facebook");
-  const plainText = link && !useButton ? `${text}\n${link}` : text;
-
-  const message = useButton
-    ? {
-        attachment: {
-          type: "template",
-          payload: {
-            template_type: "button",
-            text,
-            buttons: [{ type: "web_url", url: link, title: buttonLabel.slice(0, 20) }],
-          },
-        },
-      }
-    : { text: plainText };
+  const buttonLabel = (rule.dm_button_label ?? "").trim() || "Open link";
+  const shapes = link
+    ? buttonMessages(text, [{ type: "web_url", url: link, title: buttonLabel }])
+    : [{ text }];
 
   const recipient = actionRecipient(ctx, rule.action);
-  const first = await sendWithFallback(
-    accountId,
-    token,
-    recipient,
-    message,
-    link ? `${text}\n${link}` : text,
-    ctx.platform,
-  );
-  if (first.error) {
-    await log(admin, ctx, rule.id, "failed", first.error.slice(0, 300));
+  const sent = await sendChain(ctx.platform, accountId, token, recipient, shapes);
+  if (sent.error) {
+    await log(admin, ctx, rule.id, "failed", sent.error.slice(0, 300));
     return;
   }
-  const withLink = plainText;
 
-
-  const attachmentUrl = (rule.dm_attachment_url ?? "").trim();
-  if (attachmentUrl && rule.dm_attachment_type && rule.dm_attachment_type !== "none") {
-    const media = await callMessaging(ctx.platform, accountId, {
-      recipient: { id: ctx.externalUserId },
-      message: {
-        attachment: {
-          type: rule.dm_attachment_type,
-          payload: { url: attachmentUrl, is_reusable: true },
+  // Attachments need an open conversation: a private reply to a comment is a
+  // single message, so they are only sent once the contact has messaged/tapped.
+  const attachment = attachmentOf(rule);
+  if (attachment) {
+    if ("comment_id" in recipient) {
+      await log(admin, ctx, rule.id, "skipped", "attachment_needs_tap");
+    } else {
+      const media = await callMessaging(ctx.platform, accountId, {
+        recipient: { id: ctx.externalUserId },
+        message: {
+          attachment: {
+            type: attachment.type,
+            payload: { url: attachment.url, is_reusable: true },
+          },
         },
-      },
-      access_token: token,
-    });
-    if (media.error) {
-      await log(admin, ctx, rule.id, "failed", `attachment:${media.error.slice(0, 200)}`);
+        access_token: token,
+      });
+      if (media.error) {
+        // Some file types are refused as native media — send the link instead.
+        await callMessaging(ctx.platform, accountId, {
+          recipient: { id: ctx.externalUserId },
+          message: { text: attachment.url },
+          access_token: token,
+        });
+        await log(admin, ctx, rule.id, "failed", `attachment:${media.error.slice(0, 200)}`);
+      }
     }
   }
 
   const prefix = rule.action === "comment_private_reply" ? "[private reply] " : "";
-  await recordOutbound(admin, ctx, rule, `${prefix}${withLink}`, first.id ?? null);
+  const summary = link ? `${text}\n[${buttonLabel}] ${link}` : text;
+  await recordOutbound(admin, ctx, rule, `${prefix}${summary}`, sent.id ?? null);
   await log(admin, ctx, rule.id, "sent", rule.action);
 }
 
@@ -645,9 +712,9 @@ async function deliverDm(
 
 /**
  * Instagram exposes whether the contact follows the business only after the
- * contact grants messaging-profile consent (for example by sending a DM or
- * tapping a messaging control). A comment alone does not grant that consent,
- * so null means "Meta did not reveal it", never "not following".
+ * contact grants messaging-profile consent (sending a DM or tapping a postback
+ * button). A comment alone does not grant it, so null means "Meta did not
+ * reveal it", never "not following".
  */
 async function checkFollows(
   platform: "instagram" | "facebook",
@@ -659,9 +726,6 @@ async function checkFollows(
     const path = `${externalUserId}?fields=is_user_follow_business&access_token=${encodeURIComponent(token)}`;
     const first = await readFollowState(`${GRAPH}/${path}`);
     if (typeof first.follows === "boolean") return first.follows;
-    // Facebook Login and Instagram Login use different Graph hosts. Try both
-    // whenever the first host cannot return the consent-gated field; limiting
-    // this fallback to error #3 misses permission/consent error variants.
     const retry = await readFollowState(`${IG_GRAPH}/${path}`);
     return typeof retry.follows === "boolean" ? retry.follows : null;
   } catch {
@@ -686,15 +750,53 @@ async function readFollowState(url: string): Promise<{
 
 const FOLLOW_PAYLOAD = "AUTOMATION_FOLLOW_CHECK";
 const DEFAULT_FOLLOW_PROMPT =
-  "Please follow us first so we can send you the details — then tap the button below.";
+  "Please follow us first so we can send you the details — then tap “I followed ✅” below.";
+const OPENER_TEXT =
+  "Thanks for your comment! 🙌 Tap the button below and I'll send it to you right here.";
+/** One opener tap + three "I followed" checks. */
+const MAX_GATE_TAPS = 4;
 
-/** Ask the contact to follow, with a one-tap "I followed" button. */
-async function openFollowGate(
+async function profileUrlFor(admin: AdminClient, ctx: AutomationContext) {
+  if (!ctx.socialAccountId) return null;
+  const { data: acc } = await admin
+    .from("social_accounts")
+    .select("handle")
+    .eq("id", ctx.socialAccountId)
+    .maybeSingle();
+  const handle = (acc?.handle ?? "").replace(/^@/, "").trim();
+  if (!handle) return null;
+  return ctx.platform === "instagram"
+    ? `https://www.instagram.com/${handle}`
+    : `https://www.facebook.com/${handle}`;
+}
+
+async function followPromptShapes(
+  admin: AdminClient,
+  ctx: AutomationContext,
+  rule: Rule,
+  gateId: string,
+  retry: boolean,
+) {
+  const base = (rule.follow_prompt_text ?? "").trim() || DEFAULT_FOLLOW_PROMPT;
+  const text = retry ? `We can't see your follow yet. ${base}` : base;
+  const profileUrl = await profileUrlFor(admin, ctx);
+  const buttons: Button[] = [];
+  if (profileUrl) buttons.push({ type: "web_url", url: profileUrl, title: "Visit profile" });
+  buttons.push({ type: "postback", title: "I followed ✅", payload: `${FOLLOW_PAYLOAD}:${gateId}` });
+  return { text, shapes: buttonMessages(text, buttons) };
+}
+
+/**
+ * Starts a gate. "opener" = one private reply to the comment with a postback
+ * button; "follow" = the follow request (profile button + "I followed ✅").
+ */
+async function openGate(
   admin: AdminClient,
   ctx: AutomationContext,
   rule: Rule,
   token: string,
   accountId: string,
+  stage: "opener" | "follow",
 ) {
   const { data: gate, error: gateError } = await admin
     .from("automation_follow_gates")
@@ -707,6 +809,7 @@ async function openFollowGate(
       external_user_id: ctx.externalUserId,
       comment_external_id: ctx.channel === "comment" ? ctx.externalId : null,
       status: "waiting",
+      attempts: stage === "opener" ? 0 : 1,
     })
     .select("id")
     .single();
@@ -716,79 +819,40 @@ async function openFollowGate(
     return;
   }
 
-  const prompt = (rule.follow_prompt_text ?? "").trim() || DEFAULT_FOLLOW_PROMPT;
-
-  // Give the contact a direct way to open the profile, next to the confirm tap.
-  let profileUrl: string | null = null;
-  if (ctx.socialAccountId) {
-    const { data: acc } = await admin
-      .from("social_accounts")
-      .select("handle")
-      .eq("id", ctx.socialAccountId)
-      .maybeSingle();
-    const handle = (acc?.handle ?? "").replace(/^@/, "").trim();
-    if (handle) {
-      profileUrl =
-        ctx.platform === "instagram"
-          ? `https://www.instagram.com/${handle}`
-          : `https://www.facebook.com/${handle}`;
-    }
+  let text: string;
+  let shapes: Record<string, unknown>[];
+  if (stage === "opener") {
+    text = OPENER_TEXT;
+    const title = (rule.dm_link_url ?? "").trim() ? "Send me the link" : "Send it to me";
+    shapes = buttonMessages(text, [
+      { type: "postback", title, payload: `${FOLLOW_PAYLOAD}:${gate.id}` },
+    ]);
+  } else {
+    ({ text, shapes } = await followPromptShapes(admin, ctx, rule, gate.id, false));
   }
 
-  const quickReplies = [
-    {
-      content_type: "text",
-      title: "I followed ✅",
-      payload: `${FOLLOW_PAYLOAD}:${gate.id}`,
-    },
-  ];
-
-  const promptText = profileUrl ? `${prompt}\n${profileUrl}` : prompt;
-
-  // Instagram rejects the Messenger button template; quick replies are supported
-  // on both platforms, so they are the primary shape there.
-  const message =
-    profileUrl && ctx.platform === "facebook"
-      ? {
-          attachment: {
-            type: "template",
-            payload: {
-              template_type: "button",
-              text: prompt,
-              buttons: [
-                { type: "web_url", url: profileUrl, title: "Follow us" },
-                {
-                  type: "postback",
-                  title: "I followed ✅",
-                  payload: `${FOLLOW_PAYLOAD}:${gate.id}`,
-                },
-              ],
-            },
-          },
-        }
-      : { text: promptText, quick_replies: quickReplies };
-
-  const res = await sendWithFallback(
+  const res = await sendChain(
+    ctx.platform,
     accountId,
     token,
     actionRecipient(ctx, rule.action),
-    message,
-    promptText,
-    ctx.platform,
+    shapes,
   );
-
-
+  const detail = stage === "opener" ? "tap_prompt" : "follow_prompt";
   if (res.error) {
-    await log(admin, ctx, rule.id, "failed", `follow_prompt:${res.error.slice(0, 200)}`);
+    await admin.from("automation_follow_gates").update({ status: "expired" }).eq("id", gate.id);
+    await log(admin, ctx, rule.id, "failed", `${detail}:${res.error.slice(0, 200)}`);
     return;
   }
-  await recordOutbound(admin, ctx, rule, prompt, res.id ?? null);
-  await log(admin, ctx, rule.id, "sent", "follow_prompt");
+  await recordOutbound(admin, ctx, rule, text, res.id ?? null);
+  await log(admin, ctx, rule.id, "sent", detail);
 }
 
 /**
- * Called from the webhook when the contact taps "I followed" (quick reply or
- * postback). Re-checks the follow status and releases the held DM.
+ * Called from the webhook when the contact taps a gate button (postback or
+ * quick reply). The tap opens the conversation, so Meta now reveals the follow
+ * state: followers get the DM with the link button + attachment, non-followers
+ * get the follow request, and "I followed ✅" re-checks up to three times.
  */
 export async function handleFollowGateReply(
   admin: AdminClient,
@@ -802,19 +866,19 @@ export async function handleFollowGateReply(
   },
 ) {
   if (!args.payload.startsWith(FOLLOW_PAYLOAD)) return false;
-  const gateId = args.payload.split(":")[1] ?? "";
+  const gateId = args.payload.slice(FOLLOW_PAYLOAD.length + 1).trim();
 
-  const query = admin
+  // The comment author id and the messaging sender id can differ, so a gate
+  // referenced by the button payload is looked up by id alone.
+  let query = admin
     .from("automation_follow_gates")
-    .select("id, rule_id, attempts, comment_external_id")
+    .select("id, rule_id, attempts, social_account_id")
     .eq("organization_id", args.organizationId)
-    .eq("external_user_id", args.externalUserId)
-    .eq("status", "waiting")
-    .order("created_at", { ascending: false })
-    .limit(1);
-  const { data: gates } = gateId ? await query.eq("id", gateId) : await query;
+    .eq("status", "waiting");
+  query = gateId ? query.eq("id", gateId) : query.eq("external_user_id", args.externalUserId);
+  const { data: gates } = await query.order("created_at", { ascending: false }).limit(1);
   const gate = gates?.[0];
-  if (!gate?.rule_id) return true;
+  if (!gate?.rule_id) return true; // already handled or expired — ignore the tap
 
   const { data: rule } = await admin
     .from("automation_rules")
@@ -824,10 +888,11 @@ export async function handleFollowGateReply(
   if (!rule) return true;
   const typedRule = rule as unknown as Rule;
 
+  const socialAccountId = args.socialAccountId ?? (gate.social_account_id as string | null);
   const ctx: AutomationContext = {
     organizationId: args.organizationId,
     conversationId: args.conversationId,
-    socialAccountId: args.socialAccountId,
+    socialAccountId,
     platform: args.platform,
     channel: "dm",
     body: "",
@@ -835,21 +900,27 @@ export async function handleFollowGateReply(
     externalId: null,
   };
 
-  if (!args.socialAccountId) return true;
+  if (!socialAccountId) {
+    await log(admin, ctx, typedRule.id, "failed", "no_account");
+    return true;
+  }
   const [{ data: tokenRow }, { data: account }] = await Promise.all([
     admin
       .from("social_account_tokens")
       .select("access_token")
-      .eq("social_account_id", args.socialAccountId)
+      .eq("social_account_id", socialAccountId)
       .maybeSingle(),
     admin
       .from("social_accounts")
       .select("external_id, metadata")
-      .eq("id", args.socialAccountId)
+      .eq("id", socialAccountId)
       .maybeSingle(),
   ]);
   const token = tokenRow?.access_token as string | undefined;
-  if (!token || !account?.external_id) return true;
+  if (!token || !account?.external_id) {
+    await log(admin, ctx, typedRule.id, "failed", "no_token");
+    return true;
+  }
   const sendId = messagingAccountId(
     args.platform,
     account.external_id as string,
@@ -858,56 +929,67 @@ export async function handleFollowGateReply(
 
   const follows = await checkFollows(args.platform, args.externalUserId, token);
   const attempts = (gate.attempts ?? 0) + 1;
+  const now = new Date().toISOString();
+  const verdict = followVerdict(typedRule, follows);
 
-  if (follows === false && attempts < 3) {
+  const finish = (status: "completed" | "expired") =>
+    admin
+      .from("automation_follow_gates")
+      .update({
+        attempts,
+        status,
+        external_user_id: args.externalUserId,
+        last_checked_at: now,
+        completed_at: now,
+      })
+      .eq("id", gate.id);
+
+  if (verdict === "skip_not_follower") {
+    await finish("completed");
+    await log(admin, ctx, typedRule.id, "skipped", "not_a_follower");
+    return true;
+  }
+  if (verdict === "skip_follower") {
+    await finish("completed");
+    await log(admin, ctx, typedRule.id, "skipped", "already_a_follower");
+    return true;
+  }
+
+  if (verdict === "ask_follow") {
+    if (attempts >= MAX_GATE_TAPS) {
+      await finish("expired");
+      await log(admin, ctx, typedRule.id, "skipped", "follow_gate_expired");
+      return true;
+    }
     await admin
       .from("automation_follow_gates")
-      .update({ attempts, last_checked_at: new Date().toISOString() })
+      .update({ attempts, external_user_id: args.externalUserId, last_checked_at: now })
       .eq("id", gate.id);
-    const retry = (typedRule.follow_prompt_text ?? "").trim() || DEFAULT_FOLLOW_PROMPT;
-    await callMessaging(args.platform, sendId, {
-      recipient: { id: args.externalUserId },
-      message: {
-        text: `We can't see the follow yet. ${retry}`,
-        quick_replies: [
-          {
-            content_type: "text",
-            title: "I followed ✅",
-            payload: `${FOLLOW_PAYLOAD}:${gate.id}`,
-          },
-        ],
-      },
-      access_token: token,
-    });
-    await log(admin, ctx, typedRule.id, "skipped", "follow_not_confirmed");
+    const isRetry = (gate.attempts ?? 0) >= 1;
+    const { text, shapes } = await followPromptShapes(admin, ctx, typedRule, gate.id, isRetry);
+    const res = await sendChain(args.platform, sendId, token, { id: args.externalUserId }, shapes);
+    if (res.error) {
+      await log(admin, ctx, typedRule.id, "failed", `follow_prompt:${res.error.slice(0, 200)}`);
+      return true;
+    }
+    await recordOutbound(admin, ctx, typedRule, text, res.id ?? null);
+    await log(
+      admin,
+      ctx,
+      typedRule.id,
+      isRetry ? "skipped" : "sent",
+      isRetry ? "follow_not_confirmed" : "follow_prompt",
+    );
     return true;
   }
 
-  await admin
-    .from("automation_follow_gates")
-    .update({
-      attempts,
-      status: follows === false ? "expired" : "completed",
-      last_checked_at: new Date().toISOString(),
-      completed_at: new Date().toISOString(),
-    })
-    .eq("id", gate.id);
-
-  if (follows === false) {
-    await log(admin, ctx, typedRule.id, "skipped", "follow_gate_expired");
-    return true;
-  }
-
+  await finish("completed");
   const text = pickResponse(typedRule);
-  if (!text) return true;
-  await deliverDm(
-    admin,
-    ctx,
-    { ...typedRule, action: "reply_dm" },
-    token,
-    sendId,
-    text,
-  );
+  if (!text) {
+    await log(admin, ctx, typedRule.id, "failed", "no_response_text");
+    return true;
+  }
+  await deliverDm(admin, ctx, { ...typedRule, action: "reply_dm" }, token, sendId, text);
   return true;
 }
 
