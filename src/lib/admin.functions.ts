@@ -1063,7 +1063,7 @@ export const adminUserAction = createServerFn({ method: "POST" })
       const email = u?.user?.email;
       if (!email) throw new Error("User has no email");
       const { error } = await supabaseAdmin.auth.resetPasswordForEmail(email, {
-        redirectTo: data.redirectTo,
+        ...(data.redirectTo ? { redirectTo: data.redirectTo } : {}),
       });
       if (error) throw new Error(error.message);
     } else {
