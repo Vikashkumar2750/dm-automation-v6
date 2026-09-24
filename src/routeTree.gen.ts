@@ -45,8 +45,10 @@ import { Route as AuthenticatedAdminPlansRouteImport } from './routes/_authentic
 import { Route as AuthenticatedAdminSettingsRouteImport } from './routes/_authenticated/admin.settings'
 import { Route as AuthenticatedAdminUsersRouteImport } from './routes/_authenticated/admin.users'
 import { Route as AuthenticatedAdminWebhooksRouteImport } from './routes/_authenticated/admin.webhooks'
+import { Route as AuthenticatedAutomationsActivityRouteImport } from './routes/_authenticated/automations_.activity'
 import { Route as AuthenticatedInviteTokenRouteImport } from './routes/_authenticated/invite.$token'
 import { Route as AuthenticatedAdminOrgOrgIdRouteImport } from './routes/_authenticated/admin.org.$orgId'
+import { Route as AuthenticatedAutomationsActivityRunIdRouteImport } from './routes/_authenticated/automations_.activity_.$runId'
 import { Route as ApiPublicCronPublishDueRouteImport } from './routes/api/public/cron.publish-due'
 import { Route as ApiPublicWebhooksMetaRouteImport } from './routes/api/public/webhooks.meta'
 import { Route as ApiPublicOauthProviderCallbackRouteImport } from './routes/api/public/oauth.$provider.callback'
@@ -242,6 +244,12 @@ const AuthenticatedAdminWebhooksRoute =
     path: '/webhooks',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
+const AuthenticatedAutomationsActivityRoute =
+  AuthenticatedAutomationsActivityRouteImport.update({
+    id: '/automations_/activity',
+    path: '/automations/activity',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedInviteTokenRoute =
   AuthenticatedInviteTokenRouteImport.update({
     id: '/invite/$token',
@@ -253,6 +261,12 @@ const AuthenticatedAdminOrgOrgIdRoute =
     id: '/org/$orgId',
     path: '/org/$orgId',
     getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAutomationsActivityRunIdRoute =
+  AuthenticatedAutomationsActivityRunIdRouteImport.update({
+    id: '/automations_/activity_/$runId',
+    path: '/automations/activity/$runId',
+    getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const ApiPublicCronPublishDueRoute = ApiPublicCronPublishDueRouteImport.update({
   id: '/api/public/cron/publish-due',
@@ -306,9 +320,11 @@ export interface FileRoutesByFullPath {
   '/admin/settings': typeof AuthenticatedAdminSettingsRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
   '/admin/webhooks': typeof AuthenticatedAdminWebhooksRoute
+  '/automations/activity': typeof AuthenticatedAutomationsActivityRoute
   '/invite/$token': typeof AuthenticatedInviteTokenRoute
   '/admin/': typeof AuthenticatedAdminIndexRoute
   '/admin/org/$orgId': typeof AuthenticatedAdminOrgOrgIdRoute
+  '/automations/activity/$runId': typeof AuthenticatedAutomationsActivityRunIdRoute
   '/api/public/cron/publish-due': typeof ApiPublicCronPublishDueRoute
   '/api/public/webhooks/meta': typeof ApiPublicWebhooksMetaRoute
   '/api/public/oauth/$provider/callback': typeof ApiPublicOauthProviderCallbackRoute
@@ -347,9 +363,11 @@ export interface FileRoutesByTo {
   '/admin/settings': typeof AuthenticatedAdminSettingsRoute
   '/admin/users': typeof AuthenticatedAdminUsersRoute
   '/admin/webhooks': typeof AuthenticatedAdminWebhooksRoute
+  '/automations/activity': typeof AuthenticatedAutomationsActivityRoute
   '/invite/$token': typeof AuthenticatedInviteTokenRoute
   '/admin': typeof AuthenticatedAdminIndexRoute
   '/admin/org/$orgId': typeof AuthenticatedAdminOrgOrgIdRoute
+  '/automations/activity/$runId': typeof AuthenticatedAutomationsActivityRunIdRoute
   '/api/public/cron/publish-due': typeof ApiPublicCronPublishDueRoute
   '/api/public/webhooks/meta': typeof ApiPublicWebhooksMetaRoute
   '/api/public/oauth/$provider/callback': typeof ApiPublicOauthProviderCallbackRoute
@@ -391,9 +409,11 @@ export interface FileRoutesById {
   '/_authenticated/admin/settings': typeof AuthenticatedAdminSettingsRoute
   '/_authenticated/admin/users': typeof AuthenticatedAdminUsersRoute
   '/_authenticated/admin/webhooks': typeof AuthenticatedAdminWebhooksRoute
+  '/_authenticated/automations_/activity': typeof AuthenticatedAutomationsActivityRoute
   '/_authenticated/invite/$token': typeof AuthenticatedInviteTokenRoute
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
   '/_authenticated/admin/org/$orgId': typeof AuthenticatedAdminOrgOrgIdRoute
+  '/_authenticated/automations_/activity_/$runId': typeof AuthenticatedAutomationsActivityRunIdRoute
   '/api/public/cron/publish-due': typeof ApiPublicCronPublishDueRoute
   '/api/public/webhooks/meta': typeof ApiPublicWebhooksMetaRoute
   '/api/public/oauth/$provider/callback': typeof ApiPublicOauthProviderCallbackRoute
@@ -435,9 +455,11 @@ export interface FileRouteTypes {
     | '/admin/settings'
     | '/admin/users'
     | '/admin/webhooks'
+    | '/automations/activity'
     | '/invite/$token'
     | '/admin/'
     | '/admin/org/$orgId'
+    | '/automations/activity/$runId'
     | '/api/public/cron/publish-due'
     | '/api/public/webhooks/meta'
     | '/api/public/oauth/$provider/callback'
@@ -476,9 +498,11 @@ export interface FileRouteTypes {
     | '/admin/settings'
     | '/admin/users'
     | '/admin/webhooks'
+    | '/automations/activity'
     | '/invite/$token'
     | '/admin'
     | '/admin/org/$orgId'
+    | '/automations/activity/$runId'
     | '/api/public/cron/publish-due'
     | '/api/public/webhooks/meta'
     | '/api/public/oauth/$provider/callback'
@@ -519,9 +543,11 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/settings'
     | '/_authenticated/admin/users'
     | '/_authenticated/admin/webhooks'
+    | '/_authenticated/automations_/activity'
     | '/_authenticated/invite/$token'
     | '/_authenticated/admin/'
     | '/_authenticated/admin/org/$orgId'
+    | '/_authenticated/automations_/activity_/$runId'
     | '/api/public/cron/publish-due'
     | '/api/public/webhooks/meta'
     | '/api/public/oauth/$provider/callback'
@@ -794,6 +820,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminWebhooksRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_authenticated/automations_/activity': {
+      id: '/_authenticated/automations_/activity'
+      path: '/automations/activity'
+      fullPath: '/automations/activity'
+      preLoaderRoute: typeof AuthenticatedAutomationsActivityRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/invite/$token': {
       id: '/_authenticated/invite/$token'
       path: '/invite/$token'
@@ -807,6 +840,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/org/$orgId'
       preLoaderRoute: typeof AuthenticatedAdminOrgOrgIdRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/automations_/activity_/$runId': {
+      id: '/_authenticated/automations_/activity_/$runId'
+      path: '/automations/activity/$runId'
+      fullPath: '/automations/activity/$runId'
+      preLoaderRoute: typeof AuthenticatedAutomationsActivityRunIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/api/public/cron/publish-due': {
       id: '/api/public/cron/publish-due'
@@ -886,7 +926,9 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedSocialAccountsRoute: typeof AuthenticatedSocialAccountsRoute
   AuthenticatedTeamRoute: typeof AuthenticatedTeamRoute
   AuthenticatedUsageRoute: typeof AuthenticatedUsageRoute
+  AuthenticatedAutomationsActivityRoute: typeof AuthenticatedAutomationsActivityRoute
   AuthenticatedInviteTokenRoute: typeof AuthenticatedInviteTokenRoute
+  AuthenticatedAutomationsActivityRunIdRoute: typeof AuthenticatedAutomationsActivityRunIdRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -906,7 +948,10 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedSocialAccountsRoute: AuthenticatedSocialAccountsRoute,
   AuthenticatedTeamRoute: AuthenticatedTeamRoute,
   AuthenticatedUsageRoute: AuthenticatedUsageRoute,
+  AuthenticatedAutomationsActivityRoute: AuthenticatedAutomationsActivityRoute,
   AuthenticatedInviteTokenRoute: AuthenticatedInviteTokenRoute,
+  AuthenticatedAutomationsActivityRunIdRoute:
+    AuthenticatedAutomationsActivityRunIdRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
