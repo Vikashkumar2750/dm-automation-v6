@@ -588,13 +588,12 @@ function buttonMessages(text: string, buttons: Button[]): Record<string, unknown
 }
 
 /** A quick reply generates an inbound message, which grants profile consent;
- * a template postback alone does not always do so on Instagram. */
+ * a template postback alone does not always do so on Instagram. Never report
+ * an opener as sent when it fell back to plain text without a tappable button. */
 function gateButtonMessages(text: string, buttons: Button[]): Record<string, unknown>[] {
   const shapes = buttonMessages(text, buttons);
-  const [template, quickReply, ...fallback] = shapes;
-  return template && quickReply && fallback.length > 0
-    ? [quickReply, template, ...fallback]
-    : shapes;
+  const [template, quickReply] = shapes;
+  return template && quickReply ? [quickReply, template] : template ? [template] : [];
 }
 
 /** Tries each message shape until the platform accepts one. */
