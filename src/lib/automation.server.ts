@@ -675,7 +675,7 @@ async function deliverDm(
   if (rule.action === "comment_public_reply") {
     if (!ctx.externalId) {
       await log(admin, ctx, rule.id, "failed", "no_comment_id");
-      return;
+      return false;
     }
     const res = await call(`${GRAPH}/${ctx.externalId}/replies`, {
       message: text,
@@ -683,16 +683,16 @@ async function deliverDm(
     });
     if (res.error) {
       await log(admin, ctx, rule.id, "failed", res.error.slice(0, 300));
-      return;
+      return false;
     }
     await recordOutbound(admin, ctx, rule, `[public reply] ${text}`, res.id ?? null);
     await log(admin, ctx, rule.id, "sent", rule.action);
-    return;
+    return true;
   }
 
   if (rule.action !== "reply_dm" && rule.action !== "comment_private_reply") {
     await log(admin, ctx, rule.id, "skipped", "unknown_action");
-    return;
+    return false;
   }
 
   const link = (rule.dm_link_url ?? "").trim();
@@ -705,7 +705,7 @@ async function deliverDm(
   const sent = await sendChain(ctx.platform, accountId, token, recipient, shapes);
   if (sent.error) {
     await log(admin, ctx, rule.id, "failed", sent.error.slice(0, 300));
-    return;
+    return false;
   }
 
   // Attachments need an open conversation: a private reply to a comment is a
@@ -741,6 +741,7 @@ async function deliverDm(
   const summary = link ? `${text}\n[${buttonLabel}] ${link}` : text;
   await recordOutbound(admin, ctx, rule, `${prefix}${summary}`, sent.id ?? null);
   await log(admin, ctx, rule.id, "sent", rule.action);
+  return true;
 }
 
 // ------------------------------------------------------------- follow gate
@@ -791,6 +792,10 @@ const OPENER_TEXT =
 /** One opener tap + three "I followed" checks. */
 const MAX_GATE_TAPS = 4;
 
+export function followGatePayload(gateId: string, stage: "opener" | "confirm", nonce: string) {
+  return `${FOLLOW_PAYLOAD}:${gateId}:${stage}:${nonce}`;
+}
+
 async function profileUrlFor(admin: AdminClient, ctx: AutomationContext) {
   if (!ctx.socialAccountId) return null;
   const { data: acc } = await admin
@@ -817,7 +822,11 @@ async function followPromptShapes(
   const profileUrl = await profileUrlFor(admin, ctx);
   const buttons: Button[] = [];
   if (profileUrl) buttons.push({ type: "web_url", url: profileUrl, title: "Visit profile" });
-  buttons.push({ type: "postback", title: "I followed ✅", payload: `${FOLLOW_PAYLOAD}:${gateId}` });
+  buttons.push({
+    type: "postback",
+    title: "I followed ✅",
+    payload: followGatePayload(gateId, "confirm", crypto.randomUUID()),
+  });
   return { text, shapes: gateButtonMessages(text, buttons) };
 }
 
@@ -865,7 +874,11 @@ async function openGate(
     // a quick reply so Instagram can grant messaging-profile consent.
     shapes = gateButtonMessages(
       text,
-      [{ type: "postback", title, payload: `${FOLLOW_PAYLOAD}:${gate.id}` }],
+      [{
+        type: "postback",
+        title,
+        payload: followGatePayload(gate.id, "opener", crypto.randomUUID()),
+      }],
       false,
     );
   } else {
@@ -905,6 +918,7 @@ export async function handleFollowGateReply(
     externalUserId: string;
     payload: string;
     messageText?: string | null;
+    receivingExternalId?: string | null;
   },
 ) {
   const hasPayload = args.payload.startsWith(`${FOLLOW_PAYLOAD}:`);
@@ -920,13 +934,13 @@ export async function handleFollowGateReply(
   // referenced by the button payload is looked up by id alone.
   let query = admin
     .from("automation_follow_gates")
-    .select("id, rule_id, attempts, social_account_id")
-    .eq("organization_id", args.organizationId)
+    .select("id, organization_id, rule_id, conversation_id, attempts, social_account_id, platform, external_user_id, created_at")
     .eq("status", "waiting");
   if (gateId) {
     query = query.eq("id", gateId);
   } else {
     query = query
+      .eq("organization_id", args.organizationId)
       .eq("external_user_id", args.externalUserId)
       .gte("created_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
     if (args.socialAccountId) query = query.eq("social_account_id", args.socialAccountId);
@@ -958,12 +972,15 @@ export async function handleFollowGateReply(
   }
   const typedRule = rule as unknown as Rule;
 
-  const socialAccountId = args.socialAccountId ?? (gate.social_account_id as string | null);
+  const gateOrganizationId = gate.organization_id as string;
+  const gateConversationId = (gate.conversation_id as string | null) ?? args.conversationId;
+  const gatePlatform = gate.platform as "instagram" | "facebook";
+  const socialAccountId = (gate.social_account_id as string | null) ?? args.socialAccountId;
   const ctx: AutomationContext = {
-    organizationId: args.organizationId,
-    conversationId: args.conversationId,
+    organizationId: gateOrganizationId,
+    conversationId: gateConversationId,
     socialAccountId,
-    platform: args.platform,
+    platform: gatePlatform,
     channel: "dm",
     body: "",
     externalUserId: args.externalUserId,
@@ -991,13 +1008,23 @@ export async function handleFollowGateReply(
     await log(admin, ctx, typedRule.id, "failed", "no_token");
     return true;
   }
+  const metadata = account.metadata as { page_id?: unknown } | null;
+  const linkedPageId = typeof metadata?.page_id === "string" ? metadata.page_id : null;
+  if (
+    args.receivingExternalId &&
+    args.receivingExternalId !== account.external_id &&
+    args.receivingExternalId !== linkedPageId
+  ) {
+    await log(admin, ctx, typedRule.id, "failed", "gate_account_mismatch");
+    return true;
+  }
   const sendId = messagingAccountId(
-    args.platform,
+    gatePlatform,
     account.external_id as string,
     account.metadata,
   );
 
-  const follows = await checkFollows(args.platform, args.externalUserId, token);
+  const follows = await checkFollows(gatePlatform, args.externalUserId, token);
   const previousTaps = (gate.attempts as number | null) ?? 0;
   const attempts = previousTaps + 1;
   const now = new Date().toISOString();
@@ -1052,7 +1079,7 @@ export async function handleFollowGateReply(
     }
     const isRetry = previousTaps >= 2;
     const { text, shapes } = await followPromptShapes(admin, ctx, typedRule, gate.id, isRetry);
-    const res = await sendChain(args.platform, sendId, token, { id: args.externalUserId }, shapes);
+    const res = await sendChain(gatePlatform, sendId, token, { id: args.externalUserId }, shapes);
     if (res.error) {
       await log(admin, ctx, typedRule.id, "failed", `follow_prompt:${res.error.slice(0, 200)}`);
       return true;
@@ -1088,7 +1115,22 @@ export async function handleFollowGateReply(
   const text =
     pickResponse(typedRule) ||
     ((typedRule.dm_link_url ?? "").trim() ? "Here you go 👇" : "Thanks for following! 🙌");
-  await deliverDm(admin, ctx, { ...typedRule, action: "reply_dm" }, token, sendId, text);
+  const delivered = await deliverDm(
+    admin,
+    ctx,
+    { ...typedRule, action: "reply_dm" },
+    token,
+    sendId,
+    text,
+  );
+  if (!delivered) {
+    await admin
+      .from("automation_follow_gates")
+      .update({ status: "waiting", completed_at: null })
+      .eq("id", gate.id)
+      .eq("status", "completed")
+      .eq("completed_at", now);
+  }
   return true;
 }
 

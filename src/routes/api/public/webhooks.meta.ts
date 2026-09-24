@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import {
+  followGateId,
   isMessagingEventType,
   messagingContent,
   normalizeMessagingEvent,
@@ -59,6 +60,11 @@ type MatchedAccount = {
   platform: "instagram" | "facebook";
 };
 
+type GateAccount = MatchedAccount & {
+  external_id: string;
+  metadata: unknown;
+};
+
 /**
  * Page feed webhooks carry the Facebook Page id even when the connected row is
  * an Instagram account. Fall back to the linked page_id stored at connection
@@ -86,6 +92,37 @@ async function findSocialAccount(
     .limit(1)
     .maybeSingle();
   return (linked as MatchedAccount | null) ?? null;
+}
+
+/** A button payload is an unforgeable reference to the saved gate. Use the
+ * gate's original Instagram account instead of an exact Facebook Page row. */
+async function findGateAccount(
+  admin: AdminClient,
+  gateId: string,
+  receivingExternalId: string | null,
+): Promise<GateAccount | null> {
+  const { data: gate } = await admin
+    .from("automation_follow_gates")
+    .select("social_account_id")
+    .eq("id", gateId)
+    .eq("status", "waiting")
+    .maybeSingle();
+  if (!gate?.social_account_id) return null;
+
+  const { data: account } = await admin
+    .from("social_accounts")
+    .select("id, organization_id, platform, external_id, metadata")
+    .eq("id", gate.social_account_id)
+    .maybeSingle();
+  if (!account || account.platform === "youtube") return null;
+  const metadata = account.metadata as { page_id?: unknown } | null;
+  const pageId = typeof metadata?.page_id === "string" ? metadata.page_id : null;
+  if (
+    receivingExternalId &&
+    receivingExternalId !== account.external_id &&
+    receivingExternalId !== pageId
+  ) return null;
+  return account as GateAccount;
 }
 
 type AdminClient = import("@supabase/supabase-js").SupabaseClient;
@@ -150,11 +187,13 @@ async function ingestIntoInbox(
     socialAccountId: string | null;
     platform: "instagram" | "facebook";
     accountExternalId: string | null;
+    receivingExternalId: string | null;
     type: string;
     value: unknown;
   },
 ) {
-  const { organizationId, socialAccountId, platform, type, value } = args;
+  let { organizationId, socialAccountId, platform } = args;
+  const { type, value } = args;
 
   let externalUserId: string | null = null;
   let externalUserName: string | null = null;
@@ -178,6 +217,16 @@ async function ingestIntoInbox(
     // must not be used as the inbound id or the tap is dropped as a duplicate.
     externalId = content.externalId;
     if (m.timestamp) sentAt = new Date(m.timestamp);
+
+    const gateId = followGateId(followPayload);
+    if (gateId) {
+      const gateAccount = await findGateAccount(admin, gateId, args.receivingExternalId);
+      if (gateAccount) {
+        organizationId = gateAccount.organization_id;
+        socialAccountId = gateAccount.id;
+        platform = gateAccount.platform;
+      }
+    }
   } else if (type.endsWith(".comments") || type.endsWith(".feed")) {
     const c = (value as { value?: CommentValue }).value ?? (value as CommentValue);
     if (c.item && c.item !== "comment") return;
@@ -263,6 +312,7 @@ async function ingestIntoInbox(
         externalUserId,
         payload: followPayload ?? "",
         messageText: body,
+        receivingExternalId: args.receivingExternalId,
       });
       if (handled) return;
     }
@@ -350,8 +400,12 @@ export const Route = createFileRoute("/api/public/webhooks/meta")({
               type: `${payload.object ?? "meta"}.${c.field ?? "change"}`,
               value: c as unknown,
             })),
-            ...[...(entry.messaging ?? []), ...(entry.standby ?? [])].map((m) => ({
+            ...(entry.messaging ?? []).map((m) => ({
               type: `${payload.object ?? "meta"}.message`,
+              value: m as unknown,
+            })),
+            ...(entry.standby ?? []).map((m) => ({
+              type: `${payload.object ?? "meta"}.standby`,
               value: m as unknown,
             })),
           ];
@@ -361,22 +415,32 @@ export const Route = createFileRoute("/api/public/webhooks/meta")({
           }
 
           for (const [index, item] of items.entries()) {
+            const normalized = isMessagingEventType(item.type)
+              ? normalizeMessagingEvent(item.value)
+              : null;
+            const gateId = followGateId(normalized ? messagingContent(normalized).payload : null);
+            const gateAccount = gateId
+              ? await findGateAccount(supabaseAdmin, gateId, externalId)
+              : null;
+            const itemOrganizationId = gateAccount?.organization_id ?? organizationId;
+            const itemSocialAccountId = gateAccount?.id ?? socialAccountId;
+            const itemPlatform = gateAccount?.platform ?? platform;
             const identity = eventIdentity(item, `${entry.time ?? 0}:${index}`);
             const dedupeKey = `meta:${externalId ?? "unknown"}:${item.type}:${identity}`;
             const { data: webhookEvent, error } = await supabaseAdmin
               .from("webhook_events")
               .insert({
                 provider: "meta",
-                platform,
-                organization_id: organizationId,
-                social_account_id: socialAccountId,
+                platform: itemPlatform,
+                organization_id: itemOrganizationId,
+                social_account_id: itemSocialAccountId,
                 external_account_id: externalId,
                 event_type: item.type,
                 dedupe_key: dedupeKey,
                 payload: item.value as never,
                 signature_valid: true,
-                status: organizationId ? "received" : "ignored",
-                ...(organizationId ? {} : { error: "No connected account matched this id" }),
+                status: itemOrganizationId ? "received" : "ignored",
+                ...(itemOrganizationId ? {} : { error: "No connected account or follow gate matched this id" }),
               })
               .select("id")
               .maybeSingle();
@@ -384,13 +448,14 @@ export const Route = createFileRoute("/api/public/webhooks/meta")({
             if (error && error.code !== "23505") console.error("webhook insert failed", error);
 
             // Mirror into the inbox (conversations/messages).
-            if (organizationId && platform && webhookEvent?.id) {
+            if (itemOrganizationId && itemPlatform && webhookEvent?.id) {
               try {
                 await ingestIntoInbox(supabaseAdmin, {
-                  organizationId,
-                  socialAccountId,
-                  platform,
+                  organizationId: itemOrganizationId,
+                  socialAccountId: itemSocialAccountId,
+                  platform: itemPlatform,
                   accountExternalId: externalId,
+                  receivingExternalId: externalId,
                   type: item.type,
                   value: item.value,
                 });
