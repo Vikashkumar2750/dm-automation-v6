@@ -1026,7 +1026,7 @@ export async function handleFollowGateReply(
     body: "",
     externalUserId: args.externalUserId,
     externalId: null,
-      correlationId: args.correlationId,
+      ...(args.correlationId ? { correlationId: args.correlationId } : {}),
   };
 
   if (!socialAccountId) {
