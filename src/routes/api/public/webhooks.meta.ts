@@ -10,6 +10,8 @@ type MetaEntry = {
   time?: number;
   changes?: MetaChange[];
   messaging?: Array<Record<string, unknown>>;
+  /** Taps from message requests (non-followers) can arrive on the standby channel. */
+  standby?: Array<Record<string, unknown>>;
 };
 
 type MetaPayload = {
@@ -326,7 +328,7 @@ export const Route = createFileRoute("/api/public/webhooks/meta")({
               type: `${payload.object ?? "meta"}.${c.field ?? "change"}`,
               value: c as unknown,
             })),
-            ...(entry.messaging ?? []).map((m) => ({
+            ...[...(entry.messaging ?? []), ...(entry.standby ?? [])].map((m) => ({
               type: `${payload.object ?? "meta"}.message`,
               value: m as unknown,
             })),
