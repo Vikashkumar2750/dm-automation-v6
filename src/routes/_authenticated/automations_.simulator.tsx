@@ -11,7 +11,7 @@ import { useTenant } from "@/hooks/useTenant";
 import { explainReason, stepLabel } from "@/lib/activity-explain";
 import { listAutomationRules } from "@/lib/automations.functions";
 import { listSocialAccounts } from "@/lib/social-accounts.functions";
-import { runAutomationSimulation, type SimResult, type SimScenario } from "@/lib/simulation.functions";
+import { getSimulatorAccess, runAutomationSimulation, type SimResult, type SimScenario } from "@/lib/simulation.functions";
 
 export const Route = createFileRoute("/_authenticated/automations_/simulator")({
   head: () => ({
@@ -41,6 +41,13 @@ function TestConsolePage() {
   const fetchRules = useServerFn(listAutomationRules);
   const fetchAccounts = useServerFn(listSocialAccounts);
   const simulate = useServerFn(runAutomationSimulation);
+  const fetchAccess = useServerFn(getSimulatorAccess);
+
+  const access = useQuery({
+    queryKey: ["simulator-access", orgId],
+    enabled: !!orgId,
+    queryFn: () => fetchAccess({ data: { organizationId: orgId! } }),
+  });
 
   const rules = useQuery({
     queryKey: ["automation-rules", orgId],
@@ -72,6 +79,17 @@ function TestConsolePage() {
       }
     },
   });
+
+  if (access.data && !access.data.allowed) {
+    return (
+      <AppShell>
+        <PageHeader title="Automation test console" actions={<Button asChild variant="outline"><Link to="/automations">Back to automations</Link></Button>} />
+        <Panel title="Access not enabled">
+          <p className="text-sm text-muted-foreground">A super admin must enable the test console for this workspace or your account.</p>
+        </Panel>
+      </AppShell>
+    );
+  }
 
   return (
     <AppShell>

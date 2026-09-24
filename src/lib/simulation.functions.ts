@@ -19,6 +19,30 @@ export type SimResult = {
   steps: SimStep[];
 };
 
+async function readSimulatorAccess(
+  context: { supabase: any; userId: string },
+  organizationId: string,
+) {
+  const [{ data: superAdmin }, { data: member }, { data: settings }] = await Promise.all([
+    context.supabase.rpc("current_user_has_platform_role", { _role: "super_admin" }),
+    context.supabase.rpc("current_user_has_org_role", {
+      _org_id: organizationId,
+      _roles: ["owner", "admin", "manager"],
+    }),
+    context.supabase.from("platform_settings").select("feature_flags").eq("id", true).maybeSingle(),
+  ]);
+  if (superAdmin) return { allowed: true, isSuperAdmin: true };
+  const flags = (settings?.feature_flags ?? {}) as Record<string, boolean>;
+  const userKey = `simulator_user_${organizationId}_${context.userId}`;
+  const orgKey = `simulator_org_${organizationId}`;
+  return { allowed: Boolean(member && (flags[userKey] ?? flags[orgKey] ?? false)), isSuperAdmin: false };
+}
+
+export const getSimulatorAccess = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ organizationId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => readSimulatorAccess(context, data.organizationId));
+
 const PAYLOAD_RE = /AUTOMATION_FOLLOW_CHECK:[^"\s]+/g;
 
 function describe(payload: Record<string, unknown>) {
@@ -50,11 +74,8 @@ export const runAutomationSimulation = createServerFn({ method: "POST" })
       .parse(d),
   )
   .handler(async ({ data, context }): Promise<SimResult> => {
-    const { data: allowed } = await context.supabase.rpc("current_user_has_org_role", {
-      _org_id: data.organizationId,
-      _roles: ["owner", "admin", "manager"],
-    });
-    if (!allowed) throw new Error("Only owners, admins and managers can run tests");
+    const access = await readSimulatorAccess(context, data.organizationId);
+    if (!access.allowed) throw new Error("Test console is not enabled for this workspace");
 
     const { supabaseAdmin: admin } = await import("@/integrations/supabase/client.server");
     const { runAutomations, handleFollowGateReply, runSimulated } = await import(

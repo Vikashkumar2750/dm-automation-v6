@@ -105,7 +105,7 @@ export type AdminJobRow = {
 };
 
 export type AdminOrgDetail = {
-  org: AdminOrgRow;
+  org: AdminOrgRow & { simulatorEnabled: boolean };
   settings: {
     is_paused: boolean;
     hourly_send_limit: number;
@@ -404,6 +404,7 @@ export const getAdminOrganization = createServerFn({ method: "POST" })
         conversations: (convs.data ?? []).length,
         posts: (posts.data ?? []).length,
         automationsPaused: Boolean(settings.data?.is_paused),
+        simulatorEnabled: false,
       },
       settings: settings.data ?? null,
       accounts: (accounts.data ?? []).map((a) => ({
@@ -428,6 +429,50 @@ export const getAdminOrganization = createServerFn({ method: "POST" })
         postsScheduled: (posts.data ?? []).filter((p) => p.status === "scheduled").length,
       },
     };
+  });
+
+function simulatorOrgFlag(organizationId: string) {
+  return `simulator_org_${organizationId}`;
+}
+
+function simulatorUserFlag(organizationId: string, userId: string) {
+  return `simulator_user_${organizationId}_${userId}`;
+}
+
+export const setSimulatorAccess = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) =>
+    z.object({
+      organizationId: z.string().uuid(),
+      userId: z.string().uuid().nullable().optional(),
+      enabled: z.boolean(),
+    }).parse(data),
+  )
+  .handler(async ({ data, context }) => {
+    await assertSuperAdmin(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: row, error: readError } = await supabaseAdmin
+      .from("platform_settings")
+      .select("feature_flags")
+      .eq("id", true)
+      .maybeSingle();
+    if (readError) throw new Error(readError.message);
+    const flags = { ...((row?.feature_flags ?? {}) as Record<string, boolean>) };
+    const key = data.userId
+      ? simulatorUserFlag(data.organizationId, data.userId)
+      : simulatorOrgFlag(data.organizationId);
+    flags[key] = data.enabled;
+    const { error } = await supabaseAdmin
+      .from("platform_settings")
+      .update({ feature_flags: flags, updated_at: new Date().toISOString() })
+      .eq("id", true);
+    if (error) throw new Error(error.message);
+    await audit(context, "simulator.access_changed", {
+      type: data.userId ? "user" : "organization",
+      id: data.userId ?? data.organizationId,
+      detail: { organizationId: data.organizationId, enabled: data.enabled },
+    });
+    return { ok: true };
   });
 
 export const setOrganizationAutomationPause = createServerFn({ method: "POST" })
