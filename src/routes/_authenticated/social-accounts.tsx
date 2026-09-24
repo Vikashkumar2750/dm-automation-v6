@@ -325,8 +325,7 @@ function SocialAccountsPage() {
           <div className="min-w-0">
             <p className="text-sm font-semibold">Live event feed</p>
             <p className="text-xs text-muted-foreground">
-              Comments, messages and mentions arrive here in real time once the callback
-              URL is saved in your Meta app.
+              Comments, messages and mentions arrive here in real time once your account is connected.
             </p>
           </div>
           {webhookConfigQuery.data ? (
@@ -338,14 +337,6 @@ function SocialAccountsPage() {
           ) : null}
         </div>
 
-        <div className="border-b px-5 py-3">
-          <p className="text-xs text-muted-foreground">Callback URL</p>
-          <code className="mt-1 block truncate text-xs">
-            {typeof window === "undefined"
-              ? "/api/public/webhooks/meta"
-              : `${window.location.origin}/api/public/webhooks/meta`}
-          </code>
-        </div>
 
         {eventsQuery.isLoading ? (
           <div className="flex items-center justify-center py-10 text-sm text-muted-foreground">

@@ -355,7 +355,8 @@ export const getAutomationSettings = createServerFn({ method: "GET" })
       .eq("organization_id", data.organizationId)
       .maybeSingle();
     if (error) throw new Error(error.message);
-    return (row ?? {
+    const locked = await readSafetyLock(data.organizationId);
+    return { locked, ...((row ?? {
       organization_id: data.organizationId,
       is_paused: false,
       blocked_keywords: [],
@@ -372,8 +373,18 @@ export const getAutomationSettings = createServerFn({ method: "GET" })
       viral_cooldown_minutes: 15,
       auto_paused_until: null,
       auto_pause_reason: null,
-    }) as AutomationSettings;
+    }) as AutomationSettings) } as AutomationSettings & { locked: boolean };
   });
+
+async function readSafetyLock(orgId: string): Promise<boolean> {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data } = await supabaseAdmin
+    .from("platform_settings")
+    .select("feature_flags")
+    .eq("id", true)
+    .maybeSingle();
+  return ((data?.feature_flags as Record<string, unknown> | null) ?? {})[`safety_locked_${orgId}`] === true;
+}
 
 export const saveAutomationSettings = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -398,6 +409,9 @@ export const saveAutomationSettings = createServerFn({ method: "POST" })
       .parse(data),
   )
   .handler(async ({ data, context }) => {
+    if (await readSafetyLock(data.organizationId)) {
+      throw new Error("Safety settings are locked by the platform admin");
+    }
     const { error } = await context.supabase.from("automation_settings").upsert(
       {
         organization_id: data.organizationId,

@@ -5,6 +5,7 @@ import { AlertTriangle, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 
 import { AdminTable } from "@/components/app/AdminTable";
+import { AdminSafetyPanel } from "@/components/app/AdminSafetyPanel";
 import { PageHeader, Panel, StatCard, StatusBadge } from "@/components/app/primitives";
 import { Button } from "@/components/ui/button";
 import {
@@ -173,6 +174,8 @@ function OrgDetailPage() {
           />
         )}
       </Panel>
+
+      <AdminSafetyPanel orgId={orgId} />
 
       <Panel title="Automation test console">
         <div className="space-y-3 text-sm">

@@ -499,6 +499,17 @@ export async function runAutomations(admin: AdminClient, ctx: AutomationContext)
       // Every comment → DM goes through the opener tap so the follower check
       // can run: followers get the final DM directly, non-followers are asked
       // to follow first (plan behaviour for "Everyone").
+      // Meta allows one private reply per comment: never open a second gate
+      // for the same comment id (re-deliveries, edits, retries).
+      const { count: priorGate } = await admin
+        .from("automation_follow_gates")
+        .select("id", { count: "exact", head: true })
+        .eq("organization_id", ctx.organizationId)
+        .eq("comment_external_id", ctx.externalId as string);
+      if ((priorGate ?? 0) > 0) {
+        await log(admin, ctx, rule.id, "skipped", "duplicate_comment");
+        return;
+      }
       await openGate(admin, ctx, rule, token, accountId, "opener");
       return;
     }
