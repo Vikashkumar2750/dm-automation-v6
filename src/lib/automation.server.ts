@@ -985,11 +985,10 @@ export async function handleFollowGateReply(
   }
 
   await finish("completed");
-  const text = pickResponse(typedRule);
-  if (!text) {
-    await log(admin, ctx, typedRule.id, "failed", "no_response_text");
-    return true;
-  }
+  // Never leave a tapped contact empty-handed when the DM text is blank.
+  const text =
+    pickResponse(typedRule) ||
+    ((typedRule.dm_link_url ?? "").trim() ? "Here you go 👇" : "Thanks for following! 🙌");
   await deliverDm(admin, ctx, { ...typedRule, action: "reply_dm" }, token, sendId, text);
   return true;
 }
