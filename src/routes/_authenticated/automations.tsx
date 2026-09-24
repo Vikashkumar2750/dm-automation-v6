@@ -373,9 +373,14 @@ function AutomationsPage() {
         title="Automations"
         description="Keyword rules that reply to DMs and comments automatically, with cooldowns and daily caps."
         actions={
-          <Button onClick={() => setDraft({ ...emptyDraft })} disabled={!orgId}>
-            <Plus className="size-4" /> New rule
-          </Button>
+          <div className="flex gap-2">
+            <Button asChild variant="outline">
+              <Link to="/automations/test">Test console</Link>
+            </Button>
+            <Button onClick={() => setDraft({ ...emptyDraft })} disabled={!orgId}>
+              <Plus className="size-4" /> New rule
+            </Button>
+          </div>
         }
       />
 
