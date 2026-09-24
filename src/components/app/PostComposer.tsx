@@ -102,6 +102,7 @@ export function PostComposer({
 }) {
   const queryClient = useQueryClient();
   const save = useServerFn(savePost);
+  const publish = useServerFn(publishNow);
   const fileInput = useRef<HTMLInputElement>(null);
 
   const [selected, setSelected] = useState<string[]>([]);
@@ -169,8 +170,9 @@ export function PostComposer({
   }
 
   const mutation = useMutation({
-    mutationFn: async (status: "draft" | "scheduled") =>
-      save({
+    mutationFn: async (mode: "draft" | "scheduled" | "now") => {
+      const status = mode === "draft" ? "draft" : "scheduled";
+      const result = await save({
         data: {
           ...(draft?.post ? { id: draft.post.id } : {}),
           organizationId,
@@ -179,14 +181,33 @@ export function PostComposer({
           media,
           mediaType,
           postFormat: format,
-          scheduledAt: when ? new Date(when).toISOString() : null,
+          scheduledAt:
+            mode === "now"
+              ? new Date().toISOString()
+              : when
+                ? new Date(when).toISOString()
+                : null,
           status,
         },
-      }),
+      });
+      if (mode === "now") {
+        // Publish each platform separately so one failure never blocks the others.
+        const outcomes = await Promise.allSettled(
+          result.ids.map((id: string) => publish({ data: { id } })),
+        );
+        const failed = outcomes.filter((o) => o.status === "rejected").length;
+        if (failed > 0) throw new Error(`${failed} of ${result.ids.length} posts failed — see Calendar for details`);
+      }
+      return result;
+    },
     onSuccess: (result, status) => {
       const count = result.ids.length;
       toast.success(
-        status === "scheduled"
+        status === "now"
+          ? count > 1
+            ? `Published on ${count} accounts`
+            : "Post published"
+          : status === "scheduled"
           ? count > 1
             ? `Scheduled on ${count} accounts`
             : "Post scheduled"
@@ -384,6 +405,9 @@ export function PostComposer({
           <Button disabled={disabled || !when} onClick={() => mutation.mutate("scheduled")}>
             {mutation.isPending && <Loader2 className="mr-2 size-4 animate-spin" />}
             Schedule
+          </Button>
+          <Button disabled={disabled} variant="secondary" onClick={() => mutation.mutate("now")}>
+            Publish now
           </Button>
         </DialogFooter>
       </DialogContent>
