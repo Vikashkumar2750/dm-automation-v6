@@ -877,10 +877,17 @@ export async function handleFollowGateReply(
     platform: "instagram" | "facebook";
     externalUserId: string;
     payload: string;
+    messageText?: string | null;
   },
 ) {
-  if (!args.payload.startsWith(FOLLOW_PAYLOAD)) return false;
-  const gateId = args.payload.slice(FOLLOW_PAYLOAD.length + 1).trim();
+  const hasPayload = args.payload.startsWith(`${FOLLOW_PAYLOAD}:`);
+  // Some Instagram quick replies arrive as plain message text without their
+  // payload. Only resolve an exact button title against a gate for this sender;
+  // never associate a text-only tap with another contact's pending comment.
+  const isTextTap = !args.payload && ["Send me the link", "Send it to me", "I followed ✅"]
+    .includes((args.messageText ?? "").trim());
+  if (!hasPayload && !isTextTap) return false;
+  const gateId = hasPayload ? args.payload.slice(FOLLOW_PAYLOAD.length + 1).trim() : "";
 
   // The comment author id and the messaging sender id can differ, so a gate
   // referenced by the button payload is looked up by id alone.
@@ -889,10 +896,17 @@ export async function handleFollowGateReply(
     .select("id, rule_id, attempts, social_account_id")
     .eq("organization_id", args.organizationId)
     .eq("status", "waiting");
-  query = gateId ? query.eq("id", gateId) : query.eq("external_user_id", args.externalUserId);
+  if (gateId) {
+    query = query.eq("id", gateId);
+  } else {
+    query = query
+      .eq("external_user_id", args.externalUserId)
+      .gte("created_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
+    if (args.socialAccountId) query = query.eq("social_account_id", args.socialAccountId);
+  }
   const { data: gates } = await query.order("created_at", { ascending: false }).limit(1);
   const gate = gates?.[0];
-  if (!gate?.rule_id) return true; // already handled or expired — ignore the tap
+  if (!gate?.rule_id) return hasPayload; // never swallow an unrelated plain DM
 
   const { data: rule } = await admin
     .from("automation_rules")
