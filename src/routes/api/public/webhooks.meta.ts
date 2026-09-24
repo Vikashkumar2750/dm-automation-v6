@@ -208,9 +208,10 @@ async function ingestIntoInbox(
 
   if (isMessagingEventType(type)) {
     const m = normalizeMessagingEvent(value) as MessagingEvent;
-    if (m.message?.is_echo) return; // our own outbound echo
+    if (m.message?.is_echo) return "trace:echo"; // our own outbound echo
     externalUserId = m.sender?.id ?? null;
-    if (!externalUserId || externalUserId === args.accountExternalId) return;
+    if (!externalUserId || externalUserId === args.accountExternalId)
+      return "trace:self_or_unknown_sender";
     const content = messagingContent(m);
     followPayload = content.payload;
     body = content.body;
@@ -231,8 +232,8 @@ async function ingestIntoInbox(
     }
   } else if (type.endsWith(".comments") || type.endsWith(".feed")) {
     const c = (value as { value?: CommentValue }).value ?? (value as CommentValue);
-    if (c.item && c.item !== "comment") return;
-    if (c.verb === "remove") return;
+    if (c.item && c.item !== "comment") return "trace:not_a_comment";
+    if (c.verb === "remove") return "trace:comment_removed";
     externalUserId = c.from?.id ?? null;
     if (!externalUserId || externalUserId === args.accountExternalId) return;
     externalUserName = c.from?.username ?? c.from?.name ?? null;
