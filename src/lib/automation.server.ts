@@ -588,7 +588,10 @@ function buttonMessages(text: string, buttons: Button[]): Record<string, unknown
  * a template postback alone does not always do so on Instagram. */
 function gateButtonMessages(text: string, buttons: Button[]): Record<string, unknown>[] {
   const shapes = buttonMessages(text, buttons);
-  return shapes.length > 2 ? [shapes[1], shapes[0], ...shapes.slice(2)] : shapes;
+  const [template, quickReply, ...fallback] = shapes;
+  return template && quickReply && fallback.length > 0
+    ? [quickReply, template, ...fallback]
+    : shapes;
 }
 
 /** Tries each message shape until the platform accepts one. */
