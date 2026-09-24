@@ -58,6 +58,8 @@ Webhook: messages / messaging_postbacks / standby / quick_reply
 - Opener uses `openerMessages` (template + quick reply together).
 - A new comment expires older waiting gates for the same contact and logs
   `gate:tap_never_received` / `gate:follow_confirm_never_received`.
+- One reply per person per POST (7 days): marker run `post_reply:<postId>`; a repeat on the
+  same post logs `already_replied_on_post`. Comment cooldown is NOT applied, so other posts reply.
 - Payload formats accepted: postback.payload, quick_reply.payload, standby, and
   text-only taps matching exact titles "Send me the link" | "Send it to me" | "I followed ✅".
 
