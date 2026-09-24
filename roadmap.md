@@ -25,4 +25,5 @@ Real Meta + YouTube credentials are available when we reach OAuth phases.
 - [x] Phase 16 — Agency / white label (workspace branding, logo, brand colour, support email, client workspaces)
 - [x] Phase 17 — Export pack for Railway (Dockerfile, .dockerignore, railway.json, .env.example, scripts/migrate.mjs, DEPLOY-RAILWAY.md)
 - [x] Fix follow-confirmation delivery after “I followed” and test follower transitions.
+- [x] Deliver directly to existing followers on “Send me the link” while retaining the non-follower confirmation path.
 - [ ] Confirm delivery with a fresh Instagram comment after Railway deploy (requires a real account follow/tap).

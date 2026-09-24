@@ -512,11 +512,15 @@ type FollowVerdict = "deliver" | "ask_follow" | "skip_not_follower" | "skip_foll
  * Decides what to do for a known/unknown follow state. Unknown (null) never
  * counts as "not following" — that sent follow prompts to real followers.
  */
-function followVerdict(rule: Pick<Rule, "require_follow" | "follower_condition">, follows: boolean | null): FollowVerdict {
+export function followVerdict(rule: Pick<Rule, "require_follow" | "follower_condition">, follows: boolean | null): FollowVerdict {
   if (follows === false && rule.require_follow) return "ask_follow";
   if (follows === false && rule.follower_condition === "followers_only") {
     return "skip_not_follower";
   }
+  // Requiring a follow means both existing and newly confirmed followers get
+  // the final DM. A legacy "non_followers" audience must not reject someone
+  // who has already followed before tapping the opener.
+  if (follows === true && rule.require_follow) return "deliver";
   if (follows === true && rule.follower_condition === "non_followers") return "skip_follower";
   return "deliver";
 }
@@ -941,8 +945,8 @@ export async function handleFollowGateReply(
   const previousTaps = (gate.attempts as number | null) ?? 0;
   const attempts = previousTaps + 1;
   const now = new Date().toISOString();
-  // The opener checks initial eligibility. Later taps confirm the requested
-  // follow; applying "non_followers" again would reject a successful follow.
+  // A required-follow flow delivers immediately for existing followers and
+  // after confirmation for new followers, regardless of legacy audience filter.
   const verdict = followGateVerdict(typedRule, follows, previousTaps);
 
   const finish = (status: "completed" | "expired") =>
