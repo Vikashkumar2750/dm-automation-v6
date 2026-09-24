@@ -393,6 +393,12 @@ export const Route = createFileRoute("/api/public/webhooks/meta")({
 
       POST: async ({ request }) => {
         const traceId = correlationId();
+        try {
+          const { setPublicOriginFromRequest } = await import("@/lib/click-tracking.server");
+          setPublicOriginFromRequest(request);
+        } catch {
+          /* tracking is optional */
+        }
         const body = await request.text();
         const appSecret = process.env["META_APP_SECRET"];
         const header = request.headers.get("x-hub-signature-256") ?? "";
