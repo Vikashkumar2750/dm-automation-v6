@@ -12,6 +12,8 @@ export function explainReason(detail: string | null): { title: string; hint: str
     ["gate_follow_status_unavailable", "Instagram follow status unavailable", "The tap arrived, but Instagram did not confirm the follow. A confirmation prompt will be sent."],
     ["gate_rule_missing", "Rule for this tap was deleted", "The automation rule behind this button no longer exists."],
     ["duplicate_tap", "Duplicate tap ignored", "Meta delivered the same tap twice — only one copy was answered."],
+    ["gate:tap_never_received", "“Send me the link” tap never reached us", "Meta did not deliver a button tap before the next comment. For non-followers the message sits in Message Requests — check that messaging_postbacks and standby are subscribed (Check & repair Meta) and the tester has a role in the Meta app."],
+    ["gate:follow_confirm_never_received", "“I followed” tap never reached us", "The follow prompt was sent but no confirmation tap arrived from Meta before the next comment."],
     ["no_active_dm_received_rule", "DM did not match any DM rule", "A plain message arrived with no active “New DM” rule. Normal for chat replies."],
     ["no_matching_rule", "No rule matched", "The message did not match any active rule — normal if testing keywords."],
     ["no_token", "Account credentials missing", "Reconnect the social account from Social Accounts."],
