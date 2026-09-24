@@ -13,7 +13,7 @@ import { listAutomationRules } from "@/lib/automations.functions";
 import { listSocialAccounts } from "@/lib/social-accounts.functions";
 import { runAutomationSimulation, type SimResult, type SimScenario } from "@/lib/simulation.functions";
 
-export const Route = createFileRoute("/_authenticated/automations_/test")({
+export const Route = createFileRoute("/_authenticated/automations_/simulator")({
   head: () => ({
     meta: [
       { title: "Automation Test Console — DM FB-IG-YT by Techaasvik" },

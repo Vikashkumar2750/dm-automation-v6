@@ -375,7 +375,7 @@ function AutomationsPage() {
         actions={
           <div className="flex gap-2">
             <Button asChild variant="outline">
-              <Link to="/automations/test">Test console</Link>
+              <Link to="/automations/simulator">Test console</Link>
             </Button>
             <Button onClick={() => setDraft({ ...emptyDraft })} disabled={!orgId}>
               <Plus className="size-4" /> New rule
