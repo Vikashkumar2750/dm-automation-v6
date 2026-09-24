@@ -179,6 +179,8 @@ function eventIdentity(item: { type: string; value: unknown }, fallback: string)
 /**
  * Mirror a webhook item into the inbox (conversations + messages).
  * DM events come from entry.messaging; comments arrive as changes.
+ * Returns a short trace code whenever the item is skipped so the webhook
+ * event row shows exactly why no automation ran for it.
  */
 async function ingestIntoInbox(
   admin: AdminClient,
@@ -191,7 +193,7 @@ async function ingestIntoInbox(
     type: string;
     value: unknown;
   },
-) {
+): Promise<string | null> {
   let { organizationId, socialAccountId, platform } = args;
   const { type, value } = args;
 
