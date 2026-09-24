@@ -38,6 +38,13 @@ export function explainReason(detail: string | null): { title: string; hint: str
     ["blocked_keyword", "Skipped: blocked word", "Message matched a blocked keyword."],
     ["no_response_text", "Rule has no message written", "Open the rule and add the reply text."],
     ["unknown_action", "Rule action not supported", "Edit the rule and pick a valid action."],
+    ["trace:echo", "Our own outgoing message", "Delivery receipt of a message we sent — no automation needed."],
+    ["trace:self_or_unknown_sender", "Event from our own account", "Meta echoed our account's own action — nothing to automate."],
+    ["trace:not_a_comment", "Post event, not a comment", "Likes and other post events do not trigger comment rules."],
+    ["trace:comment_removed", "Comment was removed", "A deleted comment cannot trigger automation."],
+    ["trace:unsupported_event", "Unsupported event type", "This webhook event type is not used by automation."],
+    ["trace:empty_body", "Message had no text", "Media-only or reaction messages cannot match keyword rules."],
+    ["trace:duplicate_delivery", "Duplicate delivery skipped", "Meta sent the same event twice — only the first copy ran."],
   ];
   for (const [key, title, hint] of map) {
     if (code.startsWith(key) || code.includes(key)) return { title, hint };
