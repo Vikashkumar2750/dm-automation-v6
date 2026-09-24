@@ -507,16 +507,15 @@ export async function runAutomations(admin: AdminClient, ctx: AutomationContext)
 
 type FollowVerdict = "deliver" | "ask_follow" | "skip_not_follower" | "skip_follower";
 
-/**
- * Decides what to do for a known/unknown follow state. Unknown (null) never
- * counts as "not following" — that sent follow prompts to real followers.
- */
 /** "Everyone" in a gated comment flow means: followers direct, non-followers follow first. */
 function requiresFollow(rule: Pick<Rule, "require_follow" | "follower_condition">) {
   return rule.require_follow || rule.follower_condition === "any";
 }
 
 export function followVerdict(rule: Pick<Rule, "require_follow" | "follower_condition">, follows: boolean | null): FollowVerdict {
+  // A postback is not guaranteed to grant profile consent. If Meta cannot
+  // confirm the state, never hand out a follow-gated link by default.
+  if (follows === null && requiresFollow(rule)) return "ask_follow";
   if (follows === false && requiresFollow(rule)) return "ask_follow";
   if (follows === false && rule.follower_condition === "followers_only") {
     return "skip_not_follower";
@@ -583,6 +582,13 @@ function buttonMessages(text: string, buttons: Button[]): Record<string, unknown
   }
   shapes.push({ text: withLinks });
   return shapes;
+}
+
+/** A quick reply generates an inbound message, which grants profile consent;
+ * a template postback alone does not always do so on Instagram. */
+function gateButtonMessages(text: string, buttons: Button[]): Record<string, unknown>[] {
+  const shapes = buttonMessages(text, buttons);
+  return shapes.length > 2 ? [shapes[1], shapes[0], ...shapes.slice(2)] : shapes;
 }
 
 /** Tries each message shape until the platform accepts one. */
@@ -801,7 +807,7 @@ async function followPromptShapes(
   const buttons: Button[] = [];
   if (profileUrl) buttons.push({ type: "web_url", url: profileUrl, title: "Visit profile" });
   buttons.push({ type: "postback", title: "I followed ✅", payload: `${FOLLOW_PAYLOAD}:${gateId}` });
-  return { text, shapes: buttonMessages(text, buttons) };
+  return { text, shapes: gateButtonMessages(text, buttons) };
 }
 
 /**
@@ -842,7 +848,7 @@ async function openGate(
   if (stage === "opener") {
     text = OPENER_TEXT;
     const title = (rule.dm_link_url ?? "").trim() ? "Send me the link" : "Send it to me";
-    shapes = buttonMessages(text, [
+    shapes = gateButtonMessages(text, [
       { type: "postback", title, payload: `${FOLLOW_PAYLOAD}:${gate.id}` },
     ]);
   } else {
@@ -1050,7 +1056,7 @@ export async function handleFollowGateReply(
       ctx,
       typedRule.id,
       isRetry ? "skipped" : "sent",
-      isRetry ? "follow_not_confirmed" : "follow_prompt",
+      isRetry ? "follow_not_confirmed" : follows === null ? "follow_status_unavailable" : "follow_prompt",
     );
     return true;
   }
