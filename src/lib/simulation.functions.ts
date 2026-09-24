@@ -23,19 +23,25 @@ async function readSimulatorAccess(
   context: { supabase: any; userId: string },
   organizationId: string,
 ) {
-  const [{ data: superAdmin }, { data: member }, { data: settings }] = await Promise.all([
+  const [{ data: superAdmin }, { data: member }] = await Promise.all([
     context.supabase.rpc("current_user_has_platform_role", { _role: "super_admin" }),
     context.supabase.rpc("current_user_has_org_role", {
       _org_id: organizationId,
       _roles: ["owner", "admin", "manager"],
     }),
-    context.supabase.from("platform_settings").select("feature_flags").eq("id", true).maybeSingle(),
   ]);
   if (superAdmin) return { allowed: true, isSuperAdmin: true };
+  if (!member) return { allowed: false, isSuperAdmin: false };
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data: settings } = await supabaseAdmin
+    .from("platform_settings")
+    .select("feature_flags")
+    .eq("id", true)
+    .maybeSingle();
   const flags = (settings?.feature_flags ?? {}) as Record<string, boolean>;
   const userKey = `simulator_user_${organizationId}_${context.userId}`;
   const orgKey = `simulator_org_${organizationId}`;
-  return { allowed: Boolean(member && (flags[userKey] ?? flags[orgKey] ?? false)), isSuperAdmin: false };
+  return { allowed: Boolean(flags[userKey] ?? flags[orgKey] ?? false), isSuperAdmin: false };
 }
 
 export const getSimulatorAccess = createServerFn({ method: "GET" })

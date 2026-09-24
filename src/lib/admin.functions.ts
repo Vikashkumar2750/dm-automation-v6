@@ -115,7 +115,7 @@ export type AdminOrgDetail = {
   } | null;
   accounts: AdminAccountRow[];
   automations: AdminAutomationRow[];
-  members: { user_id: string; role: string; email: string | null; full_name: string | null }[];
+  members: { user_id: string; role: string; email: string | null; full_name: string | null; simulatorEnabled: boolean }[];
   recentErrors: { id: string; source: string; detail: string; at: string }[];
   usage: { runs24h: number; messages24h: number; postsScheduled: number };
 };
@@ -314,7 +314,7 @@ export const getAdminOrganization = createServerFn({ method: "POST" })
     const id = data.organizationId;
     const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
-    const [org, settings, accounts, rules, members, runs, posts, hooks] = await Promise.all([
+    const [org, settings, accounts, rules, members, runs, posts, hooks, platformSettings] = await Promise.all([
       supabaseAdmin
         .from("organizations")
         .select("id, name, slug, plan, created_at")
@@ -346,6 +346,11 @@ export const getAdminOrganization = createServerFn({ method: "POST" })
         .eq("organization_id", id)
         .order("received_at", { ascending: false })
         .limit(10),
+      supabaseAdmin
+        .from("platform_settings")
+        .select("feature_flags")
+        .eq("id", true)
+        .maybeSingle(),
     ]);
 
     if (!org.data) throw new Error("not_found");
@@ -355,6 +360,7 @@ export const getAdminOrganization = createServerFn({ method: "POST" })
       ? await supabaseAdmin.from("profiles").select("id, email, full_name").in("id", userIds)
       : { data: [] as { id: string; email: string | null; full_name: string | null }[] };
     const profileMap = new Map((profiles.data ?? []).map((p) => [p.id, p]));
+    const simulatorFlags = (platformSettings.data?.feature_flags ?? {}) as Record<string, boolean>;
 
     const convs = await supabaseAdmin.from("conversations").select("id").eq("organization_id", id);
 
@@ -404,7 +410,7 @@ export const getAdminOrganization = createServerFn({ method: "POST" })
         conversations: (convs.data ?? []).length,
         posts: (posts.data ?? []).length,
         automationsPaused: Boolean(settings.data?.is_paused),
-        simulatorEnabled: false,
+        simulatorEnabled: Boolean(simulatorFlags[`simulator_org_${id}`]),
       },
       settings: settings.data ?? null,
       accounts: (accounts.data ?? []).map((a) => ({
@@ -421,6 +427,7 @@ export const getAdminOrganization = createServerFn({ method: "POST" })
         role: m.role,
         email: profileMap.get(m.user_id)?.email ?? null,
         full_name: profileMap.get(m.user_id)?.full_name ?? null,
+        simulatorEnabled: Boolean(simulatorFlags[`simulator_user_${id}_${m.user_id}`]),
       })),
       recentErrors,
       usage: {
