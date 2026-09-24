@@ -179,6 +179,8 @@ function eventIdentity(item: { type: string; value: unknown }, fallback: string)
 /**
  * Mirror a webhook item into the inbox (conversations + messages).
  * DM events come from entry.messaging; comments arrive as changes.
+ * Returns a short trace code whenever the item is skipped so the webhook
+ * event row shows exactly why no automation ran for it.
  */
 async function ingestIntoInbox(
   admin: AdminClient,
@@ -191,7 +193,7 @@ async function ingestIntoInbox(
     type: string;
     value: unknown;
   },
-) {
+): Promise<string | null> {
   let { organizationId, socialAccountId, platform } = args;
   const { type, value } = args;
 
@@ -206,9 +208,10 @@ async function ingestIntoInbox(
 
   if (isMessagingEventType(type)) {
     const m = normalizeMessagingEvent(value) as MessagingEvent;
-    if (m.message?.is_echo) return; // our own outbound echo
+    if (m.message?.is_echo) return "trace:echo"; // our own outbound echo
     externalUserId = m.sender?.id ?? null;
-    if (!externalUserId || externalUserId === args.accountExternalId) return;
+    if (!externalUserId || externalUserId === args.accountExternalId)
+      return "trace:self_or_unknown_sender";
     const content = messagingContent(m);
     followPayload = content.payload;
     body = content.body;
@@ -229,20 +232,21 @@ async function ingestIntoInbox(
     }
   } else if (type.endsWith(".comments") || type.endsWith(".feed")) {
     const c = (value as { value?: CommentValue }).value ?? (value as CommentValue);
-    if (c.item && c.item !== "comment") return;
-    if (c.verb === "remove") return;
+    if (c.item && c.item !== "comment") return "trace:not_a_comment";
+    if (c.verb === "remove") return "trace:comment_removed";
     externalUserId = c.from?.id ?? null;
-    if (!externalUserId || externalUserId === args.accountExternalId) return;
+    if (!externalUserId || externalUserId === args.accountExternalId)
+      return "trace:self_or_unknown_sender";
     externalUserName = c.from?.username ?? c.from?.name ?? null;
     body = c.text ?? c.message ?? null;
     externalId = c.comment_id ?? c.id ?? null;
     postExternalId = c.media?.id ?? c.post?.id ?? c.post_id ?? null;
     channel = "comment";
   } else {
-    return;
+    return "trace:unsupported_event";
   }
 
-  if (!body) return;
+  if (!body) return "trace:empty_body";
 
   const { data: conversation, error: conversationError } = await admin
     .from("conversations")
@@ -279,7 +283,7 @@ async function ingestIntoInbox(
   if (msgError && msgError.code !== "23505") {
     throw new Error(`message_insert:${msgError.message}`);
   }
-  if (msgError) return;
+  if (msgError) return "trace:duplicate_delivery";
 
   await admin.rpc("increment_unread", { p_conversation_id: conversation.id });
 
@@ -314,7 +318,7 @@ async function ingestIntoInbox(
         messageText: body,
         receivingExternalId: args.receivingExternalId,
       });
-      if (handled) return;
+      if (handled) return null;
     }
 
     await runAutomations(admin, {
@@ -332,6 +336,7 @@ async function ingestIntoInbox(
     console.error("automation run failed", automationError);
     throw automationError;
   }
+  return null;
 }
 
 export const Route = createFileRoute("/api/public/webhooks/meta")({
@@ -450,7 +455,7 @@ export const Route = createFileRoute("/api/public/webhooks/meta")({
             // Mirror into the inbox (conversations/messages).
             if (itemOrganizationId && itemPlatform && webhookEvent?.id) {
               try {
-                await ingestIntoInbox(supabaseAdmin, {
+                const trace = await ingestIntoInbox(supabaseAdmin, {
                   organizationId: itemOrganizationId,
                   socialAccountId: itemSocialAccountId,
                   platform: itemPlatform,
@@ -459,9 +464,15 @@ export const Route = createFileRoute("/api/public/webhooks/meta")({
                   type: item.type,
                   value: item.value,
                 });
+                // Trace codes explain why an event intentionally produced no
+                // automation run (echo, duplicate, unsupported type...).
                 await supabaseAdmin
                   .from("webhook_events")
-                  .update({ status: "processed", error: null })
+                  .update(
+                    trace
+                      ? { status: "ignored", error: trace }
+                      : { status: "processed", error: null },
+                  )
                   .eq("id", webhookEvent.id);
               } catch (ingestError) {
                 console.error("inbox ingest failed", ingestError);
