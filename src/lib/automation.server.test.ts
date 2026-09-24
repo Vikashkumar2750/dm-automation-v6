@@ -22,3 +22,11 @@ describe("required-follow link delivery", () => {
     expect(followGateVerdict({ ...rule, require_follow: false }, true, 0)).toBe("skip_follower");
   });
 });
+describe("Everyone audience follows the plan", () => {
+  const rule = { require_follow: false, follower_condition: "any" };
+  it("follower gets the DM directly", () => expect(followGateVerdict(rule, true, 0)).toBe("deliver"));
+  it("non-follower is asked to follow, then gets the DM", () => {
+    expect(followGateVerdict(rule, false, 0)).toBe("ask_follow");
+    expect(followGateVerdict(rule, true, 1)).toBe("deliver");
+  });
+});
