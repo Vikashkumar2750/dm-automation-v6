@@ -197,7 +197,8 @@ export async function publishPost(
       if (!creationId) return fail("Instagram did not return a media container");
 
       // Videos/reels need processing time before they can be published.
-      if (isVideo || format === "reel") {
+      // Always wait: image containers can also be "not found" if published too fast.
+      {
         const ready = await waitForContainer(creationId, token);
         if (!ready.ok) return fail(ready.error);
       }

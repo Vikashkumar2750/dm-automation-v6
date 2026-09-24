@@ -1,5 +1,8 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { getPlatformStatus } from "@/lib/platform-status.functions";
+import { getMyPlatformRole } from "@/lib/admin.functions";
 import {
   Bell,
   Search,
@@ -46,7 +49,6 @@ const primaryNav: NavItem[] = [
   { label: "Inbox", to: "/inbox", icon: Inbox },
   { label: "Comments", to: "/comments", icon: MessageSquare },
   { label: "Automations", to: "/automations", icon: Workflow },
-  { label: "Contacts", to: "/contacts", icon: Users },
   { label: "Analytics", to: "/analytics", icon: BarChart3 },
   { label: "Social Accounts", to: "/social-accounts", icon: Share2 },
   { label: "AI Assistant", to: "/ai-assistant", icon: Sparkles },
@@ -248,6 +250,28 @@ function TopBar({ onMenu }: { onMenu: () => void }) {
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [mobileOpen, setMobileOpen] = useState(false);
+  const fetchStatus = useServerFn(getPlatformStatus);
+  const fetchRole = useServerFn(getMyPlatformRole);
+  const status = useQuery({ queryKey: ["platform-status"], queryFn: () => fetchStatus(), staleTime: 60_000 });
+  const role = useQuery({
+    queryKey: ["platform-role"],
+    queryFn: () => fetchRole(),
+    enabled: status.data?.maintenanceMode === true,
+    retry: false,
+  });
+
+  if (status.data?.maintenanceMode && role.data && !role.data.isSuperAdmin) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background px-6 text-center">
+        <div className="max-w-md space-y-2">
+          <h1 className="text-2xl font-semibold">We'll be right back</h1>
+          <p className="text-muted-foreground">
+            The app is under scheduled maintenance. Your automations keep their settings — please check back shortly.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">

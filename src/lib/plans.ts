@@ -5,7 +5,7 @@ export type PlanOption = {
   cycle: BillingCycle;
   label: string;
   amountPaise: number;
-  months: number | null; // null = lifetime
+  months: number | null; // null = 3-day trial
 };
 
 export type PlanDef = {
@@ -21,13 +21,13 @@ export const PLANS: PlanDef[] = [
   {
     key: "starter",
     name: "Free",
-    headline: "₹9 one-time · lifetime access",
+    headline: "₹9 · 3-day trial",
     perks: [
       "1 Instagram account, 1 Facebook page, 1 YouTube channel",
       "DM & comment automation",
       "AI content analysis",
     ],
-    options: [{ cycle: "lifetime", label: "One-time ₹9 (lifetime)", amountPaise: 900, months: null }],
+    options: [{ cycle: "lifetime", label: "₹9 for 3 days trial", amountPaise: 900, months: null }],
   },
   {
     key: "pro",

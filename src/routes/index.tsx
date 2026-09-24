@@ -117,7 +117,7 @@ const plans = [
   {
     name: "Free",
     price: "₹9",
-    cadence: "One-time payment, lifetime access",
+    cadence: "₹9 for 3 days trial",
     popular: false,
     features: [
       { text: "1× Instagram account", included: true },
@@ -189,7 +189,7 @@ export const Route = createFileRoute("/")({
                   name: "Free",
                   price: "9",
                   priceCurrency: "INR",
-                  description: "One-time payment, lifetime access",
+                  description: "₹9 for 3 days trial",
                 },
                 {
                   "@type": "Offer",

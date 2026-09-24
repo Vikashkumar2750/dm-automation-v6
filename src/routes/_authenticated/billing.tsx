@@ -158,7 +158,7 @@ function BillingPage() {
                 ? `Renews ${new Date(billing.data.planExpiresAt).toLocaleDateString("en-IN")}`
                 : billing.data?.planSource === "granted"
                   ? "Given by Techaasvik"
-                  : "Lifetime / no end date"
+                  : "No end date"
             }
           />
           <StatCard

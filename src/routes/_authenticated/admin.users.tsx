@@ -9,7 +9,7 @@ import { AdminTable } from "@/components/app/AdminTable";
 import { EmptyState, PageHeader, Panel, StatusBadge } from "@/components/app/primitives";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { listAdminUsers, setUserSuperAdmin } from "@/lib/admin.functions";
+import { adminUserAction, listAdminUsers, listSuspendedUserIds, setUserSuperAdmin } from "@/lib/admin.functions";
 
 export const Route = createFileRoute("/_authenticated/admin/users")({
   head: () => ({
@@ -30,6 +30,19 @@ function UsersPage() {
   const setSuper = useServerFn(setUserSuperAdmin);
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
+  const userAction = useServerFn(adminUserAction);
+  const fetchSuspended = useServerFn(listSuspendedUserIds);
+  const suspended = useQuery({ queryKey: ["admin-suspended"], queryFn: () => fetchSuspended(), retry: false });
+  const suspendedSet = new Set(suspended.data ?? []);
+  const actionMutation = useMutation({
+    mutationFn: (vars: { userId: string; action: "suspend" | "unsuspend" | "send_reset" }) =>
+      userAction({ data: { ...vars, redirectTo: `${window.location.origin}/reset-password` } }),
+    onSuccess: (_r, v) => {
+      toast.success(v.action === "send_reset" ? "Password reset email sent" : v.action === "suspend" ? "User suspended" : "User reactivated");
+      void queryClient.invalidateQueries({ queryKey: ["admin-suspended"] });
+    },
+    onError: (e: Error) => toast.error(e.message || "Action failed"),
+  });
 
   const { data, isLoading } = useQuery({
     queryKey: ["admin-users"],
@@ -76,7 +89,7 @@ function UsersPage() {
         ) : (
           <AdminTable
             rows={rows}
-            minWidth={820}
+            minWidth={1080}
             columns={[
               {
                 header: "User",
@@ -116,6 +129,26 @@ function UsersPage() {
                       }
                     >
                       {u.isSuperAdmin ? "Revoke" : "Make super admin"}
+                    </Button>
+                  </div>
+                ),
+              },
+              {
+                header: "Account",
+                cell: (u) => (
+                  <div className="flex flex-wrap items-center gap-2">
+                    {suspendedSet.has(u.id) ? <StatusBadge tone="danger">Suspended</StatusBadge> : null}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() =>
+                        actionMutation.mutate({ userId: u.id, action: suspendedSet.has(u.id) ? "unsuspend" : "suspend" })
+                      }
+                    >
+                      {suspendedSet.has(u.id) ? "Unsuspend" : "Suspend"}
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => actionMutation.mutate({ userId: u.id, action: "send_reset" })}>
+                      Send reset
                     </Button>
                   </div>
                 ),

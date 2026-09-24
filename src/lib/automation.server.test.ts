@@ -73,3 +73,29 @@ describe("gate payload identity", () => {
     expect(followGateId(confirm)).toBe("gate-1");
   });
 });
+
+// LOCKED FLOW — do not change these expectations without re-testing on real phones.
+describe("locked: opener and non-follower follow prompt shapes", () => {
+  it("opener attaches the button to the bubble and keeps the quick reply", async () => {
+    const { openerMessages } = await import("./automation.server");
+    const [first, second, third] = openerMessages("Hi", "Send me the link", "AUTOMATION_FOLLOW_CHECK:g:opener:n");
+    expect(first).toHaveProperty("attachment.payload.template_type", "button");
+    expect(first).toHaveProperty("quick_replies.0.title", "Send me the link");
+    expect(second).toHaveProperty("attachment.payload.buttons.0.type", "postback");
+    expect(third).toHaveProperty("quick_replies.0.payload");
+  });
+
+  it("follow prompt sends attached Visit profile + I followed buttons first", () => {
+    const messages = gateButtonMessages(
+      "Follow us first",
+      [
+        { type: "web_url", url: "https://www.instagram.com/x", title: "Visit profile" },
+        { type: "postback", title: "I followed ✅", payload: "AUTOMATION_FOLLOW_CHECK:g:confirm:n" },
+      ],
+      false,
+    );
+    expect(messages[0]).toHaveProperty("attachment.payload.template_type", "button");
+    expect(messages[0]).toHaveProperty("attachment.payload.buttons.0.title", "Visit profile");
+    expect(messages[0]).toHaveProperty("attachment.payload.buttons.1.title", "I followed ✅");
+  });
+});

@@ -34,7 +34,7 @@ export const Route = createFileRoute("/_authenticated/admin/plans")({
 });
 
 const PRICING: Record<string, { price: string; entitlements: string }> = {
-  starter: { price: "₹9 one-time", entitlements: "1 account each · automation · AI analysis" },
+  starter: { price: "₹9 for 3 days trial", entitlements: "1 account each · automation · AI analysis" },
   pro: { price: "₹59/mo · ₹299/6mo · ₹599/yr", entitlements: "5 accounts each · multi-publish · priority support" },
   agency: { price: "Custom", entitlements: "Unlimited accounts · client workspaces · branding" },
 };
