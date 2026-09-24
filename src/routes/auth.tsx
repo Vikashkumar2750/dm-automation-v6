@@ -77,10 +77,12 @@ function AuthPage() {
     setNotice(null);
 
     if (mode === "forgot") {
-      const { error: err } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`,
-      });
-      if (err) setError(err.message);
+      const res = await requestReset({ data: { email, origin: window.location.origin } }).catch(
+        () => ({ ok: false as const, reason: "error" as const }),
+      );
+      if (!res.ok && res.reason === "rate_limited")
+        setError("Too many reset requests for this email. Please try again later.");
+      else if (!res.ok) setError("Could not send the reset link. Please try again.");
       else
         setNotice(
           "If that email has an account, a password reset link is on its way. Check your inbox.",

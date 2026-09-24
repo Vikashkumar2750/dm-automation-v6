@@ -12,7 +12,8 @@ import { useTenant } from "@/hooks/useTenant";
 import { getAutomationUsage } from "@/lib/automations.functions";
 import { listSocialAccounts } from "@/lib/social-accounts.functions";
 import { confirmPlanPayment, createPlanOrder, getBillingState } from "@/lib/billing.functions";
-import { PLANS, formatPaise, type BillingCycle, type PlanKey } from "@/lib/plans";
+import { getPublicPlans } from "@/lib/platform-config.functions";
+import { PLANS as DEFAULT_PLANS, formatPaise, type BillingCycle, type PlanKey } from "@/lib/plans";
 
 export const Route = createFileRoute("/_authenticated/billing")({
   head: () => ({

@@ -741,7 +741,11 @@ export const getPlatformSettings = createServerFn({ method: "GET" })
     return {
       global_send_paused: Boolean(data?.global_send_paused),
       incident_banner: data?.incident_banner ?? null,
-      feature_flags: (data?.feature_flags as Record<string, boolean>) ?? {},
+      feature_flags: Object.fromEntries(
+        Object.entries((data?.feature_flags ?? {}) as Record<string, unknown>).filter(
+          ([, v]) => typeof v === "boolean",
+        ),
+      ) as Record<string, boolean>,
       updated_at: data?.updated_at ?? new Date().toISOString(),
     };
   });
@@ -764,7 +768,18 @@ export const updatePlatformSettings = createServerFn({ method: "POST" })
     if (data.globalSendPaused !== undefined) patch["global_send_paused"] = data.globalSendPaused;
     if (data.incidentBanner !== undefined)
       patch["incident_banner"] = data.incidentBanner?.trim() ? data.incidentBanner.trim() : null;
-    if (data.featureFlags !== undefined) patch["feature_flags"] = data.featureFlags;
+    if (data.featureFlags !== undefined) {
+      // Keep non-boolean entries (plan catalogue, email config, safety locks) intact.
+      const { data: current } = await supabaseAdmin
+        .from("platform_settings")
+        .select("feature_flags")
+        .eq("id", true)
+        .maybeSingle();
+      patch["feature_flags"] = {
+        ...((current?.feature_flags ?? {}) as Record<string, unknown>),
+        ...data.featureFlags,
+      };
+    }
     const { error } = await supabaseAdmin
       .from("platform_settings")
       .upsert(patch as never, { onConflict: "id" });
