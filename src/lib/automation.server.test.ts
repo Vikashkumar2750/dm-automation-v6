@@ -4,6 +4,7 @@ import {
   followGateVerdict,
   followVerdict,
   gateButtonMessages,
+  usesPerContactDailyLimit,
 } from "./automation.server";
 import { followGateId } from "./meta-messaging";
 
@@ -71,6 +72,16 @@ describe("gate payload identity", () => {
     expect(confirm).toContain("AUTOMATION_FOLLOW_CHECK:gate-1:confirm:");
     expect(followGateId(opener)).toBe("gate-1");
     expect(followGateId(confirm)).toBe("gate-1");
+  });
+});
+
+describe("one reply per person per post", () => {
+  it("does not let the DM contact cap block a comment on a different post", () => {
+    expect(usesPerContactDailyLimit("comment")).toBe(false);
+  });
+
+  it("keeps the contact cap for ordinary direct messages", () => {
+    expect(usesPerContactDailyLimit("dm")).toBe(true);
   });
 });
 
