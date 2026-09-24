@@ -512,7 +512,7 @@ type FollowVerdict = "deliver" | "ask_follow" | "skip_not_follower" | "skip_foll
  * Decides what to do for a known/unknown follow state. Unknown (null) never
  * counts as "not following" — that sent follow prompts to real followers.
  */
-function followVerdict(rule: Rule, follows: boolean | null): FollowVerdict {
+function followVerdict(rule: Pick<Rule, "require_follow" | "follower_condition">, follows: boolean | null): FollowVerdict {
   if (follows === false && rule.require_follow) return "ask_follow";
   if (follows === false && rule.follower_condition === "followers_only") {
     return "skip_not_follower";
@@ -528,7 +528,7 @@ export function followGateVerdict(
   previousTaps: number,
 ): FollowVerdict {
   if (previousTaps > 0 && follows === true && rule.require_follow) return "deliver";
-  return followVerdict(rule as Rule, follows);
+  return followVerdict(rule, follows);
 }
 
 // ------------------------------------------------------------- delivery
