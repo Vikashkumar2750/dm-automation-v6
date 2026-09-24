@@ -8,7 +8,7 @@ import { AppShell } from "@/components/app/AppShell";
 import { PageHeader, Panel, StatusBadge } from "@/components/app/primitives";
 import { Button } from "@/components/ui/button";
 import { useTenant } from "@/hooks/useTenant";
-import { explainReason } from "@/lib/activity-explain";
+import { explainReason, stepLabel } from "@/lib/activity-explain";
 import { listAutomationRules } from "@/lib/automations.functions";
 import { listSocialAccounts } from "@/lib/social-accounts.functions";
 import { runAutomationSimulation, type SimResult, type SimScenario } from "@/lib/simulation.functions";
@@ -134,13 +134,19 @@ function TestConsolePage() {
                         {st.follows !== null && <StatusBadge tone="neutral">follows: {String(st.follows)}</StatusBadge>}
                         {st.gateStatus && <StatusBadge tone="neutral">gate: {st.gateStatus}</StatusBadge>}
                       </div>
-                      {st.runs.map((run, j) => (
-                        <div key={j} className="mt-1 flex gap-2 text-xs">
-                          <StatusBadge tone={run.status === "sent" ? "success" : run.status === "failed" ? "danger" : "warning"}>{run.status}</StatusBadge>
-                          <span>{explainReason(run.detail).title}</span>
-                          <span className="text-muted-foreground">({run.detail})</span>
-                        </div>
-                      ))}
+                      {st.runs.map((run, j) => {
+                        const completed = run.status === "sent" || run.status === "matched";
+                        const label = completed ? stepLabel(run.detail) : explainReason(run.detail).title;
+                        return (
+                          <div key={j} className="mt-1 flex gap-2 text-xs">
+                            <StatusBadge tone={run.status === "sent" ? "success" : run.status === "matched" ? "neutral" : run.status === "failed" ? "danger" : "warning"}>
+                              {run.status === "matched" ? "checked" : run.status}
+                            </StatusBadge>
+                            <span>{label}</span>
+                            <span className="text-muted-foreground">({run.detail})</span>
+                          </div>
+                        );
+                      })}
                       {st.messages.map((m, j) => (
                         <div key={j} className="mt-2 rounded bg-surface-secondary px-2 py-1 text-xs">
                           <span className="text-muted-foreground">Would send → </span>{m.text || "(message)"}
