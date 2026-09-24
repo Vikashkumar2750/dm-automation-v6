@@ -5,6 +5,8 @@
  * outbound/automated messages, and every attempt is logged in automation_runs.
  */
 
+import { followGateId } from "@/lib/meta-messaging";
+
 type AdminClient = import("@supabase/supabase-js").SupabaseClient;
 
 const GRAPH = "https://graph.facebook.com/v21.0";
@@ -842,6 +844,18 @@ async function openGate(
   accountId: string,
   stage: "opener" | "follow",
 ) {
+  // A fresh comment supersedes older unanswered prompts for this contact and
+  // account. This prevents an old button from competing with the current flow.
+  let staleGateQuery = admin
+    .from("automation_follow_gates")
+    .update({ status: "expired" })
+    .eq("organization_id", ctx.organizationId)
+    .eq("platform", ctx.platform)
+    .eq("external_user_id", ctx.externalUserId)
+    .eq("status", "waiting");
+  if (ctx.socialAccountId) staleGateQuery = staleGateQuery.eq("social_account_id", ctx.socialAccountId);
+  await staleGateQuery;
+
   const { data: gate, error: gateError } = await admin
     .from("automation_follow_gates")
     .insert({
@@ -868,10 +882,9 @@ async function openGate(
   if (stage === "opener") {
     text = OPENER_TEXT;
     const title = (rule.dm_link_url ?? "").trim() ? "Send me the link" : "Send it to me";
-    // Private-reply quick replies can render but fail to emit a tap webhook.
-    // The opener therefore prefers the proven button-template postback. Once
-    // the conversation is open, the follow-confirmation prompt still prefers
-    // a quick reply so Instagram can grant messaging-profile consent.
+    // This account's production history confirms Instagram quick replies emit
+    // a messages webhook reliably. Keep the template postback as a fallback
+    // only when Meta rejects the quick-reply shape.
     shapes = gateButtonMessages(
       text,
       [{
@@ -879,7 +892,7 @@ async function openGate(
         title,
         payload: followGatePayload(gate.id, "opener", crypto.randomUUID()),
       }],
-      false,
+      true,
     );
   } else {
     ({ text, shapes } = await followPromptShapes(admin, ctx, rule, gate.id, false));
@@ -928,7 +941,9 @@ export async function handleFollowGateReply(
   const isTextTap = !args.payload && ["Send me the link", "Send it to me", "I followed ✅"]
     .includes((args.messageText ?? "").trim());
   if (!hasPayload && !isTextTap) return false;
-  const gateId = hasPayload ? args.payload.slice(FOLLOW_PAYLOAD.length + 1).trim() : "";
+  // Payloads include stage and nonce. Always use the shared parser so the UUID
+  // lookup never receives "<uuid>:opener:<nonce>".
+  const gateId = hasPayload ? followGateId(args.payload) ?? "" : "";
 
   // The comment author id and the messaging sender id can differ, so a gate
   // referenced by the button payload is looked up by id alone.
@@ -945,7 +960,19 @@ export async function handleFollowGateReply(
       .gte("created_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
     if (args.socialAccountId) query = query.eq("social_account_id", args.socialAccountId);
   }
-  const { data: gates } = await query.order("created_at", { ascending: false }).limit(1);
+  const { data: gates, error: gateLookupError } = await query
+    .order("created_at", { ascending: false })
+    .limit(1);
+  if (gateLookupError) {
+    await log(
+      admin,
+      { organizationId: args.organizationId, conversationId: args.conversationId } as AutomationContext,
+      null,
+      "failed",
+      `gate_lookup:${gateLookupError.message.slice(0, 220)}`,
+    );
+    return true;
+  }
   let gate = gates?.[0];
   // Never infer a text-only tap from another contact's waiting gate.
   if (!gate?.rule_id) {
