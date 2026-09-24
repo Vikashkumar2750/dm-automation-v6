@@ -34,6 +34,7 @@ export type AutomationContext = {
   externalId: string | null;
   /** Post/media id the comment belongs to (comment channel only). */
   postExternalId?: string | null;
+  correlationId?: string;
 };
 
 type Rule = {
@@ -160,12 +161,15 @@ async function log(
   status: "matched" | "sent" | "skipped" | "failed",
   detail?: string,
 ) {
+  const traceDetail = ctx.correlationId
+    ? `trace:${ctx.correlationId}:${detail ?? status}`
+    : detail ?? null;
   await admin.from("automation_runs").insert({
     organization_id: ctx.organizationId,
     rule_id: ruleId,
     conversation_id: ctx.conversationId,
     status,
-    detail: detail ?? null,
+    detail: traceDetail,
   });
 }
 
@@ -944,6 +948,7 @@ export async function handleFollowGateReply(
     payload: string;
     messageText?: string | null;
     receivingExternalId?: string | null;
+    correlationId?: string;
   },
 ) {
   const hasPayload = args.payload.startsWith(`${FOLLOW_PAYLOAD}:`);
@@ -1024,6 +1029,7 @@ export async function handleFollowGateReply(
     body: "",
     externalUserId: args.externalUserId,
     externalId: null,
+      correlationId: args.correlationId,
   };
 
   if (!socialAccountId) {
@@ -1190,11 +1196,16 @@ async function call(url: string, payload: Record<string, unknown>) {
   const json = (await response.json()) as {
     id?: string;
     message_id?: string;
-    error?: { message?: string; code?: number };
+    error?: { message?: string; code?: number; error_subcode?: number };
   };
   if (!response.ok || json.error) {
     return {
-      error: json.error?.message ?? `HTTP ${response.status}`,
+      error: [
+        `HTTP ${response.status}`,
+        json.error?.code != null ? `code ${json.error.code}` : null,
+        json.error?.error_subcode != null ? `subcode ${json.error.error_subcode}` : null,
+        json.error?.message,
+      ].filter(Boolean).join(" · "),
       errorCode: json.error?.code,
     };
   }
