@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
 import { getMyPlatformRole } from "@/lib/admin.functions";
+import { getPlatformStatus } from "@/lib/platform-status.functions";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
@@ -31,6 +32,7 @@ export const Route = createFileRoute("/auth")({
 function AuthPage() {
   const navigate = useNavigate();
   const fetchPlatformRole = useServerFn(getMyPlatformRole);
+  const fetchStatus = useServerFn(getPlatformStatus);
   const redirectingRef = useRef(false);
   const [mode, setMode] = useState<"signin" | "signup" | "forgot">("signin");
   const [email, setEmail] = useState("");
@@ -83,6 +85,8 @@ function AuthPage() {
         setNotice(
           "If that email has an account, a password reset link is on its way. Check your inbox.",
         );
+    } else if (mode === "signup" && (await fetchStatus()).registrationBlocked) {
+      setError("New registrations are closed right now. Please try again later.");
     } else if (mode === "signup") {
       const { data, error: err } = await supabase.auth.signUp({
         email,
