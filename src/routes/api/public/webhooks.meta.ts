@@ -235,7 +235,8 @@ async function ingestIntoInbox(
     if (c.item && c.item !== "comment") return "trace:not_a_comment";
     if (c.verb === "remove") return "trace:comment_removed";
     externalUserId = c.from?.id ?? null;
-    if (!externalUserId || externalUserId === args.accountExternalId) return;
+    if (!externalUserId || externalUserId === args.accountExternalId)
+      return "trace:self_or_unknown_sender";
     externalUserName = c.from?.username ?? c.from?.name ?? null;
     body = c.text ?? c.message ?? null;
     externalId = c.comment_id ?? c.id ?? null;
