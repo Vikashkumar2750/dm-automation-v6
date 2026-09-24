@@ -1177,7 +1177,9 @@ async function call(url: string, payload: Record<string, unknown>) {
   const sim = simulationStore.getStore();
   if (sim) {
     const clean = url.replace(/access_token=[^&]+/, "access_token=***");
-    sim.calls.push({ url: clean, payload });
+    const { access_token: _omit, ...safe } = payload;
+    void _omit;
+    sim.calls.push({ url: clean, payload: safe });
     return { id: `sim_${sim.calls.length}` } as { id?: string; error?: string; errorCode?: number };
   }
   const response = await fetch(url, {
