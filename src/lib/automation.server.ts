@@ -590,10 +590,16 @@ function buttonMessages(text: string, buttons: Button[]): Record<string, unknown
 /** A quick reply generates an inbound message, which grants profile consent;
  * a template postback alone does not always do so on Instagram. Never report
  * an opener as sent when it fell back to plain text without a tappable button. */
-function gateButtonMessages(text: string, buttons: Button[]): Record<string, unknown>[] {
+export function gateButtonMessages(
+  text: string,
+  buttons: Button[],
+  preferQuickReply = true,
+): Record<string, unknown>[] {
   const shapes = buttonMessages(text, buttons);
   const [template, quickReply] = shapes;
-  return template && quickReply ? [quickReply, template] : template ? [template] : [];
+  if (!template) return [];
+  if (!quickReply) return [template];
+  return preferQuickReply ? [quickReply, template] : [template, quickReply];
 }
 
 /** Tries each message shape until the platform accepts one. */
@@ -853,9 +859,15 @@ async function openGate(
   if (stage === "opener") {
     text = OPENER_TEXT;
     const title = (rule.dm_link_url ?? "").trim() ? "Send me the link" : "Send it to me";
-    shapes = gateButtonMessages(text, [
-      { type: "postback", title, payload: `${FOLLOW_PAYLOAD}:${gate.id}` },
-    ]);
+    // Private-reply quick replies can render but fail to emit a tap webhook.
+    // The opener therefore prefers the proven button-template postback. Once
+    // the conversation is open, the follow-confirmation prompt still prefers
+    // a quick reply so Instagram can grant messaging-profile consent.
+    shapes = gateButtonMessages(
+      text,
+      [{ type: "postback", title, payload: `${FOLLOW_PAYLOAD}:${gate.id}` }],
+      false,
+    );
   } else {
     ({ text, shapes } = await followPromptShapes(admin, ctx, rule, gate.id, false));
   }
