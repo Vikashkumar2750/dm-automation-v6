@@ -625,6 +625,28 @@ export function gateButtonMessages(
   return preferQuickReply ? [quickReply, template] : [template, quickReply];
 }
 
+/**
+ * Opener shapes: 1) attached button template + quick reply (visible in the
+ * bubble on every device and in Message Requests, quick reply kept for the
+ * proven follower path), 2) attached template only, 3) quick reply only.
+ */
+export function openerMessages(text: string, title: string, payload: string) {
+  const body = text.slice(0, 640);
+  const t = title.slice(0, 20);
+  const template = {
+    attachment: {
+      type: "template",
+      payload: { template_type: "button", text: body, buttons: [{ type: "postback", title: t, payload }] },
+    },
+  };
+  const quick = [{ content_type: "text", title: t, payload }];
+  return [
+    { ...template, quick_replies: quick },
+    template,
+    { text: body, quick_replies: quick },
+  ] as Record<string, unknown>[];
+}
+
 /** Tries each message shape until the platform accepts one. */
 async function sendChain(
   platform: AutomationContext["platform"],
