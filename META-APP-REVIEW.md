@@ -68,14 +68,19 @@ no data on people who did not message the business.
 - Callback URL: `https://dm-automation.up.railway.app/api/public/webhooks/meta`
 - Verify token: the value in `META_WEBHOOK_VERIFY_TOKEN`
 - Page fields: `messages`, `messaging_postbacks`, `feed`
-- Instagram fields: `messages`, `comments`, `live_comments`
+- Instagram fields: `messages`, `messaging_postbacks`, `comments`, `live_comments`
+
+`messaging_postbacks` on the **Instagram** object is required for the
+comment → DM flow: taps on "Send me the link" and "I followed ✅" arrive only
+through this field. Without it the commenter gets the first DM but nothing
+happens when they tap.
 
 **Important: subscribe both objects.** In Webhooks, configure the **Page**
 object and the **Instagram** object. A green callback verification alone does
 not mean either object is subscribed. After deploying this version, open
 Social Accounts and press **Check & repair Meta**. It verifies the Page fields
 (`feed`, `messages`, `messaging_postbacks`) and Instagram fields (`comments`,
-`messages`) separately, and reports any missing field.
+`messages`, `messaging_postbacks`) separately, and reports any missing field.
 
 **Access Token Debugger check**
 - Inspect the user token created by Connect and confirm the App ID is this app.
