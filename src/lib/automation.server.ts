@@ -161,6 +161,16 @@ async function log(
   status: "matched" | "sent" | "skipped" | "failed",
   detail?: string,
 ) {
+  if (ctx.correlationId) {
+    console.info(JSON.stringify({
+      scope: "automation_trace",
+      correlationId: ctx.correlationId,
+      stage: detail ?? "automation_run",
+      outcome: status,
+      organizationId: ctx.organizationId,
+      ruleId,
+    }));
+  }
   await admin.from("automation_runs").insert({
     organization_id: ctx.organizationId,
     rule_id: ruleId,

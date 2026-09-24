@@ -41,7 +41,7 @@ function safeEqual(a: string, b: string) {
   return diff === 0;
 }
 
-async function hmacSha256Hex(secret: string, body: string) {
+export async function hmacSha256Hex(secret: string, body: string) {
   const enc = new TextEncoder();
   const key = await crypto.subtle.importKey(
     "raw",
@@ -54,6 +54,12 @@ async function hmacSha256Hex(secret: string, body: string) {
   return Array.from(new Uint8Array(sig))
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("");
+}
+
+export async function verifyMetaSignature(secret: string, body: string, header: string) {
+  const provided = header.startsWith("sha256=") ? header.slice(7) : "";
+  if (!provided) return false;
+  return safeEqual(provided, await hmacSha256Hex(secret, body));
 }
 
 function platformFor(object: string | undefined) {
@@ -397,8 +403,7 @@ export const Route = createFileRoute("/api/public/webhooks/meta")({
         }
 
         const provided = header.startsWith("sha256=") ? header.slice(7) : "";
-        const expected = await hmacSha256Hex(appSecret, body);
-        if (!provided || !safeEqual(provided, expected)) {
+        if (!(await verifyMetaSignature(appSecret, body, header))) {
           const reason = provided ? "app_secret_mismatch" : "signature_header_missing";
           traceLog(traceId, "signature", "rejected", reason);
           try {
