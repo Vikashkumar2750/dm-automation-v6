@@ -47,3 +47,10 @@ export function messagingContent(event: MetaMessagingEvent) {
     : (event.message?.mid ?? null);
   return { payload, body, externalId };
 }
+
+export function followGateId(payload: string | null | undefined) {
+  const prefix = "AUTOMATION_FOLLOW_CHECK:";
+  if (!payload?.startsWith(prefix)) return null;
+  const id = payload.slice(prefix.length).trim();
+  return id || null;
+}

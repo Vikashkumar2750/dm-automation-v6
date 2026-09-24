@@ -28,3 +28,4 @@ Real Meta + YouTube credentials are available when we reach OAuth phases.
 - [x] Deliver directly to existing followers on “Send me the link” while retaining the non-follower confirmation path.
 - [ ] Confirm delivery with a fresh Instagram comment after Railway deploy; plural/nested Meta tap payload handling is fixed (requires a real account follow/tap).
 - [ ] Verify both existing-follower and non-follower button flows on Railway after deployment (requires real Instagram taps).
+- [x] Bind Meta button taps to the original Instagram follow gate when Facebook and Instagram share a Page.
