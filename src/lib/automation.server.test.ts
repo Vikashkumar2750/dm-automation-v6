@@ -5,6 +5,7 @@ import {
   followVerdict,
   gateButtonMessages,
 } from "./automation.server";
+import { followGateId } from "./meta-messaging";
 
 describe("required-follow link delivery", () => {
   const rule = { require_follow: true, follower_condition: "non_followers" };
@@ -48,10 +49,10 @@ describe("gate button delivery order", () => {
     payload: "AUTOMATION_FOLLOW_CHECK:gate-1",
   };
 
-  it("uses a template postback first for the comment opener", () => {
-    const messages = gateButtonMessages("Tap below", [button], false);
-    expect(messages[0]).toHaveProperty("attachment.payload.template_type", "button");
-    expect(messages[1]).toHaveProperty("quick_replies.0.payload", button.payload);
+  it("uses the proven quick reply first for the comment opener", () => {
+    const messages = gateButtonMessages("Tap below", [button]);
+    expect(messages[0]).toHaveProperty("quick_replies.0.payload", button.payload);
+    expect(messages[1]).toHaveProperty("attachment.payload.template_type", "button");
   });
 
   it("uses a quick reply first for follow confirmation", () => {
@@ -68,5 +69,7 @@ describe("gate payload identity", () => {
     expect(opener).not.toBe(confirm);
     expect(opener).toContain("AUTOMATION_FOLLOW_CHECK:gate-1:opener:");
     expect(confirm).toContain("AUTOMATION_FOLLOW_CHECK:gate-1:confirm:");
+    expect(followGateId(opener)).toBe("gate-1");
+    expect(followGateId(confirm)).toBe("gate-1");
   });
 });
