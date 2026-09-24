@@ -40,8 +40,10 @@ async function readSimulatorAccess(
     .maybeSingle();
   const flags = (settings?.feature_flags ?? {}) as Record<string, boolean>;
   const userKey = `simulator_user_${organizationId}_${context.userId}`;
+  const denyKey = `simulator_user_deny_${organizationId}_${context.userId}`;
   const orgKey = `simulator_org_${organizationId}`;
-  return { allowed: Boolean(flags[userKey] ?? flags[orgKey] ?? false), isSuperAdmin: false };
+  const allowed = flags[denyKey] ? false : Boolean(flags[userKey] ?? flags[orgKey] ?? false);
+  return { allowed, isSuperAdmin: false };
 }
 
 export const getSimulatorAccess = createServerFn({ method: "GET" })

@@ -201,7 +201,6 @@ async function ingestIntoInbox(
     type: string;
     value: unknown;
     correlationId: string;
-    webhookEventId: string;
   },
 ): Promise<string | null> {
   let { organizationId, socialAccountId, platform } = args;
@@ -514,7 +513,6 @@ export const Route = createFileRoute("/api/public/webhooks/meta")({
                   type: item.type,
                   value: item.value,
                   correlationId: traceId,
-                  webhookEventId: webhookEvent.id,
                 });
                 // Trace codes explain why an event intentionally produced no
                 // automation run (echo, duplicate, unsupported type...).

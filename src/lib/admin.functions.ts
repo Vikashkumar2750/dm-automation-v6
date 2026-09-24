@@ -427,7 +427,9 @@ export const getAdminOrganization = createServerFn({ method: "POST" })
         role: m.role,
         email: profileMap.get(m.user_id)?.email ?? null,
         full_name: profileMap.get(m.user_id)?.full_name ?? null,
-        simulatorEnabled: Boolean(simulatorFlags[`simulator_user_${id}_${m.user_id}`]),
+        simulatorEnabled: simulatorFlags[`simulator_user_deny_${id}_${m.user_id}`]
+          ? false
+          : Boolean(simulatorFlags[`simulator_user_${id}_${m.user_id}`]),
       })),
       recentErrors,
       usage: {
@@ -446,13 +448,17 @@ function simulatorUserFlag(organizationId: string, userId: string) {
   return `simulator_user_${organizationId}_${userId}`;
 }
 
+function simulatorUserDenyFlag(organizationId: string, userId: string) {
+  return `simulator_user_deny_${organizationId}_${userId}`;
+}
+
 export const setSimulatorAccess = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) =>
     z.object({
       organizationId: z.string().uuid(),
       userId: z.string().uuid().nullable().optional(),
-      enabled: z.boolean(),
+      enabled: z.boolean().nullable(),
     }).parse(data),
   )
   .handler(async ({ data, context }) => {
@@ -465,10 +471,19 @@ export const setSimulatorAccess = createServerFn({ method: "POST" })
       .maybeSingle();
     if (readError) throw new Error(readError.message);
     const flags = { ...((row?.feature_flags ?? {}) as Record<string, boolean>) };
-    const key = data.userId
-      ? simulatorUserFlag(data.organizationId, data.userId)
-      : simulatorOrgFlag(data.organizationId);
-    flags[key] = data.enabled;
+    if (data.userId) {
+      const allowKey = simulatorUserFlag(data.organizationId, data.userId);
+      const denyKey = simulatorUserDenyFlag(data.organizationId, data.userId);
+      if (data.enabled === null) {
+        delete flags[allowKey];
+        delete flags[denyKey];
+      } else {
+        flags[allowKey] = data.enabled;
+        flags[denyKey] = !data.enabled;
+      }
+    } else {
+      flags[simulatorOrgFlag(data.organizationId)] = Boolean(data.enabled);
+    }
     const { error } = await supabaseAdmin
       .from("platform_settings")
       .update({ feature_flags: flags, updated_at: new Date().toISOString() })

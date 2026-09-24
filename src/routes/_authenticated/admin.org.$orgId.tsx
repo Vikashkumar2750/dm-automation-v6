@@ -74,7 +74,7 @@ function OrgDetailPage() {
   });
 
   const simulatorMutation = useMutation({
-    mutationFn: (vars: { userId?: string; enabled: boolean }) =>
+    mutationFn: (vars: { userId?: string; enabled: boolean | null }) =>
       setSimulator({ data: { organizationId: orgId, userId: vars.userId ?? null, enabled: vars.enabled } }),
     onSuccess: () => {
       toast.success("Test console access updated");
