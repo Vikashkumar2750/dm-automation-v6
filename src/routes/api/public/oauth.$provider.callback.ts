@@ -68,6 +68,7 @@ export const Route = createFileRoute("/api/public/oauth/$provider/callback")({
           return backTo(origin, redirectPath, {
             connect: "success",
             added: String(connected),
+            ...(limitHits.get(stateRow) ? { limit: "1" } : {}),
           });
         } catch (error) {
           console.error("OAuth callback failed", error);
@@ -81,6 +82,44 @@ export const Route = createFileRoute("/api/public/oauth/$provider/callback")({
 type AdminClient = Awaited<
   typeof import("@/integrations/supabase/client.server")
 >["supabaseAdmin"];
+
+const PLAN_ACCOUNT_LIMITS: Record<string, number> = { starter: 1, pro: 5 };
+const limitHits = new WeakMap<StateRow, boolean>();
+
+/** Per-platform account cap for the workspace plan. Reconnecting an existing account is always allowed. */
+async function withinPlanLimit(
+  supabaseAdmin: AdminClient,
+  stateRow: StateRow,
+  platform: string,
+  externalId: string,
+): Promise<boolean> {
+  const { data: existing } = await supabaseAdmin
+    .from("social_accounts")
+    .select("id")
+    .eq("organization_id", stateRow.organization_id)
+    .eq("platform", platform as "instagram" | "facebook" | "youtube")
+    .eq("external_id", externalId)
+    .maybeSingle();
+  if (existing) return true;
+  const { data: org } = await supabaseAdmin
+    .from("organizations")
+    .select("plan, plan_expires_at")
+    .eq("id", stateRow.organization_id)
+    .maybeSingle();
+  let plan = (org?.plan as string | undefined) ?? "starter";
+  const expires = org?.plan_expires_at as string | null | undefined;
+  if (plan !== "starter" && plan !== "agency" && expires && new Date(expires) < new Date()) {
+    plan = "starter";
+  }
+  const limit = PLAN_ACCOUNT_LIMITS[plan];
+  if (limit === undefined) return true; // agency / custom = unlimited
+  const { count } = await supabaseAdmin
+    .from("social_accounts")
+    .select("id", { count: "exact", head: true })
+    .eq("organization_id", stateRow.organization_id)
+    .eq("platform", platform as "instagram" | "facebook" | "youtube");
+  return (count ?? 0) < limit;
+}
 
 async function saveAccount(
   supabaseAdmin: AdminClient,
@@ -97,7 +136,11 @@ async function saveAccount(
     refresh_token?: string | null;
     expires_at?: string | null;
   },
-) {
+): Promise<boolean> {
+  if (!(await withinPlanLimit(supabaseAdmin, stateRow, account.platform, account.external_id))) {
+    limitHits.set(stateRow, true);
+    return false;
+  }
   const { data: row, error } = await supabaseAdmin
     .from("social_accounts")
     .upsert(
@@ -128,6 +171,7 @@ async function saveAccount(
     expires_at: account.expires_at ?? null,
   });
   if (tokenError) throw new Error(tokenError.message);
+  return true;
 }
 
 async function connectMeta(args: {
@@ -207,7 +251,7 @@ async function connectMeta(args: {
       const sub = await subscribePageWebhooks(page.id, page.access_token);
       if (!sub.ok) console.error("page webhook subscribe failed", page.id, sub.error);
       if (stateRow.platform === "facebook") {
-        await saveAccount(supabaseAdmin, stateRow, {
+        const ok = await saveAccount(supabaseAdmin, stateRow, {
           platform: "facebook",
           external_id: page.id,
           name: page.name,
@@ -218,14 +262,14 @@ async function connectMeta(args: {
           access_token: page.access_token,
           expires_at: expiresAt,
         });
-        saved++;
+        if (ok) saved++;
       } else if (page.instagram_business_account) {
         const ig = page.instagram_business_account;
         const igSub = await subscribeInstagramWebhooks(ig.id, page.access_token);
         if (!igSub.ok) {
           console.error("instagram webhook subscribe failed", ig.id, igSub.error);
         }
-        await saveAccount(supabaseAdmin, stateRow, {
+        const ok = await saveAccount(supabaseAdmin, stateRow, {
           platform: "instagram",
           external_id: ig.id,
           name: ig.name ?? ig.username ?? page.name,
@@ -242,7 +286,7 @@ async function connectMeta(args: {
           access_token: page.access_token,
           expires_at: expiresAt,
         });
-        saved++;
+        if (ok) saved++;
       }
     }
   }
@@ -297,7 +341,7 @@ async function connectGoogle(args: {
   if (!channel) throw new Error("No YouTube channel on this Google account");
 
   const { googleScopes } = await import("@/lib/social");
-  await saveAccount(supabaseAdmin, stateRow, {
+  const ok = await saveAccount(supabaseAdmin, stateRow, {
     platform: "youtube",
     external_id: channel.id,
     name: channel.snippet?.title ?? "YouTube channel",
@@ -312,5 +356,5 @@ async function connectGoogle(args: {
       : null,
   });
 
-  return 1;
+  return ok ? 1 : 0;
 }
