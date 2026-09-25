@@ -185,3 +185,48 @@ Until item 3 ships, **do not rely on the app to prevent reselling** — rely on 
 - Don't promise custom domains, per-workspace email senders or source code as part of today's plan.
 - Don't let an unsupervised client turn into a reseller chain — watch Organizations and use the contract.
 - Don't sell "unlimited DMs" — Meta's limits are not ours to sell.
+
+---
+
+## 10. Recommended pricing (INR) — what we would charge
+
+Internal suggestion from the Techaasvik team. Nothing in this section changes the app's prices — the Plans editor (Admin → Plans) is the only place prices actually change. Update this section whenever we move a real price.
+
+### 10.1 Self-serve plans
+
+| Plan | Today | Recommendation | Why |
+|---|---|---|---|
+| Free trial | ₹9 for 3 days | **Keep ₹9 / 3 days** | Paid trial filters out tyre-kickers at almost zero friction. Keep the 1 Instagram + 1 Facebook + 1 YouTube limit. |
+| Pro | ₹59/mo · ₹299/6mo · ₹599/yr | **Launch: keep ₹59** · Later: **₹99/mo · ₹499/6mo · ₹899/yr** | ₹59 is a no-brainer impulse price for the Indian market and beats every competitor (ManyChat runs ~₹1,300+/mo for similar automation; Indian WhatsApp tools like AiSensy start ~₹999/mo). But ₹59 barely covers infra + support per user. Once there are 100+ paying workspaces, move new signups to ₹99 and **grandfather existing ₹59 users** — they stay on ₹59 as long as they keep paying. |
+
+**Timing for the ₹59 → ₹99 move:** only after the automation has been stable for 4–6 weeks and we have social proof (testimonials, case numbers). Announce 2 weeks in advance; grandfather everyone who joined before the change.
+
+**Do not add a middle plan.** Three tiers (Free / Pro / Agency) is already the right ladder; a mid tier only creates upsell confusion at this stage. Revisit when the Pro plan has account-type limits that genuinely pinch (e.g. 10 of each platform as "Pro+").
+
+### 10.2 Agency (custom pricing) — suggested ladder
+
+Anchor rule from section 4 stands: the deal must stay above what the same client would pay as multiple Pro accounts, plus margin for white-label + dedicated support. Concretely:
+
+| Tier | Included | Setup fee (one-time) | Monthly |
+|---|---|---|---|
+| Agency Starter | Up to 3 client workspaces, white-label branding, unlimited own accounts | ₹9,999 | **₹4,999/mo** |
+| Agency Growth | Up to 10 client workspaces, white-label, priority onboarding call | ₹14,999 | **₹9,999/mo** |
+| Agency Scale | Unlimited client workspaces, white-label, named support contact | ₹24,999 | **₹19,999/mo** |
+| Extra client workspace (any tier) | Per additional workspace beyond the tier limit | — | **₹799/mo each** |
+
+Notes:
+
+- **Annual billing: 2 months free** (pay for 10, get 12) — same discount shape as Pro's yearly plan.
+- **Minimum commitment: 3 months.** Setup fee is non-refundable once onboarding work starts (matches the Terms).
+- **Never go below ₹3,000/mo total.** Below that the client should simply buy Pro seats — a custom deal under that number costs us more in support than it earns.
+- **Do not price per message/DM.** Meta's rate limits are not ours to sell (section 4); volume-based pricing invites abuse and support fights. Price by number of client workspaces and support level.
+- **Setup fee covers:** white-label brand setup, client workspace creation, automation rule copy + tuning, one live end-to-end walkthrough on the client's real post (section 3, step 9).
+- **Dedicated support is included** in every tier; anything beyond agreed response times (e.g. 24/7 or a phone line) is a separate add-on priced per deal.
+- **Reselling clause ties to price:** if a client wants sub-reseller rights (section 7), the add-on agreement starts at the Growth tier minimum — a client big enough to resell is big enough to pay for it.
+
+### 10.3 Quick negotiation anchors
+
+- Client asks "why not just Pro?" → Pro has 5-of-each account caps, no client workspaces, no white-label, standard support. Agency buys *their own product look* and unlimited structure.
+- Client pushes on price → drop the tier (fewer included workspaces), never the per-workspace rate.
+- Client wants annual → 2 months free is the ceiling; anything more needs a reason.
+- Agency Starter at ₹4,999/mo = the price of roughly 12 Pro accounts; if the client needs fewer than 5 workspaces and doesn't care about branding, honestly tell them Pro is the better deal — that honesty wins the upgrade later.
