@@ -100,5 +100,5 @@ Highest value per effort first:
 - New triggers need extra webhook subscriptions (`message_reactions`, story `messages` payload shape, `messaging_postbacks` already handled) plus extra permissions at app review. Existing signature verification and dual-secret handling stay as is.
 - Ice breakers and persistent menu are `messenger_profile` writes per connected account — new server functions plus a per-account settings screen; no change to the send path.
 - The flow engine must reuse the current safe-send layer (cooldown, per-post rule, caps, kill switch) rather than call the Meta API directly, so the locked DM automation stays intact.
-- WhatsApp is a separate Cloud API integration with its own token store, template approval and 24-hour rules — treat as its own provider, not an extension of Meta pages.
+- WhatsApp is served by the existing Techaasvik backend, not a new Cloud API build. Integration is a server-side client calling that API with an `X-API-Key` stored as a secret (never in the browser, never in the repo), one key per workspace where possible, with retries and failure logging into the same activity feed. WhatsApp's own 24-hour window and template approval rules still apply on that side.
 - Every phase ships behind a feature flag in platform settings so super admin can roll out per workspace.
