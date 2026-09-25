@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
@@ -198,6 +198,13 @@ function SocialAccountsPage() {
           const ready =
             meta.provider === "meta" ? readiness?.meta : readiness?.google;
           const count = accounts.filter((a) => a.platform === platform).length;
+          const planName = (activeOrg?.plan ?? "").toLowerCase();
+          const limit = planName.startsWith("agency")
+            ? Infinity
+            : planName.startsWith("pro")
+              ? 5
+              : 1;
+          const atLimit = count >= limit;
           return (
             <Panel key={platform}>
               <div className="flex items-start justify-between gap-3">
@@ -222,6 +229,13 @@ function SocialAccountsPage() {
                   </li>
                 ))}
               </ul>
+              {atLimit ? (
+                <Button asChild className="mt-4 w-full" variant="outline">
+                  <Link to="/billing">
+                    Plan limit reached ({count}/{limit}) — Upgrade
+                  </Link>
+                </Button>
+              ) : (
               <Button
                 className="mt-4 w-full"
                 variant={count > 0 ? "outline" : "default"}
@@ -235,6 +249,7 @@ function SocialAccountsPage() {
                 )}
                 {count > 0 ? "Connect another" : `Connect ${meta.label}`}
               </Button>
+              )}
             </Panel>
           );
         })}
