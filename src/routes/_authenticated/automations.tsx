@@ -493,10 +493,9 @@ function AutomationsPage() {
                       title="Duplicate rule"
                       aria-label="Duplicate rule"
                       onClick={() => {
-                        const copy = toDraft(rule);
+                        const { id: _omit, ...copy } = toDraft(rule);
                         setDraft({
                           ...copy,
-                          id: undefined,
                           name: `${rule.name} (copy)`.slice(0, 80),
                           isActive: false,
                         });
