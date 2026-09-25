@@ -400,16 +400,25 @@ export const Route = createFileRoute("/api/public/webhooks/meta")({
           /* tracking is optional */
         }
         const body = await request.text();
-        const appSecret = process.env["META_APP_SECRET"];
+        // Facebook Page webhooks are signed with the Meta App Secret, while the
+        // "Instagram" product (Instagram API with Instagram Login) signs with
+        // its own Instagram App Secret. Accept either configured secret.
+        const secrets = [process.env["META_APP_SECRET"], process.env["INSTAGRAM_APP_SECRET"]]
+          .map((s) => s?.trim())
+          .filter((s): s is string => !!s);
         const header = request.headers.get("x-hub-signature-256") ?? "";
 
-        if (!appSecret) {
+        if (secrets.length === 0) {
           traceLog(traceId, "signature", "rejected", "meta_app_secret_missing");
           return new Response("Not configured", { status: 503 });
         }
 
         const provided = header.startsWith("sha256=") ? header.slice(7) : "";
-        if (!(await verifyMetaSignature(appSecret, body, header))) {
+        let signatureOk = false;
+        for (const s of secrets) {
+          if (await verifyMetaSignature(s, body, header)) { signatureOk = true; break; }
+        }
+        if (!signatureOk) {
           const reason = provided ? "app_secret_mismatch" : "signature_header_missing";
           traceLog(traceId, "signature", "rejected", reason);
           try {
