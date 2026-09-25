@@ -50,7 +50,7 @@ Includes: delays, branching on user answer, buttons/quick replies per step, A/B 
 
 ## Phase F — More channels
 
-- WhatsApp Cloud API (own number, template messages, catalogue).
+- **WhatsApp via your own in-house platform** (bulkmarketing.techaasvik.in, official Cloud API, you are a registered Tech Provider). We do not rebuild WhatsApp — we call your existing backend with its API key: pull contacts, push contacts captured from Instagram/Facebook, trigger campaigns, and send a WhatsApp follow-up when a DM link is not opened. One "WhatsApp handoff" step inside automation rules.
 - Threads and Telegram where APIs allow.
 - TikTok DM automation (officially opened to partners).
 - Email/SMS fallback when a DM window closes.
