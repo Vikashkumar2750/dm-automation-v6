@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
-import { ChevronDown, Loader2, Plus, ShieldCheck, Trash2, Workflow, Zap } from "lucide-react";
+import { ChevronDown, Copy, Loader2, Plus, ShieldCheck, Trash2, Workflow, Zap } from "lucide-react";
 import { toast } from "sonner";
 
 import { AppShell } from "@/components/app/AppShell";
@@ -487,6 +487,24 @@ function AutomationsPage() {
                         toggleMutation.mutate({ id: rule.id, isActive: checked })
                       }
                     />
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      title="Duplicate rule"
+                      aria-label="Duplicate rule"
+                      onClick={() => {
+                        const copy = toDraft(rule);
+                        setDraft({
+                          ...copy,
+                          id: undefined,
+                          name: `${rule.name} (copy)`.slice(0, 80),
+                          isActive: false,
+                        });
+                        toast.info("Copy opened — edit and save. It starts paused.");
+                      }}
+                    >
+                      <Copy className="size-4" />
+                    </Button>
                     <Button
                       variant="ghost"
                       size="icon"
