@@ -7,7 +7,7 @@ read this file and run `bunx vitest run`. All tests must stay green.
 ## 1. End-to-end flow
 
 ```text
-User comments "tikki" on a post
+User comments "keyword" on a post
         |
         v
 Meta webhook (POST /api/public/webhooks/meta)
@@ -52,6 +52,7 @@ Webhook: messages / messaging_postbacks / standby / quick_reply
 ```
 
 ## 2. Key rules (do not break)
+
 - Unknown follow status (null) is NEVER treated as follower -> ask_follow.
 - Follower flow: opener tap delivers directly. No "I followed" step.
 - Follow prompt uses `gateButtonMessages(text, buttons, false)` (template first).
@@ -65,22 +66,26 @@ Webhook: messages / messaging_postbacks / standby / quick_reply
   text-only taps matching exact titles "Send me the link" | "Send it to me" | "I followed ✅".
 
 ## 3. Meta time windows
+
 - Standard messaging window: 24 h after the user's last message/tap (resets each tap).
 - Comment private reply: within 7 days of the comment, one private reply per comment.
 - Non-follower DMs land in Message Requests — that's why buttons must be attached.
 
 ## 4. Safety limits (recommended)
+
 - 60 automated DMs/hour and 200/day per account, 1 DM per person per comment,
   reply variations, viral guard. Meta publishes no fixed DM number; these are
   conservative values used by ManyChat-style tools to avoid spam flags.
 
 ## 5. Tracing / where to look when it breaks
+
 - `webhook_events.error` = `trace:<id>:<reason>` (echo, duplicate_delivery,
   account_not_matched, unsupported_event, empty_body ...).
 - `automation_runs` = each step with status + detail; friendly text in `src/lib/activity-explain.ts`.
 - Delivery Health page shows live trace timeline; Test console simulates both flows without sending.
 
 ## 6. Troubleshooting checklist
+
 1. Nothing at all -> webhook 401: META_APP_SECRET on Railway must equal the Meta app secret.
 2. Opener arrives, tap does nothing -> run "Check & repair Meta" (subscribes messages,
    messaging_postbacks, standby); check Meta app webhook fields.
