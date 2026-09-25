@@ -116,6 +116,11 @@ function SocialAccountsPage() {
           ? `Connected ${added} account${added === "1" ? "" : "s"}`
           : "Nothing new to connect — check the account has the right permissions",
       );
+      if (params.get("limit")) {
+        toast.error(
+          "Your plan's account limit is reached. Free plan: 1 Instagram, 1 Facebook, 1 YouTube. Upgrade to Pro to add more.",
+        );
+      }
       queryClient.invalidateQueries({ queryKey: ["social-accounts", orgId] });
     } else if (result === "cancelled") {
       toast("Connection cancelled");
