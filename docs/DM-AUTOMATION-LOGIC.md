@@ -64,6 +64,13 @@ Webhook: messages / messaging_postbacks / standby / quick_reply
   applied to new comments, so other posts reply; org/rule rate limits and viral protection remain.
 - Payload formats accepted: postback.payload, quick_reply.payload, standby, and
   text-only taps matching exact titles "Send me the link" | "Send it to me" | "I followed ✅".
+- **Facebook only (no verified follow possible):** Messenger exposes no follow
+  state and no Page-follow webhook. When the rule requires a follow, Facebook
+  runs the gate on the honor system — opener tap sends "Visit profile" +
+  "I followed ✅" (no verification), and the confirmation tap delivers the
+  final DM. Instagram keeps its verified `is_user_follow_business` check. The
+  Facebook plain-text fallback never carries the link when follow is required
+  (it would bypass the gate).
 
 ## 3. Meta time windows
 
