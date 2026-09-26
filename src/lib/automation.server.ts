@@ -474,7 +474,7 @@ export async function runAutomations(admin: AdminClient, ctx: AutomationContext)
     ) {
       const commentText = pickFrom(rule.comment_reply_text, rule.comment_reply_variations);
       if (commentText) {
-        const res = await call(`${GRAPH}/${ctx.externalId}/replies`, {
+        const res = await call(`${GRAPH}/${ctx.externalId}/${ctx.platform === "facebook" ? "comments" : "replies"}`, {
           message: commentText,
           access_token: token,
         });
@@ -772,7 +772,7 @@ async function deliverDm(
       await log(admin, ctx, rule.id, "failed", "no_comment_id");
       return false;
     }
-    const res = await call(`${GRAPH}/${ctx.externalId}/replies`, {
+    const res = await call(`${GRAPH}/${ctx.externalId}/${ctx.platform === "facebook" ? "comments" : "replies"}`, {
       message: text,
       access_token: token,
     });
