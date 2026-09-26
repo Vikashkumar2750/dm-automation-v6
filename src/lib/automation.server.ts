@@ -1007,6 +1007,12 @@ async function openGate(
     // message so it stays visible in Message Requests (non-followers), where
     // bottom-of-screen quick replies are hidden. Fallbacks follow.
     shapes = openerMessages(text, title, followGatePayload(gate.id, "opener", crypto.randomUUID()));
+    // Facebook only: last-resort plain text so a template refusal never
+    // blocks the DM. Instagram shapes are unchanged (LOCKED).
+    if (ctx.platform === "facebook") {
+      const link = (rule.dm_link_url ?? "").trim();
+      shapes = [...shapes, { text: link ? `${OPENER_TEXT}\n${link}` : OPENER_TEXT }];
+    }
   } else {
     ({ text, shapes } = await followPromptShapes(admin, ctx, rule, gate.id, false));
   }
