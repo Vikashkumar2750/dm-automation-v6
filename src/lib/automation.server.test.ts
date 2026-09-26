@@ -1,12 +1,39 @@
 import { describe, expect, it } from "vitest";
 import {
   followGatePayload,
+  followGateStage,
   followGateVerdict,
   followVerdict,
   gateButtonMessages,
   usesPerContactDailyLimit,
 } from "./automation.server";
 import { followGateId } from "./meta-messaging";
+
+describe("Facebook honor-system follow gate", () => {
+  it("reads the stage from the button payload", () => {
+    expect(followGateStage("AUTOMATION_FOLLOW_CHECK:g:opener:n")).toBe("opener");
+    expect(followGateStage("AUTOMATION_FOLLOW_CHECK:g:confirm:n")).toBe("confirm");
+  });
+
+  it("reads the stage from exact text-only taps", () => {
+    expect(followGateStage(null, "I followed ✅")).toBe("confirm");
+    expect(followGateStage(null, "Send me the link")).toBe("opener");
+    expect(followGateStage(null, "hello")).toBe("opener");
+  });
+
+  // Facebook shows the follow prompt on the opener tap and delivers on the
+  // "I followed" tap without verification (Messenger has no follow API).
+  it("asks a required-follow rule for a follow on the opener tap", () => {
+    const rule = { require_follow: true, follower_condition: "non_followers" as const };
+    expect(followGateVerdict(rule, null, 0)).toBe("ask_follow");
+    expect(followGateVerdict(rule, true, 1)).toBe("deliver");
+  });
+
+  it("delivers directly when no follow is required", () => {
+    const rule = { require_follow: false, follower_condition: "any" as const };
+    expect(followGateVerdict(rule, true, 0)).toBe("deliver");
+  });
+});
 
 describe("required-follow link delivery", () => {
   const rule = { require_follow: true, follower_condition: "non_followers" };
