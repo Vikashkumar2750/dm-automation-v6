@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   CheckCheck,
   EyeOff,
@@ -96,6 +96,19 @@ function FilterChips<T extends string>({
   );
 }
 
+const BUTTON_TITLES = ["Send me the link", "Visit profile", "I followed ✅"];
+
+/** Split "[public reply] text" into a tag + the text the contact actually sees. */
+function describeMessage(body: string, outbound: boolean) {
+  const match = body.match(/^\[(public reply|private reply)\]\s*/i);
+  const tag = match ? match[1].toLowerCase() : null;
+  const text = match ? body.slice(match[0].length) : body;
+  const buttons: string[] = [];
+  if (outbound && /tap the button below/i.test(text)) buttons.push("Send me the link");
+  if (outbound && /follow/i.test(text) && /tap/i.test(text)) buttons.push("Visit profile", "I followed ✅");
+  return { tag, text, buttons: buttons.filter((b) => BUTTON_TITLES.includes(b)) };
+}
+
 function InboxPage() {
   const { activeOrg } = useTenant();
   const orgId = activeOrg?.id;
@@ -143,6 +156,12 @@ function InboxPage() {
     refetchInterval: 15_000,
     queryFn: () => fetchMessages({ data: { conversationId: selected!.id } }),
   });
+
+  const threadRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = threadRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [selected?.id, messagesQuery.data?.length]);
 
   const send = useMutation({
     mutationFn: (body: string) =>
@@ -380,13 +399,18 @@ function InboxPage() {
                 </StatusBadge>
               </div>
 
-              <div className="flex-1 space-y-3 overflow-y-auto px-5 py-4">
+              <div
+                ref={threadRef}
+                className="h-[60vh] min-h-[320px] space-y-3 overflow-y-auto px-5 py-4"
+              >
                 {messagesQuery.isLoading ? (
                   <div className="flex items-center justify-center py-10 text-sm text-muted-foreground">
                     <Loader2 className="mr-2 size-4 animate-spin" /> Loading messages…
                   </div>
                 ) : (
-                  (messagesQuery.data ?? []).map((m) => (
+                  (messagesQuery.data ?? []).map((m) => {
+                    const view = describeMessage(m.body, m.direction === "outbound");
+                    return (
                     <div
                       key={m.id}
                       className={cn(
@@ -396,7 +420,24 @@ function InboxPage() {
                           : "bg-muted",
                       )}
                     >
-                      <p className="whitespace-pre-wrap break-words">{m.body}</p>
+                      {view.tag ? (
+                        <span className="mb-1 inline-block rounded bg-background/20 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide">
+                          {view.tag}
+                        </span>
+                      ) : null}
+                      <p className="whitespace-pre-wrap break-words">{view.text}</p>
+                      {view.buttons.length ? (
+                        <div className="mt-2 space-y-1">
+                          {view.buttons.map((b) => (
+                            <div
+                              key={b}
+                              className="rounded-md bg-background px-3 py-1.5 text-center text-xs font-semibold text-foreground"
+                            >
+                              {b}
+                            </div>
+                          ))}
+                        </div>
+                      ) : null}
                       <p
                         className={cn(
                           "mt-1 text-[10px]",
@@ -408,7 +449,8 @@ function InboxPage() {
                         {new Date(m.sent_at).toLocaleString()}
                       </p>
                     </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
 
