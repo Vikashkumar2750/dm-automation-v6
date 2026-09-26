@@ -1088,6 +1088,21 @@ export async function handleFollowGateReply(
     return true;
   }
   let gate = gates?.[0];
+  // Facebook: the comment author id differs from the Messenger PSID, so a
+  // text-only tap cannot match by sender. Use the single waiting Facebook gate
+  // on this Page from the last 30 minutes — only when exactly one exists.
+  if (!gate && !gateId && isTextTap && args.platform === "facebook" && args.socialAccountId) {
+    const { data: fbGates } = await admin
+      .from("automation_follow_gates")
+      .select("id, organization_id, rule_id, conversation_id, attempts, social_account_id, platform, external_user_id, created_at")
+      .eq("status", "waiting")
+      .eq("platform", "facebook")
+      .eq("organization_id", args.organizationId)
+      .eq("social_account_id", args.socialAccountId)
+      .gte("created_at", new Date(Date.now() - 30 * 60 * 1000).toISOString())
+      .limit(2);
+    if (fbGates && fbGates.length === 1) gate = fbGates[0];
+  }
   // Never infer a text-only tap from another contact's waiting gate.
   if (!gate?.rule_id) {
     if (hasPayload) {
@@ -1166,7 +1181,11 @@ export async function handleFollowGateReply(
     account.metadata,
   );
 
-  const follows = await checkFollows(gatePlatform, args.externalUserId, token);
+  // Facebook Messenger has no follower API and no "follow" concept for a Page
+  // DM, so a Facebook tap always delivers the final DM. Instagram unchanged.
+  const follows = gatePlatform === "facebook"
+    ? true
+    : await checkFollows(gatePlatform, args.externalUserId, token);
   const previousTaps = (gate.attempts as number | null) ?? 0;
   const attempts = previousTaps + 1;
   const now = new Date().toISOString();
