@@ -1219,7 +1219,9 @@ export async function handleFollowGateReply(
   const verdict = followGateVerdict(typedRule, follows, previousTaps);
   await log(admin, ctx, typedRule.id, "matched", follows === true
     ? "gate_verified_follower"
-    : follows === false ? "gate_verified_non_follower" : "gate_follow_status_unavailable");
+    : follows === false
+      ? "gate_verified_non_follower"
+      : gatePlatform === "facebook" ? "gate_follow_prompt_pending" : "gate_follow_status_unavailable");
 
   const finish = (status: "completed" | "expired") =>
     admin
