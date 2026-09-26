@@ -101,7 +101,7 @@ const BUTTON_TITLES = ["Send me the link", "Visit profile", "I followed ✅"];
 /** Split "[public reply] text" into a tag + the text the contact actually sees. */
 function describeMessage(body: string, outbound: boolean) {
   const match = body.match(/^\[(public reply|private reply)\]\s*/i);
-  const tag = match ? match[1].toLowerCase() : null;
+  const tag = match ? (match[1] ?? "").toLowerCase() : null;
   const text = match ? body.slice(match[0].length) : body;
   const buttons: string[] = [];
   if (outbound && /tap the button below/i.test(text)) buttons.push("Send me the link");
