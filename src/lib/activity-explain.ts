@@ -6,6 +6,7 @@
 export function explainReason(detail: string | null): { title: string; hint: string } {
   const code = (detail ?? "").toLowerCase().replace(/^trace:[^:]+:/, "");
   const map: [string, string, string][] = [
+    ["code 10903", "Facebook blocked the DM for this commenter", "Facebook does not allow private replies to this person — usually because they commented as a Page or as an admin/owner of your own Page. Test with a normal personal Facebook profile that is not a Page admin."],
     ["already_replied_on_post", "Skipped: this person was already answered on this post", "One reply per person per post (7 days). Comments on other posts still get a reply."],
     ["post_reply:", "Comment on this post accepted", "First comment by this person on this post — reply is being sent."],
     ["duplicate_comment", "Skipped: this comment was already answered", "Meta allows one private reply per comment, so repeats are ignored."],
