@@ -316,7 +316,7 @@ function InboxPage() {
               description="Once your webhook is subscribed in the Meta app, incoming DMs and comments appear here in real time."
             />
           ) : (
-            <ul className="divide-y">
+            <ul className="max-h-[60vh] min-h-[240px] divide-y overflow-y-auto">
               {conversations.map((c) => (
                 <li key={c.id}>
                   <button
