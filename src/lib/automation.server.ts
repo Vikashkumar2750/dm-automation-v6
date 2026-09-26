@@ -905,6 +905,18 @@ export function followGatePayload(gateId: string, stage: "opener" | "confirm", n
   return `${FOLLOW_PAYLOAD}:${gateId}:${stage}:${nonce}`;
 }
 
+/** Which gate stage a tap belongs to. Payload carries it; a text-only tap is
+ * matched by exact button title ("I followed ✅" = confirmation). */
+export function followGateStage(
+  payload: string | null | undefined,
+  messageText?: string | null,
+): "opener" | "confirm" {
+  if (payload && payload.startsWith(`${FOLLOW_PAYLOAD}:`)) {
+    return payload.split(":")[2] === "confirm" ? "confirm" : "opener";
+  }
+  return (messageText ?? "").trim() === "I followed ✅" ? "confirm" : "opener";
+}
+
 async function profileUrlFor(admin: AdminClient, ctx: AutomationContext) {
   if (!ctx.socialAccountId) return null;
   const { data: acc } = await admin
@@ -1008,10 +1020,13 @@ async function openGate(
     // bottom-of-screen quick replies are hidden. Fallbacks follow.
     shapes = openerMessages(text, title, followGatePayload(gate.id, "opener", crypto.randomUUID()));
     // Facebook only: last-resort plain text so a template refusal never
-    // blocks the DM. Instagram shapes are unchanged (LOCKED).
+    // blocks the DM. Instagram shapes are unchanged (LOCKED). When the rule
+    // requires a follow, the link must NOT ride along in the fallback text —
+    // otherwise the plain-text shape would bypass the follow gate.
     if (ctx.platform === "facebook") {
       const link = (rule.dm_link_url ?? "").trim();
-      shapes = [...shapes, { text: link ? `${OPENER_TEXT}\n${link}` : OPENER_TEXT }];
+      const gated = requiresFollow(rule);
+      shapes = [...shapes, { text: link && !gated ? `${OPENER_TEXT}\n${link}` : OPENER_TEXT }];
     }
   } else {
     ({ text, shapes } = await followPromptShapes(admin, ctx, rule, gate.id, false));
@@ -1187,10 +1202,14 @@ export async function handleFollowGateReply(
     account.metadata,
   );
 
-  // Facebook Messenger has no follower API and no "follow" concept for a Page
-  // DM, so a Facebook tap always delivers the final DM. Instagram unchanged.
+  // Facebook: Messenger exposes no follow state and no Page-follow webhook, so
+  // a required-follow rule runs on the honor system — the opener tap asks the
+  // contact to follow (Visit profile + "I followed ✅") and the confirmation
+  // tap delivers the final DM without re-checking. Instagram keeps its verified
+  // Graph API check (LOCKED — never change this branch for Instagram).
+  const tapStage = followGateStage(hasPayload ? args.payload : null, args.messageText);
   const follows = gatePlatform === "facebook"
-    ? true
+    ? (tapStage === "confirm" || !requiresFollow(typedRule) ? true : null)
     : await checkFollows(gatePlatform, args.externalUserId, token);
   const previousTaps = (gate.attempts as number | null) ?? 0;
   const attempts = previousTaps + 1;
