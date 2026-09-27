@@ -93,6 +93,7 @@ function SettingsPage() {
   }, [workspace.data]);
 
   const canEdit = ["owner", "admin"].includes(workspace.data?.my_role ?? "");
+  const isAgency = workspace.data?.plan === "agency";
 
   const save = useMutation({
     mutationFn: () =>
@@ -130,7 +131,12 @@ function SettingsPage() {
       queryClient.invalidateQueries();
       switchOrg(res.id);
     },
-    onError: () => toast.error("Could not create the client workspace"),
+    onError: (e: Error) =>
+      toast.error(
+        e.message === "plan_only_agency"
+          ? "Client workspaces are available on the Agency plan only"
+          : "Could not create the client workspace",
+      ),
   });
 
   if (!orgId) {
@@ -249,7 +255,8 @@ function SettingsPage() {
         </div>
       </Panel>
 
-      <Panel title="Client workspaces">
+      {isAgency ? (
+        <Panel title="Client workspaces">
         <div className="flex flex-col gap-3 sm:flex-row">
           <Input
             placeholder="New client name"
@@ -303,7 +310,15 @@ function SettingsPage() {
             />
           )}
         </div>
-      </Panel>
+        </Panel>
+      ) : (
+        <Panel title="Client workspaces">
+          <p className="text-sm text-muted-foreground">
+            Client workspaces are available on the Agency (custom pricing) plan. Upgrade to manage
+            client accounts in separate workspaces.
+          </p>
+        </Panel>
+      )}
     </div>
     </AppShell>
   );
