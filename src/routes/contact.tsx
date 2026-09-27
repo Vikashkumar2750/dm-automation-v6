@@ -61,18 +61,18 @@ function ContactPage() {
       ) : (
         <form onSubmit={handleSubmit} className="space-y-4 rounded-lg border bg-surface p-5 text-foreground">
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Name"><Input name="name" maxLength={100} required autoComplete="name" /></Field>
-            <Field label="Email"><Input name="email" type="email" maxLength={200} required autoComplete="email" /></Field>
+            <Field label="Name" htmlFor="support-name"><Input id="support-name" name="name" maxLength={100} required autoComplete="name" /></Field>
+            <Field label="Email" htmlFor="support-email"><Input id="support-email" name="email" type="email" maxLength={200} required autoComplete="email" /></Field>
           </div>
-          <Field label="Category">
-            <select name="category" className="h-10 w-full rounded-md border bg-background px-3 text-sm" defaultValue="general">
+          <Field label="Category" htmlFor="support-category">
+            <select id="support-category" name="category" className="h-10 w-full rounded-md border bg-background px-3 text-sm" defaultValue="general">
               <option value="general">General</option><option value="technical">Technical support</option>
               <option value="billing">Billing</option><option value="privacy">Privacy or data</option>
               <option value="partnership">Partnership</option>
             </select>
           </Field>
-          <Field label="Subject"><Input name="subject" minLength={3} maxLength={160} required /></Field>
-          <Field label="How can we help?"><Textarea name="message" minLength={10} maxLength={4000} rows={7} required /></Field>
+          <Field label="Subject" htmlFor="support-subject"><Input id="support-subject" name="subject" minLength={3} maxLength={160} required /></Field>
+          <Field label="How can we help?" htmlFor="support-message"><Textarea id="support-message" name="message" minLength={10} maxLength={4000} rows={7} required /></Field>
           {error ? <p role="alert" className="text-sm text-destructive">{error}</p> : null}
           <Button type="submit" disabled={busy}>{busy ? "Sending…" : "Send inquiry"}</Button>
         </form>
@@ -81,6 +81,6 @@ function ContactPage() {
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return <div className="space-y-1.5"><Label>{label}</Label>{children}</div>;
+function Field({ label, htmlFor, children }: { label: string; htmlFor: string; children: React.ReactNode }) {
+  return <div className="space-y-1.5"><Label htmlFor={htmlFor}>{label}</Label>{children}</div>;
 }
