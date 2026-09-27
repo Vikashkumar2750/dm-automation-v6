@@ -1005,6 +1005,11 @@ export const listAutomationAlerts = createServerFn({ method: "GET" })
     for (const h of hooks.data ?? []) {
       if (h.status !== "failed" && h.signature_valid !== false) continue;
       const bad = h.signature_valid === false;
+      const signatureHeaderMissing = bad && h.error?.includes("signature_header_missing");
+      // Public webhook URLs are routinely probed by browsers, uptime checks and bots.
+      // Those unsigned requests are rejected correctly, but are not Meta delivery failures.
+      if (signatureHeaderMissing) continue;
+      const secretMismatch = bad && h.error?.includes("app_secret_mismatch");
       const title = bad ? "Event rejected: signature invalid" : "Incoming event could not be processed";
       reasonCount.set(title, (reasonCount.get(title) ?? 0) + 1);
       items.push({
@@ -1013,8 +1018,10 @@ export const listAutomationAlerts = createServerFn({ method: "GET" })
         category: "delivery",
         title: `${title} (${h.event_type})`,
         detail: h.error,
-        hint: bad
-          ? "The app secret in Meta does not match the one configured here."
+        hint: secretMismatch
+          ? "The request was signed, but its signature did not match the configured Facebook or Instagram app secret."
+          : bad
+            ? "The request did not pass Meta signature verification."
           : "Open Webhooks to inspect the raw event payload.",
         organizationName: name(h.organization_id),
         at: h.received_at,

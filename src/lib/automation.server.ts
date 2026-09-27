@@ -366,19 +366,25 @@ export async function runAutomations(admin: AdminClient, ctx: AutomationContext)
     .eq("trigger", trigger)
     .order("priority", { ascending: true });
 
-  const candidates = ((rules ?? []) as Rule[]).filter(
-    (r) =>
-      (!r.platform || r.platform === ctx.platform) &&
-      targetsPost(r, ctx.postExternalId ?? null) &&
-      matches(r, ctx.body),
-  );
+  const activeRules = (rules ?? []) as Rule[];
+  const platformRules = activeRules.filter((r) => !r.platform || r.platform === ctx.platform);
+  const postRules = platformRules.filter((r) => targetsPost(r, ctx.postExternalId ?? null));
+  const candidates = postRules.filter((r) => matches(r, ctx.body));
   if (candidates.length === 0) {
+    const reason =
+      activeRules.length === 0
+        ? `no_active_${trigger}_rule`
+        : platformRules.length === 0
+          ? "no_matching_rule:platform"
+          : postRules.length === 0
+            ? "no_matching_rule:post"
+            : "no_matching_rule:keyword";
     await log(
       admin,
       ctx,
       null,
       "skipped",
-      rules?.length ? "no_matching_rule" : `no_active_${trigger}_rule`,
+      reason,
     );
     return;
   }
