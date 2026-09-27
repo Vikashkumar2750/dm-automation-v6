@@ -13,6 +13,7 @@ import {
   getAutomationUsage,
   resumeAutomations,
 } from "@/lib/automations.functions";
+import { getPlanUsage } from "@/lib/plan-limits.functions";
 
 export const Route = createFileRoute("/_authenticated/usage")({
   head: () => ({
@@ -42,6 +43,13 @@ function UsagePage() {
   const fetchUsage = useServerFn(getAutomationUsage);
   const fetchSettings = useServerFn(getAutomationSettings);
   const resume = useServerFn(resumeAutomations);
+  const fetchPlanUsage = useServerFn(getPlanUsage);
+  const planUsage = useQuery({
+    queryKey: ["plan-usage", orgId],
+    enabled: !!orgId,
+    queryFn: () => fetchPlanUsage({ data: { organizationId: orgId! } }),
+  });
+  const pu = planUsage.data;
 
   const usage = useQuery({
     queryKey: ["automation-usage", orgId],
@@ -106,6 +114,21 @@ function UsagePage() {
             <StatCard icon={SkipForward} label="Skipped today" value={String(u?.skippedLastDay ?? 0)} sub="Safety rules or caps" />
             <StatCard icon={ShieldAlert} label="Failed today" value={String(u?.failedLastDay ?? 0)} sub={`${u?.inboundLastHour ?? 0} events this hour`} />
           </div>
+
+          <Panel title="Your plan this month">
+            <div className="grid gap-5 sm:grid-cols-2">
+              {pu?.monthlyDms == null ? (
+                <p className="text-sm">DMs this month: <span className="num font-medium">{pu?.dmsThisMonth ?? 0}</span> (unlimited)</p>
+              ) : (
+                <UsageMeter label="DMs this month" used={pu.dmsThisMonth} limit={pu.monthlyDms || 1} unit="DMs" />
+              )}
+              {pu?.maxRules == null ? (
+                <p className="text-sm">Active rules: <span className="num font-medium">{pu?.activeRules ?? 0}</span> (unlimited)</p>
+              ) : (
+                <UsageMeter label="Active rules" used={pu.activeRules} limit={pu.maxRules || 1} unit="rules" />
+              )}
+            </div>
+          </Panel>
 
           <Panel title="Against your limits">
             <div className="grid gap-5 sm:grid-cols-2">

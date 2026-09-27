@@ -38,6 +38,7 @@ export function explainReason(detail: string | null): { title: string; hint: str
     ["already_a_follower", "Skipped: contact already follows", "Rule targets non-followers only."],
     ["paused", "Skipped: automation paused", "Automation is paused for this workspace."],
     ["quiet_hours", "Skipped: quiet hours", "Outside the workspace's sending hours."],
+    ["plan_monthly_dm_limit", "Monthly DM limit reached — upgrade", "Your plan's automated DMs for this month are used up. Upgrade on the Billing page, or wait until the 1st of next month."],
     ["per_contact_limit", "Skipped: contact reply limit reached", "This contact already received the allowed automated replies in the last 24 hours. Raise the per-person limit in Safety settings or wait for it to reset."],
     ["daily_limit", "Skipped: daily limit reached", "Raise the rule's daily cap if this is unexpected."],
     ["cooldown", "Skipped: cooldown active", "The same contact was messaged very recently."],
