@@ -310,6 +310,7 @@ function SettingsPage() {
             />
           )}
         </div>
+        </Panel>
       ) : (
         <Panel title="Client workspaces">
           <p className="text-sm text-muted-foreground">
