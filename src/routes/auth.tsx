@@ -1,3 +1,4 @@
+import appLogo from "@/assets/logo.webp.asset.json";
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
@@ -144,9 +145,7 @@ function AuthPage() {
     <div className="flex min-h-screen items-center justify-center bg-background px-4 py-10">
       <div className="w-full max-w-md">
         <Link to="/" className="mb-6 flex items-center justify-center gap-3">
-          <span className="inline-flex size-10 items-center justify-center rounded-xl bg-primary text-base font-bold text-primary-foreground">
-            W
-          </span>
+          <img src={appLogo.url} alt="AutoDM" className="size-10 rounded-xl object-contain" />
           <span className="text-left">
             <span className="block text-sm font-bold">AutoDM</span>
             <span className="block text-xs text-subtle-foreground">by Techaasvik</span>

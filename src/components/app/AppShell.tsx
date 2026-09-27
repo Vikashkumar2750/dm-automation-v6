@@ -1,3 +1,4 @@
+import appLogo from "@/assets/logo.webp.asset.json";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -88,7 +89,7 @@ function NavLink({ item, active }: { item: NavItem; active: boolean }) {
 function Sidebar({ pathname }: { pathname: string }) {
   const { activeOrg } = useTenant();
   const brand = activeOrg?.brandName?.trim() || "AutoDM";
-  const logo = activeOrg?.logoUrl?.trim() || null;
+  const logo = activeOrg?.logoUrl?.trim() || appLogo.url;
   const color = activeOrg?.brandColor?.trim() || null;
 
   return (
