@@ -33,5 +33,5 @@ Real Meta + YouTube credentials are available when we reach OAuth phases.
 - [x] Add real Meta webhook tracing, provider error visibility, and super-admin-controlled simulator access.
 - [ ] Verify fresh follower and non-follower taps after Railway deploy using correlation IDs (external deploy required).
 
-- [ ] Plan limits: monthly DMs + active rules per plan, super admin override (clarify edit behaviour)
+- [x] Plan limits done
 - [ ] User: set INSTAGRAM_APP_SECRET in Railway (app ID 1497788405165320)
