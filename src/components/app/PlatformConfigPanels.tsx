@@ -79,6 +79,27 @@ export function PlanEditorPanel() {
               />
               Contact-only (no online payment)
             </div>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {(["monthlyDms", "maxRules"] as const).map((k) => {
+                const lim = p.limits ?? DEFAULT_PLAN_LIMITS[p.key];
+                return (
+                  <label key={k} className="text-xs">
+                    <span className="font-medium">
+                      {k === "monthlyDms" ? "Automated DMs / month" : "Active automation rules"} (empty = unlimited)
+                    </span>
+                    <Input
+                      className="mt-1"
+                      inputMode="numeric"
+                      value={lim[k] ?? ""}
+                      onChange={(e) => {
+                        const n = parseInt(e.target.value, 10);
+                        update(i, { limits: { ...lim, [k]: e.target.value === "" || Number.isNaN(n) ? null : n } });
+                      }}
+                    />
+                  </label>
+                );
+              })}
+            </div>
             <div className="space-y-2">
               <p className="text-xs font-medium">Price options</p>
               {p.options.map((o, oi) => (
