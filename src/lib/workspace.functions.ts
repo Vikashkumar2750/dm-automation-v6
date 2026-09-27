@@ -156,15 +156,6 @@ export const createClientWorkspace = createServerFn({ method: "POST" })
     const role = await roleIn(context.supabase, data.parentOrganizationId, context.userId);
     if (!["owner", "admin"].includes(role)) throw new Error("not_allowed");
 
-    // Client workspaces are an Agency-plan feature — prevents ₹9/₹59 users
-    // from creating extra starter workspaces to bypass per-plan account limits.
-    const { data: parentOrg } = await context.supabase
-      .from("organizations")
-      .select("plan")
-      .eq("id", data.parentOrganizationId)
-      .maybeSingle();
-    if (parentOrg?.plan !== "agency") throw new Error("plan_only_agency");
-
     const base = data.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
     const slug = `${base || "client"}-${crypto.randomUUID().slice(0, 8)}`;
 
