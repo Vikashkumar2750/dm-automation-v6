@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { getPlatformConfig, savePlatformConfig } from "@/lib/platform-config.functions";
-import type { BillingCycle, PlanDef } from "@/lib/plans";
+import { DEFAULT_PLAN_LIMITS, type BillingCycle, type PlanDef } from "@/lib/plans";
 
 type Config = Awaited<ReturnType<typeof getPlatformConfig>>;
 
