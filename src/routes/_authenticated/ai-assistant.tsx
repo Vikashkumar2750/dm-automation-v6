@@ -30,12 +30,12 @@ import {
 export const Route = createFileRoute("/_authenticated/ai-assistant")({
   head: () => ({
     meta: [
-      { title: "AI Assistant — DM FB-IG-YT by Techaasvik" },
+      { title: "AI Assistant — AutoDM by Techaasvik" },
       {
         name: "description",
         content: "Draft captions, reply suggestions and automation rules with AI.",
       },
-      { property: "og:title", content: "AI Assistant — DM FB-IG-YT by Techaasvik" },
+      { property: "og:title", content: "AI Assistant — AutoDM by Techaasvik" },
       {
         property: "og:description",
         content: "Draft captions, reply suggestions and automation rules with AI.",

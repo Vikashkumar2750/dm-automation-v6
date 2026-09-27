@@ -31,9 +31,9 @@ import {
 export const Route = createFileRoute("/_authenticated/team")({
   head: () => ({
     meta: [
-      { title: "Team — DM FB-IG-YT by Techaasvik" },
+      { title: "Team — AutoDM by Techaasvik" },
       { name: "description", content: "Invite teammates and control what each role can do." },
-      { property: "og:title", content: "Team — DM FB-IG-YT by Techaasvik" },
+      { property: "og:title", content: "Team — AutoDM by Techaasvik" },
       {
         property: "og:description",
         content: "Invite teammates and control what each role can do.",

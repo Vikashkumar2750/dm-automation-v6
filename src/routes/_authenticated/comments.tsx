@@ -19,7 +19,7 @@ import { listConversations } from "@/lib/inbox.functions";
 export const Route = createFileRoute("/_authenticated/comments")({
   head: () => ({
     meta: [
-      { title: "Comments — DM FB-IG-YT by Techaasvik" },
+      { title: "Comments — AutoDM by Techaasvik" },
       {
         name: "description",
         content: "All Instagram and Facebook comment threads, with unread and status filters.",

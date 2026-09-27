@@ -2,9 +2,9 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import { LegalPage, SUPPORT_EMAIL } from "@/components/app/LegalPage";
 
-const title = "Terms of Service — DM FB-IG-YT by Techaasvik";
+const title = "Terms of Service — AutoDM by Techaasvik";
 const description =
-  "The terms for using DM FB-IG-YT by Techaasvik: accounts, acceptable use, platform rules, payments, and cancellation.";
+  "The terms for using AutoDM by Techaasvik: accounts, acceptable use, platform rules, payments, and cancellation.";
 
 export const Route = createFileRoute("/terms")({
   head: () => ({
@@ -24,7 +24,7 @@ function Terms() {
   return (
     <LegalPage title="Terms of Service" updated="21 September 2026">
       <p>
-        By creating a workspace on DM FB-IG-YT by Techaasvik ("the Service") you agree
+        By creating a workspace on AutoDM by Techaasvik ("the Service") you agree
         to these terms.
       </p>
 

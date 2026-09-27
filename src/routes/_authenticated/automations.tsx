@@ -51,12 +51,12 @@ import { getSimulatorAccess } from "@/lib/simulation.functions";
 export const Route = createFileRoute("/_authenticated/automations")({
   head: () => ({
     meta: [
-      { title: "Automations — DM FB-IG-YT by Techaasvik" },
+      { title: "Automations — AutoDM by Techaasvik" },
       {
         name: "description",
         content: "Keyword rules that auto-reply to DMs and comments with safety limits.",
       },
-      { property: "og:title", content: "Automations — DM FB-IG-YT by Techaasvik" },
+      { property: "og:title", content: "Automations — AutoDM by Techaasvik" },
       {
         property: "og:description",
         content: "Keyword rules that auto-reply to DMs and comments with safety limits.",

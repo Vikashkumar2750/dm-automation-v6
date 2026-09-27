@@ -37,12 +37,12 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/_authenticated/inbox")({
   head: () => ({
     meta: [
-      { title: "Unified Inbox — DM FB-IG-YT by Techaasvik" },
+      { title: "Unified Inbox — AutoDM by Techaasvik" },
       {
         name: "description",
         content: "Every conversation from Instagram, Facebook and YouTube in one place.",
       },
-      { property: "og:title", content: "Unified Inbox — DM FB-IG-YT by Techaasvik" },
+      { property: "og:title", content: "Unified Inbox — AutoDM by Techaasvik" },
       {
         property: "og:description",
         content: "Every conversation from Instagram, Facebook and YouTube in one place.",

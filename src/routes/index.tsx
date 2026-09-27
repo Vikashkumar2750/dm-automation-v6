@@ -20,13 +20,13 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 
 const pageTitle =
-  "DM FB-IG-YT by Techaasvik — Turn Instagram, Facebook & YouTube comments into leads";
+  "AutoDM by Techaasvik — Turn Instagram, Facebook & YouTube comments into leads";
 const pageDescription =
   "One inbox, comment-to-DM automations, scheduling and analytics for Instagram, Facebook and YouTube. Reply in seconds, capture every lead, stay inside platform rules.";
 
 const faqs = [
   {
-    q: "What does DM FB-IG-YT actually do?",
+    q: "What does AutoDM actually do?",
     a: "It brings your Instagram, Facebook and YouTube DMs and comments into one inbox, replies automatically using keyword rules, schedules and publishes posts, and shows which conversations turn into leads.",
   },
   {
@@ -170,7 +170,7 @@ export const Route = createFileRoute("/")({
           "@graph": [
             {
               "@type": "SoftwareApplication",
-              name: "DM FB-IG-YT by Techaasvik",
+              name: "AutoDM by Techaasvik",
               applicationCategory: "BusinessApplication",
               operatingSystem: "Web",
               description: pageDescription,
@@ -234,7 +234,7 @@ function LandingPage() {
               D
             </span>
             <div>
-              <p className="text-sm font-bold">DM FB-IG-YT</p>
+              <p className="text-sm font-bold">AutoDM</p>
               <p className="text-xs text-subtle-foreground">by Techaasvik</p>
             </div>
           </div>
@@ -279,7 +279,7 @@ function LandingPage() {
                 Turn every comment and DM into a paying customer
               </h1>
               <p className="mt-5 text-lg text-muted-foreground">
-                DM FB-IG-YT answers your Instagram, Facebook and YouTube audience
+                AutoDM answers your Instagram, Facebook and YouTube audience
                 instantly, moves interested people into a private chat, and shows your
                 team exactly which conversations became leads — all from one inbox.
               </p>
@@ -633,7 +633,7 @@ function LandingPage() {
               alt="Meta Business Partner"
               className="h-8 w-auto"
             />
-            <p>DM FB-IG-YT by Techaasvik</p>
+            <p>AutoDM by Techaasvik</p>
           </div>
           <div className="text-xs">
             <div className="flex flex-wrap gap-4">

@@ -7,12 +7,12 @@ import { supabase } from "@/integrations/supabase/client";
 export const Route = createFileRoute("/reset-password")({
   head: () => ({
     meta: [
-      { title: "Set a new password — DM FB-IG-YT by Techaasvik" },
+      { title: "Set a new password — AutoDM by Techaasvik" },
       {
         name: "description",
         content: "Choose a new password for your Techaasvik workspace account.",
       },
-      { property: "og:title", content: "Set a new password — DM FB-IG-YT" },
+      { property: "og:title", content: "Set a new password — AutoDM" },
       {
         property: "og:description",
         content: "Choose a new password for your Techaasvik workspace account.",
@@ -69,7 +69,7 @@ function ResetPasswordPage() {
             W
           </span>
           <span className="text-left">
-            <span className="block text-sm font-bold">DM FB-IG-YT</span>
+            <span className="block text-sm font-bold">AutoDM</span>
             <span className="block text-xs text-subtle-foreground">by Techaasvik</span>
           </span>
         </Link>

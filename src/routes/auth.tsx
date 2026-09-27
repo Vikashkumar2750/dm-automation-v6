@@ -12,13 +12,13 @@ import { requestPasswordReset } from "@/lib/platform-config.functions";
 export const Route = createFileRoute("/auth")({
   head: () => ({
     meta: [
-      { title: "Sign in — DM FB-IG-YT by Techaasvik" },
+      { title: "Sign in — AutoDM by Techaasvik" },
       {
         name: "description",
         content:
           "Sign in to your Techaasvik workspace to manage Instagram, Facebook and YouTube conversations.",
       },
-      { property: "og:title", content: "Sign in — DM FB-IG-YT by Techaasvik" },
+      { property: "og:title", content: "Sign in — AutoDM by Techaasvik" },
       {
         property: "og:description",
         content: "Access your social automation workspace.",
@@ -148,7 +148,7 @@ function AuthPage() {
             W
           </span>
           <span className="text-left">
-            <span className="block text-sm font-bold">DM FB-IG-YT</span>
+            <span className="block text-sm font-bold">AutoDM</span>
             <span className="block text-xs text-subtle-foreground">by Techaasvik</span>
           </span>
         </Link>

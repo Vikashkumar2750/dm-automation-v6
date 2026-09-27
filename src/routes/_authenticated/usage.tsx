@@ -17,7 +17,7 @@ import {
 export const Route = createFileRoute("/_authenticated/usage")({
   head: () => ({
     meta: [
-      { title: "Usage & Limits — DM FB-IG-YT by Techaasvik" },
+      { title: "Usage & Limits — AutoDM by Techaasvik" },
       {
         name: "description",
         content: "Automated sends this hour and today, skips, failures and safety limits.",

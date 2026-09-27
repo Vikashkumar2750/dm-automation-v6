@@ -21,7 +21,7 @@ import {
 export const Route = createFileRoute("/_authenticated/settings")({
   head: () => ({
     meta: [
-      { title: "Settings — DM FB-IG-YT by Techaasvik" },
+      { title: "Settings — AutoDM by Techaasvik" },
       {
         name: "description",
         content: "Workspace name, white-label branding, support email and client workspaces.",

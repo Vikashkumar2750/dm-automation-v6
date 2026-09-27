@@ -28,7 +28,7 @@ export type PlatformConfig = {
 export const DEFAULT_CONFIG: PlatformConfig = {
   plans: PLANS,
   email: {
-    senderName: "Techaasvik",
+    senderName: "AutoDM by Techaasvik",
     supportEmail: "",
     adminAlertEmail: "",
     events: {

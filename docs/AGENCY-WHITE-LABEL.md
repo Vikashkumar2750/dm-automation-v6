@@ -36,7 +36,7 @@ The Agency client is typically an agency, freelancer or marketing company that m
 
 Branding is set **per workspace** by the workspace owner/admin under **Settings → Branding**:
 
-- **Brand name** — shown in the sidebar header instead of "DM FB-IG-YT".
+- **Brand name** — shown in the sidebar header instead of "AutoDM".
 - **Logo link** (URL) — shown in the sidebar; falls back to the brand initial on a colour tile if the image fails to load.
 - **Brand colour** (hex) — used for the sidebar logo tile and workspace chips.
 - **Support email** — the support address we show/ship for that workspace.
@@ -52,7 +52,7 @@ Each **client workspace** (created from the Agency owner's workspace via Setting
 | Workspace switcher names | ✅ Yes | Workspace/client names |
 | Support email shown to end client | ✅ Yes | Per workspace |
 | App URL / domain | ❌ Not yet | Runs on our domain (Lovable preview / Railway URL). A custom domain per client is a **future option** — needs per-tenant hosting work, do not promise it today. |
-| Page titles / meta ("DM FB-IG-YT by Techaasvik") | ❌ Not yet | Browser tab titles still mention our brand |
+| Page titles / meta ("AutoDM by Techaasvik") | ❌ Not yet | Browser tab titles still mention our brand |
 | Login/signup pages | ❌ Not yet | Shared branded screens |
 | Emails sent by the platform | ⚠️ Partial | Sender name/reply-to are configured by super admin; per-workspace sender identity is a future option and needs a verified sender domain |
 | Underlying Meta / Google app | ❌ Never | The client's accounts connect through **our** registered Meta app and Google project — see section 7 |

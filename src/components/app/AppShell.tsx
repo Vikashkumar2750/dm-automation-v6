@@ -87,7 +87,7 @@ function NavLink({ item, active }: { item: NavItem; active: boolean }) {
 
 function Sidebar({ pathname }: { pathname: string }) {
   const { activeOrg } = useTenant();
-  const brand = activeOrg?.brandName?.trim() || "DM FB-IG-YT";
+  const brand = activeOrg?.brandName?.trim() || "AutoDM";
   const logo = activeOrg?.logoUrl?.trim() || null;
   const color = activeOrg?.brandColor?.trim() || null;
 
