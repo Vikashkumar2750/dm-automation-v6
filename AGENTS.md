@@ -10,3 +10,4 @@
 <!-- LOVABLE:END -->
 - Tool limits (plan DMs/month + active rules, super-admin override) stored in platform_settings.feature_flags (plans config + plan_limits_<orgId>); checked in runAutomations before new flows only — why: no schema change, never cuts mid-flow contacts.
 - Public support inquiries are written only by a validated server function and read through super-admin authorization — why: anonymous visitors can contact support without exposing inquiry data.
+- Unsigned webhook probes stay rejected and audited but are excluded from Breaking alerts — why: public callback scans are not Meta delivery failures.
