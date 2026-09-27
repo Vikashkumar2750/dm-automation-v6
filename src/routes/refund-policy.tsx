@@ -9,7 +9,7 @@ export const Route = createFileRoute("/refund-policy")({
     { title }, { name: "description", content: description }, { property: "og:title", content: title },
     { property: "og:description", content: description }, { property: "og:type", content: "article" },
     { name: "twitter:card", content: "summary" },
-  ] }), component: RefundPolicy,
+  ], links: [{ rel: "canonical", href: "https://autodm.techaasvik.com/refund-policy" }] }), component: RefundPolicy,
 });
 
 function RefundPolicy() {

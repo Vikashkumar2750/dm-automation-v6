@@ -9,7 +9,7 @@ export const Route = createFileRoute("/disclaimer")({
     { title }, { name: "description", content: description }, { property: "og:title", content: title },
     { property: "og:description", content: description }, { property: "og:type", content: "article" },
     { name: "twitter:card", content: "summary" },
-  ] }), component: Disclaimer,
+  ], links: [{ rel: "canonical", href: "https://autodm.techaasvik.com/disclaimer" }] }), component: Disclaimer,
 });
 
 function Disclaimer() {

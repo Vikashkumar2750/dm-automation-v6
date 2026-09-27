@@ -52,7 +52,17 @@ export const submitSupportInquiry = createServerFn({ method: "POST" })
     const { readPlatformConfig } = await import("@/lib/platform-config.server");
     const config = await readPlatformConfig(supabaseAdmin);
     const { sendInquiryAlert } = await import("@/lib/support-email.server");
-    const delivery = await sendInquiryAlert(data, config.email.adminAlertEmail, config.email.senderName);
+    let delivery: { status: "pending" | "sent" | "failed"; error: string | null } = {
+      status: "pending",
+      error: null,
+    };
+    if (config.email.events.support_inquiry !== false) {
+      try {
+        delivery = await sendInquiryAlert(data, config.email.adminAlertEmail, config.email.senderName);
+      } catch {
+        delivery = { status: "failed", error: "Email provider could not be reached" };
+      }
+    }
     await supabaseAdmin
       .from("support_inquiries")
       .update({ email_notification_status: delivery.status, email_notification_error: delivery.error })
