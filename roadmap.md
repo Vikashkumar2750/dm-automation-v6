@@ -32,6 +32,7 @@ Real Meta + YouTube credentials are available when we reach OAuth phases.
 - [x] Parse staged follow-gate payloads with the canonical UUID parser and expire superseded waiting gates.
 - [x] Add real Meta webhook tracing, provider error visibility, and super-admin-controlled simulator access.
 - [ ] Verify fresh follower and non-follower taps after Railway deploy using correlation IDs (external deploy required).
+- [ ] Verify the repaired comment rule receives a fresh Instagram comment after Railway deploy (external deploy required).
 
 - [x] Plan limits done
 - [ ] User: set INSTAGRAM_APP_SECRET in Railway (app ID 1497788405165320)
