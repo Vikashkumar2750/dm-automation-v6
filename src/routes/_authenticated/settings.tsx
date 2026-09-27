@@ -130,7 +130,12 @@ function SettingsPage() {
       queryClient.invalidateQueries();
       switchOrg(res.id);
     },
-    onError: () => toast.error("Could not create the client workspace"),
+    onError: (e: Error) =>
+      toast.error(
+        e.message === "agency_only"
+          ? "Client workspaces are available on the Agency plan only"
+          : "Could not create the client workspace",
+      ),
   });
 
   if (!orgId) {
