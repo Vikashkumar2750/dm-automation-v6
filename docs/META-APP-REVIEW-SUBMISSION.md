@@ -62,17 +62,41 @@ The app **never** calls insights APIs.
 | business_management | **Keep** (requested by our login) | Needed for Pages owned by a Business portfolio. If you remove it, tell me and I'll remove it from the login too — otherwise reviewers see a mismatch |
 | Human Agent | **Keep** | Inbox lets a person reply manually up to 7 days |
 | **read_insights** | **Remove** | Not used → common rejection reason |
-| **instagram_manage_insights** | **Remove** | Not used |
-| **instagram_business_manage_insights** | **Remove** | Not used |
-| instagram_business_basic / _manage_messages / _manage_comments / _content_publish | **Remove from this submission** (see note) | Our login uses the Facebook-Login set above; asking for both sets for the same feature confuses reviewers |
+| **instagram_manage_insights** | **Remove** | Not used (46 calls shown came from Graph Explorer tests, not the app) |
+| **instagram_business_manage_insights** | **Remove** | Not used (0 calls) |
+| instagram_business_basic | **Keep** (updated) | 76 real API calls — Instagram-login token path + webhooks use it |
+| instagram_business_manage_messages | **Keep** (updated) | 73 real API calls — IG DMs / button taps via Instagram-login webhook |
+| instagram_business_manage_comments | **Keep** (updated) | IG comment webhooks (`comments`) come through the Instagram-login product |
+| instagram_business_content_publish | Optional — remove | 0 calls; publishing uses `instagram_content_publish`. Remove only if you won't show it in the video |
+| email, ads_*, catalog_*, branded_content_*, marketplace_*, shopping, upcoming_events, Public Content Access, Business Asset User Profile | **Do not add** | Not used — leave them on "Add to App Review" (not requested) |
 
-**Note on the instagram_business_* set:** these belong to "Instagram API with Instagram login". Our Connect flow uses Facebook Login, so they are duplicates. Before removing, check **Webhooks** page → object **Instagram** is subscribed (fields `comments`, `messages`, `messaging_postbacks`). If Instagram webhooks are only configured under *Instagram → API setup with Instagram login*, also subscribe them under the main **Webhooks → Instagram** object first, test one comment, then remove the business set.
+**Update (based on your Webhooks screenshots):** Instagram comment/DM events currently arrive through **Instagram API → API setup with Instagram login → Webhooks** (comments, messages, messaging_postbacks … all subscribed). That product needs the `instagram_business_*` permissions. **Do not remove** `instagram_business_basic`, `_manage_messages`, `_manage_comments` — removing them can stop the working Instagram automation. Requesting both sets is fine because each has real API calls and a real use.
 
 ### How to remove (step by step)
-1. **App Review → Requests** → open the draft submission → **Edit submission** → untick the permissions marked Remove → Save.
-2. **Use cases** (left menu) → each use case → **Customize** → **Permissions and features** → next to an unused permission click **Remove**.
-3. For the Instagram-login set: **Use cases → "Manage messaging & content on Instagram" (Instagram login)** → Customize → remove those permissions (or remove the use case entirely once webhooks work via the Webhooks page).
-4. Reload App Review → Requests and confirm only the Keep list remains.
+1. **Use cases → Instagram API → Customize → Permissions and features** → row **read_insights** → **Actions ▾ → Remove**. Repeat for **instagram_manage_insights** and **instagram_business_manage_insights**. (Optional: instagram_business_content_publish.)
+2. **App Review → Requests** → open draft → **Edit submission** → confirm those rows are gone → Save.
+3. Do the same check in the other use cases (Messenger / Facebook Login for Business) — a permission "Found in 3 use cases" must be removed in each, or it will still be requested.
+4. Test once after removal: one Instagram comment + one Facebook comment → full flow must still work.
+
+### 1.1 Webhooks — what to keep (Use cases → Customize → Webhooks)
+| Object | What to do |
+|---|---|
+| **Page** | Must stay subscribed: `feed`, `messages`, `messaging_postbacks`, `message_echoes`, `messaging_optins`, `standby`, `mention`. Everything else (affiliation, attire, awards, birthday, hours, leadgen, calls, marketing_message_*, invoice…, etc.) is **not used** — safe to Unsubscribe to reduce noise. Leave `message_context` unsubscribed. Optional, not required for review |
+| **Instagram (Instagram-login product)** | Already correct — keep `comments`, `messages`, `messaging_postbacks`, `live_comments`, `mentions`, `standby`, `messaging_seen`, `message_reactions`. **Don't change** |
+| **Permissions** | Not used by the app. Leave as is (it only notifies when a user revokes a permission). No action |
+| **Application** | Not used. Leave as is |
+| **WhatsApp Business Account** | Empty — leave empty (WhatsApp is your separate tool) |
+
+Callback URL on Page + Instagram objects: `https://autodm.techaasvik.com/api/public/webhooks/meta` (after the domain is live). Change it on both objects at the same time, with the same verify token.
+
+### 1.2 Final to-do order (today)
+1. Domain live on Railway + `PUBLIC_APP_URL` (section 0.1).
+2. `INSTAGRAM_APP_SECRET` set in Railway (section 0.5).
+3. Update Callback URL on Page + Instagram webhook objects, App domains, OAuth redirect, Privacy/Terms/Deletion URLs (0.2).
+4. Remove the 3 insights permissions (section 1 steps).
+5. Test IG follower, IG non-follower, FB comment once each.
+6. Run test API calls (section 3), wait for green ticks.
+7. Record screencast (section 5), fill answers (section 4), reviewer login (section 2) → **Submit**.
 
 ---
 
