@@ -990,6 +990,54 @@ export type Database = {
           },
         ]
       }
+      support_inquiries: {
+        Row: {
+          category: string
+          created_at: string
+          email: string
+          email_notification_error: string | null
+          email_notification_status: string
+          id: string
+          message: string
+          name: string
+          resolved_at: string | null
+          resolved_by: string | null
+          status: string
+          subject: string
+          updated_at: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          email: string
+          email_notification_error?: string | null
+          email_notification_status?: string
+          id?: string
+          message: string
+          name: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          subject: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          email?: string
+          email_notification_error?: string | null
+          email_notification_status?: string
+          id?: string
+          message?: string
+          name?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          subject?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       webhook_events: {
         Row: {
           dedupe_key: string | null

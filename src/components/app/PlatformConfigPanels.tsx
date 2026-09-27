@@ -188,6 +188,7 @@ const EVENT_LABELS: Record<string, string> = {
   payment_received: "Payment received",
   automation_failure: "Automation keeps failing",
   account_disconnected: "Social account disconnected",
+  support_inquiry: "New support inquiry",
   plan_expiring: "Plan about to expire",
   workspace_suspended: "Workspace / user suspended",
 };

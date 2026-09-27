@@ -16,6 +16,7 @@ import {
 import { useEffect } from "react";
 
 import metaPartnerBadge from "@/assets/meta-business-partner.png.asset.json";
+import { PublicFooter } from "@/components/app/PublicFooter";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -156,12 +157,12 @@ export const Route = createFileRoute("/")({
       { property: "og:title", content: pageTitle },
       { property: "og:description", content: pageDescription },
       { property: "og:type", content: "website" },
-      { property: "og:url", content: "/" },
+      { property: "og:url", content: "https://autodm.techaasvik.com/" },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:title", content: pageTitle },
       { name: "twitter:description", content: pageDescription },
     ],
-    links: [{ rel: "canonical", href: "/" }],
+    links: [{ rel: "canonical", href: "https://autodm.techaasvik.com/" }],
     scripts: [
       {
         type: "application/ld+json",
@@ -304,11 +305,11 @@ function LandingPage() {
                   </li>
                 ))}
               </ul>
-              <div className="mt-8 inline-flex items-center gap-3 rounded-xl border bg-surface px-4 py-3">
+              <div className="mt-8 inline-flex items-center gap-4 rounded-lg border bg-surface px-5 py-4">
                 <img
                   src={metaPartnerBadge.url}
                   alt="Meta Business Partner"
-                  className="h-9 w-auto"
+                  className="h-16 w-auto object-contain"
                 />
                 <p className="text-xs text-muted-foreground">
                   Built on the official Meta platform
@@ -623,35 +624,7 @@ function LandingPage() {
         </section>
       </main>
 
-      <footer className="border-t bg-surface">
-        <div className="mx-auto flex max-w-6xl flex-col gap-3 px-6 py-8 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-3">
-            <img
-              src={metaPartnerBadge.url}
-              alt="Meta Business Partner"
-              className="h-8 w-auto"
-            />
-            <p>AutoDM by Techaasvik</p>
-          </div>
-          <div className="text-xs">
-            <div className="flex flex-wrap gap-4">
-              <Link to="/privacy" className="hover:text-foreground">
-                Privacy Policy
-              </Link>
-              <Link to="/terms" className="hover:text-foreground">
-                Terms of Service
-              </Link>
-              <Link to="/data-deletion" className="hover:text-foreground">
-                Data Deletion
-              </Link>
-            </div>
-            <p className="mt-3">
-              Instagram and Facebook are trademarks of Meta Platforms, Inc. YouTube is a
-              trademark of Google LLC.
-            </p>
-          </div>
-        </div>
-      </footer>
+      <PublicFooter />
     </div>
   );
 }

@@ -8,6 +8,7 @@ import {
   FileClock,
   Gauge,
   LayoutDashboard,
+  LifeBuoy,
   MessageSquare,
   Menu,
   Settings,
@@ -34,6 +35,7 @@ const opsNav: NavItem[] = [
   { label: "Social Accounts", to: "/admin/accounts", icon: Share2 },
   { label: "Automations", to: "/admin/automations", icon: Workflow },
   { label: "Messages", to: "/admin/messages", icon: MessageSquare },
+  { label: "Inquiries", to: "/admin/inquiries", icon: LifeBuoy },
 ];
 
 const healthNav: NavItem[] = [
