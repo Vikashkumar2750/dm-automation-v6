@@ -93,6 +93,7 @@ function SettingsPage() {
   }, [workspace.data]);
 
   const canEdit = ["owner", "admin"].includes(workspace.data?.my_role ?? "");
+  const isAgency = workspace.data?.plan === "agency";
 
   const save = useMutation({
     mutationFn: () =>
@@ -130,7 +131,12 @@ function SettingsPage() {
       queryClient.invalidateQueries();
       switchOrg(res.id);
     },
-    onError: () => toast.error("Could not create the client workspace"),
+    onError: (e: Error) =>
+      toast.error(
+        e.message === "agency_only"
+          ? "Client workspaces are available on the Agency plan only"
+          : "Could not create the client workspace",
+      ),
   });
 
   if (!orgId) {
@@ -250,21 +256,28 @@ function SettingsPage() {
       </Panel>
 
       <Panel title="Client workspaces">
-        <div className="flex flex-col gap-3 sm:flex-row">
-          <Input
-            placeholder="New client name"
-            value={clientName}
-            onChange={(e) => setClientName(e.target.value)}
-            disabled={!canEdit}
-          />
-          <Button
-            onClick={() => create.mutate()}
-            disabled={!canEdit || clientName.trim().length < 2 || create.isPending}
-          >
-            <Plus className="size-4" />
-            {create.isPending ? "Creating…" : "Add client"}
-          </Button>
-        </div>
+        {isAgency ? (
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <Input
+              placeholder="New client name"
+              value={clientName}
+              onChange={(e) => setClientName(e.target.value)}
+              disabled={!canEdit}
+            />
+            <Button
+              onClick={() => create.mutate()}
+              disabled={!canEdit || clientName.trim().length < 2 || create.isPending}
+            >
+              <Plus className="size-4" />
+              {create.isPending ? "Creating…" : "Add client"}
+            </Button>
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            Client workspaces are available on the Agency plan. Upgrade to manage separate
+            workspaces for your clients.
+          </p>
+        )}
 
         <div className="mt-4 space-y-2">
           {(clients.data ?? []).map((c) => (

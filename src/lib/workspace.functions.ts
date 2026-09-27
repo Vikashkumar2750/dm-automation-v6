@@ -156,6 +156,18 @@ export const createClientWorkspace = createServerFn({ method: "POST" })
     const role = await roleIn(context.supabase, data.parentOrganizationId, context.userId);
     if (!["owner", "admin"].includes(role)) throw new Error("not_allowed");
 
+    // Client workspaces are an Agency-plan feature — Free/Pro users cannot
+    // spawn extra workspaces to bypass per-plan account limits.
+    const { data: parentOrg } = await context.supabase
+      .from("organizations")
+      .select("plan, plan_expires_at")
+      .eq("id", data.parentOrganizationId)
+      .maybeSingle();
+    const plan = (parentOrg?.plan as string | undefined) ?? "starter";
+    const expired =
+      parentOrg?.plan_expires_at && new Date(parentOrg.plan_expires_at) < new Date();
+    if (plan !== "agency" || expired) throw new Error("agency_only");
+
     const base = data.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
     const slug = `${base || "client"}-${crypto.randomUUID().slice(0, 8)}`;
 
