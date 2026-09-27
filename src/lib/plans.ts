@@ -8,6 +8,15 @@ export type PlanOption = {
   months: number | null; // null = 3-day trial
 };
 
+/** null = unlimited */
+export type PlanLimits = { monthlyDms: number | null; maxRules: number | null };
+
+export const DEFAULT_PLAN_LIMITS: Record<PlanKey, PlanLimits> = {
+  starter: { monthlyDms: 300, maxRules: 3 },
+  pro: { monthlyDms: 10000, maxRules: 50 },
+  agency: { monthlyDms: null, maxRules: null },
+};
+
 export type PlanDef = {
   key: PlanKey;
   name: string;
@@ -15,11 +24,13 @@ export type PlanDef = {
   perks: string[];
   options: PlanOption[];
   contactOnly?: boolean;
+  limits?: PlanLimits;
 };
 
 export const PLANS: PlanDef[] = [
   {
     key: "starter",
+    limits: DEFAULT_PLAN_LIMITS.starter,
     name: "Free",
     headline: "₹9 · 3-day trial",
     perks: [
@@ -31,6 +42,7 @@ export const PLANS: PlanDef[] = [
   },
   {
     key: "pro",
+    limits: DEFAULT_PLAN_LIMITS.pro,
     name: "Pro",
     headline: "₹59 / month",
     perks: [
@@ -46,6 +58,7 @@ export const PLANS: PlanDef[] = [
   },
   {
     key: "agency",
+    limits: DEFAULT_PLAN_LIMITS.agency,
     name: "Agency",
     headline: "Custom pricing",
     perks: ["Unlimited accounts & client workspaces", "White-label branding", "Dedicated support"],

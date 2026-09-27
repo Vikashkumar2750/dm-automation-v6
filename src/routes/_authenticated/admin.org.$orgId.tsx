@@ -6,6 +6,7 @@ import { toast } from "sonner";
 
 import { AdminTable } from "@/components/app/AdminTable";
 import { AdminSafetyPanel } from "@/components/app/AdminSafetyPanel";
+import { AdminPlanLimitsPanel } from "@/components/app/AdminPlanLimitsPanel";
 import { PageHeader, Panel, StatCard, StatusBadge } from "@/components/app/primitives";
 import { Button } from "@/components/ui/button";
 import {
@@ -175,6 +176,7 @@ function OrgDetailPage() {
         )}
       </Panel>
 
+      <AdminPlanLimitsPanel orgId={orgId} />
       <AdminSafetyPanel orgId={orgId} />
 
       <Panel title="Automation test console">

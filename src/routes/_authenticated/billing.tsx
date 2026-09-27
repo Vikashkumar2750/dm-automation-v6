@@ -18,7 +18,7 @@ import { PLANS as DEFAULT_PLANS, formatPaise, type BillingCycle, type PlanKey } 
 export const Route = createFileRoute("/_authenticated/billing")({
   head: () => ({
     meta: [
-      { title: "Billing — DM FB-IG-YT by Techaasvik" },
+      { title: "Billing — AutoDM by Techaasvik" },
       {
         name: "description",
         content: "Your current plan, what it includes and how much of it you are using.",

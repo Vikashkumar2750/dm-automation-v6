@@ -13,7 +13,7 @@ import { getAutomationRunDetail } from "@/lib/automations.functions";
 export const Route = createFileRoute("/_authenticated/automations_/activity_/$runId")({
   head: () => ({
     meta: [
-      { title: "Activity details — DM FB-IG-YT by Techaasvik" },
+      { title: "Activity details — AutoDM by Techaasvik" },
       { name: "description", content: "Full details of one automation step: contact, rule, timeline and messages." },
       { property: "og:title", content: "Activity details — Techaasvik" },
       { property: "og:description", content: "Automation step details." },

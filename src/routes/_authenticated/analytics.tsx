@@ -29,13 +29,13 @@ import { AutomationReportPanel } from "@/components/app/AutomationReportPanel";
 export const Route = createFileRoute("/_authenticated/analytics")({
   head: () => ({
     meta: [
-      { title: "Analytics — DM FB-IG-YT by Techaasvik" },
+      { title: "Analytics — AutoDM by Techaasvik" },
       {
         name: "description",
         content:
           "Engagement, automation performance and publishing results across Instagram and Facebook.",
       },
-      { property: "og:title", content: "Analytics — DM FB-IG-YT by Techaasvik" },
+      { property: "og:title", content: "Analytics — AutoDM by Techaasvik" },
       {
         property: "og:description",
         content:

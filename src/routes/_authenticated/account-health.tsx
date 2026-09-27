@@ -20,7 +20,7 @@ import { listWebhookEvents } from "@/lib/webhooks.functions";
 export const Route = createFileRoute("/_authenticated/account-health")({
   head: () => ({
     meta: [
-      { title: "Account Health — DM FB-IG-YT by Techaasvik" },
+      { title: "Account Health — AutoDM by Techaasvik" },
       {
         name: "description",
         content: "Connection status, permission scopes, token expiry and incoming event health.",

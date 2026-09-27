@@ -17,7 +17,7 @@ export function LegalPage({
       <header className="border-b bg-surface/90 backdrop-blur">
         <div className="mx-auto flex max-w-3xl items-center justify-between px-5 py-4">
           <Link to="/" className="text-sm font-semibold">
-            DM FB-IG-YT by Techaasvik
+            AutoDM by Techaasvik
           </Link>
           <Link to="/" className="text-sm text-muted-foreground hover:text-foreground">
             Back to home

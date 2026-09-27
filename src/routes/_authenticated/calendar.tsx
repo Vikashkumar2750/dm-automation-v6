@@ -17,12 +17,12 @@ import { statusTone } from "./create-post";
 export const Route = createFileRoute("/_authenticated/calendar")({
   head: () => ({
     meta: [
-      { title: "Content Calendar — DM FB-IG-YT by Techaasvik" },
+      { title: "Content Calendar — AutoDM by Techaasvik" },
       {
         name: "description",
         content: "Plan and schedule your content across every connected platform.",
       },
-      { property: "og:title", content: "Content Calendar — DM FB-IG-YT by Techaasvik" },
+      { property: "og:title", content: "Content Calendar — AutoDM by Techaasvik" },
       {
         property: "og:description",
         content: "Plan and schedule your content across every connected platform.",

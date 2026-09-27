@@ -5,7 +5,7 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
- * DM FB-IG-YT by Techaasvik — design system.
+ * AutoDM by Techaasvik — design system.
  * Calm, technical B2B SaaS. Borders over shadows. 4px spacing base.
  * All colors are oklch tokens; never hardcode colors in components.
  */

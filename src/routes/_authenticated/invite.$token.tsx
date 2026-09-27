@@ -11,9 +11,9 @@ import { acceptInvite, getInvite } from "@/lib/team.functions";
 export const Route = createFileRoute("/_authenticated/invite/$token")({
   head: () => ({
     meta: [
-      { title: "Workspace invitation — DM FB-IG-YT by Techaasvik" },
+      { title: "Workspace invitation — AutoDM by Techaasvik" },
       { name: "description", content: "Join a workspace you were invited to." },
-      { property: "og:title", content: "Workspace invitation — DM FB-IG-YT by Techaasvik" },
+      { property: "og:title", content: "Workspace invitation — AutoDM by Techaasvik" },
       { property: "og:description", content: "Join a workspace you were invited to." },
     ],
   }),

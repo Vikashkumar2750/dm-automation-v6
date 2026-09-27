@@ -7,12 +7,12 @@ import { supabase } from "@/integrations/supabase/client";
 export const Route = createFileRoute("/reset-password")({
   head: () => ({
     meta: [
-      { title: "Set a new password — DM FB-IG-YT by Techaasvik" },
+      { title: "Set a new password — AutoDM by Techaasvik" },
       {
         name: "description",
         content: "Choose a new password for your Techaasvik workspace account.",
       },
-      { property: "og:title", content: "Set a new password — DM FB-IG-YT" },
+      { property: "og:title", content: "Set a new password — AutoDM" },
       {
         property: "og:description",
         content: "Choose a new password for your Techaasvik workspace account.",
@@ -65,11 +65,9 @@ function ResetPasswordPage() {
     <div className="flex min-h-screen items-center justify-center bg-background px-4 py-10">
       <div className="w-full max-w-md">
         <Link to="/" className="mb-6 flex items-center justify-center gap-3">
-          <span className="inline-flex size-10 items-center justify-center rounded-xl bg-primary text-base font-bold text-primary-foreground">
-            W
-          </span>
+          <img src={"/logo.webp"} alt="AutoDM" className="size-10 rounded-xl object-contain" />
           <span className="text-left">
-            <span className="block text-sm font-bold">DM FB-IG-YT</span>
+            <span className="block text-sm font-bold">AutoDM</span>
             <span className="block text-xs text-subtle-foreground">by Techaasvik</span>
           </span>
         </Link>

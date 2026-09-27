@@ -1,4 +1,4 @@
-# Meta App Review Guide — DM FB-IG-YT by Techaasvik
+# Meta App Review Guide — AutoDM by Techaasvik
 
 Everything you need to take the Meta app from Development mode to Live:
 exact permissions, app settings, the dev-mode test run, the screen recordings,
@@ -172,7 +172,7 @@ video linked to every permission if the form allows it).
 ## 6. Answers for the review form
 
 **What does your app do?**
-"DM FB-IG-YT by Techaasvik is a social inbox and publishing tool for
+"AutoDM by Techaasvik is a social inbox and publishing tool for
 businesses. A business owner connects their own Facebook Page and Instagram
 Business account, then reads and replies to their DMs and comments from one
 inbox, sets keyword-based auto-replies, and schedules posts to those accounts."

@@ -1,3 +1,4 @@
+import { getPlanUsage } from "@/lib/plan-limits.functions";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -51,12 +52,12 @@ import { getSimulatorAccess } from "@/lib/simulation.functions";
 export const Route = createFileRoute("/_authenticated/automations")({
   head: () => ({
     meta: [
-      { title: "Automations — DM FB-IG-YT by Techaasvik" },
+      { title: "Automations — AutoDM by Techaasvik" },
       {
         name: "description",
         content: "Keyword rules that auto-reply to DMs and comments with safety limits.",
       },
-      { property: "og:title", content: "Automations — DM FB-IG-YT by Techaasvik" },
+      { property: "og:title", content: "Automations — AutoDM by Techaasvik" },
       {
         property: "og:description",
         content: "Keyword rules that auto-reply to DMs and comments with safety limits.",
@@ -359,6 +360,15 @@ function AutomationsPage() {
   });
 
   const rules = rulesQuery.data ?? [];
+  const fetchPlanUsage = useServerFn(getPlanUsage);
+  const planUsage = useQuery({
+    queryKey: ["plan-usage", orgId],
+    enabled: !!orgId,
+    queryFn: () => fetchPlanUsage({ data: { organizationId: orgId! } }),
+  });
+  const maxRules = planUsage.data?.maxRules ?? null;
+  const activeCount = rules.filter((r) => r.is_active).length;
+  const ruleLimitHit = maxRules !== null && activeCount >= maxRules;
   const runs = runsQuery.data ?? [];
   const visibleRuns = runs.slice(0, 5);
   const ruleName = (id: string | null) => {
@@ -387,7 +397,7 @@ function AutomationsPage() {
               </Button>
             )}
             <Button onClick={() => setDraft({ ...emptyDraft })} disabled={!orgId}>
-              <Plus className="size-4" /> New rule
+              <Plus className="size-4" /> {ruleLimitHit ? `Rule limit reached (${activeCount}/${maxRules})` : "New rule"}
             </Button>
           </div>
         }

@@ -2,9 +2,9 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import { LegalPage, SUPPORT_EMAIL } from "@/components/app/LegalPage";
 
-const title = "Privacy Policy — DM FB-IG-YT by Techaasvik";
+const title = "Privacy Policy — AutoDM by Techaasvik";
 const description =
-  "How DM FB-IG-YT by Techaasvik collects, uses, stores and deletes Instagram, Facebook and YouTube data connected by business owners.";
+  "How AutoDM by Techaasvik collects, uses, stores and deletes Instagram, Facebook and YouTube data connected by business owners.";
 
 export const Route = createFileRoute("/privacy")({
   head: () => ({
@@ -24,7 +24,7 @@ function Privacy() {
   return (
     <LegalPage title="Privacy Policy" updated="21 September 2026">
       <p>
-        DM FB-IG-YT by Techaasvik ("the Service") helps a business manage its own
+        AutoDM by Techaasvik ("the Service") helps a business manage its own
         Instagram, Facebook and YouTube conversations and posts. This policy explains
         what we collect, why, and how you can delete it.
       </p>

@@ -8,3 +8,4 @@
 > Commits you push to the connected branch sync back to Lovable and show up in
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
+- Tool limits (plan DMs/month + active rules, super-admin override) stored in platform_settings.feature_flags (plans config + plan_limits_<orgId>); checked in runAutomations before new flows only — why: no schema change, never cuts mid-flow contacts.

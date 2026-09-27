@@ -139,6 +139,11 @@ export const createAutomationRule = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { organizationId, ...rest } = data;
+    if (rest.isActive) {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const { assertRuleSlot } = await import("@/lib/plan-limits.server");
+      await assertRuleSlot(supabaseAdmin, organizationId);
+    }
     const { error } = await context.supabase.from("automation_rules").insert({
       organization_id: organizationId,
       created_by: context.userId,
@@ -186,6 +191,18 @@ export const updateAutomationRule = createServerFn({ method: "POST" })
     if (rest.followPromptText !== undefined)
       patch.follow_prompt_text = rest.followPromptText;
 
+    if (rest.isActive === true) {
+      const { data: current } = await context.supabase
+        .from("automation_rules")
+        .select("organization_id, is_active")
+        .eq("id", id)
+        .maybeSingle();
+      if (current && !current.is_active) {
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        const { assertRuleSlot } = await import("@/lib/plan-limits.server");
+        await assertRuleSlot(supabaseAdmin, current.organization_id, id);
+      }
+    }
     const { error } = await context.supabase
       .from("automation_rules")
       .update(patch)

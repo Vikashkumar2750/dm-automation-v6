@@ -87,8 +87,8 @@ function NavLink({ item, active }: { item: NavItem; active: boolean }) {
 
 function Sidebar({ pathname }: { pathname: string }) {
   const { activeOrg } = useTenant();
-  const brand = activeOrg?.brandName?.trim() || "DM FB-IG-YT";
-  const logo = activeOrg?.logoUrl?.trim() || null;
+  const brand = activeOrg?.brandName?.trim() || "AutoDM";
+  const logo = activeOrg?.logoUrl?.trim() || "/logo.webp";
   const color = activeOrg?.brandColor?.trim() || null;
 
   return (

@@ -14,7 +14,7 @@ import { listAutomationRules, listAutomationRuns } from "@/lib/automations.funct
 export const Route = createFileRoute("/_authenticated/automations_/activity")({
   head: () => ({
     meta: [
-      { title: "Automation activity — DM FB-IG-YT by Techaasvik" },
+      { title: "Automation activity — AutoDM by Techaasvik" },
       { name: "description", content: "Every automation step: sent, skipped and failed, with reasons." },
       { property: "og:title", content: "Automation activity — Techaasvik" },
       { property: "og:description", content: "Full automation activity log." },

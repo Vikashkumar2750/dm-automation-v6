@@ -46,13 +46,13 @@ import { listSocialAccounts } from "@/lib/social-accounts.functions";
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
     meta: [
-      { title: "Dashboard — DM FB-IG-YT by Techaasvik" },
+      { title: "Dashboard — AutoDM by Techaasvik" },
       {
         name: "description",
         content:
           "Publish to Instagram, Facebook and YouTube, manage comments and conversations, and automate eligible replies from one workspace.",
       },
-      { property: "og:title", content: "Dashboard — DM FB-IG-YT by Techaasvik" },
+      { property: "og:title", content: "Dashboard — AutoDM by Techaasvik" },
       {
         property: "og:description",
         content:

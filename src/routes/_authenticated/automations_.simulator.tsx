@@ -16,7 +16,7 @@ import { getSimulatorAccess, runAutomationSimulation, type SimResult, type SimSc
 export const Route = createFileRoute("/_authenticated/automations_/simulator")({
   head: () => ({
     meta: [
-      { title: "Automation Test Console — DM FB-IG-YT by Techaasvik" },
+      { title: "Automation Test Console — AutoDM by Techaasvik" },
       { name: "description", content: "Simulate follower and non-follower button taps without sending real messages." },
       { property: "og:title", content: "Automation Test Console" },
       { property: "og:description", content: "Dry-run your comment-to-DM automations end to end." },

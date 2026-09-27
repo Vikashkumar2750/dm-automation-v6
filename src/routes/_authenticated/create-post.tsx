@@ -27,12 +27,12 @@ import {
 export const Route = createFileRoute("/_authenticated/create-post")({
   head: () => ({
     meta: [
-      { title: "Create Post — DM FB-IG-YT by Techaasvik" },
+      { title: "Create Post — AutoDM by Techaasvik" },
       {
         name: "description",
         content: "Compose once, schedule and publish to Instagram and Facebook.",
       },
-      { property: "og:title", content: "Create Post — DM FB-IG-YT by Techaasvik" },
+      { property: "og:title", content: "Create Post — AutoDM by Techaasvik" },
       {
         property: "og:description",
         content: "Compose once, schedule and publish to Instagram and Facebook.",

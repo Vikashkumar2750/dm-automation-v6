@@ -22,12 +22,12 @@ import { getWebhookConfig, listWebhookEvents } from "@/lib/webhooks.functions";
 export const Route = createFileRoute("/_authenticated/social-accounts")({
   head: () => ({
     meta: [
-      { title: "Social Accounts — DM FB-IG-YT by Techaasvik" },
+      { title: "Social Accounts — AutoDM by Techaasvik" },
       {
         name: "description",
         content: "Connect and manage Instagram, Facebook and YouTube accounts.",
       },
-      { property: "og:title", content: "Social Accounts — DM FB-IG-YT by Techaasvik" },
+      { property: "og:title", content: "Social Accounts — AutoDM by Techaasvik" },
       {
         property: "og:description",
         content: "Connect and manage Instagram, Facebook and YouTube accounts.",

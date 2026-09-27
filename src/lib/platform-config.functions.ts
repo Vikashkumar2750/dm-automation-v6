@@ -16,6 +16,12 @@ const planSchema = z.object({
   perks: z.array(z.string().max(160)).max(12),
   options: z.array(optionSchema).max(6),
   contactOnly: z.boolean().optional(),
+  limits: z
+    .object({
+      monthlyDms: z.number().int().min(0).max(10_000_000).nullable(),
+      maxRules: z.number().int().min(0).max(10_000).nullable(),
+    })
+    .optional(),
 });
 const configSchema = z.object({
   plans: z.array(planSchema).min(1).max(3),

@@ -20,7 +20,7 @@ import { listConversations } from "@/lib/inbox.functions";
 export const Route = createFileRoute("/_authenticated/contacts")({
   head: () => ({
     meta: [
-      { title: "Contacts — DM FB-IG-YT by Techaasvik" },
+      { title: "Contacts — AutoDM by Techaasvik" },
       {
         name: "description",
         content: "Everyone who messaged or commented, with their platform, last message and thread count.",

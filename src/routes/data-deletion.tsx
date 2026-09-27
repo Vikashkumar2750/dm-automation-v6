@@ -2,9 +2,9 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import { LegalPage, SUPPORT_EMAIL } from "@/components/app/LegalPage";
 
-const title = "Data Deletion Instructions — DM FB-IG-YT by Techaasvik";
+const title = "Data Deletion Instructions — AutoDM by Techaasvik";
 const description =
-  "How to disconnect a social account, delete a workspace, or request full deletion of your data from DM FB-IG-YT by Techaasvik.";
+  "How to disconnect a social account, delete a workspace, or request full deletion of your data from AutoDM by Techaasvik.";
 
 export const Route = createFileRoute("/data-deletion")({
   head: () => ({
@@ -24,7 +24,7 @@ function DataDeletion() {
   return (
     <LegalPage title="Data Deletion Instructions" updated="21 September 2026">
       <p>
-        You can remove your data from DM FB-IG-YT by Techaasvik at any time. Choose the
+        You can remove your data from AutoDM by Techaasvik at any time. Choose the
         option that matches what you want to delete.
       </p>
 
