@@ -89,7 +89,23 @@ The app **never** calls insights APIs.
 
 Callback URL on Page + Instagram objects: `https://autodm.techaasvik.com/api/public/webhooks/meta` (after the domain is live). Change it on both objects at the same time, with the same verify token.
 
-### 1.2 Final to-do order (today)
+### 1.2 Facebook Login for Business → Configurations (fix needed — from your screenshots)
+
+Your **"Instagram onboarding"** configuration (ID `870669472036175`) shows a red warning: **"Some permissions have been restricted and won't be requested from users of this app."** This appeared because you removed the 3 insights permissions — the configuration still lists them. It also does **not** match what the app's Connect button asks for.
+
+**Fix (2 minutes):**
+1. **Facebook Login for Business → Configurations → Instagram onboarding → Edit → Permissions** (the page in your screenshots).
+2. **Remove** any of these if still listed: `read_insights`, `instagram_manage_insights`, `instagram_business_manage_insights` — this clears the red warning.
+3. **Tick these boxes** (currently unticked in your screenshots, but the app's login asks for them — a mismatch here means new connections won't get comment-reply and publishing rights):
+   - `business_management`
+   - `pages_manage_engagement`
+   - `pages_manage_posts`
+   - `pages_read_user_content`
+4. Keep ticked: `instagram_basic`, `instagram_content_publish`, `instagram_manage_comments`, `instagram_manage_messages`, `pages_manage_metadata`, `pages_messaging`, `pages_read_engagement`, `pages_show_list` (+ `instagram_business_*` ones if listed).
+5. **Save.** The red warning must disappear. Final list = exactly the 12 permissions the app requests (section 1) + the `instagram_business_*` set.
+6. After saving, reconnect one test account once (Social Accounts → disconnect → connect) so its token gets the full permission set, and confirm automation still works.
+
+### 1.3 Final to-do order (today)
 1. Domain live on Railway + `PUBLIC_APP_URL` (section 0.1).
 2. `INSTAGRAM_APP_SECRET` set in Railway (section 0.5).
 3. Update Callback URL on Page + Instagram webhook objects, App domains, OAuth redirect, Privacy/Terms/Deletion URLs (0.2).
