@@ -1,4 +1,3 @@
-import appLogo from "@/assets/logo.webp.asset.json";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
   ArrowRight,
@@ -231,7 +230,7 @@ function LandingPage() {
       <header className="sticky top-0 z-30 border-b bg-surface/90 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3.5">
           <div className="flex items-center gap-3">
-            <img src={appLogo.url} alt="AutoDM" className="size-9 rounded-xl object-contain" />
+            <img src={"/logo.webp"} alt="AutoDM" className="size-9 rounded-xl object-contain" />
             <div>
               <p className="text-sm font-bold">AutoDM</p>
               <p className="text-xs text-subtle-foreground">by Techaasvik</p>

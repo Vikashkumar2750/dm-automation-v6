@@ -1,4 +1,3 @@
-import appLogo from "@/assets/logo.webp.asset.json";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 
@@ -66,7 +65,7 @@ function ResetPasswordPage() {
     <div className="flex min-h-screen items-center justify-center bg-background px-4 py-10">
       <div className="w-full max-w-md">
         <Link to="/" className="mb-6 flex items-center justify-center gap-3">
-          <img src={appLogo.url} alt="AutoDM" className="size-10 rounded-xl object-contain" />
+          <img src={"/logo.webp"} alt="AutoDM" className="size-10 rounded-xl object-contain" />
           <span className="text-left">
             <span className="block text-sm font-bold">AutoDM</span>
             <span className="block text-xs text-subtle-foreground">by Techaasvik</span>
