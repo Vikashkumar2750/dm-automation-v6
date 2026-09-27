@@ -192,6 +192,49 @@ Common intro (use at the start of each answer):
 
 ---
 
+## 4.1 Copy-paste block — App Review form questions
+
+### "Allowed usage" / "How does your app use this permission?" (per permission)
+Use the table in section 4 above — one row per permission, paste as-is.
+
+### "Tell us how your app works" / App description
+```
+AutoDM by Techaasvik (https://autodm.techaasvik.com) is a SaaS tool for businesses and creators to manage their own Facebook Pages and Instagram professional accounts. The business owner connects their own accounts via Facebook Login, creates keyword-based automation rules, and the tool posts a public reply to matching comments and sends the requested link by DM only after the user interacts (taps a button). The owner can also read and reply to messages manually in a unified inbox, and publish or schedule posts to their connected accounts. We never message anyone who has not interacted with the business first, we respect the 24-hour messaging window, and every automated message is configured by the business owner themselves.
+```
+
+### Reviewer instructions (paste in the instructions box; add your real test login)
+```
+Test login: review@techaasvik.com / <password>  (Pro plan, test Page + Instagram already connected)
+
+1. Go to https://autodm.techaasvik.com/auth and log in with the credentials above.
+2. Open Social Accounts — a Facebook Page and its linked Instagram professional account are already connected. (To see the connection flow, click Connect and complete Facebook Login with your own account.)
+3. Open Automations — an active rule with keyword "LINK" is configured (public reply + DM with link).
+4. From any Facebook/Instagram account, comment "LINK" on the latest post of the connected Page/IG account.
+5. Within seconds you will see: a public reply under the comment, and a DM with a "Send me the link" button. Tap the button — the final link arrives by DM. (On Instagram, if the commenting account does not follow the business, a "Visit profile / I followed" step appears first.)
+6. Open Automations → Activity to see every step logged. Open Inbox to see the conversation and send a manual reply.
+7. Open Create Post to publish or schedule a post to the connected accounts.
+A screencast of this exact flow is attached to each permission.
+```
+
+### Data handling questions
+```
+Where is data stored? On our servers hosted on Railway, with our managed database. Access tokens are stored encrypted server-side and never sent to the browser.
+Who do you share data with? No one. We do not sell data, do not share it with third parties, do not use it for advertising, and do not use it to train AI models. Payment processing (Razorpay) receives only payment details, never Meta data.
+How long is data kept? Until the business disconnects the account (tokens deleted immediately) or requests deletion via https://autodm.techaasvik.com/data-deletion or email — completed within 30 days.
+How is data secured? HTTPS everywhere, webhook signature verification (HMAC-SHA256), row-level security so one business can never read another's data, role-based access, and rate limits.
+```
+
+### "Do you use automated messaging?"
+```
+Yes — business-configured keyword auto-replies sent only to people who comment on or message the business first. We follow the 24-hour messaging window, send at most one automated DM per comment, deliver the link only after the person taps a button, honour opt-out words (STOP/UNSUBSCRIBE), enforce per-contact daily limits and quiet hours, and the business can pause all automation instantly. We never send promotional broadcasts.
+```
+
+### Business verification / "What is your business relationship with users?"
+```
+We are a SaaS provider (Tech Provider). Our customers are businesses and creators who connect their own Facebook Pages and Instagram professional accounts to manage their own customer conversations. We only access accounts that the business owner explicitly connects and authorizes through Facebook Login. We never access data of people who have not interacted with the business.
+
+---
+
 ## 5. Screencast script (one video can cover all; 2–4 min, 1080p, English captions)
 
 1. Show the browser URL `autodm.techaasvik.com`, log in.
