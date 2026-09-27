@@ -588,6 +588,48 @@ export const setUserSuperAdmin = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+export const updateAdminUserProfile = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) =>
+    z
+      .object({
+        userId: z.string().uuid(),
+        fullName: z.string().trim().min(2).max(100),
+        email: z.string().trim().toLowerCase().email().max(200),
+        password: z.union([z.literal(""), z.string().min(10).max(128)]),
+      })
+      .parse(data),
+  )
+  .handler(async ({ data, context }) => {
+    await assertSuperAdmin(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: current, error: readError } = await supabaseAdmin.auth.admin.getUserById(data.userId);
+    if (readError || !current.user) throw new Error("User not found");
+
+    const authChanges: { email?: string; password?: string; user_metadata: { full_name: string } } = {
+      user_metadata: { ...(current.user.user_metadata ?? {}), full_name: data.fullName },
+    };
+    if (current.user.email?.toLowerCase() !== data.email) authChanges.email = data.email;
+    if (data.password) authChanges.password = data.password;
+    const { error: authError } = await supabaseAdmin.auth.admin.updateUserById(data.userId, authChanges);
+    if (authError) throw new Error(authError.message);
+
+    const { error: profileError } = await supabaseAdmin
+      .from("profiles")
+      .update({ full_name: data.fullName, email: data.email })
+      .eq("id", data.userId);
+    if (profileError) throw new Error(profileError.message);
+    await audit(context, "user.profile_updated", {
+      type: "user",
+      id: data.userId,
+      detail: {
+        emailChanged: current.user.email?.toLowerCase() !== data.email,
+        passwordChanged: Boolean(data.password),
+      },
+    });
+    return { ok: true };
+  });
+
 export const listAdminAccounts = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<AdminAccountRow[]> => {

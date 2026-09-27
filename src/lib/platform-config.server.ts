@@ -10,6 +10,7 @@ export type EmailEvents = {
   payment_received: boolean;
   automation_failure: boolean;
   account_disconnected: boolean;
+  support_inquiry: boolean;
   plan_expiring: boolean;
   workspace_suspended: boolean;
 };
@@ -36,6 +37,7 @@ export const DEFAULT_CONFIG: PlatformConfig = {
       payment_received: true,
       automation_failure: true,
       account_disconnected: true,
+      support_inquiry: true,
       plan_expiring: true,
       workspace_suspended: true,
     },

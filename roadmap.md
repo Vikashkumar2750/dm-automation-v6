@@ -35,3 +35,6 @@ Real Meta + YouTube credentials are available when we reach OAuth phases.
 
 - [x] Plan limits done
 - [ ] User: set INSTAGRAM_APP_SECRET in Railway (app ID 1497788405165320)
+- [x] Super-admin user profile editing (name, email, password) with audit logging
+- [x] Public contact, disclaimer, and refund pages with professional shared footer
+- [x] Support inquiry inbox for super admins with optional configured email alerts

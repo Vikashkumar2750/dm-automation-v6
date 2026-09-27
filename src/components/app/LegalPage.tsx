@@ -1,7 +1,9 @@
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 
-export const SUPPORT_EMAIL = "contact@techaavik.com";
+import { PublicFooter, SUPPORT_EMAIL } from "@/components/app/PublicFooter";
+
+export { SUPPORT_EMAIL };
 
 export function LegalPage({
   title,
@@ -33,19 +35,7 @@ export function LegalPage({
         </div>
       </main>
 
-      <footer className="border-t">
-        <div className="mx-auto max-w-3xl px-5 py-8 text-xs text-muted-foreground">
-          <div className="flex flex-wrap gap-4">
-            <Link to="/privacy">Privacy Policy</Link>
-            <Link to="/terms">Terms of Service</Link>
-            <Link to="/data-deletion">Data Deletion</Link>
-          </div>
-          <p className="mt-4">
-            Questions? Write to {SUPPORT_EMAIL}. Instagram, Facebook and YouTube are
-            trademarks of their respective owners.
-          </p>
-        </div>
-      </footer>
+      <PublicFooter />
     </div>
   );
 }

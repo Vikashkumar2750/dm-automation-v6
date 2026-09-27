@@ -1,15 +1,17 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Users } from "lucide-react";
+import { Pencil, Users } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
 import { AdminTable } from "@/components/app/AdminTable";
 import { EmptyState, PageHeader, Panel, StatusBadge } from "@/components/app/primitives";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { adminUserAction, listAdminUsers, listSuspendedUserIds, setUserSuperAdmin } from "@/lib/admin.functions";
+import { Label } from "@/components/ui/label";
+import { adminUserAction, listAdminUsers, listSuspendedUserIds, setUserSuperAdmin, updateAdminUserProfile, type AdminUserRow } from "@/lib/admin.functions";
 
 export const Route = createFileRoute("/_authenticated/admin/users")({
   head: () => ({
@@ -30,6 +32,10 @@ function UsersPage() {
   const setSuper = useServerFn(setUserSuperAdmin);
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
+  const [editing, setEditing] = useState<AdminUserRow | null>(null);
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const userAction = useServerFn(adminUserAction);
   const fetchSuspended = useServerFn(listSuspendedUserIds);
   const suspended = useQuery({ queryKey: ["admin-suspended"], queryFn: () => fetchSuspended(), retry: false });
@@ -58,6 +64,27 @@ function UsersPage() {
     },
     onError: (e: Error) => toast.error(e.message || "Could not update access"),
   });
+  const updateUser = useServerFn(updateAdminUserProfile);
+  const editMutation = useMutation({
+    mutationFn: () => {
+      if (!editing) throw new Error("Choose a user");
+      return updateUser({ data: { userId: editing.id, fullName, email, password } });
+    },
+    onSuccess: () => {
+      toast.success("User profile updated");
+      setEditing(null);
+      setPassword("");
+      void queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+    },
+    onError: (e: Error) => toast.error(e.message || "Could not update user"),
+  });
+
+  function openEditor(user: AdminUserRow) {
+    setEditing(user);
+    setFullName(user.full_name ?? "");
+    setEmail(user.email ?? "");
+    setPassword("");
+  }
 
   const q = search.trim().toLowerCase();
   const rows = (data ?? []).filter(
@@ -138,6 +165,9 @@ function UsersPage() {
                 cell: (u) => (
                   <div className="flex flex-wrap items-center gap-2">
                     {suspendedSet.has(u.id) ? <StatusBadge tone="danger">Suspended</StatusBadge> : null}
+                    <Button size="sm" variant="outline" onClick={() => openEditor(u)}>
+                      <Pencil className="size-3.5" /> Edit
+                    </Button>
                     <Button
                       size="sm"
                       variant="outline"
@@ -157,6 +187,23 @@ function UsersPage() {
           />
         )}
       </Panel>
+      <Dialog open={Boolean(editing)} onOpenChange={(open) => !open && setEditing(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit user</DialogTitle>
+            <DialogDescription>Update the user’s name, login email, or set a new password. Existing passwords are never shown.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <label className="space-y-1.5"><Label>Full name</Label><Input value={fullName} onChange={(e) => setFullName(e.target.value)} maxLength={100} /></label>
+            <label className="space-y-1.5"><Label>Login email</Label><Input value={email} onChange={(e) => setEmail(e.target.value)} type="email" maxLength={200} /></label>
+            <label className="space-y-1.5"><Label>New password</Label><Input value={password} onChange={(e) => setPassword(e.target.value)} type="password" minLength={10} maxLength={128} placeholder="Leave blank to keep current password" /><span className="block text-xs text-muted-foreground">Minimum 10 characters.</span></label>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditing(null)}>Cancel</Button>
+            <Button disabled={editMutation.isPending || fullName.trim().length < 2 || !email.includes("@") || (password.length > 0 && password.length < 10)} onClick={() => editMutation.mutate()}>{editMutation.isPending ? "Saving…" : "Save changes"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
