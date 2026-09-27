@@ -3,7 +3,7 @@
 ## 1. Monthly DM and automation limits by plan (the reply and DM steps stay the same)
 - Each plan gets two limits:
   - **Automated DMs per month**, suggested: Free (Rs 9 trial) 300, Pro 10,000, Agency unlimited.
-  - **Active automation rules**, suggested: Free 3, Pro 50, Agency unlimited.
+  - **Active automation rules**, suggested: Free 3, Pro 50, Agency unlimited. The limit counts only rules that are switched on. Users can edit a rule's keywords, posts, replies or link at any time, and the edited rule keeps working. Only creating, duplicating or switching on a rule beyond the limit is blocked. Rules the user already has stay on.
 - These show up in Admin → Plans next to the price, so the super admin can change them any time.
 - The super admin can also override the limits for one workspace (Admin → Organizations → workspace → a new "Plan limits override" box).
 - When a workspace reaches its monthly DM limit, new automations stop and the Activity page says "Monthly DM limit reached — upgrade". A contact who has already started a flow (tapped "Send me the link" or "I followed") still gets the final link, so nobody is left halfway.
