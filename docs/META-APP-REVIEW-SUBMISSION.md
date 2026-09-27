@@ -127,21 +127,35 @@ Reviewers need to log in and see everything working.
 
 ---
 
-## 3. Required API test calls
+## 3. Required API test calls — step by step ( easiest way)
 
-Graph API Explorer (developers.facebook.com/tools/explorer) → select app **autodm techaasvik** → Get User Access Token with all Keep permissions → run once each (this makes the "Ensure you have performed test calls" tick turn green within 24h):
-- `GET me/accounts` (pages_show_list)
-- `GET {page-id}?fields=name,instagram_business_account` (instagram_basic)
-- `POST {page-id}/subscribed_apps?subscribed_fields=feed,messages,messaging_postbacks` (pages_manage_metadata)
-- `GET {page-id}/feed?fields=id,message,comments{from,message}` (pages_read_engagement, pages_read_user_content)
-- `POST {comment-id}/comments` message=Thanks (pages_manage_engagement)
-- `GET {ig-user-id}/media?fields=id,caption,comments{text,username}` (instagram_manage_comments)
-- `POST {page-id}/messages` recipient={comment_id}, message=Hi (pages_messaging / instagram_manage_messages)
-- `POST {ig-user-id}/media` then `/media_publish` (instagram_content_publish)
-- `POST {page-id}/photos` url=… (pages_manage_posts)
-- `GET me/businesses` (business_management)
+The "Ensure you have performed test API calls" warning turns green automatically once Meta sees real API calls from your app in the last 30 days. **You have two options:**
 
-Or simply use the app itself with the test account — real calls count too.
+### Option A (recommended, zero extra work): just use the app
+You already tested automation on both platforms after removing the permissions — those were real API calls. Do this once more with the **reviewer test account** (section 2) so every permission gets a fresh call:
+1. Log in as the reviewer account → Social Accounts → disconnect + reconnect Facebook & Instagram (covers `pages_show_list`, `business_management`, `pages_manage_metadata`, `instagram_basic`).
+2. Comment the keyword on one FB post and one IG post → full flow (covers `pages_read_engagement`, `pages_read_user_content`, `pages_manage_engagement`, `pages_messaging`, `instagram_manage_comments`, `instagram_manage_messages`).
+3. Create Post → publish one photo to FB + one to IG (covers `pages_manage_posts`, `instagram_content_publish`).
+4. Check **App Review → each permission row** within 24–48 hours — the test-call warning clears on its own.
+
+### Option B (if a specific permission row still shows the warning): Graph API Explorer
+1. Open **developers.facebook.com/tools/explorer**.
+2. Top-right dropdown: select app **autodm techaasvik**.
+3. Click **Generate Access Token** → log in with YOUR Facebook account (the app admin) → tick all permissions when asked.
+4. In the query box, run these one by one (replace `{page-id}` / `{ig-user-id}` / `{comment-id}` with your test Page/IG values — `{page-id}` and `{ig-user-id}` are visible in AutoDM → Social Accounts; `{comment-id}` from any recent comment):
+
+| Call | Covers |
+|---|---|
+| `GET me/accounts` | pages_show_list |
+| `GET {page-id}?fields=name,instagram_business_account` | instagram_basic |
+| `GET {page-id}/feed?fields=id,message,comments{from,message}` | pages_read_engagement, pages_read_user_content |
+| `POST {comment-id}/comments` with field `message=Thanks!` | pages_manage_engagement |
+| `GET {ig-user-id}/media?fields=id,caption,comments{text,username}` | instagram_manage_comments |
+| `GET me/businesses` | business_management |
+
+For `pages_messaging`, `instagram_manage_messages`, `pages_manage_posts`, `instagram_content_publish` — use the app itself (Option A steps 2–3); it's easier than hand-building POST calls, and real calls count the same.
+
+5. If a call returns an error, the permission name in the error tells you which one is missing from the token — regenerate the token with it ticked.
 
 ---
 
