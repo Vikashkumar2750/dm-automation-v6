@@ -113,10 +113,18 @@ async function withinPlanLimit(
   }
   const limit = PLAN_ACCOUNT_LIMITS[plan];
   if (limit === undefined) return true; // agency / custom = unlimited
+  // User-wide cap: count accounts across EVERY workspace this user owns, so
+  // creating extra workspaces cannot bypass the plan limit.
+  const { data: ownedOrgs } = await supabaseAdmin
+    .from("organizations")
+    .select("id")
+    .eq("owner_id", stateRow.user_id);
+  const orgIds = (ownedOrgs ?? []).map((o) => o.id as string);
+  if (!orgIds.includes(stateRow.organization_id)) orgIds.push(stateRow.organization_id);
   const { count } = await supabaseAdmin
     .from("social_accounts")
     .select("id", { count: "exact", head: true })
-    .eq("organization_id", stateRow.organization_id)
+    .in("organization_id", orgIds)
     .eq("platform", platform as "instagram" | "facebook" | "youtube");
   return (count ?? 0) < limit;
 }
