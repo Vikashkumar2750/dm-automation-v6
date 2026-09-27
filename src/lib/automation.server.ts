@@ -286,6 +286,32 @@ export async function runAutomations(admin: AdminClient, ctx: AutomationContext)
     return;
   }
 
+  // Plan quota: monthly automated DMs. Only blocks NEW flows — a contact who
+  // already has an open follow gate (mid-flow) is never cut off.
+  {
+    const { resolveOrgLimits, countMonthlySent } = await import("@/lib/plan-limits.server");
+    const limits = await resolveOrgLimits(admin, ctx.organizationId).catch(() => null);
+    if (limits && limits.monthlyDms !== null) {
+      const sentMonth = await countMonthlySent(admin, ctx.organizationId);
+      if (sentMonth >= limits.monthlyDms) {
+        let midFlow = false;
+        if (ctx.channel !== "comment") {
+          const { count } = await admin
+            .from("automation_follow_gates")
+            .select("id", { count: "exact", head: true })
+            .eq("organization_id", ctx.organizationId)
+            .eq("external_user_id", ctx.externalUserId)
+            .is("completed_at", null);
+          midFlow = (count ?? 0) > 0;
+        }
+        if (!midFlow) {
+          await log(admin, ctx, null, "skipped", "plan_monthly_dm_limit");
+          return;
+        }
+      }
+    }
+  }
+
   // Safety: contact asked to stop -> record opt-out and never auto-reply again.
   const optOutHit = hitsKeyword(settings.opt_out_keywords, ctx.body);
   if (optOutHit) {
