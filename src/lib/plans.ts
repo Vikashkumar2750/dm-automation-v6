@@ -30,7 +30,7 @@ export type PlanDef = {
 export const PLANS: PlanDef[] = [
   {
     key: "starter",
-    limits: { ...({ starter: { monthlyDms: 300, maxRules: 3 }, pro: { monthlyDms: 10000, maxRules: 50 }, agency: { monthlyDms: null, maxRules: null } } as const)["starter"] },
+    limits: DEFAULT_PLAN_LIMITS.starter,
     name: "Free",
     headline: "₹9 · 3-day trial",
     perks: [
@@ -42,7 +42,7 @@ export const PLANS: PlanDef[] = [
   },
   {
     key: "pro",
-    limits: { ...({ starter: { monthlyDms: 300, maxRules: 3 }, pro: { monthlyDms: 10000, maxRules: 50 }, agency: { monthlyDms: null, maxRules: null } } as const)["pro"] },
+    limits: DEFAULT_PLAN_LIMITS.pro,
     name: "Pro",
     headline: "₹59 / month",
     perks: [
@@ -58,7 +58,7 @@ export const PLANS: PlanDef[] = [
   },
   {
     key: "agency",
-    limits: { ...({ starter: { monthlyDms: 300, maxRules: 3 }, pro: { monthlyDms: 10000, maxRules: 50 }, agency: { monthlyDms: null, maxRules: null } } as const)["agency"] },
+    limits: DEFAULT_PLAN_LIMITS.agency,
     name: "Agency",
     headline: "Custom pricing",
     perks: ["Unlimited accounts & client workspaces", "White-label branding", "Dedicated support"],
