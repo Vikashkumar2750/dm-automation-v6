@@ -104,34 +104,73 @@ function SocialAccountsPage() {
     onError: () => toast.error("Could not disconnect that account"),
   });
 
-  // Surface the result of a returning OAuth redirect.
+  // Surface the result of a returning OAuth redirect. When this page is
+  // loaded inside the connect popup, hand the result to the opener and close
+  // the popup instead of rendering the dashboard in a small window.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const result = params.get("connect");
     if (!result) return;
-    if (result === "success") {
-      const added = params.get("added");
+    const payload = {
+      type: "social-connect",
+      result,
+      added: params.get("added"),
+      limit: params.get("limit"),
+    };
+    if (window.opener && !window.opener.closed) {
+      window.opener.postMessage(payload, window.location.origin);
+      window.close();
+      return;
+    }
+    handleConnectResult(payload);
+    navigate({ to: "/social-accounts", replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Listen for the popup's result while the dashboard stays open.
+  useEffect(() => {
+    function onMessage(event: MessageEvent) {
+      if (event.origin !== window.location.origin) return;
+      const data = event.data as
+        | { type?: string; result?: string; added?: string | null; limit?: string | null }
+        | null;
+      if (!data || data.type !== "social-connect" || !data.result) return;
+      handleConnectResult({
+        result: data.result,
+        added: data.added ?? null,
+        limit: data.limit ?? null,
+      });
+    }
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orgId]);
+
+  function handleConnectResult(payload: {
+    result: string;
+    added: string | null;
+    limit: string | null;
+  }) {
+    if (payload.result === "success") {
       toast.success(
-        added && added !== "0"
-          ? `Connected ${added} account${added === "1" ? "" : "s"}`
+        payload.added && payload.added !== "0"
+          ? `Connected ${payload.added} account${payload.added === "1" ? "" : "s"}`
           : "Nothing new to connect — check the account has the right permissions",
       );
-      if (params.get("limit")) {
+      if (payload.limit) {
         toast.error(
           "Your plan's account limit is reached. Free plan: 1 Instagram, 1 Facebook, 1 YouTube. Upgrade to Pro to add more.",
         );
       }
       queryClient.invalidateQueries({ queryKey: ["social-accounts", orgId] });
-    } else if (result === "cancelled") {
+    } else if (payload.result === "cancelled") {
       toast("Connection cancelled");
-    } else if (result === "expired") {
+    } else if (payload.result === "expired") {
       toast.error("That connection link expired — try again");
     } else {
       toast.error("Connection failed. Please try again.");
     }
-    navigate({ to: "/social-accounts", replace: true });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }
 
   function handleConnect(platform: SocialPlatform) {
     if (!orgId) return;
