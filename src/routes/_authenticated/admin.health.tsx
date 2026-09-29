@@ -44,7 +44,9 @@ function HealthPage() {
   const atRisk = (accounts.data ?? []).filter(
     (a) =>
       a.status !== "connected" ||
-      (a.token_expires_at && new Date(a.token_expires_at).getTime() < soon),
+      (a.platform !== "youtube" &&
+        a.token_expires_at &&
+        new Date(a.token_expires_at).getTime() < soon),
   );
 
   return (

@@ -95,8 +95,36 @@ export function fallbackYouTubeReply(comment: string, rule: Rule): string {
   return "Thanks for joining the conversation — we appreciate your comment!";
 }
 
-async function smartReply(comment: Comment, rule: Rule): Promise<{ text: string; usedAi: boolean }> {
+function aiStatus(error: unknown): number | null {
+  const value = error as { statusCode?: unknown; status?: unknown; response?: { status?: unknown } };
+  for (const candidate of [value?.statusCode, value?.status, value?.response?.status]) {
+    if (typeof candidate === "number") return candidate;
+  }
+  const match = (error instanceof Error ? error.message : "").match(/\b(400|401|402|403|404|429|5\d\d)\b/);
+  return match?.[1] ? Number(match[1]) : null;
+}
+
+async function pauseAutomatedAi(admin: AdminClient, status: number) {
+  if (status !== 402 && status !== 403) return;
+  const { data } = await admin
+    .from("platform_settings")
+    .select("feature_flags")
+    .eq("id", true)
+    .maybeSingle();
+  const flags = { ...((data?.feature_flags ?? {}) as Record<string, unknown>) };
+  flags["youtube_ai_paused"] = true;
+  flags["youtube_ai_pause_status"] = status;
+  await admin.from("platform_settings").update({ feature_flags: flags }).eq("id", true);
+}
+
+async function smartReply(
+  admin: AdminClient,
+  comment: Comment,
+  rule: Rule,
+  aiPaused: boolean,
+): Promise<{ text: string; usedAi: boolean }> {
   const fallback = fallbackYouTubeReply(comment.text, rule);
+  if (aiPaused) return { text: fallback, usedAi: false };
   try {
     const { generateYouTubeReply } = await import("@/lib/youtube-ai.server");
     const generated = await generateYouTubeReply({
@@ -108,7 +136,8 @@ async function smartReply(comment: Comment, rule: Rule): Promise<{ text: string;
     const link = (rule.dm_link_url ?? "").trim();
     const withLink = link && !generated.includes(link) ? `${generated} ${link}` : generated;
     return { text: withLink.slice(0, 900), usedAi: true };
-  } catch {
+  } catch (error) {
+    await pauseAutomatedAi(admin, aiStatus(error) ?? 0);
     return { text: fallback, usedAi: false };
   }
 }
@@ -407,10 +436,10 @@ export async function runYouTubeCommentAutomation(
     .select("global_send_paused, feature_flags")
     .eq("id", true)
     .maybeSingle();
-  if (platform?.global_send_paused) return { channels: 0, comments: 0, replied: 0 };
-  if (!youtubeAutomationEnabled(platform?.feature_flags)) {
-    return { channels: 0, comments: 0, replied: 0 };
-  }
+  const globalSendPaused = platform?.global_send_paused === true;
+  const automationEnabled = youtubeAutomationEnabled(platform?.feature_flags);
+  const aiPaused =
+    ((platform?.feature_flags ?? {}) as Record<string, unknown>)["youtube_ai_paused"] === true;
 
   let accountQuery = admin
     .from("social_accounts")
@@ -445,13 +474,10 @@ export async function runYouTubeCommentAutomation(
       .select("is_paused, auto_paused_until")
       .eq("organization_id", account.organization_id)
       .maybeSingle();
-    if (settings?.is_paused) continue;
-    if (
+    const workspaceSendPaused =
+      settings?.is_paused === true ||
       settings?.auto_paused_until &&
-      new Date(settings.auto_paused_until as string).getTime() > Date.now()
-    ) {
-      continue;
-    }
+        new Date(settings.auto_paused_until as string).getTime() > Date.now();
 
     const { data: ruleRows } = await admin
       .from("automation_rules")
@@ -523,7 +549,7 @@ export async function runYouTubeCommentAutomation(
         .from("automation_runs")
         .select("id")
         .eq("organization_id", account.organization_id)
-        .eq("detail", `youtube:comment:${comment.id}`)
+        .like("detail", `youtube:comment:${comment.id}%`)
         .limit(1)
         .maybeSingle();
       if (seen?.id) continue;
@@ -568,6 +594,8 @@ export async function runYouTubeCommentAutomation(
         );
         continue;
       }
+
+      if (globalSendPaused || !automationEnabled || workspaceSendPaused) continue;
 
       if (comment.authorId && comment.videoId && rule.cooldown_seconds > 0) {
         const since = new Date(Date.now() - rule.cooldown_seconds * 1000).toISOString();
@@ -614,7 +642,7 @@ export async function runYouTubeCommentAutomation(
         continue;
       }
 
-      const reply = await smartReply(comment, rule);
+      const reply = await smartReply(admin, comment, rule, aiPaused);
       const text = reply.text;
 
       const result = await postReply(comment.id, text, token);

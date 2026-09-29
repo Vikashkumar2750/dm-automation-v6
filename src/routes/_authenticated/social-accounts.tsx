@@ -345,6 +345,7 @@ function SocialAccountsPage() {
           <ul className="divide-y">
             {accounts.map((account) => {
               const expired =
+                account.platform !== "youtube" &&
                 account.token_expires_at &&
                 new Date(account.token_expires_at) < new Date();
               return (

@@ -1029,7 +1029,8 @@ export const listAutomationAlerts = createServerFn({ method: "GET" })
     }
 
     for (const a of accounts.data ?? []) {
-      const expiring = a.token_expires_at && a.token_expires_at < soon;
+      const expiring =
+        a.platform !== "youtube" && a.token_expires_at && a.token_expires_at < soon;
       if (a.status === "connected" && !expiring) continue;
       const disconnected = a.status !== "connected";
       items.push({
