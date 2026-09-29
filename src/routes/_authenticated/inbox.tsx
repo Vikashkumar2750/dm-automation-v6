@@ -197,9 +197,15 @@ function InboxPage() {
       toast.error("You need agent access or higher to reply.");
     } else if (message.includes("no_comment_id")) {
       toast.error("We don't have the original comment id for this thread yet.");
+    } else if (message.includes("youtube_no_token")) {
+      toast.error("YouTube authorization was revoked. Reconnect the channel.");
+    } else if (message.includes("youtube_reply")) {
+      toast.error(`YouTube rejected this reply: ${message.split("youtube_reply:")[1]?.trim()}`);
     } else {
       toast.error(
-        message ? `Meta rejected this: ${message.slice(0, 200)}` : "Could not complete the action. Check the account connection.",
+        message
+          ? `${selected?.platform === "youtube" ? "YouTube" : "Meta"} rejected this: ${message.slice(0, 200)}`
+          : "Could not complete the action. Check the account connection.",
       );
     }
   }
@@ -207,12 +213,18 @@ function InboxPage() {
   const commentReply = useMutation({
     mutationFn: (body: string) =>
       replyToCommentFn({
-        data: { conversationId: selected!.id, body, mode: commentMode },
+        data: {
+          conversationId: selected!.id,
+          body,
+          mode: selected?.platform === "youtube" ? "public" : commentMode,
+        },
       }),
     onSuccess: () => {
       setDraft("");
       toast.success(
-        commentMode === "public" ? "Public reply posted." : "Private DM sent.",
+        selected?.platform === "youtube" || commentMode === "public"
+          ? "Public reply posted."
+          : "Private DM sent.",
       );
       queryClient.invalidateQueries({ queryKey: ["messages", selected?.id] });
       queryClient.invalidateQueries({ queryKey: ["conversations", orgId] });
@@ -246,7 +258,7 @@ function InboxPage() {
     <AppShell>
       <PageHeader
         title="Unified Inbox"
-        description="Messages and comments from your connected Instagram and Facebook accounts."
+        description="Messages and comments from Instagram, Facebook and YouTube in one place."
       />
 
       <div className="grid gap-4 lg:grid-cols-[340px_1fr]">
@@ -458,7 +470,7 @@ function InboxPage() {
                 )}
               </div>
 
-              {selected.channel === "comment" && selected.platform !== "youtube" ? (
+              {selected.channel === "comment" ? (
                 <form
                   className="space-y-2 border-t px-4 py-3"
                   onSubmit={(e) => {
@@ -471,7 +483,7 @@ function InboxPage() {
                     value={draft}
                     onChange={(e) => setDraft(e.target.value)}
                     placeholder={
-                      commentMode === "public"
+                      selected.platform === "youtube" || commentMode === "public"
                         ? "Reply publicly under this comment…"
                         : "Send a private DM to this commenter…"
                     }
@@ -479,6 +491,7 @@ function InboxPage() {
                     maxLength={1000}
                   />
                   <div className="flex flex-wrap items-center gap-2">
+                    {selected.platform !== "youtube" ? (
                     <div className="flex rounded-md border p-0.5">
                       {(["public", "private"] as const).map((mode) => (
                         <button
@@ -496,6 +509,8 @@ function InboxPage() {
                         </button>
                       ))}
                     </div>
+                    ) : null}
+                    {selected.platform !== "youtube" ? (
                     <Button
                       type="submit"
                       size="sm"
@@ -508,6 +523,7 @@ function InboxPage() {
                       )}
                       Send
                     </Button>
+                    ) : null}
                     <Button
                       type="button"
                       size="sm"
@@ -548,7 +564,7 @@ function InboxPage() {
               ) : (
                 <div className="flex items-center gap-2 border-t px-4 py-3 text-xs text-muted-foreground">
                   <CheckCheck className="size-4" />
-                  Replies from the inbox are only available for Instagram/Facebook DMs.
+                  Direct messages are only available for Instagram and Facebook.
                 </div>
               )}
             </>

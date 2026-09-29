@@ -37,7 +37,10 @@ export const Route = createFileRoute("/_authenticated/account-health")({
   component: AccountHealthPage,
 });
 
-function expiryTone(iso: string | null) {
+function expiryTone(iso: string | null, platform: "instagram" | "facebook" | "youtube") {
+  if (platform === "youtube") {
+    return { tone: "success" as const, label: "Auto-renews" };
+  }
   if (!iso) return { tone: "neutral" as const, label: "No expiry" };
   const days = Math.round((new Date(iso).getTime() - Date.now()) / 86_400_000);
   if (days < 0) return { tone: "danger" as const, label: "Access expired" };
@@ -96,7 +99,7 @@ function AccountHealthPage() {
           ) : (
             <div className="space-y-2">
               {rows.map((a) => {
-                const exp = expiryTone(a.token_expires_at);
+                const exp = expiryTone(a.token_expires_at, a.platform);
                 return (
                   <div
                     key={a.id}
