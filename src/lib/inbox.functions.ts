@@ -316,7 +316,7 @@ export const replyToComment = createServerFn({ method: "POST" })
       result =
         !response.ok || json.error
           ? { error: json.error?.message ?? "Meta rejected the reply" }
-          : { id: json.id };
+          : { ...(json.id ? { id: json.id } : {}) };
     }
     if (result.error) throw new Error(result.error);
 
@@ -439,7 +439,9 @@ async function sendMetaMessage(
       message_id?: string;
       error?: { message?: string; code?: number };
     };
-    if (response.ok && !json.error) return { message_id: json.message_id };
+    if (response.ok && !json.error) {
+      return json.message_id ? { message_id: json.message_id } : {};
+    }
     lastError = json.error?.message ?? `Meta error ${response.status}`;
     // Only a capability error means "wrong endpoint" — anything else is final.
     if (json.error?.code !== 3) return { error: lastError };
