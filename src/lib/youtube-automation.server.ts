@@ -294,7 +294,7 @@ async function fetchVideoComments(videoId: string, token: string): Promise<Comme
     const error = new Error(
       json.error?.message ?? `YouTube refused the comment list (${res.status})`,
     ) as Error & { reason?: string };
-    error.reason = youtubeApiReason(json);
+    error.reason = youtubeApiReason(json) ?? undefined;
     throw error;
   }
   return (json.items ?? [])
