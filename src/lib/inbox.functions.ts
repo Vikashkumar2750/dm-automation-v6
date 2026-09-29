@@ -278,45 +278,47 @@ export const replyToComment = createServerFn({ method: "POST" })
         .single(),
       supabaseAdmin
         .from("social_accounts")
-        .select("external_id")
+        .select("external_id, metadata")
         .eq("id", conversation.social_account_id)
         .single(),
     ]);
     if (!tokenRow?.access_token || !account?.external_id) throw new Error("no_token");
 
     const accessToken = tokenRow.access_token;
-    let url: string;
-    let payload: Record<string, unknown>;
+    let result: { id?: string; message_id?: string; error?: string };
 
     if (data.mode === "private") {
       // Private reply: recipient is the comment itself.
-      url = `https://graph.facebook.com/v21.0/${account.external_id}/messages`;
-      payload = {
-        recipient: { comment_id: lastComment.external_id },
-        message: { text: data.body },
-        access_token: accessToken,
-      };
-    } else if (conversation.platform === "instagram") {
-      url = `https://graph.facebook.com/v21.0/${lastComment.external_id}/replies`;
-      payload = { message: data.body, access_token: accessToken };
+      result = await sendMetaMessage(
+        conversation.platform,
+        account.external_id,
+        account.metadata,
+        {
+          recipient: { comment_id: lastComment.external_id },
+          message: { text: data.body },
+          access_token: accessToken,
+        },
+      );
     } else {
-      url = `https://graph.facebook.com/v21.0/${lastComment.external_id}/comments`;
-      payload = { message: data.body, access_token: accessToken };
+      const edge = conversation.platform === "instagram" ? "replies" : "comments";
+      const response = await fetch(
+        `https://graph.facebook.com/v21.0/${lastComment.external_id}/${edge}`,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ message: data.body, access_token: accessToken }),
+        },
+      );
+      const json = (await response.json()) as {
+        id?: string;
+        error?: { message?: string };
+      };
+      result =
+        !response.ok || json.error
+          ? { error: json.error?.message ?? "Meta rejected the reply" }
+          : { id: json.id };
     }
-
-    const response = await fetch(url, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    const result = (await response.json()) as {
-      id?: string;
-      message_id?: string;
-      error?: { message?: string };
-    };
-    if (!response.ok || result.error) {
-      throw new Error(result.error?.message ?? "Meta rejected the reply");
-    }
+    if (result.error) throw new Error(result.error);
 
     const now = new Date().toISOString();
     const prefix = data.mode === "private" ? "[private reply] " : "[public reply] ";
