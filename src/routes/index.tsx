@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { useEffect } from "react";
 
-import metaPartnerBadge from "@/assets/meta-business-partner.png.asset.json";
+const metaPartnerBadge = { url: "/meta-business-partner.png" };
 import { PublicFooter } from "@/components/app/PublicFooter";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
