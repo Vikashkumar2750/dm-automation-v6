@@ -115,10 +115,41 @@ async function freshToken(admin: AdminClient, accountId: string): Promise<string
   return json.access_token;
 }
 
+/** Latest uploaded video ids of the channel (channel-wide comment listing was retired by YouTube). */
+async function recentVideoIds(channelId: string, token: string): Promise<string[]> {
+  const auth = { headers: { authorization: `Bearer ${token}` } };
+  const ch = (await (
+    await fetch(`${YT}/channels?part=contentDetails&id=${encodeURIComponent(channelId)}`, auth)
+  ).json().catch(() => ({}))) as {
+    items?: { contentDetails?: { relatedPlaylists?: { uploads?: string } } }[];
+  };
+  const uploads = ch.items?.[0]?.contentDetails?.relatedPlaylists?.uploads;
+  if (!uploads) return [];
+  const pl = (await (
+    await fetch(`${YT}/playlistItems?part=contentDetails&maxResults=10&playlistId=${uploads}`, auth)
+  ).json().catch(() => ({}))) as { items?: { contentDetails?: { videoId?: string } }[] };
+  return (pl.items ?? []).map((i) => i.contentDetails?.videoId).filter((v): v is string => !!v);
+}
+
 async function fetchComments(channelId: string, token: string): Promise<Comment[]> {
-  const url = `${YT}/commentThreads?part=snippet&allThreadsRelatedToChannelId=${encodeURIComponent(
-    channelId,
-  )}&maxResults=30&order=time`;
+  const videos = await recentVideoIds(channelId, token);
+  const all: Comment[] = [];
+  let lastError: Error | null = null;
+  for (const videoId of videos) {
+    try {
+      all.push(...(await fetchVideoComments(videoId, token)));
+    } catch (e) {
+      lastError = e as Error;
+    }
+  }
+  if (all.length === 0 && lastError) throw lastError;
+  return all;
+}
+
+async function fetchVideoComments(videoId: string, token: string): Promise<Comment[]> {
+  const url = `${YT}/commentThreads?part=snippet&videoId=${encodeURIComponent(
+    videoId,
+  )}&maxResults=20&order=time`;
   const res = await fetch(url, { headers: { authorization: `Bearer ${token}` } });
   const json = (await res.json().catch(() => ({}))) as {
     items?: {
