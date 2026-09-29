@@ -182,7 +182,9 @@ function InboxPage() {
       } else if (message.includes("not_allowed")) {
         toast.error("You need agent access or higher to reply.");
       } else {
-        toast.error("Could not send the reply. Check the account connection.");
+        toast.error(
+          message ? `Meta rejected this: ${message.slice(0, 200)}` : "Could not send the reply. Check the account connection.",
+        );
       }
     },
   });
@@ -196,7 +198,9 @@ function InboxPage() {
     } else if (message.includes("no_comment_id")) {
       toast.error("We don't have the original comment id for this thread yet.");
     } else {
-      toast.error("Could not complete the action. Check the account connection.");
+      toast.error(
+        message ? `Meta rejected this: ${message.slice(0, 200)}` : "Could not complete the action. Check the account connection.",
+      );
     }
   }
 
