@@ -94,8 +94,9 @@ async function freshToken(admin: AdminClient, accountId: string): Promise<string
     method: "POST",
     headers: { "content-type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
-      client_id: process.env["GOOGLE_OAUTH_CLIENT_ID"] ?? "",
-      client_secret: process.env["GOOGLE_OAUTH_CLIENT_SECRET"] ?? "",
+      client_id: process.env["GOOGLE_OAUTH_CLIENT_ID"] ?? process.env["YOUTUBE_CLIENT_ID"] ?? "",
+      client_secret:
+        process.env["GOOGLE_OAUTH_CLIENT_SECRET"] ?? process.env["YOUTUBE_CLIENT_SECRET"] ?? "",
       refresh_token: row.refresh_token,
       grant_type: "refresh_token",
     }),
@@ -294,18 +295,8 @@ export async function runYouTubeCommentAutomation(
       .eq("trigger", "comment_received")
       .in("platform", ["youtube"])
       .order("priority", { ascending: false });
-    const { data: allPlatformRows } = await admin
-      .from("automation_rules")
-      .select(RULE_SELECT)
-      .eq("organization_id", account.organization_id)
-      .eq("is_active", true)
-      .eq("trigger", "comment_received")
-      .is("platform", null)
-      .order("priority", { ascending: false });
-    const rules = [
-      ...((ruleRows ?? []) as Rule[]),
-      ...((allPlatformRows ?? []) as Rule[]),
-    ].sort((a, b) => b.priority - a.priority);
+    // "Both platforms" rules are Facebook + Instagram only — never YouTube.
+    const rules = ((ruleRows ?? []) as Rule[]).sort((a, b) => b.priority - a.priority);
     if (rules.length === 0) continue;
 
     let fetched: Comment[] = [];
@@ -324,8 +315,23 @@ export async function runYouTubeCommentAutomation(
     }
 
     for (const comment of fetched) {
-      if (comment.authorId && comment.authorId === account.external_id) continue;
       if (Date.now() - new Date(comment.publishedAt).getTime() > LOOKBACK_MS) continue;
+      if (comment.authorId && comment.authorId === account.external_id) {
+        // Own-channel comments are never answered, but record it once so the
+        // Activity page explains why a self-test did not trigger.
+        const ownDetail = `youtube:own_channel_comment:${comment.id}`;
+        const { data: ownSeen } = await admin
+          .from("automation_runs")
+          .select("id")
+          .eq("organization_id", account.organization_id)
+          .eq("detail", ownDetail)
+          .limit(1)
+          .maybeSingle();
+        if (!ownSeen?.id) {
+          await log(admin, account.organization_id, null, null, "skipped", ownDetail);
+        }
+        continue;
+      }
       comments += 1;
 
       // One reply per comment, ever.
