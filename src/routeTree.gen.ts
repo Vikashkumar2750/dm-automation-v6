@@ -55,6 +55,7 @@ import { Route as AuthenticatedInviteTokenRouteImport } from './routes/_authenti
 import { Route as AuthenticatedAdminOrgOrgIdRouteImport } from './routes/_authenticated/admin.org.$orgId'
 import { Route as AuthenticatedAutomationsActivityRunIdRouteImport } from './routes/_authenticated/automations_.activity_.$runId'
 import { Route as ApiPublicCronPublishDueRouteImport } from './routes/api/public/cron.publish-due'
+import { Route as ApiPublicCronYoutubeCommentsRouteImport } from './routes/api/public/cron.youtube-comments'
 import { Route as ApiPublicTTokenRouteImport } from './routes/api/public/t.$token'
 import { Route as ApiPublicWebhooksMetaRouteImport } from './routes/api/public/webhooks.meta'
 import { Route as ApiPublicOauthProviderCallbackRouteImport } from './routes/api/public/oauth.$provider.callback'
@@ -306,6 +307,12 @@ const ApiPublicCronPublishDueRoute = ApiPublicCronPublishDueRouteImport.update({
   path: '/api/public/cron/publish-due',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicCronYoutubeCommentsRoute =
+  ApiPublicCronYoutubeCommentsRouteImport.update({
+    id: '/api/public/cron/youtube-comments',
+    path: '/api/public/cron/youtube-comments',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicTTokenRoute = ApiPublicTTokenRouteImport.update({
   id: '/api/public/t/$token',
   path: '/api/public/t/$token',
@@ -369,6 +376,7 @@ export interface FileRoutesByFullPath {
   '/admin/org/$orgId': typeof AuthenticatedAdminOrgOrgIdRoute
   '/automations/activity/$runId': typeof AuthenticatedAutomationsActivityRunIdRoute
   '/api/public/cron/publish-due': typeof ApiPublicCronPublishDueRoute
+  '/api/public/cron/youtube-comments': typeof ApiPublicCronYoutubeCommentsRoute
   '/api/public/t/$token': typeof ApiPublicTTokenRoute
   '/api/public/webhooks/meta': typeof ApiPublicWebhooksMetaRoute
   '/api/public/oauth/$provider/callback': typeof ApiPublicOauthProviderCallbackRoute
@@ -418,6 +426,7 @@ export interface FileRoutesByTo {
   '/admin/org/$orgId': typeof AuthenticatedAdminOrgOrgIdRoute
   '/automations/activity/$runId': typeof AuthenticatedAutomationsActivityRunIdRoute
   '/api/public/cron/publish-due': typeof ApiPublicCronPublishDueRoute
+  '/api/public/cron/youtube-comments': typeof ApiPublicCronYoutubeCommentsRoute
   '/api/public/t/$token': typeof ApiPublicTTokenRoute
   '/api/public/webhooks/meta': typeof ApiPublicWebhooksMetaRoute
   '/api/public/oauth/$provider/callback': typeof ApiPublicOauthProviderCallbackRoute
@@ -470,6 +479,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/org/$orgId': typeof AuthenticatedAdminOrgOrgIdRoute
   '/_authenticated/automations_/activity_/$runId': typeof AuthenticatedAutomationsActivityRunIdRoute
   '/api/public/cron/publish-due': typeof ApiPublicCronPublishDueRoute
+  '/api/public/cron/youtube-comments': typeof ApiPublicCronYoutubeCommentsRoute
   '/api/public/t/$token': typeof ApiPublicTTokenRoute
   '/api/public/webhooks/meta': typeof ApiPublicWebhooksMetaRoute
   '/api/public/oauth/$provider/callback': typeof ApiPublicOauthProviderCallbackRoute
@@ -522,6 +532,7 @@ export interface FileRouteTypes {
     | '/admin/org/$orgId'
     | '/automations/activity/$runId'
     | '/api/public/cron/publish-due'
+    | '/api/public/cron/youtube-comments'
     | '/api/public/t/$token'
     | '/api/public/webhooks/meta'
     | '/api/public/oauth/$provider/callback'
@@ -571,6 +582,7 @@ export interface FileRouteTypes {
     | '/admin/org/$orgId'
     | '/automations/activity/$runId'
     | '/api/public/cron/publish-due'
+    | '/api/public/cron/youtube-comments'
     | '/api/public/t/$token'
     | '/api/public/webhooks/meta'
     | '/api/public/oauth/$provider/callback'
@@ -622,6 +634,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/org/$orgId'
     | '/_authenticated/automations_/activity_/$runId'
     | '/api/public/cron/publish-due'
+    | '/api/public/cron/youtube-comments'
     | '/api/public/t/$token'
     | '/api/public/webhooks/meta'
     | '/api/public/oauth/$provider/callback'
@@ -639,6 +652,7 @@ export interface RootRouteChildren {
   ResetPasswordRoute: typeof ResetPasswordRoute
   TermsRoute: typeof TermsRoute
   ApiPublicCronPublishDueRoute: typeof ApiPublicCronPublishDueRoute
+  ApiPublicCronYoutubeCommentsRoute: typeof ApiPublicCronYoutubeCommentsRoute
   ApiPublicTTokenRoute: typeof ApiPublicTTokenRoute
   ApiPublicWebhooksMetaRoute: typeof ApiPublicWebhooksMetaRoute
   ApiPublicOauthProviderCallbackRoute: typeof ApiPublicOauthProviderCallbackRoute
@@ -968,6 +982,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicCronPublishDueRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/cron/youtube-comments': {
+      id: '/api/public/cron/youtube-comments'
+      path: '/api/public/cron/youtube-comments'
+      fullPath: '/api/public/cron/youtube-comments'
+      preLoaderRoute: typeof ApiPublicCronYoutubeCommentsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/t/$token': {
       id: '/api/public/t/$token'
       path: '/api/public/t/$token'
@@ -1094,6 +1115,7 @@ const rootRouteChildren: RootRouteChildren = {
   ResetPasswordRoute: ResetPasswordRoute,
   TermsRoute: TermsRoute,
   ApiPublicCronPublishDueRoute: ApiPublicCronPublishDueRoute,
+  ApiPublicCronYoutubeCommentsRoute: ApiPublicCronYoutubeCommentsRoute,
   ApiPublicTTokenRoute: ApiPublicTTokenRoute,
   ApiPublicWebhooksMetaRoute: ApiPublicWebhooksMetaRoute,
   ApiPublicOauthProviderCallbackRoute: ApiPublicOauthProviderCallbackRoute,

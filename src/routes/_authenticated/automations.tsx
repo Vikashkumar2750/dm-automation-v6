@@ -634,6 +634,7 @@ function AutomationsPage() {
                       <SelectItem value="all">All platforms</SelectItem>
                       <SelectItem value="instagram">Instagram</SelectItem>
                       <SelectItem value="facebook">Facebook</SelectItem>
+                      <SelectItem value="youtube">YouTube (public reply only)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
