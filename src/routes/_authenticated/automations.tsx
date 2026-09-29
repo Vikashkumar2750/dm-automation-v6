@@ -236,10 +236,10 @@ function toDraft(rule: AutomationRule): Draft {
       rule.platform === "youtube"
       ? rule.platform
       : "all") as Draft["platform"],
-    trigger: rule.trigger,
     matchType: rule.match_type,
     keywords: (rule.keywords ?? []).join(", "),
-    action: rule.action,
+    action: rule.platform === "youtube" ? "comment_public_reply" : rule.action,
+    trigger: rule.platform === "youtube" ? "comment_received" : rule.trigger,
     responseText: rule.response_text ?? "",
     responseVariations: (rule.response_variations ?? []).join("\n"),
     setStatus: rule.set_status ?? "pending",
