@@ -177,7 +177,7 @@ export const sendReply = createServerFn({ method: "POST" })
         .single(),
       supabaseAdmin
         .from("social_accounts")
-        .select("external_id")
+        .select("external_id, metadata")
         .eq("id", conversation.social_account_id)
         .single(),
     ]);
@@ -185,25 +185,17 @@ export const sendReply = createServerFn({ method: "POST" })
       throw new Error("no_token");
     }
 
-    const response = await fetch(
-      `https://graph.facebook.com/v21.0/${account.external_id}/messages`,
+    const result = await sendMetaMessage(
+      conversation.platform,
+      account.external_id,
+      account.metadata,
       {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          recipient: { id: conversation.external_user_id },
-          message: { text: data.body },
-          access_token: tokenRow.access_token,
-        }),
+        recipient: { id: conversation.external_user_id },
+        message: { text: data.body },
+        access_token: tokenRow.access_token,
       },
     );
-    const result = (await response.json()) as {
-      message_id?: string;
-      error?: { message?: string };
-    };
-    if (!response.ok || result.error) {
-      throw new Error(result.error?.message ?? "Meta rejected the message");
-    }
+    if (result.error) throw new Error(result.error);
 
     const now = new Date().toISOString();
     await supabaseAdmin.from("messages").insert({
@@ -286,45 +278,47 @@ export const replyToComment = createServerFn({ method: "POST" })
         .single(),
       supabaseAdmin
         .from("social_accounts")
-        .select("external_id")
+        .select("external_id, metadata")
         .eq("id", conversation.social_account_id)
         .single(),
     ]);
     if (!tokenRow?.access_token || !account?.external_id) throw new Error("no_token");
 
     const accessToken = tokenRow.access_token;
-    let url: string;
-    let payload: Record<string, unknown>;
+    let result: { id?: string; message_id?: string; error?: string };
 
     if (data.mode === "private") {
       // Private reply: recipient is the comment itself.
-      url = `https://graph.facebook.com/v21.0/${account.external_id}/messages`;
-      payload = {
-        recipient: { comment_id: lastComment.external_id },
-        message: { text: data.body },
-        access_token: accessToken,
-      };
-    } else if (conversation.platform === "instagram") {
-      url = `https://graph.facebook.com/v21.0/${lastComment.external_id}/replies`;
-      payload = { message: data.body, access_token: accessToken };
+      result = await sendMetaMessage(
+        conversation.platform,
+        account.external_id,
+        account.metadata,
+        {
+          recipient: { comment_id: lastComment.external_id },
+          message: { text: data.body },
+          access_token: accessToken,
+        },
+      );
     } else {
-      url = `https://graph.facebook.com/v21.0/${lastComment.external_id}/comments`;
-      payload = { message: data.body, access_token: accessToken };
+      const edge = conversation.platform === "instagram" ? "replies" : "comments";
+      const response = await fetch(
+        `https://graph.facebook.com/v21.0/${lastComment.external_id}/${edge}`,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ message: data.body, access_token: accessToken }),
+        },
+      );
+      const json = (await response.json()) as {
+        id?: string;
+        error?: { message?: string };
+      };
+      result =
+        !response.ok || json.error
+          ? { error: json.error?.message ?? "Meta rejected the reply" }
+          : { ...(json.id ? { id: json.id } : {}) };
     }
-
-    const response = await fetch(url, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    const result = (await response.json()) as {
-      id?: string;
-      message_id?: string;
-      error?: { message?: string };
-    };
-    if (!response.ok || result.error) {
-      throw new Error(result.error?.message ?? "Meta rejected the reply");
-    }
+    if (result.error) throw new Error(result.error);
 
     const now = new Date().toISOString();
     const prefix = data.mode === "private" ? "[private reply] " : "[public reply] ";
@@ -408,3 +402,49 @@ export const setCommentHidden = createServerFn({ method: "POST" })
     }
     return { ok: true };
   });
+
+/**
+ * Sends a Messenger/Instagram message the same way the automation engine does:
+ * Instagram messaging must go through the linked Facebook Page id (the IG user
+ * id fails with capability error #3), so we try the page id first, then the
+ * "me" alias, then the Instagram graph host — advancing only on error #3.
+ */
+async function sendMetaMessage(
+  platform: string,
+  externalId: string,
+  metadata: unknown,
+  payload: Record<string, unknown>,
+): Promise<{ message_id?: string; error?: string }> {
+  const pageId =
+    (metadata as { page_id?: string; pageId?: string } | null)?.page_id ??
+    (metadata as { pageId?: string } | null)?.pageId ??
+    null;
+  const ids = [pageId, externalId].filter((v): v is string => Boolean(v));
+  const urls = [
+    ...ids.map((id) => `https://graph.facebook.com/v21.0/${id}/messages`),
+    "https://graph.facebook.com/v21.0/me/messages",
+    ...(platform === "instagram"
+      ? [`https://graph.instagram.com/v21.0/me/messages`]
+      : []),
+  ].filter((url, index, all) => all.indexOf(url) === index);
+
+  let lastError = "Meta rejected the message";
+  for (const url of urls) {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const json = (await response.json().catch(() => ({}))) as {
+      message_id?: string;
+      error?: { message?: string; code?: number };
+    };
+    if (response.ok && !json.error) {
+      return json.message_id ? { message_id: json.message_id } : {};
+    }
+    lastError = json.error?.message ?? `Meta error ${response.status}`;
+    // Only a capability error means "wrong endpoint" — anything else is final.
+    if (json.error?.code !== 3) return { error: lastError };
+  }
+  return { error: lastError };
+}

@@ -81,7 +81,7 @@ type Draft = {
   name: string;
   isActive: boolean;
   priority: number;
-  platform: "all" | "instagram" | "facebook";
+  platform: "all" | "instagram" | "facebook" | "youtube";
   trigger: Trigger;
   matchType: MatchType;
   keywords: string;
@@ -232,7 +232,8 @@ function toDraft(rule: AutomationRule): Draft {
     name: rule.name,
     isActive: rule.is_active,
     priority: rule.priority,
-    platform: (rule.platform === "instagram" || rule.platform === "facebook"
+    platform: (rule.platform === "instagram" || rule.platform === "facebook" ||
+      rule.platform === "youtube"
       ? rule.platform
       : "all") as Draft["platform"],
     trigger: rule.trigger,
@@ -634,6 +635,7 @@ function AutomationsPage() {
                       <SelectItem value="all">All platforms</SelectItem>
                       <SelectItem value="instagram">Instagram</SelectItem>
                       <SelectItem value="facebook">Facebook</SelectItem>
+                      <SelectItem value="youtube">YouTube (public reply only)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
