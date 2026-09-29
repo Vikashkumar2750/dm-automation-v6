@@ -187,7 +187,9 @@ export const getPlatformOverview = createServerFn({ method: "GET" })
       await Promise.all([
         supabaseAdmin.from("organizations").select("id, name, slug, plan, created_at"),
         supabaseAdmin.from("organization_members").select("organization_id"),
-        supabaseAdmin.from("social_accounts").select("organization_id, status, token_expires_at"),
+        supabaseAdmin
+          .from("social_accounts")
+          .select("organization_id, platform, status, token_expires_at"),
         supabaseAdmin.from("conversations").select("id, organization_id"),
         supabaseAdmin.from("posts").select("organization_id, status"),
         supabaseAdmin.from("profiles").select("id"),
