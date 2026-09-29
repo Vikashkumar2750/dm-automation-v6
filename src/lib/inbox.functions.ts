@@ -177,7 +177,7 @@ export const sendReply = createServerFn({ method: "POST" })
         .single(),
       supabaseAdmin
         .from("social_accounts")
-        .select("external_id")
+        .select("external_id, metadata")
         .eq("id", conversation.social_account_id)
         .single(),
     ]);
@@ -185,25 +185,17 @@ export const sendReply = createServerFn({ method: "POST" })
       throw new Error("no_token");
     }
 
-    const response = await fetch(
-      `https://graph.facebook.com/v21.0/${account.external_id}/messages`,
+    const result = await sendMetaMessage(
+      conversation.platform,
+      account.external_id,
+      account.metadata,
       {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          recipient: { id: conversation.external_user_id },
-          message: { text: data.body },
-          access_token: tokenRow.access_token,
-        }),
+        recipient: { id: conversation.external_user_id },
+        message: { text: data.body },
+        access_token: tokenRow.access_token,
       },
     );
-    const result = (await response.json()) as {
-      message_id?: string;
-      error?: { message?: string };
-    };
-    if (!response.ok || result.error) {
-      throw new Error(result.error?.message ?? "Meta rejected the message");
-    }
+    if (result.error) throw new Error(result.error);
 
     const now = new Date().toISOString();
     await supabaseAdmin.from("messages").insert({
