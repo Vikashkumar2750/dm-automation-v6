@@ -258,13 +258,9 @@ export async function runYouTubeCommentAutomation(
     .eq("status", "connected")
     .limit(50);
   if (organizationId) accountQuery = accountQuery.eq("organization_id", organizationId);
-  const { data: accounts } = accountQuery as unknown as {
-    data: { id: string; organization_id: string; external_id: string; name: string }[] | null;
-  };
   const rows = (await accountQuery).data as
     | { id: string; organization_id: string; external_id: string; name: string }[]
     | null;
-  void accounts;
   if (!rows || rows.length === 0) return { channels: 0, comments: 0, replied: 0 };
 
   let comments = 0;
