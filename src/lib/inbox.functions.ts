@@ -250,7 +250,6 @@ export const replyToComment = createServerFn({ method: "POST" })
     if (!allowed) throw new Error("not_allowed");
 
     if (conversation.channel !== "comment") throw new Error("not_a_comment");
-    if (conversation.platform === "youtube") throw new Error("youtube_unsupported");
     if (!conversation.social_account_id) throw new Error("no_account");
 
     // Latest inbound comment id — that is what we reply to.
@@ -264,6 +263,37 @@ export const replyToComment = createServerFn({ method: "POST" })
       .limit(1)
       .maybeSingle();
     if (!lastComment?.external_id) throw new Error("no_comment_id");
+
+    if (conversation.platform === "youtube") {
+      if (data.mode !== "public") throw new Error("youtube_public_only");
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const { freshYouTubeToken, postYouTubeReply } = await import(
+        "@/lib/youtube-automation.server"
+      );
+      const token = await freshYouTubeToken(supabaseAdmin, conversation.social_account_id);
+      if (!token) throw new Error("youtube_no_token");
+      const result = await postYouTubeReply(lastComment.external_id, data.body, token);
+      if (!result.ok) throw new Error(`youtube_reply: ${result.error}`);
+
+      const now = new Date().toISOString();
+      await supabaseAdmin.from("messages").insert({
+        conversation_id: conversation.id,
+        direction: "outbound",
+        body: `[public reply] ${data.body}`,
+        external_id: result.id,
+        sent_by: context.userId,
+        sent_at: now,
+      });
+      await supabaseAdmin
+        .from("conversations")
+        .update({
+          last_message_at: now,
+          last_message_preview: `[public reply] ${data.body}`.slice(0, 140),
+          status: "pending",
+        })
+        .eq("id", conversation.id);
+      return { ok: true };
+    }
 
     // Meta's comment reply window is also 7 days for public / 7 days for private.
     const ageMs = Date.now() - new Date(lastComment.sent_at).getTime();

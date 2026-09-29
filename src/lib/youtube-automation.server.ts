@@ -476,8 +476,10 @@ export async function runYouTubeCommentAutomation(
       .maybeSingle();
     const workspaceSendPaused =
       settings?.is_paused === true ||
-      settings?.auto_paused_until &&
-        new Date(settings.auto_paused_until as string).getTime() > Date.now();
+      Boolean(
+        settings?.auto_paused_until &&
+          new Date(settings.auto_paused_until as string).getTime() > Date.now(),
+      );
 
     const { data: ruleRows } = await admin
       .from("automation_rules")
