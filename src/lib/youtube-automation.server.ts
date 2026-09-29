@@ -11,6 +11,8 @@ type AdminClient = import("@supabase/supabase-js").SupabaseClient;
 
 const YT = "https://www.googleapis.com/youtube/v3";
 const LOOKBACK_MS = 48 * 60 * 60 * 1000;
+const VIDEO_BATCH_SIZE = 20;
+const MAX_CHANNEL_VIDEOS = 500;
 
 type Rule = {
   id: string;
@@ -75,8 +77,47 @@ function replyText(rule: Rule) {
   return base.slice(0, 900);
 }
 
+export function youtubeApiReason(error: unknown): string | null {
+  const value = error as { error?: { errors?: Array<{ reason?: string }> } } | null;
+  return value?.error?.errors?.[0]?.reason ?? null;
+}
+
+export function fallbackYouTubeReply(comment: string, rule: Rule): string {
+  const configured = replyText(rule);
+  if (configured) return configured;
+  const text = comment.toLowerCase();
+  if (/\?|how|where|when|what|kaise|kahan|kab/.test(text)) {
+    return "Great question — thanks for asking. We’ve noted it and will share the most helpful details here.";
+  }
+  if (/thank|thanks|helpful|great|amazing|love|nice|awesome/.test(text)) {
+    return "Thank you — really glad this was useful to you!";
+  }
+  return "Thanks for joining the conversation — we appreciate your comment!";
+}
+
+async function smartReply(comment: Comment, rule: Rule): Promise<{ text: string; usedAi: boolean }> {
+  const fallback = fallbackYouTubeReply(comment.text, rule);
+  try {
+    const { generateYouTubeReply } = await import("@/lib/youtube-ai.server");
+    const generated = await generateYouTubeReply({
+      comment: comment.text,
+      approvedReply: replyText(rule),
+      link: rule.dm_link_url,
+    });
+    if (!generated) return { text: fallback, usedAi: false };
+    const link = (rule.dm_link_url ?? "").trim();
+    const withLink = link && !generated.includes(link) ? `${generated} ${link}` : generated;
+    return { text: withLink.slice(0, 900), usedAi: true };
+  } catch {
+    return { text: fallback, usedAi: false };
+  }
+}
+
 /** Refresh the Google access token when it is close to expiring. */
-async function freshToken(admin: AdminClient, accountId: string): Promise<string | null> {
+export async function freshYouTubeToken(
+  admin: AdminClient,
+  accountId: string,
+): Promise<string | null> {
   const { data } = await admin
     .from("social_account_tokens")
     .select("access_token, refresh_token, expires_at")
@@ -85,10 +126,19 @@ async function freshToken(admin: AdminClient, accountId: string): Promise<string
   const row = data as
     | { access_token?: string; refresh_token?: string | null; expires_at?: string | null }
     | null;
-  if (!row?.access_token) return null;
+  if (!row?.access_token) {
+    await admin.from("social_accounts").update({ status: "attention" }).eq("id", accountId);
+    return null;
+  }
   const expiresAt = row.expires_at ? new Date(row.expires_at).getTime() : 0;
   if (expiresAt > Date.now() + 120_000) return row.access_token;
-  if (!row.refresh_token) return expiresAt ? null : row.access_token;
+  if (!row.refresh_token) {
+    if (expiresAt) {
+      await admin.from("social_accounts").update({ status: "attention" }).eq("id", accountId);
+      return null;
+    }
+    return row.access_token;
+  }
 
   const res = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
@@ -105,18 +155,24 @@ async function freshToken(admin: AdminClient, accountId: string): Promise<string
     access_token?: string;
     expires_in?: number;
   };
-  if (!json.access_token) return null;
+  if (!json.access_token) {
+    await admin.from("social_accounts").update({ status: "attention" }).eq("id", accountId);
+    return null;
+  }
   const expires = new Date(Date.now() + (json.expires_in ?? 3600) * 1000).toISOString();
   await admin
     .from("social_account_tokens")
     .update({ access_token: json.access_token, expires_at: expires })
     .eq("social_account_id", accountId);
-  await admin.from("social_accounts").update({ token_expires_at: expires }).eq("id", accountId);
+  await admin
+    .from("social_accounts")
+    .update({ token_expires_at: expires, status: "connected" })
+    .eq("id", accountId);
   return json.access_token;
 }
 
-/** Latest uploaded video ids of the channel (channel-wide comment listing was retired by YouTube). */
-async function recentVideoIds(channelId: string, token: string): Promise<string[]> {
+/** Uploaded video ids, paginated so older videos are eventually checked too. */
+async function uploadedVideoIds(channelId: string, token: string): Promise<string[]> {
   const auth = { headers: { authorization: `Bearer ${token}` } };
   const ch = (await (
     await fetch(`${YT}/channels?part=contentDetails&id=${encodeURIComponent(channelId)}`, auth)
@@ -125,25 +181,61 @@ async function recentVideoIds(channelId: string, token: string): Promise<string[
   };
   const uploads = ch.items?.[0]?.contentDetails?.relatedPlaylists?.uploads;
   if (!uploads) return [];
-  const pl = (await (
-    await fetch(`${YT}/playlistItems?part=contentDetails&maxResults=10&playlistId=${uploads}`, auth)
-  ).json().catch(() => ({}))) as { items?: { contentDetails?: { videoId?: string } }[] };
-  return (pl.items ?? []).map((i) => i.contentDetails?.videoId).filter((v): v is string => !!v);
+  const videos: string[] = [];
+  let pageToken: string | null = null;
+  do {
+    const params = new URLSearchParams({
+      part: "contentDetails",
+      maxResults: "50",
+      playlistId: uploads,
+      ...(pageToken ? { pageToken } : {}),
+    });
+    const response = await fetch(`${YT}/playlistItems?${params}`, auth);
+    const json = (await response.json().catch(() => ({}))) as {
+      items?: { contentDetails?: { videoId?: string } }[];
+      nextPageToken?: string;
+    };
+    if (!response.ok) break;
+    videos.push(
+      ...(json.items ?? [])
+        .map((item) => item.contentDetails?.videoId)
+        .filter((videoId): videoId is string => Boolean(videoId)),
+    );
+    pageToken = json.nextPageToken ?? null;
+  } while (pageToken && videos.length < MAX_CHANNEL_VIDEOS);
+  return videos.slice(0, MAX_CHANNEL_VIDEOS);
 }
 
-async function fetchComments(channelId: string, token: string): Promise<Comment[]> {
-  const videos = await recentVideoIds(channelId, token);
+export function videosForPoll(videos: string[], cursor: number): { ids: string[]; next: number } {
+  if (videos.length <= VIDEO_BATCH_SIZE) return { ids: videos, next: 0 };
+  const recent = videos.slice(0, 10);
+  const start = Math.max(10, cursor < 10 ? 10 : cursor);
+  const rotating = videos.slice(start, start + 10);
+  const next = start + 10 >= videos.length ? 10 : start + 10;
+  return { ids: [...new Set([...recent, ...rotating])], next };
+}
+
+async function fetchComments(
+  channelId: string,
+  token: string,
+  cursor: number,
+): Promise<{ comments: Comment[]; nextCursor: number; disabled: string[] }> {
+  const videos = await uploadedVideoIds(channelId, token);
+  const poll = videosForPoll(videos, cursor);
   const all: Comment[] = [];
+  const disabled: string[] = [];
   let lastError: Error | null = null;
-  for (const videoId of videos) {
+  for (const videoId of poll.ids) {
     try {
       all.push(...(await fetchVideoComments(videoId, token)));
     } catch (e) {
-      lastError = e as Error;
+      const error = e as Error & { reason?: string };
+      if (error.reason === "commentsDisabled") disabled.push(videoId);
+      else lastError = error;
     }
   }
-  if (all.length === 0 && lastError) throw lastError;
-  return all;
+  if (all.length === 0 && lastError && disabled.length === 0) throw lastError;
+  return { comments: all, nextCursor: poll.next, disabled };
 }
 
 async function fetchVideoComments(videoId: string, token: string): Promise<Comment[]> {
@@ -167,10 +259,14 @@ async function fetchVideoComments(videoId: string, token: string): Promise<Comme
         };
       };
     }[];
-    error?: { message?: string };
+    error?: { message?: string; errors?: Array<{ reason?: string }> };
   };
   if (!res.ok || json.error) {
-    throw new Error(json.error?.message ?? `YouTube refused the comment list (${res.status})`);
+    const error = new Error(
+      json.error?.message ?? `YouTube refused the comment list (${res.status})`,
+    ) as Error & { reason?: string };
+    error.reason = youtubeApiReason(json);
+    throw error;
   }
   return (json.items ?? [])
     .map((item) => {
@@ -205,6 +301,10 @@ async function postReply(parentId: string, text: string, token: string) {
   return { ok: true as const, id: json.id };
 }
 
+export async function postYouTubeReply(parentId: string, text: string, token: string) {
+  return postReply(parentId, text, token);
+}
+
 async function upsertConversation(
   admin: AdminClient,
   orgId: string,
@@ -220,7 +320,18 @@ async function upsertConversation(
     .eq("channel", "comment")
     .eq("external_user_id", externalUserId)
     .maybeSingle();
-  if (existing?.id) return existing.id as string;
+  if (existing?.id) {
+    await admin
+      .from("conversations")
+      .update({
+        social_account_id: accountId,
+        external_user_name: comment.authorName,
+        last_message_at: comment.publishedAt,
+        last_message_preview: comment.text.slice(0, 140),
+      })
+      .eq("id", existing.id);
+    return existing.id as string;
+  }
   const { data: created } = await admin
     .from("conversations")
     .insert({
@@ -257,6 +368,24 @@ async function log(
   });
 }
 
+async function logOnce(
+  admin: AdminClient,
+  orgId: string,
+  ruleId: string | null,
+  conversationId: string | null,
+  status: "matched" | "sent" | "skipped" | "failed",
+  detail: string,
+) {
+  const { data } = await admin
+    .from("automation_runs")
+    .select("id")
+    .eq("organization_id", orgId)
+    .eq("detail", detail)
+    .limit(1)
+    .maybeSingle();
+  if (!data?.id) await log(admin, orgId, ruleId, conversationId, status, detail);
+}
+
 /** True unless a super admin turned YouTube comment automation off. */
 export function youtubeAutomationEnabled(flags: unknown) {
   const value = (flags as { youtube_comment_automation?: unknown } | null)
@@ -285,13 +414,19 @@ export async function runYouTubeCommentAutomation(
 
   let accountQuery = admin
     .from("social_accounts")
-    .select("id, organization_id, external_id, name")
+    .select("id, organization_id, external_id, name, metadata")
     .eq("platform", "youtube")
     .eq("status", "connected")
     .limit(50);
   if (organizationId) accountQuery = accountQuery.eq("organization_id", organizationId);
   const rows = (await accountQuery).data as
-    | { id: string; organization_id: string; external_id: string; name: string }[]
+    | {
+        id: string;
+        organization_id: string;
+        external_id: string;
+        name: string;
+        metadata: Record<string, unknown> | null;
+      }[]
     | null;
   if (!rows || rows.length === 0) return { channels: 0, comments: 0, replied: 0 };
 
@@ -299,7 +434,7 @@ export async function runYouTubeCommentAutomation(
   let replied = 0;
 
   for (const account of rows) {
-    const token = await freshToken(admin, account.id);
+    const token = await freshYouTubeToken(admin, account.id);
     if (!token) {
       await log(admin, account.organization_id, null, null, "failed", "youtube:no_token");
       continue;
@@ -328,11 +463,29 @@ export async function runYouTubeCommentAutomation(
       .order("priority", { ascending: false });
     // "Both platforms" rules are Facebook + Instagram only — never YouTube.
     const rules = ((ruleRows ?? []) as Rule[]).sort((a, b) => b.priority - a.priority);
-    if (rules.length === 0) continue;
-
     let fetched: Comment[] = [];
+    const cursor = Number(account.metadata?.["youtube_poll_cursor"] ?? 10);
     try {
-      fetched = await fetchComments(account.external_id, token);
+      const result = await fetchComments(account.external_id, token, cursor);
+      fetched = result.comments;
+      await admin
+        .from("social_accounts")
+        .update({
+          last_synced_at: new Date().toISOString(),
+          metadata: { ...(account.metadata ?? {}), youtube_poll_cursor: result.nextCursor },
+        })
+        .eq("id", account.id);
+      for (const videoId of result.disabled) {
+        const day = new Date().toISOString().slice(0, 10);
+        await logOnce(
+          admin,
+          account.organization_id,
+          null,
+          null,
+          "skipped",
+          `youtube:comments_disabled:${videoId}:${day}`,
+        );
+      }
     } catch (error) {
       await log(
         admin,
@@ -385,33 +538,60 @@ export async function runYouTubeCommentAutomation(
         comment,
       );
       if (conversationId) {
-        await admin.from("messages").insert({
+        const { data: existingMessage } = await admin
+          .from("messages")
+          .select("id")
+          .eq("conversation_id", conversationId)
+          .eq("external_id", comment.id)
+          .maybeSingle();
+        if (!existingMessage?.id) {
+          await admin.from("messages").insert({
           conversation_id: conversationId,
           direction: "inbound",
           body: comment.text.slice(0, 1000),
           external_id: comment.id,
           sender_name: comment.authorName,
           sent_at: comment.publishedAt,
-        });
-        await admin
-          .from("conversations")
-          .update({
-            last_message_at: comment.publishedAt,
-            last_message_preview: comment.text.slice(0, 140),
-          })
-          .eq("id", conversationId);
+          });
+          await admin.rpc("increment_unread", { p_conversation_id: conversationId });
+        }
       }
 
       if (!rule) {
-        await log(
+        await logOnce(
           admin,
           account.organization_id,
           null,
           conversationId,
           "skipped",
-          "youtube:no_matching_rule:keyword",
+          `youtube:no_matching_rule:keyword:${comment.id}`,
         );
         continue;
+      }
+
+      if (comment.authorId && comment.videoId && rule.cooldown_seconds > 0) {
+        const since = new Date(Date.now() - rule.cooldown_seconds * 1000).toISOString();
+        const { data: recentReply } = await admin
+          .from("automation_runs")
+          .select("id")
+          .eq("organization_id", account.organization_id)
+          .eq("rule_id", rule.id)
+          .eq("status", "sent")
+          .like("detail", `%:video:${comment.videoId}:author:${comment.authorId}`)
+          .gte("created_at", since)
+          .limit(1)
+          .maybeSingle();
+        if (recentReply?.id) {
+          await logOnce(
+            admin,
+            account.organization_id,
+            rule.id,
+            conversationId,
+            "skipped",
+            `youtube:contact_cooldown:${comment.id}`,
+          );
+          continue;
+        }
       }
 
       // Daily cap per rule.
@@ -434,18 +614,8 @@ export async function runYouTubeCommentAutomation(
         continue;
       }
 
-      const text = replyText(rule);
-      if (!text) {
-        await log(
-          admin,
-          account.organization_id,
-          rule.id,
-          conversationId,
-          "skipped",
-          "youtube:no_response_text",
-        );
-        continue;
-      }
+      const reply = await smartReply(comment, rule);
+      const text = reply.text;
 
       const result = await postReply(comment.id, text, token);
       if (!result.ok) {
@@ -461,13 +631,23 @@ export async function runYouTubeCommentAutomation(
       }
 
       replied += 1;
+      if (!reply.usedAi) {
+        await logOnce(
+          admin,
+          account.organization_id,
+          rule.id,
+          conversationId,
+          "matched",
+          `youtube:ai_fallback:${comment.id}`,
+        );
+      }
       await log(
         admin,
         account.organization_id,
         rule.id,
         conversationId,
         "sent",
-        `youtube:comment:${comment.id}`,
+        `youtube:comment:${comment.id}:video:${comment.videoId ?? "unknown"}:author:${comment.authorId ?? "unknown"}`,
       );
       if (conversationId) {
         const now = new Date().toISOString();
