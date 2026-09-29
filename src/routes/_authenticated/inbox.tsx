@@ -207,12 +207,18 @@ function InboxPage() {
   const commentReply = useMutation({
     mutationFn: (body: string) =>
       replyToCommentFn({
-        data: { conversationId: selected!.id, body, mode: commentMode },
+        data: {
+          conversationId: selected!.id,
+          body,
+          mode: selected?.platform === "youtube" ? "public" : commentMode,
+        },
       }),
     onSuccess: () => {
       setDraft("");
       toast.success(
-        commentMode === "public" ? "Public reply posted." : "Private DM sent.",
+        selected?.platform === "youtube" || commentMode === "public"
+          ? "Public reply posted."
+          : "Private DM sent.",
       );
       queryClient.invalidateQueries({ queryKey: ["messages", selected?.id] });
       queryClient.invalidateQueries({ queryKey: ["conversations", orgId] });

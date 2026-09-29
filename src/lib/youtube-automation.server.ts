@@ -13,6 +13,7 @@ const YT = "https://www.googleapis.com/youtube/v3";
 const LOOKBACK_MS = 48 * 60 * 60 * 1000;
 const VIDEO_BATCH_SIZE = 20;
 const MAX_CHANNEL_VIDEOS = 500;
+const MAX_COMMENTS_PER_VIDEO = 500;
 
 type Rule = {
   id: string;
@@ -268,51 +269,66 @@ async function fetchComments(
 }
 
 async function fetchVideoComments(videoId: string, token: string): Promise<Comment[]> {
-  const url = `${YT}/commentThreads?part=snippet&videoId=${encodeURIComponent(
-    videoId,
-  )}&maxResults=20&order=time`;
-  const res = await fetch(url, { headers: { authorization: `Bearer ${token}` } });
-  const json = (await res.json().catch(() => ({}))) as {
-    items?: {
-      snippet?: {
-        topLevelComment?: {
-          id?: string;
-          snippet?: {
-            videoId?: string;
-            textOriginal?: string;
-            textDisplay?: string;
-            authorDisplayName?: string;
-            authorChannelId?: { value?: string };
-            publishedAt?: string;
+  const comments: Comment[] = [];
+  let pageToken: string | null = null;
+  do {
+    const params = new URLSearchParams({
+      part: "snippet",
+      videoId,
+      maxResults: "100",
+      order: "time",
+      ...(pageToken ? { pageToken } : {}),
+    });
+    const res = await fetch(`${YT}/commentThreads?${params}`, {
+      headers: { authorization: `Bearer ${token}` },
+    });
+    const json = (await res.json().catch(() => ({}))) as {
+      items?: {
+        snippet?: {
+          topLevelComment?: {
+            id?: string;
+            snippet?: {
+              videoId?: string;
+              textOriginal?: string;
+              textDisplay?: string;
+              authorDisplayName?: string;
+              authorChannelId?: { value?: string };
+              publishedAt?: string;
+            };
           };
         };
-      };
-    }[];
-    error?: { message?: string; errors?: Array<{ reason?: string }> };
-  };
-  if (!res.ok || json.error) {
-    const error = new Error(
-      json.error?.message ?? `YouTube refused the comment list (${res.status})`,
-    ) as Error & { reason?: string };
-    const reason = youtubeApiReason(json);
-    if (reason) error.reason = reason;
-    throw error;
-  }
-  return (json.items ?? [])
-    .map((item) => {
-      const top = item.snippet?.topLevelComment;
-      const s = top?.snippet;
-      if (!top?.id || !s) return null;
-      return {
-        id: top.id,
-        videoId: s.videoId ?? null,
-        text: s.textOriginal ?? s.textDisplay ?? "",
-        authorId: s.authorChannelId?.value ?? null,
-        authorName: s.authorDisplayName ?? null,
-        publishedAt: s.publishedAt ?? new Date().toISOString(),
-      } satisfies Comment;
-    })
-    .filter((c): c is Comment => Boolean(c));
+      }[];
+      nextPageToken?: string;
+      error?: { message?: string; errors?: Array<{ reason?: string }> };
+    };
+    if (!res.ok || json.error) {
+      const error = new Error(
+        json.error?.message ?? `YouTube refused the comment list (${res.status})`,
+      ) as Error & { reason?: string };
+      const reason = youtubeApiReason(json);
+      if (reason) error.reason = reason;
+      throw error;
+    }
+    comments.push(
+      ...(json.items ?? [])
+        .map((item) => {
+          const top = item.snippet?.topLevelComment;
+          const snippet = top?.snippet;
+          if (!top?.id || !snippet) return null;
+          return {
+            id: top.id,
+            videoId: snippet.videoId ?? null,
+            text: snippet.textOriginal ?? snippet.textDisplay ?? "",
+            authorId: snippet.authorChannelId?.value ?? null,
+            authorName: snippet.authorDisplayName ?? null,
+            publishedAt: snippet.publishedAt ?? new Date().toISOString(),
+          } satisfies Comment;
+        })
+        .filter((comment): comment is Comment => Boolean(comment)),
+    );
+    pageToken = json.nextPageToken ?? null;
+  } while (pageToken && comments.length < MAX_COMMENTS_PER_VIDEO);
+  return comments.slice(0, MAX_COMMENTS_PER_VIDEO);
 }
 
 async function postReply(parentId: string, text: string, token: string) {
@@ -528,7 +544,8 @@ export async function runYouTubeCommentAutomation(
     }
 
     for (const comment of fetched) {
-      if (Date.now() - new Date(comment.publishedAt).getTime() > LOOKBACK_MS) continue;
+      const eligibleForAutomation =
+        Date.now() - new Date(comment.publishedAt).getTime() <= LOOKBACK_MS;
       if (comment.authorId && comment.authorId === account.external_id) {
         // Own-channel comments are never answered, but record it once so the
         // Activity page explains why a self-test did not trigger.
@@ -598,6 +615,7 @@ export async function runYouTubeCommentAutomation(
         continue;
       }
 
+      if (!eligibleForAutomation) continue;
       if (globalSendPaused || !automationEnabled || workspaceSendPaused) continue;
 
       if (comment.authorId && comment.videoId && rule.cooldown_seconds > 0) {
