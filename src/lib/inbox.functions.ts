@@ -402,3 +402,47 @@ export const setCommentHidden = createServerFn({ method: "POST" })
     }
     return { ok: true };
   });
+
+/**
+ * Sends a Messenger/Instagram message the same way the automation engine does:
+ * Instagram messaging must go through the linked Facebook Page id (the IG user
+ * id fails with capability error #3), so we try the page id first, then the
+ * "me" alias, then the Instagram graph host — advancing only on error #3.
+ */
+async function sendMetaMessage(
+  platform: string,
+  externalId: string,
+  metadata: unknown,
+  payload: Record<string, unknown>,
+): Promise<{ message_id?: string; error?: string }> {
+  const pageId =
+    (metadata as { page_id?: string; pageId?: string } | null)?.page_id ??
+    (metadata as { pageId?: string } | null)?.pageId ??
+    null;
+  const ids = [pageId, externalId].filter((v): v is string => Boolean(v));
+  const urls = [
+    ...ids.map((id) => `https://graph.facebook.com/v21.0/${id}/messages`),
+    "https://graph.facebook.com/v21.0/me/messages",
+    ...(platform === "instagram"
+      ? [`https://graph.instagram.com/v21.0/me/messages`]
+      : []),
+  ].filter((url, index, all) => all.indexOf(url) === index);
+
+  let lastError = "Meta rejected the message";
+  for (const url of urls) {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const json = (await response.json().catch(() => ({}))) as {
+      message_id?: string;
+      error?: { message?: string; code?: number };
+    };
+    if (response.ok && !json.error) return { message_id: json.message_id };
+    lastError = json.error?.message ?? `Meta error ${response.status}`;
+    // Only a capability error means "wrong endpoint" — anything else is final.
+    if (json.error?.code !== 3) return { error: lastError };
+  }
+  return { error: lastError };
+}
