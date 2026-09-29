@@ -15,10 +15,11 @@ import {
 } from "lucide-react";
 import { useEffect } from "react";
 
-const metaPartnerBadge = { url: "/meta-business-partner.png" };
 import { PublicFooter } from "@/components/app/PublicFooter";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
+
+const metaPartnerBadge = { url: "/meta-business-partner.png" };
 
 const pageTitle =
   "AutoDM by Techaasvik — Turn Instagram, Facebook & YouTube comments into leads";
