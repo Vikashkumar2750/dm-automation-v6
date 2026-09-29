@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 
-import metaPartnerBadge from "@/assets/meta-business-partner.png.asset.json";
+const metaPartnerBadge = { url: "/meta-business-partner.png" };
 
 export const SUPPORT_EMAIL = "contact@techaavik.com";
 
