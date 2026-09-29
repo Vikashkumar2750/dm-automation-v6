@@ -54,7 +54,7 @@ const ruleInput = z.object({
   name: z.string().trim().min(1).max(80),
   isActive: z.boolean(),
   priority: z.number().int().min(1).max(999),
-  platform: z.enum(["instagram", "facebook"]).nullable(),
+  platform: z.enum(["instagram", "facebook", "youtube"]).nullable(),
   trigger: z.enum(["dm_received", "comment_received"]),
   matchType: z.enum(["any", "contains", "exact", "starts_with"]),
   keywords: z.array(z.string().trim().min(1).max(60)).max(20),
