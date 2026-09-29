@@ -299,6 +299,29 @@ export const replyToComment = createServerFn({ method: "POST" })
           access_token: accessToken,
         },
       );
+      // Meta allows only ONE private reply per comment. When the automation
+      // already used it, message the person directly in the open DM thread.
+      if (result.error) {
+        const { data: conv } = await supabaseAdmin
+          .from("conversations")
+          .select("external_user_id")
+          .eq("id", conversation.id)
+          .single();
+        if (conv?.external_user_id && !conv.external_user_id.startsWith("yt:")) {
+          const direct = await sendMetaMessage(
+            conversation.platform,
+            account.external_id,
+            account.metadata,
+            {
+              recipient: { id: conv.external_user_id },
+              message: { text: data.body },
+              access_token: accessToken,
+            },
+          );
+          if (!direct.error) result = direct;
+          else result = { error: `${result.error} | ${direct.error}` };
+        }
+      }
     } else {
       const edge = conversation.platform === "instagram" ? "replies" : "comments";
       const response = await fetch(

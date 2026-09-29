@@ -236,10 +236,10 @@ function toDraft(rule: AutomationRule): Draft {
       rule.platform === "youtube"
       ? rule.platform
       : "all") as Draft["platform"],
-    trigger: rule.trigger,
     matchType: rule.match_type,
     keywords: (rule.keywords ?? []).join(", "),
-    action: rule.action,
+    action: rule.platform === "youtube" ? "comment_public_reply" : rule.action,
+    trigger: rule.platform === "youtube" ? "comment_received" : rule.trigger,
     responseText: rule.response_text ?? "",
     responseVariations: (rule.response_variations ?? []).join("\n"),
     setStatus: rule.set_status ?? "pending",
@@ -617,7 +617,9 @@ function AutomationsPage() {
                   >
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="dm_received">New DM</SelectItem>
+                      {draft.platform !== "youtube" && (
+                        <SelectItem value="dm_received">New DM</SelectItem>
+                      )}
                       <SelectItem value="comment_received">New comment</SelectItem>
                     </SelectContent>
                   </Select>
@@ -626,13 +628,34 @@ function AutomationsPage() {
                   <Label>Platform</Label>
                   <Select
                     value={draft.platform}
-                    onValueChange={(v) =>
-                      setDraft({ ...draft, platform: v as Draft["platform"] })
-                    }
+                    onValueChange={(v) => {
+                      const platform = v as Draft["platform"];
+                      if (platform === "youtube") {
+                        setDraft({
+                          ...draft,
+                          platform,
+                          trigger: "comment_received",
+                          action: "comment_public_reply",
+                          targetPostIds: [],
+                          responseText: draft.platform === "youtube" ? draft.responseText : "",
+                          responseVariations:
+                            draft.platform === "youtube" ? draft.responseVariations : "",
+                          commentReplyText: "",
+                          commentReplyVariations: "",
+                          requireFollow: false,
+                        });
+                      } else {
+                        setDraft({
+                          ...draft,
+                          platform,
+                          targetPostIds: draft.platform === "youtube" ? [] : draft.targetPostIds,
+                        });
+                      }
+                    }}
                   >
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All platforms</SelectItem>
+                      <SelectItem value="all">Both platforms (FB+IG only)</SelectItem>
                       <SelectItem value="instagram">Instagram</SelectItem>
                       <SelectItem value="facebook">Facebook</SelectItem>
                       <SelectItem value="youtube">YouTube (public reply only)</SelectItem>
@@ -676,7 +699,11 @@ function AutomationsPage() {
                 >
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {draft.trigger === "dm_received" ? (
+                    {draft.platform === "youtube" ? (
+                      <SelectItem value="comment_public_reply">
+                        {actionLabel.comment_public_reply}
+                      </SelectItem>
+                    ) : draft.trigger === "dm_received" ? (
                       <>
                         <SelectItem value="reply_dm">{actionLabel.reply_dm}</SelectItem>
                         <SelectItem value="set_status">{actionLabel.set_status}</SelectItem>
@@ -730,11 +757,12 @@ function AutomationsPage() {
               <PostPicker
                 orgId={orgId}
                 trigger={draft.trigger}
+                platform={draft.platform}
                 selected={draft.targetPostIds}
                 onChange={(ids) => setDraft({ ...draft, targetPostIds: ids })}
               />
 
-              {draft.trigger === "comment_received" && (
+              {draft.trigger === "comment_received" && draft.platform !== "youtube" && (
                 <div className="grid gap-2">
                   <Label>Public reply under the comment (optional)</Label>
                   <Textarea
@@ -798,11 +826,13 @@ function AutomationsPage() {
 
               {needsText && (
                 <div className="grid gap-2">
-                  <Label>Message</Label>
+                  <Label>{draft.platform === "youtube" ? "YouTube public reply" : "Message"}</Label>
                   <Textarea
                     rows={3}
                     value={draft.responseText}
-                    placeholder="Thanks for reaching out! Our pricing starts at ₹4,999/month."
+                    placeholder={draft.platform === "youtube"
+                      ? "Thanks for watching! 🙌 The link is in the video description."
+                      : "Thanks for reaching out! Our pricing starts at ₹4,999/month."}
                     onChange={(e) => setDraft({ ...draft, responseText: e.target.value })}
                   />
                 </div>
@@ -814,13 +844,17 @@ function AutomationsPage() {
                   <Textarea
                     rows={3}
                     value={draft.responseVariations}
-                    placeholder={"Hi! Pricing starts at ₹4,999/month.\nHey — plans begin at ₹4,999/month."}
+                    placeholder={draft.platform === "youtube"
+                      ? "Glad you liked it! Check the description for the link 👇\nThanks for the comment! Link is in the description."
+                      : "Hi! Pricing starts at ₹4,999/month.\nHey — plans begin at ₹4,999/month."}
                     onChange={(e) =>
                       setDraft({ ...draft, responseVariations: e.target.value })
                     }
                   />
                   <p className="text-xs text-muted-foreground">
                     One is picked at random each time, so replies never look robotic.
+                    {draft.platform === "youtube" &&
+                      " YouTube allows only a public reply under the comment — no DM, buttons or follow check."}
                   </p>
                 </div>
               )}
@@ -1470,11 +1504,13 @@ function parsePostId(raw: string): string | null {
 function PostPicker({
   orgId,
   trigger,
+  platform,
   selected,
   onChange,
 }: {
   orgId: string | undefined;
   trigger: Trigger;
+  platform: Draft["platform"];
   selected: string[];
   onChange: (ids: string[]) => void;
 }) {
@@ -1512,10 +1548,16 @@ function PostPicker({
     for (const post of postsQuery.data ?? []) {
       if (!merged.has(post.externalPostId)) merged.set(post.externalPostId, post);
     }
-    return [...merged.values()].sort((a, b) =>
-      (b.publishedAt ?? "").localeCompare(a.publishedAt ?? ""),
-    );
-  }, [remoteQuery.data, postsQuery.data]);
+    return [...merged.values()]
+      .filter((post) =>
+        platform === "youtube"
+          ? post.platform === "youtube"
+          : platform === "all"
+            ? post.platform !== "youtube"
+            : post.platform === platform,
+      )
+      .sort((a, b) => (b.publishedAt ?? "").localeCompare(a.publishedAt ?? ""));
+  }, [remoteQuery.data, postsQuery.data, platform]);
   const warnings = remoteQuery.data?.warnings ?? [];
 
   const toggle = (externalId: string) => {
@@ -1587,8 +1629,9 @@ function PostPicker({
         <p className="text-sm text-muted-foreground">Loading your latest posts…</p>
       ) : posts.length === 0 ? (
         <p className="text-sm text-muted-foreground">
-          No posts found. Connect an Instagram or Facebook account, or add a post link
-          manually below.
+          {platform === "youtube"
+            ? "No YouTube videos found yet. Publish a video from Create Post, or paste a video link below."
+            : "No posts found. Connect an Instagram or Facebook account, or add a post link manually below."}
         </p>
       ) : (
         <div className="grid max-h-64 gap-2 overflow-y-auto pr-1">

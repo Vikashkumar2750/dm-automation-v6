@@ -6,6 +6,14 @@
 export function explainReason(detail: string | null): { title: string; hint: string } {
   const code = (detail ?? "").toLowerCase().replace(/^trace:[^:]+:/, "");
   const map: [string, string, string][] = [
+    ["youtube:own_channel_comment", "YouTube: your own comment was skipped", "Comments made from the connected channel itself are never answered. Test from a different YouTube account."],
+    ["youtube:comment:", "YouTube public reply posted", "The matching comment got one public reply."],
+    ["youtube:no_matching_rule", "YouTube: no rule matched", "The comment did not match any active rule with platform set to YouTube."],
+    ["youtube:daily_limit", "YouTube: daily limit reached", "This rule hit its Max / day limit."],
+    ["youtube:no_response_text", "YouTube: reply text missing", "Add a YouTube public reply message to the rule."],
+    ["youtube:no_token", "YouTube: channel not authorised", "Reconnect the YouTube channel from Social Accounts."],
+    ["youtube:comment_list", "YouTube: could not read comments", "Google refused the comment list — reconnect the channel and confirm the youtube.force-ssl permission."],
+    ["youtube:comment_reply", "YouTube: reply was rejected", "Google refused the public reply — see the reason, then reconnect the channel if needed."],
     ["code 10903", "Facebook blocked the DM for this commenter", "Facebook does not allow private replies to this person — usually because they commented as a Page or as an admin/owner of your own Page. Test with a normal personal Facebook profile that is not a Page admin."],
     ["already_replied_on_post", "Skipped: this person was already answered on this post", "One reply per person per post (7 days). Comments on other posts still get a reply."],
     ["post_reply:", "Comment on this post accepted", "First comment by this person on this post — reply is being sent."],
