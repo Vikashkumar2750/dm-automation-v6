@@ -34,4 +34,4 @@ COPY --from=build /app/package.json ./package.json
 COPY --from=build /app/node_modules/postgres ./node_modules/postgres
 
 EXPOSE 3000
-CMD ["sh", "-c", "bun run scripts/migrate.mjs && (bun scripts/scheduler.mjs &) && bun dist/server/index.mjs"]
+CMD ["sh", "-c", "export CRON_SECRET=\"${CRON_SECRET:-$(head -c 24 /dev/urandom | od -An -tx1 | tr -d \" \\n\")}\" && bun run scripts/migrate.mjs && (bun scripts/scheduler.mjs &) && bun dist/server/index.mjs"]

@@ -133,6 +133,7 @@ function Sidebar({ pathname }: { pathname: string }) {
         </div>
       </nav>
 
+      {activeOrg && !/^(pro|agency)\b/i.test(activeOrg.plan) && (
       <div className="border-t p-3">
         <div className="rounded-xl border bg-surface-secondary p-4">
           <p className="text-sm font-semibold">Upgrade to Pro</p>
@@ -144,6 +145,7 @@ function Sidebar({ pathname }: { pathname: string }) {
           </Button>
         </div>
       </div>
+      )}
     </div>
   );
 }
