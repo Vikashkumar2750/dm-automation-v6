@@ -360,23 +360,25 @@ async function upsertConversation(
   const externalUserId = comment.authorId ?? `yt:${comment.id}`;
   const { data: existing } = await admin
     .from("conversations")
-    .select("id")
+    .select("id, last_message_at")
     .eq("organization_id", orgId)
     .eq("platform", "youtube")
     .eq("channel", "comment")
     .eq("external_user_id", externalUserId)
     .maybeSingle();
   if (existing?.id) {
-    await admin
-      .from("conversations")
-      .update({
-        social_account_id: accountId,
-        external_user_name: comment.authorName,
-        last_message_at: comment.publishedAt,
-        last_message_preview: comment.text.slice(0, 140),
-      })
-      .eq("id", existing.id);
-    return existing.id as string;
+    if (comment.publishedAt >= existing.last_message_at) {
+      await admin
+        .from("conversations")
+        .update({
+          social_account_id: accountId,
+          external_user_name: comment.authorName,
+          last_message_at: comment.publishedAt,
+          last_message_preview: comment.text.slice(0, 140),
+        })
+        .eq("id", existing.id);
+    }
+    return { id: existing.id as string, created: false };
   }
   const { data: created } = await admin
     .from("conversations")
@@ -394,7 +396,7 @@ async function upsertConversation(
     })
     .select("id")
     .single();
-  return (created?.id as string | undefined) ?? null;
+  return created?.id ? { id: created.id as string, created: true } : null;
 }
 
 async function log(
@@ -546,43 +548,18 @@ export async function runYouTubeCommentAutomation(
     for (const comment of fetched) {
       const eligibleForAutomation =
         Date.now() - new Date(comment.publishedAt).getTime() <= LOOKBACK_MS;
-      if (comment.authorId && comment.authorId === account.external_id) {
-        // Own-channel comments are never answered, but record it once so the
-        // Activity page explains why a self-test did not trigger.
-        const ownDetail = `youtube:own_channel_comment:${comment.id}`;
-        const { data: ownSeen } = await admin
-          .from("automation_runs")
-          .select("id")
-          .eq("organization_id", account.organization_id)
-          .eq("detail", ownDetail)
-          .limit(1)
-          .maybeSingle();
-        if (!ownSeen?.id) {
-          await log(admin, account.organization_id, null, null, "skipped", ownDetail);
-        }
-        continue;
-      }
       comments += 1;
-
-      // One reply per comment, ever.
-      const { data: seen } = await admin
-        .from("automation_runs")
-        .select("id")
-        .eq("organization_id", account.organization_id)
-        .like("detail", `youtube:comment:${comment.id}%`)
-        .limit(1)
-        .maybeSingle();
-      if (seen?.id) continue;
 
       const rule = rules.find(
         (r) => targetsVideo(r, comment.videoId) && matches(r, comment.text),
       );
-      const conversationId = await upsertConversation(
+      const conversation = await upsertConversation(
         admin,
         account.organization_id,
         account.id,
         comment,
       );
+      const conversationId = conversation?.id ?? null;
       if (conversationId) {
         const { data: existingMessage } = await admin
           .from("messages")
@@ -599,9 +576,33 @@ export async function runYouTubeCommentAutomation(
           sender_name: comment.authorName,
           sent_at: comment.publishedAt,
           });
-          await admin.rpc("increment_unread", { p_conversation_id: conversationId });
+          if (!conversation?.created) {
+            await admin.rpc("increment_unread", { p_conversation_id: conversationId });
+          }
         }
       }
+
+      if (comment.authorId && comment.authorId === account.external_id) {
+        await logOnce(
+          admin,
+          account.organization_id,
+          null,
+          conversationId,
+          "skipped",
+          `youtube:own_channel_comment:${comment.id}`,
+        );
+        continue;
+      }
+
+      // One automatic reply per comment, ever. Inbox ingestion above still runs.
+      const { data: seen } = await admin
+        .from("automation_runs")
+        .select("id")
+        .eq("organization_id", account.organization_id)
+        .like("detail", `youtube:comment:${comment.id}%`)
+        .limit(1)
+        .maybeSingle();
+      if (seen?.id) continue;
 
       if (!rule) {
         await logOnce(

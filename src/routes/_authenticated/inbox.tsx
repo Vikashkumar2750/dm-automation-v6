@@ -197,9 +197,15 @@ function InboxPage() {
       toast.error("You need agent access or higher to reply.");
     } else if (message.includes("no_comment_id")) {
       toast.error("We don't have the original comment id for this thread yet.");
+    } else if (message.includes("youtube_no_token")) {
+      toast.error("YouTube authorization was revoked. Reconnect the channel.");
+    } else if (message.includes("youtube_reply")) {
+      toast.error(`YouTube rejected this reply: ${message.split("youtube_reply:")[1]?.trim()}`);
     } else {
       toast.error(
-        message ? `Meta rejected this: ${message.slice(0, 200)}` : "Could not complete the action. Check the account connection.",
+        message
+          ? `${selected?.platform === "youtube" ? "YouTube" : "Meta"} rejected this: ${message.slice(0, 200)}`
+          : "Could not complete the action. Check the account connection.",
       );
     }
   }

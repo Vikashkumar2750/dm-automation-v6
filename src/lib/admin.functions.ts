@@ -265,7 +265,8 @@ export const getPlatformOverview = createServerFn({ method: "GET" })
         failedJobs: (posts.data ?? []).filter((p) => p.status === "failed").length,
         tokenIssues: (accounts.data ?? []).filter(
           (a) =>
-            a.status !== "connected" || (a.token_expires_at && a.token_expires_at < soon),
+            a.status !== "connected" ||
+            (a.platform !== "youtube" && a.token_expires_at && a.token_expires_at < soon),
         ).length,
         pausedOrgs: pausedSet.size,
       },
