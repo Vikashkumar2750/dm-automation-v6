@@ -79,12 +79,29 @@ export function AiProvidersPanel() {
   });
 
   const testMutation = useMutation({
-    mutationFn: () => test(),
-    onSuccess: (r) => {
-      if (r.provider) toast.success(`${r.provider} answered: ${r.sample ?? ""}`.slice(0, 180));
-      else toast.error(`No provider answered. ${r.attempts.map((a) => `${a.provider}: ${a.error}`).join(" · ")}`.slice(0, 220));
+    mutationFn: async () => {
+      // Keys typed but not saved yet would be ignored by the test — save them first.
+      if (openRouterKeys.trim() || nvidiaKey.trim() || openAiKey.trim()) {
+        await mutation.mutateAsync();
+      }
+      return test();
     },
-    onError: () => toast.error("Test could not run"),
+    onSuccess: (r) => {
+      if (r.provider) {
+        toast.success(`${r.provider} answered: ${r.sample ?? ""}`.slice(0, 180));
+        return;
+      }
+      const tried = r.attempts.filter((a) => a.provider !== "lovable" || r.attempts.length === 1);
+      const noKeys = !r.attempts.some((a) => a.provider !== "lovable");
+      const detail = tried.map((a) => `${a.provider}: ${a.error}`).join(" · ");
+      toast.error(
+        noKeys
+          ? "No OpenRouter/NVIDIA/OpenAI key is saved yet. Paste the key, click Save AI providers, then test again."
+          : `No provider answered. ${detail}`.slice(0, 300),
+        { duration: 12000 },
+      );
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message.slice(0, 160) : "Test could not run"),
   });
 
   if (!status) return null;

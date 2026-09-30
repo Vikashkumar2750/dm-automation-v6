@@ -247,7 +247,19 @@ async function chatCompletion(opts: {
         ],
       }),
     });
-    if (!res.ok) return { text: null, status: res.status };
+    if (!res.ok) {
+      const body = await res.text().catch(() => "");
+      let reason = body.slice(0, 200);
+      try {
+        const j = JSON.parse(body) as { error?: { message?: string } | string; message?: string };
+        reason = (typeof j.error === "string" ? j.error : j.error?.message) ?? j.message ?? reason;
+      } catch {
+        /* keep raw text */
+      }
+      throw Object.assign(new Error(`HTTP ${res.status}: ${String(reason).slice(0, 140)}`), {
+        status: res.status,
+      });
+    }
     const json = (await res.json().catch(() => ({}))) as {
       choices?: { message?: { content?: string } }[];
     };
