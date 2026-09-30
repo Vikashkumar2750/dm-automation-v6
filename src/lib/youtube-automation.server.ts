@@ -680,7 +680,7 @@ export async function runYouTubeCommentAutomation(
         continue;
       }
 
-      const reply = await smartReply(admin, comment, rule, aiPaused);
+      const reply = await smartReply(admin, comment, rule, aiPaused, account.organization_id);
       const text = reply.text;
 
       const result = await postReply(comment.id, text, token);
