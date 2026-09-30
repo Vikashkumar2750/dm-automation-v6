@@ -24,12 +24,13 @@ const metaPartnerBadge = { url: "/meta-business-partner.png" };
 const pageTitle =
   "AutoDM by Techaasvik — Turn Instagram, Facebook & YouTube comments into leads";
 const pageDescription =
-  "One inbox, comment-to-DM automations, scheduling and analytics for Instagram, Facebook and YouTube. Reply in seconds, capture every lead, stay inside platform rules.";
+  "One inbox for Instagram and Facebook DMs and comments, smart public comment replies and publishing for YouTube, scheduling and analytics. Reply in seconds, stay inside platform rules.";
+
 
 const faqs = [
   {
     q: "What does AutoDM actually do?",
-    a: "It brings your Instagram, Facebook and YouTube DMs and comments into one inbox, replies automatically using keyword rules, schedules and publishes posts, and shows which conversations turn into leads.",
+    a: "On Instagram and Facebook it brings DMs and comments into one inbox and replies automatically using keyword rules. On YouTube it answers public comments on your videos and publishes your videos. YouTube has no business direct messages, so AutoDM never sends DMs there.",
   },
   {
     q: "Is automated replying safe for my accounts?",
@@ -37,8 +38,9 @@ const faqs = [
   },
   {
     q: "Which platforms are supported?",
-    a: "Instagram and Facebook for DMs, comments and publishing, and YouTube for comments and channel content. All connections use the official APIs with permissions you approve.",
+    a: "Instagram and Facebook for DMs, comments and publishing, and YouTube for public comment replies and video publishing only. All connections use the official APIs with permissions you approve.",
   },
+
   {
     q: "Can agencies manage multiple clients?",
     a: "Yes. Create a separate workspace per client, invite your team with Admin, Manager, Agent or Viewer roles, and switch between clients without signing out.",
@@ -58,13 +60,14 @@ const benefits = [
   {
     icon: MessageSquare,
     title: "Turn comments into conversations",
-    body: "A keyword in a comment triggers a public reply plus a private DM, moving the lead from a noisy thread into a real chat.",
+    body: "On Instagram and Facebook a keyword in a comment triggers a public reply plus a private DM. On YouTube it sends a smart public reply under the comment.",
   },
   {
     icon: Inbox,
     title: "Nothing slips through",
-    body: "Every DM and comment from all three platforms lands in one queue, so your team never re-checks three apps or misses a buyer.",
+    body: "Instagram and Facebook DMs plus comments from all three platforms land in one queue, so your team never re-checks three apps or misses a buyer.",
   },
+
   {
     icon: ShieldCheck,
     title: "Protect your accounts by default",
@@ -177,13 +180,15 @@ export const Route = createFileRoute("/")({
               operatingSystem: "Web",
               description: pageDescription,
               featureList: [
-                "Unified inbox for Instagram, Facebook and YouTube",
-                "Comment-to-DM automations",
-                "Post scheduling and publishing",
+                "Unified inbox for Instagram and Facebook messages and comments",
+                "Comment-to-DM automations for Instagram and Facebook",
+                "Smart public comment replies for YouTube",
+                "Post and video scheduling and publishing",
                 "AI caption and reply assistance",
                 "Team roles and multi-client workspaces",
                 "Conversation and lead analytics",
               ],
+
               publisher: { "@type": "Organization", name: "Techaasvik" },
               offers: [
                 {
