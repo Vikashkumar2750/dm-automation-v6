@@ -850,21 +850,25 @@ function AutomationsPage() {
                         type="button"
                         variant="outline"
                         size="sm"
-                        onClick={() =>
+                        onClick={() => {
+                          const meta = template as Partial<{
+                            comment: string;
+                            commentVariations: string[];
+                          }>;
                           setDraft({
                             ...draft,
                             responseText: template.text,
                             responseVariations: template.variations.join("\n"),
                             commentReplyText:
-                              draft.trigger === "comment_received" && "comment" in template
-                                ? template.comment
+                              draft.trigger === "comment_received" && meta.comment
+                                ? meta.comment
                                 : draft.commentReplyText,
                             commentReplyVariations:
-                              draft.trigger === "comment_received" && "comment" in template
-                                ? template.commentVariations.join("\n")
+                              draft.trigger === "comment_received" && meta.commentVariations
+                                ? meta.commentVariations.join("\n")
                                 : draft.commentReplyVariations,
-                          })
-                        }
+                          });
+                        }}
                       >
                         {template.label}
                       </Button>
