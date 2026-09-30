@@ -60,7 +60,7 @@ function DataDeletion() {
       </p>
 
 
-      <h2>3. Delete your workspace and all its data</h2>
+      <h2>4. Delete your workspace and all its data</h2>
       <p>
         Write to {SUPPORT_EMAIL} from the email address that owns the workspace with the
         subject "Delete my workspace". We delete the workspace's messages, contacts,
@@ -68,7 +68,7 @@ function DataDeletion() {
         within 30 days and confirm by email.
       </p>
 
-      <h2>4. Delete your personal account</h2>
+      <h2>5. Delete your personal account</h2>
       <p>
         Write to {SUPPORT_EMAIL} with the subject "Delete my account". We remove your
         profile and workspace membership. If you are the only owner of a workspace, it
