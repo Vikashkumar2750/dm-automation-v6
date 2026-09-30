@@ -1,7 +1,7 @@
-import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 
 import { PublicFooter, SUPPORT_EMAIL } from "@/components/app/PublicFooter";
+import { PublicHeader } from "@/components/app/PublicHeader";
 
 export { SUPPORT_EMAIL };
 
@@ -16,16 +16,7 @@ export function LegalPage({
 }) {
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b bg-surface/90 backdrop-blur">
-        <div className="mx-auto flex max-w-3xl items-center justify-between px-5 py-4">
-          <Link to="/" className="text-sm font-semibold">
-            AutoDM by Techaasvik
-          </Link>
-          <Link to="/" className="text-sm text-muted-foreground hover:text-foreground">
-            Back to home
-          </Link>
-        </div>
-      </header>
+      <PublicHeader />
 
       <main className="mx-auto max-w-3xl px-5 py-12">
         <h1 className="text-3xl font-semibold tracking-tight">{title}</h1>
