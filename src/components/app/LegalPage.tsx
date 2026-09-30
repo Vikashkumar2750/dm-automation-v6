@@ -1,7 +1,7 @@
-import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 
 import { PublicFooter, SUPPORT_EMAIL } from "@/components/app/PublicFooter";
+import { PublicHeader } from "@/components/app/PublicHeader";
 
 export { SUPPORT_EMAIL };
 
