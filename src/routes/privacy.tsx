@@ -68,6 +68,36 @@ function Privacy() {
         and do not use platform data for advertising or for training public AI models.
       </p>
 
+      <h2>YouTube API Services</h2>
+      <p>
+        AutoDM by Techaasvik uses YouTube API Services. By connecting your channel you
+        agree to the{" "}
+        <a href="https://www.youtube.com/t/terms" target="_blank" rel="noreferrer">
+          YouTube Terms of Service
+        </a>{" "}
+        and the{" "}
+        <a href="https://policies.google.com/privacy" target="_blank" rel="noreferrer">
+          Google Privacy Policy
+        </a>
+        . You can revoke our access at any time from{" "}
+        <a
+          href="https://myaccount.google.com/permissions"
+          target="_blank"
+          rel="noreferrer"
+        >
+          https://myaccount.google.com/permissions
+        </a>
+        .
+      </p>
+      <p>
+        From YouTube we read your channel details, your videos and the public comments
+        on them, and we publish the replies and videos you ask us to publish. YouTube
+        has no private messaging for businesses, so AutoDM never sends direct messages
+        on YouTube. YouTube data is stored only for your own workspace, is never sold
+        or shared with advertisers, and is deleted when you disconnect the channel.
+      </p>
+
+
       <h2>AI features</h2>
       <p>
         When you use the AI assistant to draft a caption or a reply, the text you
