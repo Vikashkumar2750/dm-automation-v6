@@ -62,16 +62,10 @@ function ResetPasswordPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4 py-10">
+    <div className="flex min-h-screen flex-col bg-background">
+      <PublicHeader />
+      <main className="flex flex-1 items-center justify-center px-4 py-10">
       <div className="w-full max-w-md">
-        <Link to="/" className="mb-6 flex items-center justify-center gap-3">
-          <img src={"/logo.webp"} alt="AutoDM" className="size-10 rounded-xl object-contain" />
-          <span className="text-left">
-            <span className="block text-sm font-bold">AutoDM</span>
-            <span className="block text-xs text-subtle-foreground">by Techaasvik</span>
-          </span>
-        </Link>
-
         <div className="panel p-6">
           <h1 className="text-xl font-semibold">Set a new password</h1>
 
@@ -129,6 +123,8 @@ function ResetPasswordPage() {
           )}
         </div>
       </div>
+      </main>
+      <PublicFooter />
     </div>
   );
 }
