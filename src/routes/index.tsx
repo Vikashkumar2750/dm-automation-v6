@@ -328,7 +328,7 @@ function LandingPage() {
 
             <div className="panel p-5">
               <p className="text-xs font-semibold tracking-wide text-subtle-foreground uppercase">
-                What a rule looks like
+                What a rule looks like (Instagram &amp; Facebook)
               </p>
               <div className="mt-4 space-y-3">
                 {[
@@ -337,6 +337,7 @@ function LandingPage() {
                     value: "Comment on a reel contains “price”",
                     tone: "text-instagram",
                   },
+
                   {
                     label: "Public reply",
                     value: "“Sent you the details in DM 💬”",
