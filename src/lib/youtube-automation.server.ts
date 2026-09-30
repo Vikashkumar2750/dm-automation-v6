@@ -63,6 +63,12 @@ function targetsVideo(rule: Rule, videoId: string | null) {
   return targets.some((t) => t === videoId || videoId.endsWith(`_${t}`));
 }
 
+export function youtubeApiReason(error: unknown): string | null {
+  const value = error as { error?: { errors?: Array<{ reason?: string }> } } | null;
+  return value?.error?.errors?.[0]?.reason ?? null;
+}
+
+
 function pick(primary: string | null, variations: string[] | null | undefined) {
   const options = [primary, ...(variations ?? [])].map((t) => (t ?? "").trim()).filter(Boolean);
   if (options.length === 0) return null;
