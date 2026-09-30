@@ -248,10 +248,12 @@ export function EmailAndResetPanels() {
         </Button>
         {status.data && !status.data.ready ? (
           <p className="mt-3 text-sm text-destructive">
-            Emails can't go out yet: add RESEND_API_KEY and RESEND_FROM_EMAIL (a verified sender address) in Railway variables, then redeploy. Settings above are saved but nothing is sent until then.
+            Emails can't go out yet: the Resend connection is not linked to this project. Settings above are saved but nothing is sent until then.
           </p>
         ) : status.data?.ready ? (
-          <p className="mt-3 text-sm text-muted-foreground">Email sending is set up. Save first, then send a test.</p>
+          <p className="mt-3 text-sm text-muted-foreground">
+            Email sending is set up. Save first, then send a test. Note: the default sender only delivers to the Resend account owner — to email any address, verify your domain in Resend and set RESEND_FROM_EMAIL in Railway variables.
+          </p>
         ) : null}
       </Panel>
 
