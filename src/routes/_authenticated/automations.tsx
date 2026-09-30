@@ -199,6 +199,55 @@ const MESSAGE_TEMPLATES: Array<{
   },
 ];
 
+/**
+ * YouTube-ready packs: public replies only, no DM wording (YouTube has no DMs),
+ * and generic enough to feel natural under almost any comment. The AI still
+ * reads each comment and writes a contextual reply — these are only the
+ * fallback when AI is unavailable.
+ */
+const YOUTUBE_MESSAGE_TEMPLATES: Array<{
+  label: string;
+  text: string;
+  variations: string[];
+}> = [
+  {
+    label: "Warm thanks",
+    text: "Bahut shukriya! Khushi hui ki aapko video pasand aayi 🙏",
+    variations: [
+      "Thank you so much for watching and supporting! 🙏",
+      "Glad you enjoyed the video — aise hi support karte rahiye ❤️",
+      "Thanks a lot! Aapke comments se hi motivation milta hai 🙏",
+    ],
+  },
+  {
+    label: "Helpful reply",
+    text: "Great question! Saari details video description me de rahi hain, check kar lijiye 🙂",
+    variations: [
+      "Thanks for asking! Description me pura detail diya hai — dekh lijiye.",
+      "Good question! Iske baare me video me detail se bataya hai, dobara dekh lijiye 🙂",
+      "Happy to help! Description aur pinned comment me saari info hai.",
+    ],
+  },
+  {
+    label: "Engage back",
+    text: "Thanks for watching! Aapko video ka kaunsa part sabse achha laga? 🙂",
+    variations: [
+      "Glad you watched! Next video kis topic par chahiye, batayein?",
+      "Thank you! Aapke suggestions se hi next videos banti hain 🙂",
+      "Shukriya! Aur kya dekhna chahenge channel par? Comment me batayein.",
+    ],
+  },
+  {
+    label: "Short & sweet",
+    text: "Thanks for the love! ❤️",
+    variations: [
+      "Glad you liked it! 🙏",
+      "Thank you! ❤️",
+      "Shukriya ji! 🙏",
+    ],
+  },
+];
+
 const triggerLabel: Record<Trigger, string> = {
   dm_received: "New DM",
   comment_received: "New comment",
