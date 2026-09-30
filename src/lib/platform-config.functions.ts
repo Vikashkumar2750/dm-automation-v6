@@ -129,3 +129,22 @@ export const requestPasswordReset = createServerFn({ method: "POST" })
     });
     return { ok: true as const };
   });
+
+export const getEmailProviderStatus = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertSuperAdmin(context);
+    const { emailProviderReady } = await import("@/lib/support-email.server");
+    return { ready: emailProviderReady() };
+  });
+
+export const sendPlatformTestEmail = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertSuperAdmin(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { readPlatformConfig } = await import("@/lib/platform-config.server");
+    const { sendTestEmail } = await import("@/lib/support-email.server");
+    const config = await readPlatformConfig(supabaseAdmin);
+    return sendTestEmail(config.email.adminAlertEmail, config.email.senderName);
+  });
