@@ -841,7 +841,10 @@ function AutomationsPage() {
                 <div className="grid gap-2">
                   <Label>Ready-made messages</Label>
                   <div className="flex flex-wrap gap-2">
-                    {MESSAGE_TEMPLATES.map((template) => (
+                    {(draft.platform === "youtube"
+                      ? YOUTUBE_MESSAGE_TEMPLATES
+                      : MESSAGE_TEMPLATES
+                    ).map((template) => (
                       <Button
                         key={template.label}
                         type="button"
@@ -853,11 +856,11 @@ function AutomationsPage() {
                             responseText: template.text,
                             responseVariations: template.variations.join("\n"),
                             commentReplyText:
-                              draft.trigger === "comment_received"
+                              draft.trigger === "comment_received" && "comment" in template
                                 ? template.comment
                                 : draft.commentReplyText,
                             commentReplyVariations:
-                              draft.trigger === "comment_received"
+                              draft.trigger === "comment_received" && "comment" in template
                                 ? template.commentVariations.join("\n")
                                 : draft.commentReplyVariations,
                           })
@@ -868,7 +871,9 @@ function AutomationsPage() {
                     ))}
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    One tap fills the message plus three alternates — edit them as you like.
+                    {draft.platform === "youtube"
+                      ? "Optional backup replies — the AI reads each comment and writes a contextual reply; these are used only if AI is unavailable."
+                      : "One tap fills the message plus three alternates — edit them as you like."}
                   </p>
                 </div>
               )}
