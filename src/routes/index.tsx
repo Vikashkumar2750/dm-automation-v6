@@ -284,10 +284,11 @@ function LandingPage() {
                 Turn every comment and DM into a paying customer
               </h1>
               <p className="mt-5 text-lg text-muted-foreground">
-                AutoDM answers your Instagram, Facebook and YouTube audience
-                instantly, moves interested people into a private chat, and shows your
-                team exactly which conversations became leads — all from one inbox.
+                AutoDM answers your audience instantly — on Instagram and Facebook it
+                moves interested people from a comment into a private chat, and on
+                YouTube it replies publicly under the comment — all from one inbox.
               </p>
+
               <div className="mt-8 flex flex-wrap gap-3">
                 <Button asChild size="lg">
                   <Link to="/auth">
