@@ -72,7 +72,7 @@ APIs & Services → **Credentials** → your OAuth 2.0 Client ID → Authorised
 redirect URIs must contain exactly:
 
 ```
-https://autodm.techaasvik.com/api/public/oauth/youtube/callback
+https://autodm.techaasvik.com/api/public/oauth/google/callback
 ```
 
 Authorised JavaScript origin:

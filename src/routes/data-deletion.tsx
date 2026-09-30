@@ -43,7 +43,24 @@ function DataDeletion() {
         websites → Remove. This revokes our access from the platform side as well.
       </p>
 
-      <h2>3. Delete your workspace and all its data</h2>
+      <h2>3. Revoke our access to your YouTube channel</h2>
+      <p>
+        Open{" "}
+        <a
+          href="https://myaccount.google.com/permissions"
+          target="_blank"
+          rel="noreferrer"
+        >
+          https://myaccount.google.com/permissions
+        </a>
+        , select <strong>AutoDM by Techaasvik</strong> and choose{" "}
+        <strong>Remove access</strong>. Google immediately revokes our YouTube access,
+        and disconnecting the channel inside the app deletes its stored tokens and
+        synced comments.
+      </p>
+
+
+      <h2>4. Delete your workspace and all its data</h2>
       <p>
         Write to {SUPPORT_EMAIL} from the email address that owns the workspace with the
         subject "Delete my workspace". We delete the workspace's messages, contacts,
@@ -51,7 +68,7 @@ function DataDeletion() {
         within 30 days and confirm by email.
       </p>
 
-      <h2>4. Delete your personal account</h2>
+      <h2>5. Delete your personal account</h2>
       <p>
         Write to {SUPPORT_EMAIL} with the subject "Delete my account". We remove your
         profile and workspace membership. If you are the only owner of a workspace, it
