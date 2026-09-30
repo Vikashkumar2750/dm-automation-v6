@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   fallbackYouTubeReply,
+  stripDmWording,
   videosForPoll,
   youtubeApiReason,
 } from "./youtube-automation.server";
@@ -42,5 +43,28 @@ describe("YouTube comment safeguards", () => {
   it("uses intent-aware fallback replies instead of random text", () => {
     expect(fallbackYouTubeReply("How can I get this?", rule)).toContain("Great question");
     expect(fallbackYouTubeReply("Amazing video, thanks!", rule)).toContain("really glad");
+  });
+
+  it("answers Hinglish praise in the viewer's own language", () => {
+    const reply = fallbackYouTubeReply("Mast bnayi hai video", rule);
+    expect(reply).toContain("shukriya");
+    expect(reply).not.toMatch(/dm|inbox/i);
+  });
+
+  it("answers reported problems with a helpful reply, never a generic one", () => {
+    expect(fallbackYouTubeReply("bhai ye kaam nahi kar raha", rule)).toMatch(/help|sort it out/i);
+  });
+
+  it("never publishes DM wording under a YouTube video", () => {
+    expect(stripDmWording("Thanks for commenting! Replied in DM 📩")).toBe("Thanks for commenting!");
+    expect(stripDmWording("Answered you in DM 📩")).toBe("");
+    expect(stripDmWording("Thanks 🙏 sent you a message")).toBe("Thanks 🙏");
+  });
+
+  it("strips DM wording from a rule copied over from the Instagram flow", () => {
+    const dmRule = { ...rule, comment_reply_text: "Answered you in DM 📩" };
+    const reply = fallbackYouTubeReply("Wow", dmRule);
+    expect(reply).not.toMatch(/dm|inbox|message/i);
+    expect(reply.length).toBeGreaterThan(10);
   });
 });

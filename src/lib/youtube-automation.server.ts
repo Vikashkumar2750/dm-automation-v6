@@ -63,59 +63,87 @@ function targetsVideo(rule: Rule, videoId: string | null) {
   return targets.some((t) => t === videoId || videoId.endsWith(`_${t}`));
 }
 
+export function youtubeApiReason(error: unknown): string | null {
+  const value = error as { error?: { errors?: Array<{ reason?: string }> } } | null;
+  return value?.error?.errors?.[0]?.reason ?? null;
+}
+
+
 function pick(primary: string | null, variations: string[] | null | undefined) {
   const options = [primary, ...(variations ?? [])].map((t) => (t ?? "").trim()).filter(Boolean);
   if (options.length === 0) return null;
   return options[Math.floor(Math.random() * options.length)]!;
 }
 
+/**
+ * YouTube has no direct messages. Rules are often copied from the Instagram /
+ * Facebook DM flow, so any "check your DM" wording must be stripped before a
+ * reply is published publicly under a video.
+ */
+const DM_PHRASES =
+  /\b(replied|reply|answered|sent|sending|check|dekho|dekhein)?\s*(you)?\s*(in|on|your|the)?\s*(dm|dms|inbox|direct message|private message|messenger)\b[^.!?]*/gi;
+
+const SENT_MESSAGE_PHRASES =
+  /\b(sent|send|sending|sends|replied|reply|answered|check|dropped|drop|bheja|bhej)\b[^.!?]{0,24}\bmessages?\b[^.!?]*/gi;
+
+export function stripDmWording(text: string): string {
+  return text
+    .replace(SENT_MESSAGE_PHRASES, " ")
+    .replace(DM_PHRASES, " ")
+    .replace(/\b(dm|dms|inbox)\b/gi, " ")
+    .replace(/\s*(?:📩|📨|✉️|✉|📬)\s*/gu, " ")
+    .replace(/\s*([.!?])\s*\1+/g, "$1")
+    .replace(/^[\s,.!?–—-]+/, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function replyText(rule: Rule) {
   const base = pick(rule.comment_reply_text, rule.comment_reply_variations) ??
     pick(rule.response_text, rule.response_variations);
   if (!base) return null;
+  const safe = stripDmWording(base);
+  if (!safe) return null;
   const link = (rule.dm_link_url ?? "").trim();
-  if (link && !base.includes(link)) return `${base} ${link}`.slice(0, 900);
-  return base.slice(0, 900);
+  if (link && !safe.includes(link)) return `${safe} ${link}`.slice(0, 900);
+  return safe.slice(0, 900);
 }
 
-export function youtubeApiReason(error: unknown): string | null {
-  const value = error as { error?: { errors?: Array<{ reason?: string }> } } | null;
-  return value?.error?.errors?.[0]?.reason ?? null;
-}
-
+/**
+ * Context-aware reply used when no AI provider is available. Detects intent in
+ * English, Hindi and Hinglish so the reply still relates to the comment.
+ */
 export function fallbackYouTubeReply(comment: string, rule: Rule): string {
+  const text = comment.toLowerCase().trim();
+  const link = (rule.dm_link_url ?? "").trim();
+  const withLink = (body: string) => (link ? `${body} ${link}`.slice(0, 900) : body);
+
+  if (/\?|how|where|when|what|which|price|cost|kaise|kahan|kab|kitna|kya|batao|bataye/.test(text)) {
+    return withLink(
+      "Great question — thanks for asking! We have covered this in detail and will keep sharing more on it.",
+    );
+  }
+  if (/mast|badhiya|bahut accha|bohot accha|shandar|zabardast|kya baat|maza aa/.test(text)) {
+    return withLink("Bahut shukriya! Khushi hui ki aapko video pasand aayi 🙏");
+  }
+  if (/thank|thanks|shukriya|dhanyavad|helpful|useful|learn/.test(text)) {
+    return withLink("Thank you — really glad this was useful for you!");
+  }
+  if (/great|amazing|love|nice|awesome|superb|best|wow|op|fire|excellent|good/.test(text)) {
+    return withLink("Thanks a lot for the kind words — glad you enjoyed it!");
+  }
+  if (
+    /not work|problem|issue|error|nahi ho|nahi chal|nahi kar|nahi aa|kaam nahi|doubt|stuck|help/.test(
+      text,
+    )
+  ) {
+    return withLink(
+      "Sorry you hit that — tell us a bit more about what happened and we will help you sort it out.",
+    );
+  }
   const configured = replyText(rule);
   if (configured) return configured;
-  const text = comment.toLowerCase();
-  if (/\?|how|where|when|what|kaise|kahan|kab/.test(text)) {
-    return "Great question — thanks for asking. We’ve noted it and will share the most helpful details here.";
-  }
-  if (/thank|thanks|helpful|great|amazing|love|nice|awesome/.test(text)) {
-    return "Thank you — really glad this was useful to you!";
-  }
-  return "Thanks for joining the conversation — we appreciate your comment!";
-}
-
-function aiStatus(error: unknown): number | null {
-  const value = error as { statusCode?: unknown; status?: unknown; response?: { status?: unknown } };
-  for (const candidate of [value?.statusCode, value?.status, value?.response?.status]) {
-    if (typeof candidate === "number") return candidate;
-  }
-  const match = (error instanceof Error ? error.message : "").match(/\b(400|401|402|403|404|429|5\d\d)\b/);
-  return match?.[1] ? Number(match[1]) : null;
-}
-
-async function pauseAutomatedAi(admin: AdminClient, status: number) {
-  if (status !== 402 && status !== 403) return;
-  const { data } = await admin
-    .from("platform_settings")
-    .select("feature_flags")
-    .eq("id", true)
-    .maybeSingle();
-  const flags = { ...((data?.feature_flags ?? {}) as Record<string, unknown>) };
-  flags["youtube_ai_paused"] = true;
-  flags["youtube_ai_pause_status"] = status;
-  await admin.from("platform_settings").update({ feature_flags: flags }).eq("id", true);
+  return withLink("Thanks for watching and for taking the time to comment — it really means a lot!");
 }
 
 async function smartReply(
@@ -123,22 +151,24 @@ async function smartReply(
   comment: Comment,
   rule: Rule,
   aiPaused: boolean,
+  orgId: string,
 ): Promise<{ text: string; usedAi: boolean }> {
   const fallback = fallbackYouTubeReply(comment.text, rule);
   if (aiPaused) return { text: fallback, usedAi: false };
   try {
     const { generateYouTubeReply } = await import("@/lib/youtube-ai.server");
-    const generated = await generateYouTubeReply({
+    const generated = await generateYouTubeReply(admin, {
       comment: comment.text,
       approvedReply: replyText(rule),
       link: rule.dm_link_url,
+      scope: `youtube:${orgId}`,
     });
-    if (!generated) return { text: fallback, usedAi: false };
+    if (!generated.text) return { text: fallback, usedAi: false };
+    const safe = stripDmWording(generated.text) || generated.text;
     const link = (rule.dm_link_url ?? "").trim();
-    const withLink = link && !generated.includes(link) ? `${generated} ${link}` : generated;
+    const withLink = link && !safe.includes(link) ? `${safe} ${link}` : safe;
     return { text: withLink.slice(0, 900), usedAi: true };
-  } catch (error) {
-    await pauseAutomatedAi(admin, aiStatus(error) ?? 0);
+  } catch {
     return { text: fallback, usedAi: false };
   }
 }
@@ -664,7 +694,7 @@ export async function runYouTubeCommentAutomation(
         continue;
       }
 
-      const reply = await smartReply(admin, comment, rule, aiPaused);
+      const reply = await smartReply(admin, comment, rule, aiPaused, account.organization_id);
       const text = reply.text;
 
       const result = await postReply(comment.id, text, token);
