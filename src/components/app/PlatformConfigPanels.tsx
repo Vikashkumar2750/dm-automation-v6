@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { getPlatformConfig, savePlatformConfig } from "@/lib/platform-config.functions";
+import { getEmailProviderStatus, getPlatformConfig, savePlatformConfig, sendPlatformTestEmail } from "@/lib/platform-config.functions";
 import { DEFAULT_PLAN_LIMITS, type BillingCycle, type PlanDef } from "@/lib/plans";
 
 type Config = Awaited<ReturnType<typeof getPlatformConfig>>;
@@ -195,6 +195,14 @@ const EVENT_LABELS: Record<string, string> = {
 
 export function EmailAndResetPanels() {
   const { config, mutation } = useConfig();
+  const fetchStatus = useServerFn(getEmailProviderStatus);
+  const sendTest = useServerFn(sendPlatformTestEmail);
+  const status = useQuery({ queryKey: ["email-provider-status"], queryFn: () => fetchStatus(), retry: false });
+  const test = useMutation({
+    mutationFn: () => sendTest(),
+    onSuccess: (r) => (r.ok ? toast.success("Test email sent — check the admin inbox") : toast.error(r.error ?? "Failed")),
+    onError: (e) => toast.error(e instanceof Error ? e.message.slice(0, 160) : "Failed"),
+  });
   const [draft, setDraft] = useState<Config | null>(null);
   useEffect(() => {
     if (config) setDraft(structuredClone(config));
@@ -235,6 +243,16 @@ export function EmailAndResetPanels() {
         <Button className="mt-4" disabled={mutation.isPending} onClick={() => mutation.mutate(draft)}>
           Save email settings
         </Button>
+        <Button className="mt-4 ml-2" variant="outline" disabled={test.isPending} onClick={() => test.mutate()}>
+          {test.isPending ? "Sending…" : "Send test email"}
+        </Button>
+        {status.data && !status.data.ready ? (
+          <p className="mt-3 text-sm text-destructive">
+            Emails can't go out yet: add RESEND_API_KEY and RESEND_FROM_EMAIL (a verified sender address) in Railway variables, then redeploy. Settings above are saved but nothing is sent until then.
+          </p>
+        ) : status.data?.ready ? (
+          <p className="mt-3 text-sm text-muted-foreground">Email sending is set up. Save first, then send a test.</p>
+        ) : null}
       </Panel>
 
       <Panel title="Forgot-password limit">
