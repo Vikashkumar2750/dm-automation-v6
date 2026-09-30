@@ -16,6 +16,7 @@ import {
 import { useEffect } from "react";
 
 import { PublicFooter } from "@/components/app/PublicFooter";
+import { PublicHeader } from "@/components/app/PublicHeader";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 
