@@ -91,7 +91,7 @@ export function stripDmWording(text: string): string {
     .replace(SENT_MESSAGE_PHRASES, " ")
     .replace(DM_PHRASES, " ")
     .replace(/\b(dm|dms|inbox)\b/gi, " ")
-    .replace(/\s*[📩📨✉️📬]\s*/g, " ")
+    .replace(/\s*(?:📩|📨|✉️|✉|📬)\s*/gu, " ")
     .replace(/\s*([.!?])\s*\1+/g, "$1")
     .replace(/^[\s,.!?–—-]+/, "")
     .replace(/\s+/g, " ")
