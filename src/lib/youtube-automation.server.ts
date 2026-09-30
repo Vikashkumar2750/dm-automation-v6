@@ -132,7 +132,11 @@ export function fallbackYouTubeReply(comment: string, rule: Rule): string {
   if (/great|amazing|love|nice|awesome|superb|best|wow|op|fire|excellent|good/.test(text)) {
     return withLink("Thanks a lot for the kind words — glad you enjoyed it!");
   }
-  if (/not work|problem|issue|error|nahi ho|nahi chal|doubt|stuck|help/.test(text)) {
+  if (
+    /not work|problem|issue|error|nahi ho|nahi chal|nahi kar|nahi aa|kaam nahi|doubt|stuck|help/.test(
+      text,
+    )
+  ) {
     return withLink(
       "Sorry you hit that — tell us a bit more about what happened and we will help you sort it out.",
     );
