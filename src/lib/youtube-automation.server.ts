@@ -83,8 +83,12 @@ function pick(primary: string | null, variations: string[] | null | undefined) {
 const DM_PHRASES =
   /\b(replied|reply|answered|sent|sending|check|dekho|dekhein)?\s*(you)?\s*(in|on|your|the)?\s*(dm|dms|inbox|direct message|private message|messenger)\b[^.!?]*/gi;
 
+const SENT_MESSAGE_PHRASES =
+  /\b(sent|send|sending|sends|replied|reply|answered|check|dropped|drop|bheja|bhej)\b[^.!?]{0,24}\bmessages?\b[^.!?]*/gi;
+
 export function stripDmWording(text: string): string {
   return text
+    .replace(SENT_MESSAGE_PHRASES, " ")
     .replace(DM_PHRASES, " ")
     .replace(/\b(dm|dms|inbox)\b/gi, " ")
     .replace(/\s*[📩📨✉️📬]\s*/g, " ")
