@@ -39,3 +39,7 @@ Real Meta + YouTube credentials are available when we reach OAuth phases.
 - [x] Super-admin user profile editing (name, email, password) with audit logging
 - [x] Public contact, disclaimer, and refund pages with professional shared footer
 - [x] Support inquiry inbox for super admins with optional configured email alerts
+- [x] Contextual YouTube comment replies (Hindi/Hinglish/English intent, DM wording stripped)
+- [x] Multi-provider AI with automatic failover (multiple OpenRouter keys → NVIDIA → OpenAI → built-in)
+- [x] Secure super-admin AI provider panel (write-only keys, masked display, hourly spend cap, prompt-injection sanitising)
+- [x] Google Cloud / YouTube API verification guide (`docs/GOOGLE-YOUTUBE-VERIFICATION.md`)
