@@ -48,7 +48,8 @@ Real Meta + YouTube credentials are available when we reach OAuth phases.
 - [x] Dashboard AI assistant uses Super admin AI keys (OpenRouter → NVIDIA → OpenAI → Lovable AI)
 - [x] SEO Phase 1 (part): robots.txt, sitemap.xml, llms.txt
 - [ ] SEO Phase 1 rest: JSON-LD on all public pages, canonical tags
-- [ ] Phase 2–3: public blog + super-admin blog editor with Rank Math-style score
-- [ ] Phase 4: AI blog assistant
-- [ ] Phase 5: starter draft articles
-- [ ] Phase 6: GA4/GTM/AdSense/Pixel/GSC/Bing settings + cookie banner
+- [x] Phase 2–3: public blog + super-admin blog editor with Rank Math-style score
+- [x] Phase 4: AI blog assistant
+- [x] Phase 5: starter draft articles
+- [x] Phase 6: GA4/GTM/AdSense/Pixel/GSC/Bing settings + cookie banner
+- [x] AI assistant daily limit per user (default 5, super-admin setting)
