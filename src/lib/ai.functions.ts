@@ -1,55 +1,41 @@
-import { createOpenAI } from "@ai-sdk/openai";
 import { createServerFn } from "@tanstack/react-start";
-import { Output, streamText } from "ai";
 import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-
-const MODEL = "openai/gpt-6-astra";
 
 async function runModel<T>(
   prompt: string,
   system: string,
   schema: z.ZodType<T>,
+  userId: string,
+  shape: string,
 ): Promise<T> {
-  const key = process.env["LOVABLE_API_KEY"];
-  if (!key) throw new Error("AI is not configured yet");
-
-  const { createLovableAiGatewayRunIdFetch } = await import("@/lib/ai-gateway.server");
-  const runIdFetch = createLovableAiGatewayRunIdFetch();
-  const lovable = createOpenAI({
-    baseURL: "https://ai.gateway.lovable.dev/v1",
-    apiKey: key,
-    headers: { "Lovable-API-Key": key, "X-Lovable-AIG-SDK": "vercel-ai-sdk" },
-    fetch: runIdFetch.fetch,
+  const { readAiProviders, generateWithFailover, sanitisePromptInput } = await import(
+    "@/lib/ai-providers.server"
+  );
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const config = await readAiProviders(supabaseAdmin);
+  const result = await generateWithFailover({
+    // The dashboard assistant uses the same keys as YouTube replies,
+    // independent of the YouTube on/off switch.
+    config: { ...config, enabled: true, useLovableFallback: true, maxCallsPerHour: 40 },
+    system: `${system}\nRespond with ONLY a valid JSON object matching this shape, no markdown fences: ${shape}`,
+    prompt: sanitisePromptInput(prompt, 3000),
+    scope: `assistant:${userId}`,
+    long: true,
   });
-
-  try {
-    const result = streamText({
-      model: lovable.responses(MODEL),
-      system,
-      prompt,
-      output: Output.object({ schema }),
-      providerOptions: {
-        openai: {
-          forceReasoning: true,
-          reasoningEffort: "low",
-          reasoningSummary: "auto",
-          store: false,
-          include: ["reasoning.encrypted_content"],
-        },
-      },
-    });
-    return await result.output;
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "";
-    if (message.includes("429")) {
-      throw new Error("AI is busy right now — try again in a moment");
-    }
-    if (message.includes("402")) {
-      throw new Error("AI credits are exhausted — top up to keep using the assistant");
-    }
+  if (!result.text) {
+    const last = result.attempts.at(-1);
+    if (last?.provider === "budget") throw new Error("Hourly AI limit reached — try again later");
+    if (last?.status === 402) throw new Error("AI credits are exhausted — add credits or another key in Super admin → Settings");
+    if (last?.status === 429) throw new Error("AI is busy right now — try again in a moment");
     throw new Error("The AI service could not complete this request");
+  }
+  const match = result.text.replace(/```(?:json)?/gi, "").match(/\{[\s\S]*\}/);
+  try {
+    return schema.parse(JSON.parse(match ? match[0] : result.text));
+  } catch {
+    throw new Error("The AI reply was not in the expected format — please try again");
   }
 }
 
@@ -72,7 +58,7 @@ export const generateCaptions = createServerFn({ method: "POST" })
       })
       .parse(data),
   )
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
     const result = await runModel(
       [
         `Platform: ${platformLabel[data.platform]}`,
@@ -84,6 +70,8 @@ export const generateCaptions = createServerFn({ method: "POST" })
       ].join("\n"),
       "You are a social media copywriter. Write scroll-stopping captions that sound human, never corporate. Return exactly 3 captions in the options array.",
       optionsSchema,
+      context.userId,
+      '{"options": ["string", "string", "string"]}',
     );
     return { options: result.options.slice(0, 3) };
   });
@@ -99,7 +87,7 @@ export const suggestReplies = createServerFn({ method: "POST" })
       })
       .parse(data),
   )
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
     const result = await runModel(
       [
         `Tone: ${data.tone}`,
@@ -110,6 +98,8 @@ export const suggestReplies = createServerFn({ method: "POST" })
         .join("\n"),
       "You write replies for a brand's Instagram and Facebook inbox. Keep each reply under 40 words, warm, specific and ready to send as-is. Return exactly 3 options in the options array.",
       optionsSchema,
+      context.userId,
+      '{"options": ["string", "string", "string"]}',
     );
     return { options: result.options.slice(0, 3) };
   });
@@ -136,7 +126,7 @@ export const suggestAutomation = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) =>
     z.object({ goal: z.string().trim().min(5).max(600) }).parse(data),
   )
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
     const rule = await runModel(
       `Goal: ${data.goal}`,
       [
@@ -145,6 +135,8 @@ export const suggestAutomation = createServerFn({ method: "POST" })
         "Keep the rule name under 80 characters.",
       ].join("\n"),
       suggestedRule,
+      context.userId,
+      '{"name": string, "trigger": "dm_received"|"comment_received", "matchType": "any"|"contains"|"exact"|"starts_with", "keywords": string[], "action": "reply_dm"|"comment_public_reply"|"comment_private_reply"|"hide_comment"|"set_status", "responseVariations": string[]}',
     );
     return {
       rule: {
