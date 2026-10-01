@@ -226,12 +226,16 @@ export function PostComposer({
           }
         }
         void queryClient.invalidateQueries({ queryKey: ["posts", organizationId] });
-        if (failed > 0) throw new Error(`${failed} of ${all.length} posts failed — see details above`);
+        if (failed > 0) {
+          toast.error(`${failed} of ${all.length} posts failed — check the Posts list for details`);
+          if (failed === all.length) throw new Error("Publishing failed on all accounts");
+        }
+        return { ids: all, failed };
       }
-      return { ids: all };
+      return { ids: all, failed: 0 };
     },
     onSuccess: (result, status) => {
-      const count = result.ids.length;
+      const count = result.ids.length - result.failed;
       toast.success(
         status === "now"
           ? count > 1
@@ -244,7 +248,11 @@ export function PostComposer({
           : "Draft saved",
       );
       void queryClient.invalidateQueries({ queryKey: ["posts", organizationId] });
-      onOpenChange(false);
+      // Let the user see the finished progress briefly, then close automatically.
+      setTimeout(() => {
+        setProgress(null);
+        onOpenChange(false);
+      }, status === "now" ? 900 : 0);
     },
     onError: (error: Error) =>
       toast.error(
