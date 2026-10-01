@@ -225,6 +225,7 @@ async function chatCompletion(opts: {
   system: string;
   prompt: string;
   extraHeaders?: Record<string, string>;
+  long?: boolean;
 }): Promise<{ text: string | null; status: number }> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
@@ -240,7 +241,7 @@ async function chatCompletion(opts: {
       body: JSON.stringify({
         model: opts.model,
         temperature: 0.7,
-        max_tokens: 220,
+        max_tokens: opts.long ? 1800 : 220,
         messages: [
           { role: "system", content: opts.system },
           { role: "user", content: opts.prompt },
@@ -251,7 +252,8 @@ async function chatCompletion(opts: {
     const json = (await res.json().catch(() => ({}))) as {
       choices?: { message?: { content?: string } }[];
     };
-    return { text: cleanOutput(json.choices?.[0]?.message?.content), status: res.status };
+    const raw = json.choices?.[0]?.message?.content;
+    return { text: opts.long ? raw?.trim() || null : cleanOutput(raw), status: res.status };
   } finally {
     clearTimeout(timer);
   }
@@ -260,6 +262,7 @@ async function chatCompletion(opts: {
 async function lovableGateway(
   system: string,
   prompt: string,
+  long = false,
 ): Promise<{ text: string | null; status: number }> {
   const key = process.env["LOVABLE_API_KEY"];
   if (!key) return { text: null, status: 401 };
@@ -287,7 +290,8 @@ async function lovableGateway(
       },
     },
   });
-  return { text: cleanOutput(await result.text), status: 200 };
+  const out = await result.text;
+  return { text: long ? out.trim() || null : cleanOutput(out), status: 200 };
 }
 
 function statusFrom(error: unknown): number | null {
@@ -311,6 +315,8 @@ export async function generateWithFailover(input: {
   system: string;
   prompt: string;
   scope?: string;
+  /** Long-form mode for the dashboard assistant: keeps formatting and allows longer output. */
+  long?: boolean;
 }): Promise<AiResult> {
   const attempts: Attempt[] = [];
   const { config } = input;
@@ -325,8 +331,10 @@ export async function generateWithFailover(input: {
     };
   }
 
-  const system = input.system.slice(0, MAX_PROMPT_CHARS);
-  const prompt = input.prompt.slice(0, MAX_PROMPT_CHARS);
+  const limit = input.long ? 4000 : MAX_PROMPT_CHARS;
+  const long = input.long === true;
+  const system = input.system.slice(0, limit);
+  const prompt = input.prompt.slice(0, limit);
 
   type Candidate = { name: string; run: () => Promise<{ text: string | null; status: number }> };
   const candidates: Candidate[] = [];
@@ -341,6 +349,7 @@ export async function generateWithFailover(input: {
           model: config.openRouterModel,
           system,
           prompt,
+          long,
           extraHeaders: { "X-Title": "AutoDM by Techaasvik" },
         }),
     });
@@ -355,6 +364,7 @@ export async function generateWithFailover(input: {
           model: config.nvidiaModel,
           system,
           prompt,
+          long,
         }),
     });
   }
@@ -368,11 +378,12 @@ export async function generateWithFailover(input: {
           model: config.openAiModel,
           system,
           prompt,
+          long,
         }),
     });
   }
   if (config.useLovableFallback) {
-    candidates.push({ name: "lovable", run: () => lovableGateway(system, prompt) });
+    candidates.push({ name: "lovable", run: () => lovableGateway(system, prompt, long) });
   }
 
   for (const candidate of candidates) {
