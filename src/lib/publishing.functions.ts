@@ -92,7 +92,7 @@ export const savePost = createServerFn({ method: "POST" })
     if (data.postFormat === "carousel" && data.media.length < 2) {
       throw new Error("A carousel needs at least 2 photos");
     }
-    if ((data.postFormat === "reel" || data.postFormat === "story") && data.media.length === 0) {
+    if ((data.postFormat === "reel" || data.postFormat === "story" || data.postFormat === "trial_reel") && data.media.length === 0) {
       throw new Error("Reels and stories need a video or photo");
     }
 
