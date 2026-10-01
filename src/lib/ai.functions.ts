@@ -15,6 +15,16 @@ async function runModel<T>(
   );
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const config = await readAiProviders(supabaseAdmin);
+  const { readAiDailyLimit } = await import("@/lib/site-settings.server");
+  const limit = await readAiDailyLimit(supabaseAdmin);
+  const { data: used, error: quotaError } = await supabaseAdmin.rpc("consume_ai_request" as never, {
+    _user_id: userId,
+    _limit: limit,
+  } as never);
+  if (quotaError) throw new Error("Could not check your AI limit — please try again");
+  if ((used as unknown as number) < 0) {
+    throw new Error(`You've used all ${limit} AI requests for today. The limit resets tomorrow.`);
+  }
   const result = await generateWithFailover({
     // The dashboard assistant uses the same keys as YouTube replies,
     // independent of the YouTube on/off switch.

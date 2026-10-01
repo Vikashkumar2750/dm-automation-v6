@@ -2,6 +2,7 @@ import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
+  Newspaper,
   Activity,
   Building2,
   CreditCard,
@@ -47,6 +48,7 @@ const healthNav: NavItem[] = [
 
 const governNav: NavItem[] = [
   { label: "Plans & Billing", to: "/admin/plans", icon: CreditCard },
+  { label: "Blog & SEO", to: "/admin/blog", icon: Newspaper },
   { label: "Security & Audit", to: "/admin/audit", icon: FileClock },
   { label: "System Settings", to: "/admin/settings", icon: Settings },
 ];

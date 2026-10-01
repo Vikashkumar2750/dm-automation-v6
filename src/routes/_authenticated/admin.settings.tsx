@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { EmailAndResetPanels } from "@/components/app/PlatformConfigPanels";
 import { AiProvidersPanel } from "@/components/app/AiProvidersPanel";
+import { SiteSettingsPanel } from "@/components/app/SiteSettingsPanel";
 import { getPlatformSettings, updatePlatformSettings } from "@/lib/admin.functions";
 
 export const Route = createFileRoute("/_authenticated/admin/settings")({
@@ -141,6 +142,8 @@ function SystemSettingsPage() {
       </Panel>
 
       <AiProvidersPanel />
+
+      <SiteSettingsPanel />
 
       <EmailAndResetPanels />
     </div>

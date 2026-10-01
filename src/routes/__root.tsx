@@ -14,6 +14,8 @@ import { Toaster } from "@/components/ui/sonner";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { supabase } from "@/integrations/supabase/client";
+import { TrackingScripts } from "@/components/app/TrackingScripts";
+import { getPublicTracking } from "@/lib/site-settings.functions";
 
 function NotFoundComponent() {
   return (
@@ -76,8 +78,13 @@ function ErrorComponent({ error, reset }: ErrorComponentProps) {
 }
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
-  head: () => ({
+  loader: () => getPublicTracking(),
+  staleTime: Infinity,
+  head: ({ loaderData }) => ({
     meta: [
+      ...(loaderData?.googleVerification ? [{ name: "google-site-verification", content: loaderData.googleVerification }] : []),
+      ...(loaderData?.bingVerification ? [{ name: "msvalidate.01", content: loaderData.bingVerification }] : []),
+      ...(loaderData?.adsenseId ? [{ name: "google-adsense-account", content: loaderData.adsenseId }] : []),
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "AutoDM by Techaasvik" },
@@ -127,6 +134,7 @@ function RootShell({ children }: { children: ReactNode }) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const router = useRouter();
+  const tracking = Route.useLoaderData();
 
   useEffect(() => {
     const { data } = supabase.auth.onAuthStateChange((event) => {
@@ -143,6 +151,7 @@ function RootComponent() {
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <Outlet />
       <Toaster position="top-right" richColors />
+      {tracking && <TrackingScripts tracking={tracking} />}
     </QueryClientProvider>
   );
 }

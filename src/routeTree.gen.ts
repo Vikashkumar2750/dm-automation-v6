@@ -37,11 +37,14 @@ import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedSocialAccountsRouteImport } from './routes/_authenticated/social-accounts'
 import { Route as AuthenticatedTeamRouteImport } from './routes/_authenticated/team'
 import { Route as AuthenticatedUsageRouteImport } from './routes/_authenticated/usage'
+import { Route as BlogIndexRouteImport } from './routes/blog.index'
+import { Route as BlogSlugRouteImport } from './routes/blog.$slug'
 import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated/admin.index'
 import { Route as AuthenticatedAdminAccountsRouteImport } from './routes/_authenticated/admin.accounts'
 import { Route as AuthenticatedAdminAlertsRouteImport } from './routes/_authenticated/admin.alerts'
 import { Route as AuthenticatedAdminAuditRouteImport } from './routes/_authenticated/admin.audit'
 import { Route as AuthenticatedAdminAutomationsRouteImport } from './routes/_authenticated/admin.automations'
+import { Route as AuthenticatedAdminBlogRouteImport } from './routes/_authenticated/admin.blog'
 import { Route as AuthenticatedAdminHealthRouteImport } from './routes/_authenticated/admin.health'
 import { Route as AuthenticatedAdminInquiriesRouteImport } from './routes/_authenticated/admin.inquiries'
 import { Route as AuthenticatedAdminJobsRouteImport } from './routes/_authenticated/admin.jobs'
@@ -205,6 +208,16 @@ const AuthenticatedUsageRoute = AuthenticatedUsageRouteImport.update({
   path: '/usage',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const BlogIndexRoute = BlogIndexRouteImport.update({
+  id: '/blog/',
+  path: '/blog/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BlogSlugRoute = BlogSlugRouteImport.update({
+  id: '/blog/$slug',
+  path: '/blog/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedAdminIndexRoute = AuthenticatedAdminIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -233,6 +246,11 @@ const AuthenticatedAdminAutomationsRoute =
     path: '/automations',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
+const AuthenticatedAdminBlogRoute = AuthenticatedAdminBlogRouteImport.update({
+  id: '/blog',
+  path: '/blog',
+  getParentRoute: () => AuthenticatedAdminRoute,
+} as any)
 const AuthenticatedAdminHealthRoute =
   AuthenticatedAdminHealthRouteImport.update({
     id: '/health',
@@ -370,10 +388,13 @@ export interface FileRoutesByFullPath {
   '/social-accounts': typeof AuthenticatedSocialAccountsRoute
   '/team': typeof AuthenticatedTeamRoute
   '/usage': typeof AuthenticatedUsageRoute
+  '/blog/$slug': typeof BlogSlugRoute
+  '/blog/': typeof BlogIndexRoute
   '/admin/accounts': typeof AuthenticatedAdminAccountsRoute
   '/admin/alerts': typeof AuthenticatedAdminAlertsRoute
   '/admin/audit': typeof AuthenticatedAdminAuditRoute
   '/admin/automations': typeof AuthenticatedAdminAutomationsRoute
+  '/admin/blog': typeof AuthenticatedAdminBlogRoute
   '/admin/health': typeof AuthenticatedAdminHealthRoute
   '/admin/inquiries': typeof AuthenticatedAdminInquiriesRoute
   '/admin/jobs': typeof AuthenticatedAdminJobsRoute
@@ -422,10 +443,13 @@ export interface FileRoutesByTo {
   '/social-accounts': typeof AuthenticatedSocialAccountsRoute
   '/team': typeof AuthenticatedTeamRoute
   '/usage': typeof AuthenticatedUsageRoute
+  '/blog/$slug': typeof BlogSlugRoute
+  '/blog': typeof BlogIndexRoute
   '/admin/accounts': typeof AuthenticatedAdminAccountsRoute
   '/admin/alerts': typeof AuthenticatedAdminAlertsRoute
   '/admin/audit': typeof AuthenticatedAdminAuditRoute
   '/admin/automations': typeof AuthenticatedAdminAutomationsRoute
+  '/admin/blog': typeof AuthenticatedAdminBlogRoute
   '/admin/health': typeof AuthenticatedAdminHealthRoute
   '/admin/inquiries': typeof AuthenticatedAdminInquiriesRoute
   '/admin/jobs': typeof AuthenticatedAdminJobsRoute
@@ -477,10 +501,13 @@ export interface FileRoutesById {
   '/_authenticated/social-accounts': typeof AuthenticatedSocialAccountsRoute
   '/_authenticated/team': typeof AuthenticatedTeamRoute
   '/_authenticated/usage': typeof AuthenticatedUsageRoute
+  '/blog/$slug': typeof BlogSlugRoute
+  '/blog/': typeof BlogIndexRoute
   '/_authenticated/admin/accounts': typeof AuthenticatedAdminAccountsRoute
   '/_authenticated/admin/alerts': typeof AuthenticatedAdminAlertsRoute
   '/_authenticated/admin/audit': typeof AuthenticatedAdminAuditRoute
   '/_authenticated/admin/automations': typeof AuthenticatedAdminAutomationsRoute
+  '/_authenticated/admin/blog': typeof AuthenticatedAdminBlogRoute
   '/_authenticated/admin/health': typeof AuthenticatedAdminHealthRoute
   '/_authenticated/admin/inquiries': typeof AuthenticatedAdminInquiriesRoute
   '/_authenticated/admin/jobs': typeof AuthenticatedAdminJobsRoute
@@ -532,10 +559,13 @@ export interface FileRouteTypes {
     | '/social-accounts'
     | '/team'
     | '/usage'
+    | '/blog/$slug'
+    | '/blog/'
     | '/admin/accounts'
     | '/admin/alerts'
     | '/admin/audit'
     | '/admin/automations'
+    | '/admin/blog'
     | '/admin/health'
     | '/admin/inquiries'
     | '/admin/jobs'
@@ -584,10 +614,13 @@ export interface FileRouteTypes {
     | '/social-accounts'
     | '/team'
     | '/usage'
+    | '/blog/$slug'
+    | '/blog'
     | '/admin/accounts'
     | '/admin/alerts'
     | '/admin/audit'
     | '/admin/automations'
+    | '/admin/blog'
     | '/admin/health'
     | '/admin/inquiries'
     | '/admin/jobs'
@@ -638,10 +671,13 @@ export interface FileRouteTypes {
     | '/_authenticated/social-accounts'
     | '/_authenticated/team'
     | '/_authenticated/usage'
+    | '/blog/$slug'
+    | '/blog/'
     | '/_authenticated/admin/accounts'
     | '/_authenticated/admin/alerts'
     | '/_authenticated/admin/audit'
     | '/_authenticated/admin/automations'
+    | '/_authenticated/admin/blog'
     | '/_authenticated/admin/health'
     | '/_authenticated/admin/inquiries'
     | '/_authenticated/admin/jobs'
@@ -677,6 +713,8 @@ export interface RootRouteChildren {
   ResetPasswordRoute: typeof ResetPasswordRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   TermsRoute: typeof TermsRoute
+  BlogSlugRoute: typeof BlogSlugRoute
+  BlogIndexRoute: typeof BlogIndexRoute
   ApiPublicCronPublishDueRoute: typeof ApiPublicCronPublishDueRoute
   ApiPublicCronYoutubeCommentsRoute: typeof ApiPublicCronYoutubeCommentsRoute
   ApiPublicTTokenRoute: typeof ApiPublicTTokenRoute
@@ -882,6 +920,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedUsageRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/blog/': {
+      id: '/blog/'
+      path: '/blog'
+      fullPath: '/blog/'
+      preLoaderRoute: typeof BlogIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/blog/$slug': {
+      id: '/blog/$slug'
+      path: '/blog/$slug'
+      fullPath: '/blog/$slug'
+      preLoaderRoute: typeof BlogSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/admin/': {
       id: '/_authenticated/admin/'
       path: '/'
@@ -915,6 +967,13 @@ declare module '@tanstack/react-router' {
       path: '/automations'
       fullPath: '/admin/automations'
       preLoaderRoute: typeof AuthenticatedAdminAutomationsRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/blog': {
+      id: '/_authenticated/admin/blog'
+      path: '/blog'
+      fullPath: '/admin/blog'
+      preLoaderRoute: typeof AuthenticatedAdminBlogRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
     '/_authenticated/admin/health': {
@@ -1058,6 +1117,7 @@ interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminAlertsRoute: typeof AuthenticatedAdminAlertsRoute
   AuthenticatedAdminAuditRoute: typeof AuthenticatedAdminAuditRoute
   AuthenticatedAdminAutomationsRoute: typeof AuthenticatedAdminAutomationsRoute
+  AuthenticatedAdminBlogRoute: typeof AuthenticatedAdminBlogRoute
   AuthenticatedAdminHealthRoute: typeof AuthenticatedAdminHealthRoute
   AuthenticatedAdminInquiriesRoute: typeof AuthenticatedAdminInquiriesRoute
   AuthenticatedAdminJobsRoute: typeof AuthenticatedAdminJobsRoute
@@ -1076,6 +1136,7 @@ const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminAlertsRoute: AuthenticatedAdminAlertsRoute,
   AuthenticatedAdminAuditRoute: AuthenticatedAdminAuditRoute,
   AuthenticatedAdminAutomationsRoute: AuthenticatedAdminAutomationsRoute,
+  AuthenticatedAdminBlogRoute: AuthenticatedAdminBlogRoute,
   AuthenticatedAdminHealthRoute: AuthenticatedAdminHealthRoute,
   AuthenticatedAdminInquiriesRoute: AuthenticatedAdminInquiriesRoute,
   AuthenticatedAdminJobsRoute: AuthenticatedAdminJobsRoute,
@@ -1156,6 +1217,8 @@ const rootRouteChildren: RootRouteChildren = {
   ResetPasswordRoute: ResetPasswordRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   TermsRoute: TermsRoute,
+  BlogSlugRoute: BlogSlugRoute,
+  BlogIndexRoute: BlogIndexRoute,
   ApiPublicCronPublishDueRoute: ApiPublicCronPublishDueRoute,
   ApiPublicCronYoutubeCommentsRoute: ApiPublicCronYoutubeCommentsRoute,
   ApiPublicTTokenRoute: ApiPublicTTokenRoute,

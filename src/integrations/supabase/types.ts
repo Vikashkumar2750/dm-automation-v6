@@ -35,6 +35,24 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_usage_daily: {
+        Row: {
+          day: string
+          requests: number
+          user_id: string
+        }
+        Insert: {
+          day?: string
+          requests?: number
+          user_id: string
+        }
+        Update: {
+          day?: string
+          requests?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       automation_follow_gates: {
         Row: {
           attempts: number
@@ -1231,6 +1249,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      consume_ai_request: {
+        Args: { _limit: number; _user_id: string }
+        Returns: number
+      }
       current_user_has_org_role: {
         Args: {
           _org_id: string
