@@ -14,6 +14,27 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_assistant_usage: {
+        Row: {
+          created_at: string
+          feature: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          feature: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          feature?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       automation_follow_gates: {
         Row: {
           attempts: number
@@ -349,6 +370,107 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: true
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      blog_categories: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          slug: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          slug: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          slug?: string
+        }
+        Relationships: []
+      }
+      blog_posts: {
+        Row: {
+          author_name: string
+          canonical_url: string | null
+          category_id: string | null
+          content: string
+          cover_alt: string | null
+          cover_url: string | null
+          created_at: string
+          excerpt: string
+          faq: Json
+          focus_keyword: string | null
+          id: string
+          meta_description: string | null
+          noindex: boolean
+          published_at: string | null
+          seo_title: string | null
+          slug: string
+          status: string
+          tags: string[]
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          author_name?: string
+          canonical_url?: string | null
+          category_id?: string | null
+          content?: string
+          cover_alt?: string | null
+          cover_url?: string | null
+          created_at?: string
+          excerpt?: string
+          faq?: Json
+          focus_keyword?: string | null
+          id?: string
+          meta_description?: string | null
+          noindex?: boolean
+          published_at?: string | null
+          seo_title?: string | null
+          slug: string
+          status?: string
+          tags?: string[]
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          author_name?: string
+          canonical_url?: string | null
+          category_id?: string | null
+          content?: string
+          cover_alt?: string | null
+          cover_url?: string | null
+          created_at?: string
+          excerpt?: string
+          faq?: Json
+          focus_keyword?: string | null
+          id?: string
+          meta_description?: string | null
+          noindex?: boolean
+          published_at?: string | null
+          seo_title?: string | null
+          slug?: string
+          status?: string
+          tags?: string[]
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "blog_posts_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "blog_categories"
             referencedColumns: ["id"]
           },
         ]
