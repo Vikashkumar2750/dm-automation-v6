@@ -43,3 +43,12 @@ Real Meta + YouTube credentials are available when we reach OAuth phases.
 - [x] Multi-provider AI with automatic failover (multiple OpenRouter keys → NVIDIA → OpenAI → built-in)
 - [x] Secure super-admin AI provider panel (write-only keys, masked display, hourly spend cap, prompt-injection sanitising)
 - [x] Google Cloud / YouTube API verification guide (`docs/GOOGLE-YOUTUBE-VERIFICATION.md`)
+
+## Current: AI assistant + SEO/Blog plan
+- [x] Dashboard AI assistant uses Super admin AI keys (OpenRouter → NVIDIA → OpenAI → Lovable AI)
+- [x] SEO Phase 1 (part): robots.txt, sitemap.xml, llms.txt
+- [ ] SEO Phase 1 rest: JSON-LD on all public pages, canonical tags
+- [ ] Phase 2–3: public blog + super-admin blog editor with Rank Math-style score
+- [ ] Phase 4: AI blog assistant
+- [ ] Phase 5: starter draft articles
+- [ ] Phase 6: GA4/GTM/AdSense/Pixel/GSC/Bing settings + cookie banner
