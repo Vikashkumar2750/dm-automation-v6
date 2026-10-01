@@ -8,6 +8,7 @@ async function runModel<T>(
   system: string,
   schema: z.ZodType<T>,
   userId: string,
+  shape: string,
 ): Promise<T> {
   const { readAiProviders, generateWithFailover, sanitisePromptInput } = await import(
     "@/lib/ai-providers.server"
@@ -18,7 +19,7 @@ async function runModel<T>(
     // The dashboard assistant uses the same keys as YouTube replies,
     // independent of the YouTube on/off switch.
     config: { ...config, enabled: true, useLovableFallback: true, maxCallsPerHour: 40 },
-    system: `${system}\nRespond with ONLY a valid JSON object matching this shape, no markdown fences: ${describeShape(schema)}`,
+    system: `${system}\nRespond with ONLY a valid JSON object matching this shape, no markdown fences: ${shape}`,
     prompt: sanitisePromptInput(prompt, 3000),
     scope: `assistant:${userId}`,
     long: true,
@@ -36,10 +37,6 @@ async function runModel<T>(
   } catch {
     throw new Error("The AI reply was not in the expected format — please try again");
   }
-}
-
-function describeShape(schema: z.ZodType<unknown>): string {
-  return JSON.stringify(z.toJSONSchema(schema));
 }
 
 const optionsSchema = z.object({ options: z.array(z.string()) });
@@ -74,6 +71,7 @@ export const generateCaptions = createServerFn({ method: "POST" })
       "You are a social media copywriter. Write scroll-stopping captions that sound human, never corporate. Return exactly 3 captions in the options array.",
       optionsSchema,
       context.userId,
+      '{"options": ["string", "string", "string"]}',
     );
     return { options: result.options.slice(0, 3) };
   });
@@ -101,6 +99,7 @@ export const suggestReplies = createServerFn({ method: "POST" })
       "You write replies for a brand's Instagram and Facebook inbox. Keep each reply under 40 words, warm, specific and ready to send as-is. Return exactly 3 options in the options array.",
       optionsSchema,
       context.userId,
+      '{"options": ["string", "string", "string"]}',
     );
     return { options: result.options.slice(0, 3) };
   });
@@ -137,6 +136,7 @@ export const suggestAutomation = createServerFn({ method: "POST" })
       ].join("\n"),
       suggestedRule,
       context.userId,
+      '{"name": string, "trigger": "dm_received"|"comment_received", "matchType": "any"|"contains"|"exact"|"starts_with", "keywords": string[], "action": "reply_dm"|"comment_public_reply"|"comment_private_reply"|"hide_comment"|"set_status", "responseVariations": string[]}',
     );
     return {
       rule: {
