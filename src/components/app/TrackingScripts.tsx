@@ -17,7 +17,7 @@ function addScript(src: string, attrs: Record<string, string> = {}) {
 }
 
 function load(t: SeoTracking) {
-  const w = window as unknown as Record<string, any>;
+  const w = window as any;
   if (t.gtmId) {
     w.dataLayer = w.dataLayer || [];
     w.dataLayer.push({ "gtm.start": Date.now(), event: "gtm.js" });
