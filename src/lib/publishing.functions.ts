@@ -72,9 +72,10 @@ const postInput = z.object({
   caption: z.string().trim().max(2200),
   media: z.array(mediaRef).max(10),
   mediaType: z.enum(["image", "video"]),
-  postFormat: z.enum(["feed", "reel", "story", "carousel"]),
+  postFormat: z.enum(["feed", "reel", "story", "carousel", "trial_reel"]),
   scheduledAt: z.string().datetime().nullable(),
   status: z.enum(["draft", "scheduled"]),
+  alsoStory: z.boolean().optional().default(false),
 });
 
 export const savePost = createServerFn({ method: "POST" })
@@ -130,11 +131,15 @@ export const savePost = createServerFn({ method: "POST" })
     }
 
     const groupId = crypto.randomUUID();
+    const wantsStory = data.alsoStory && (data.postFormat === "feed" || data.postFormat === "reel" || data.postFormat === "trial_reel");
+    const useGroup = targets.length > 1 || wantsStory;
     const rows = targets.map((account) => ({
       ...base,
+      // Trial reels exist on Instagram only; other platforms get a normal reel.
+      post_format: data.postFormat === "trial_reel" && account.platform !== "instagram" ? "reel" : data.postFormat,
       social_account_id: account.id,
       platform: account.platform,
-      group_id: targets.length > 1 ? groupId : null,
+      group_id: useGroup ? groupId : null,
       created_by: context.userId,
     }));
 
@@ -143,7 +148,31 @@ export const savePost = createServerFn({ method: "POST" })
       .insert(rows)
       .select("id");
     if (error) throw new Error(error.message);
-    return { ids: ((created ?? []) as { id: string }[]).map((row) => row.id) };
+    const ids = ((created ?? []) as { id: string }[]).map((row) => row.id);
+
+    // Optional story copies: first media only, no caption (stories don't show captions).
+    let storyIds: string[] = [];
+    const storyTargets = targets.filter((a) => a.platform === "instagram" || a.platform === "facebook");
+    if (wantsStory && storyTargets.length > 0 && data.media.length > 0) {
+      const storyRows = storyTargets.map((account) => ({
+        ...base,
+        caption: "",
+        media_url: data.media[0]!,
+        media_urls: [data.media[0]!],
+        post_format: "story",
+        social_account_id: account.id,
+        platform: account.platform,
+        group_id: groupId,
+        created_by: context.userId,
+      }));
+      const { data: stories, error: storyError } = await context.supabase
+        .from("posts")
+        .insert(storyRows)
+        .select("id");
+      if (storyError) throw new Error(storyError.message);
+      storyIds = ((stories ?? []) as { id: string }[]).map((row) => row.id);
+    }
+    return { ids, storyIds };
   });
 
 export const deletePost = createServerFn({ method: "POST" })
