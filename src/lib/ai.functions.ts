@@ -3,6 +3,8 @@ import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
+const memoryUsage = new Map<string, number>();
+
 async function runModel<T>(
   prompt: string,
   system: string,
@@ -21,8 +23,17 @@ async function runModel<T>(
     _user_id: userId,
     _limit: limit,
   } as never);
-  if (quotaError) throw new Error("Could not check your AI limit — please try again");
-  if ((used as unknown as number) < 0) {
+  let remaining = used as unknown as number;
+  if (quotaError) {
+    // Usage table not available on this database yet — fall back to an in-memory daily count.
+    console.error("consume_ai_request failed", quotaError.message);
+    const day = new Date().toISOString().slice(0, 10);
+    const key = `${userId}:${day}`;
+    const count = (memoryUsage.get(key) ?? 0) + 1;
+    if (limit > 0 && count <= limit) memoryUsage.set(key, count);
+    remaining = limit > 0 && count <= limit ? limit - count : -1;
+  }
+  if (remaining < 0) {
     throw new Error(`You've used all ${limit} AI requests for today. The limit resets tomorrow.`);
   }
   const result = await generateWithFailover({
