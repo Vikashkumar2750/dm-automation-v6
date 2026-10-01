@@ -1,4 +1,4 @@
-CREATE TABLE public.support_inquiries (
+CREATE TABLE IF NOT EXISTS public.support_inquiries (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   name text NOT NULL,
   email text NOT NULL,
@@ -26,12 +26,14 @@ GRANT ALL ON public.support_inquiries TO service_role;
 
 ALTER TABLE public.support_inquiries ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Super admins can read support inquiries" ON public.support_inquiries;
 CREATE POLICY "Super admins can read support inquiries"
 ON public.support_inquiries
 FOR SELECT
 TO authenticated
 USING (public.current_user_has_platform_role('super_admin'));
 
+DROP POLICY IF EXISTS "Super admins can update support inquiries" ON public.support_inquiries;
 CREATE POLICY "Super admins can update support inquiries"
 ON public.support_inquiries
 FOR UPDATE
@@ -39,9 +41,10 @@ TO authenticated
 USING (public.current_user_has_platform_role('super_admin'))
 WITH CHECK (public.current_user_has_platform_role('super_admin'));
 
-CREATE INDEX support_inquiries_created_at_idx ON public.support_inquiries (created_at DESC);
-CREATE INDEX support_inquiries_status_created_at_idx ON public.support_inquiries (status, created_at DESC);
+CREATE INDEX IF NOT EXISTS support_inquiries_created_at_idx ON public.support_inquiries (created_at DESC);
+CREATE INDEX IF NOT EXISTS support_inquiries_status_created_at_idx ON public.support_inquiries (status, created_at DESC);
 
+DROP TRIGGER IF EXISTS support_inquiries_updated_at ON public.support_inquiries;
 CREATE TRIGGER support_inquiries_updated_at
 BEFORE UPDATE ON public.support_inquiries
 FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
