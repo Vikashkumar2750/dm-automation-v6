@@ -159,3 +159,30 @@ export const adminBlogAi = createServerFn({ method: "POST" })
     if (!result.text) throw new Error("AI could not complete this request — check AI keys in Settings");
     return { text: result.text.replace(/^```(?:markdown|md|json)?\s*|\s*```$/gi, "").trim() };
   });
+
+const IMAGE_TYPES: Record<string, string> = { "image/png": "png", "image/jpeg": "jpg", "image/webp": "webp", "image/gif": "gif" };
+
+/** Upload a blog image (≤5 MB) to the public blog-media library and return its URL. */
+export const adminUploadBlogImage = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ name: z.string().max(120), type: z.string(), base64: z.string().max(7_000_000) }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    await assertSuperAdmin(context);
+    const ext = IMAGE_TYPES[data.type];
+    if (!ext) throw new Error("Only PNG, JPG, WebP or GIF images are allowed");
+    const bytes = Buffer.from(data.base64, "base64");
+    if (bytes.byteLength > 5 * 1024 * 1024) throw new Error("Image must be under 5 MB");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const bucket = "blog-media";
+    const { data: existing } = await supabaseAdmin.storage.getBucket(bucket);
+    if (!existing) {
+      await supabaseAdmin.storage.createBucket(bucket, { public: true, fileSizeLimit: "5MB" });
+    }
+    const base = data.name.replace(/\.[^.]+$/, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 60) || "image";
+    const path = `${new Date().toISOString().slice(0, 7)}/${base}-${crypto.randomUUID().slice(0, 8)}.${ext}`;
+    const { error } = await supabaseAdmin.storage.from(bucket).upload(path, bytes, { contentType: data.type });
+    if (error) throw new Error(error.message);
+    return { url: supabaseAdmin.storage.from(bucket).getPublicUrl(path).data.publicUrl };
+  });

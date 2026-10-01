@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { Loader2, Plus, Sparkles, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
+import { MarkdownEditor, useBlogImageUpload } from "@/components/app/MarkdownEditor";
 import { PageHeader, Panel, StatusBadge } from "@/components/app/primitives";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -159,7 +160,7 @@ function AdminBlogPage() {
                   </Button>
                 ))}
               </div>
-              <div className="space-y-2"><Label>Article (Markdown)</Label><Textarea rows={22} className="font-mono text-sm" value={d.content} onChange={(e) => set("content", e.target.value)} /></div>
+              <div className="space-y-2"><Label>Article</Label><MarkdownEditor value={d.content} onChange={(v) => set("content", v)} /></div>
               <div className="space-y-2"><Label>Excerpt / summary</Label><Textarea rows={2} value={d.excerpt} onChange={(e) => set("excerpt", e.target.value)} /></div>
             </div>
           </Panel>
@@ -173,7 +174,7 @@ function AdminBlogPage() {
                 <p className="line-clamp-2 text-xs text-muted-foreground">{d.meta_description || d.excerpt}</p>
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2"><Label>Cover image URL</Label><Input value={d.cover_url ?? ""} onChange={(e) => set("cover_url", e.target.value)} placeholder="https://…" /></div>
+                <div className="space-y-2"><Label>Cover image</Label><div className="flex gap-2"><Input value={d.cover_url ?? ""} onChange={(e) => set("cover_url", e.target.value)} placeholder="https://…" /><CoverUpload onUrl={(u) => set("cover_url", u)} /></div></div>
                 <div className="space-y-2"><Label>Cover alt text</Label><Input value={d.cover_alt ?? ""} onChange={(e) => set("cover_alt", e.target.value)} /></div>
                 <div className="space-y-2"><Label>Tags (comma separated)</Label><Input value={d.tags.join(", ")} onChange={(e) => set("tags", e.target.value.split(",").map((t) => t.trim()).filter(Boolean))} /></div>
                 <div className="space-y-2"><Label>Canonical URL (optional)</Label><Input value={d.canonical_url ?? ""} onChange={(e) => set("canonical_url", e.target.value)} /></div>
@@ -200,5 +201,22 @@ function AdminBlogPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+function CoverUpload({ onUrl }: { onUrl: (url: string) => void }) {
+  const { upload, busy } = useBlogImageUpload();
+  return (
+    <Button asChild type="button" variant="outline" size="sm" className="h-9 shrink-0" disabled={busy}>
+      <label className="cursor-pointer">
+        {busy ? <Loader2 className="size-4 animate-spin" /> : "Upload"}
+        <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" className="hidden"
+          onChange={async (e) => {
+            const f = e.target.files?.[0]; e.target.value = "";
+            if (!f) return;
+            try { onUrl(await upload(f)); toast.success("Cover uploaded"); } catch (err) { toast.error(err instanceof Error ? err.message : "Upload failed"); }
+          }} />
+      </label>
+    </Button>
   );
 }
