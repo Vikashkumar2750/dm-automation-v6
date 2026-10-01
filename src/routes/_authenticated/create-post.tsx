@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
-import { Loader2, PenSquare, Plus, Send, Trash2 } from "lucide-react";
+import { Copy, Loader2, PenSquare, Plus, Send, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { AppShell } from "@/components/app/AppShell";
@@ -123,6 +123,11 @@ function CreatePostPage() {
     setOpen(true);
   };
 
+  const openDuplicate = (post: Post) => {
+    setDraft({ post, duplicate: true });
+    setOpen(true);
+  };
+
   return (
     <AppShell>
       <PageHeader
@@ -190,6 +195,15 @@ function CreatePostPage() {
                       <Send className="mr-1.5 size-3.5" /> Publish now
                     </Button>
                   )}
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => openDuplicate(post)}
+                    aria-label="Duplicate post"
+                    title="Duplicate"
+                  >
+                    <Copy className="size-4" />
+                  </Button>
                   <Button
                     size="icon"
                     variant="ghost"

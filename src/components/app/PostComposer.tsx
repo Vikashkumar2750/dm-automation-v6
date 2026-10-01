@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Loader2, Upload, X } from "lucide-react";
+import { CheckCircle2, Circle, Loader2, Upload, X, XCircle } from "lucide-react";
 import { toast } from "sonner";
 
 import { PlatformBadge } from "@/components/app/primitives";
@@ -31,15 +31,20 @@ import type { SocialAccountRow } from "@/lib/social";
 export type ComposerDraft = {
   post?: Post;
   scheduledAt?: string | null;
+  /** Open as a new copy of `post` instead of editing it. */
+  duplicate?: boolean;
 };
 
-type PostFormat = "feed" | "reel" | "story" | "carousel";
+type Progress = { id: string; label: string; state: "waiting" | "running" | "done" | "failed"; detail?: string };
+
+type PostFormat = "feed" | "reel" | "story" | "carousel" | "trial_reel";
 
 const formats: { value: PostFormat; label: string; hint: string }[] = [
   { value: "feed", label: "Feed post", hint: "One photo or video in the main feed" },
   { value: "carousel", label: "Carousel", hint: "2–10 photos swiped side to side" },
   { value: "reel", label: "Reel", hint: "Vertical video, also shared to the feed" },
-  { value: "story", label: "Story", hint: "Instagram story that disappears in 24h" },
+  { value: "story", label: "Story", hint: "Story that disappears in 24h (no caption shown)" },
+  { value: "trial_reel", label: "Trial reel (Instagram)", hint: "Shown to non-followers first, not on your profile grid. Share it to followers later from the Instagram app if it performs well." },
 ];
 
 /** Convert an ISO string to the value a datetime-local input expects (local time). */
@@ -113,6 +118,8 @@ export function PostComposer({
   const [link, setLink] = useState("");
   const [when, setWhen] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [alsoStory, setAlsoStory] = useState(false);
+  const [progress, setProgress] = useState<Progress[] | null>(null);
 
   // Instagram, Facebook and YouTube (video only) can publish.
   const publishable = accounts.filter(
@@ -128,6 +135,8 @@ export function PostComposer({
     setFormat(((post?.post_format as PostFormat) ?? "feed") || "feed");
     setWhen(toLocalInput(post?.scheduled_at ?? draft?.scheduledAt ?? null));
     setLink("");
+    setAlsoStory(false);
+    setProgress(null);
     setSelected(
       post?.social_account_id
         ? [post.social_account_id]
@@ -138,7 +147,8 @@ export function PostComposer({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, draft, accounts]);
 
-  const editing = Boolean(draft?.post);
+  const editing = Boolean(draft?.post) && !draft?.duplicate;
+  const storyEligible = !editing && (format === "feed" || format === "reel" || format === "trial_reel");
 
   function toggleAccount(id: string) {
     setSelected((current) =>
@@ -174,7 +184,7 @@ export function PostComposer({
       const status = mode === "draft" ? "draft" : "scheduled";
       const result = await save({
         data: {
-          ...(draft?.post ? { id: draft.post.id } : {}),
+          ...(editing && draft?.post ? { id: draft.post.id } : {}),
           organizationId,
           socialAccountIds: selected,
           caption,
@@ -188,17 +198,37 @@ export function PostComposer({
                 ? new Date(when).toISOString()
                 : null,
           status,
+          alsoStory: storyEligible && alsoStory,
         },
       });
+      const storyIds: string[] = "storyIds" in result ? (result.storyIds as string[]) : [];
+      const all = [...result.ids, ...storyIds];
       if (mode === "now") {
-        // Publish each platform separately so one failure never blocks the others.
-        const outcomes = await Promise.allSettled(
-          result.ids.map((id: string) => publish({ data: { id } })),
-        );
-        const failed = outcomes.filter((o) => o.status === "rejected").length;
-        if (failed > 0) throw new Error(`${failed} of ${result.ids.length} posts failed — see Calendar for details`);
+        const nameOf = (index: number) => {
+          const isStory = index >= result.ids.length;
+          const account = selectedAccounts[(isStory ? index - result.ids.length : index)];
+          return `${account?.name ?? "Account"} — ${isStory ? "Story" : formats.find((f) => f.value === format)?.label ?? "Post"}`;
+        };
+        const steps: Progress[] = all.map((id, index) => ({ id, label: nameOf(index), state: "waiting" }));
+        setProgress(steps);
+        const update = (id: string, patch: Partial<Progress>) =>
+          setProgress((current) => current?.map((step) => (step.id === id ? { ...step, ...patch } : step)) ?? null);
+        // Publish one by one (main post first, then story) so one failure never blocks the others.
+        let failed = 0;
+        for (const id of all) {
+          update(id, { state: "running" });
+          try {
+            await publish({ data: { id } });
+            update(id, { state: "done" });
+          } catch (error) {
+            failed += 1;
+            update(id, { state: "failed", detail: error instanceof Error ? error.message : "Failed" });
+          }
+        }
+        void queryClient.invalidateQueries({ queryKey: ["posts", organizationId] });
+        if (failed > 0) throw new Error(`${failed} of ${all.length} posts failed — see details above`);
       }
-      return result;
+      return { ids: all };
     },
     onSuccess: (result, status) => {
       const count = result.ids.length;
@@ -224,6 +254,8 @@ export function PostComposer({
       ),
   });
 
+  // Keep the same order the server used when creating rows.
+  const selectedAccounts = publishable.filter((a) => selected.includes(a.id));
   const igSelected = publishable.some(
     (a) => selected.includes(a.id) && a.platform === "instagram",
   );
@@ -233,7 +265,7 @@ export function PostComposer({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>{editing ? "Edit post" : "New post"}</DialogTitle>
+          <DialogTitle>{editing ? "Edit post" : draft?.duplicate ? "Duplicate post" : "New post"}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
@@ -381,6 +413,22 @@ export function PostComposer({
             </div>
           </div>
 
+          {storyEligible && (
+            <label className="flex cursor-pointer items-start gap-3 rounded-xl border p-3">
+              <Checkbox checked={alsoStory} onCheckedChange={(v) => setAlsoStory(v === true)} />
+              <span className="space-y-0.5">
+                <span className="block text-sm font-medium">Also publish to Story</span>
+                <span className="block text-xs text-muted-foreground">
+                  Instagram and Facebook only. Uses the first photo or video, without the caption. Best in 9:16, videos up to 60 seconds. Facebook stories take photos only.
+                </span>
+              </span>
+            </label>
+          )}
+
+          {format === "trial_reel" && mediaType !== "video" && (
+            <p className="text-xs text-warning">A trial reel needs a video.</p>
+          )}
+
           {igSelected && media.length === 0 && (
             <p className="text-xs text-warning">
               Instagram needs at least one photo or video — a text-only post will fail there.
@@ -397,6 +445,31 @@ export function PostComposer({
             />
           </div>
         </div>
+
+        {progress && (
+          <div className="space-y-2 rounded-xl border p-3">
+            <p className="text-sm font-medium">Publishing progress</p>
+            <ul className="space-y-1.5">
+              {progress.map((step) => (
+                <li key={step.id} className="flex items-start gap-2 text-sm">
+                  {step.state === "running" ? (
+                    <Loader2 className="mt-0.5 size-4 shrink-0 animate-spin text-primary" />
+                  ) : step.state === "done" ? (
+                    <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-success" />
+                  ) : step.state === "failed" ? (
+                    <XCircle className="mt-0.5 size-4 shrink-0 text-destructive" />
+                  ) : (
+                    <Circle className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+                  )}
+                  <span className="min-w-0">
+                    <span className="block truncate">{step.label}</span>
+                    {step.detail && <span className="block text-xs text-destructive">{step.detail}</span>}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         <DialogFooter className="gap-2">
           <Button variant="outline" disabled={disabled} onClick={() => mutation.mutate("draft")}>
