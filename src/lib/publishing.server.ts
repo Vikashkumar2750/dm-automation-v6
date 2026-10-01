@@ -186,6 +186,13 @@ export async function publishPost(
           body["media_type"] = "STORIES";
           if (isVideo) body["video_url"] = url;
           else body["image_url"] = url;
+        } else if (format === "trial_reel") {
+          // Trial reel: shown to non-followers first, not on the profile grid.
+          if (!isVideo) return fail("A trial reel needs a video");
+          body["media_type"] = "REELS";
+          body["video_url"] = url;
+          body["caption"] = post.caption;
+          body["trial_params"] = { graduation_strategy: "MANUAL" };
         } else if (format === "reel" || (isVideo && format === "feed")) {
           body["media_type"] = "REELS";
           body["video_url"] = url;
@@ -219,6 +226,24 @@ export async function publishPost(
     }
 
     // ---- Facebook Page ----
+    if (format === "story") {
+      if (media.length === 0) return fail("A story needs a photo");
+      if (isVideo) return fail("Facebook video stories aren't supported yet — use a photo for the Facebook story");
+      const photo = await graph(`${GRAPH}/${externalAccountId}/photos`, {
+        url: media[0],
+        published: false,
+        access_token: token,
+      });
+      if (!photo.ok) return fail(graphError(photo.data));
+      const story = await graph(`${GRAPH}/${externalAccountId}/photo_stories`, {
+        photo_id: String((photo.data as { id?: string }).id ?? ""),
+        access_token: token,
+      });
+      if (!story.ok) return fail(graphError(story.data));
+      const raw = story.data as { post_id?: string; id?: string };
+      return succeed(String(raw.post_id ?? raw.id ?? ""), null);
+    }
+
     if (media.length === 0) {
       const result = await graph(`${GRAPH}/${externalAccountId}/feed`, {
         message: post.caption,
