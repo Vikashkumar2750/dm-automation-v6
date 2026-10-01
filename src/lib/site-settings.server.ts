@@ -44,7 +44,7 @@ export function cleanTracking(raw: unknown): SeoTracking {
     const value = typeof input[key] === "string" ? (input[key] as string).trim() : "";
     out[key] = TRACKING_PATTERNS[key].test(value) ? value : "";
   }
-  out.requireConsent = input.requireConsent !== false;
+  out.requireConsent = input["requireConsent"] !== false;
   return out;
 }
 
