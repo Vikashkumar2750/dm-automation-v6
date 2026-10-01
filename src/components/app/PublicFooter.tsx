@@ -35,8 +35,6 @@ export function PublicFooter() {
           </FooterGroup>
           <FooterGroup title="Support">
             <Link to="/contact">Contact &amp; Support</Link>
-          </li>
-          <li>
             <Link to="/blog">Blog</Link>
             <Link to="/data-deletion">Data Deletion</Link>
             <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>
