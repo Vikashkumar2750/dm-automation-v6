@@ -531,6 +531,66 @@ export type Database = {
           },
         ]
       }
+      conversation_insights: {
+        Row: {
+          confidence: number
+          conversation_id: string | null
+          created_at: string
+          decision: string
+          id: string
+          intent: string
+          lead_score: number
+          message_text: string
+          organization_id: string
+          provider: string | null
+          reply_text: string | null
+          sentiment: string
+        }
+        Insert: {
+          confidence?: number
+          conversation_id?: string | null
+          created_at?: string
+          decision?: string
+          id?: string
+          intent?: string
+          lead_score?: number
+          message_text?: string
+          organization_id: string
+          provider?: string | null
+          reply_text?: string | null
+          sentiment?: string
+        }
+        Update: {
+          confidence?: number
+          conversation_id?: string | null
+          created_at?: string
+          decision?: string
+          id?: string
+          intent?: string
+          lead_score?: number
+          message_text?: string
+          organization_id?: string
+          provider?: string | null
+          reply_text?: string | null
+          sentiment?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversation_insights_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversation_insights_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       conversations: {
         Row: {
           channel: string
