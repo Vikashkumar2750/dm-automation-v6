@@ -1,0 +1,36 @@
+import { describe, expect, it } from "vitest";
+import { runFlowDry, sanitizeFlows, validateFlow, type Flow } from "./flows";
+
+const base: Flow = {
+  id: "f1", name: "Price flow", active: true, platform: "both", trigger: "new_comment", updatedAt: "",
+  steps: [
+    { id: "a", kind: "condition", check: "contains", value: "price, cost" },
+    { id: "b", kind: "public_reply", text: "Sent you a DM" },
+    { id: "c", kind: "send_dm", text: "Here is the price" },
+  ],
+};
+
+describe("flows", () => {
+  it("runs actions when keyword matches", () => {
+    const r = runFlowDry(base, { text: "What is the PRICE?", isFollower: null, platform: "instagram", trigger: "new_comment" });
+    expect(r.actions.map((a) => a.kind)).toEqual(["Public reply", "DM"]);
+  });
+  it("stops at failed condition", () => {
+    const r = runFlowDry(base, { text: "nice", isFollower: null, platform: "instagram", trigger: "new_comment" });
+    expect(r.stoppedAt).toBe(0);
+    expect(r.actions).toHaveLength(0);
+  });
+  it("ignores other triggers", () => {
+    expect(runFlowDry(base, { text: "price", isFollower: null, platform: "facebook", trigger: "new_dm" }).matched).toBe(false);
+  });
+  it("sanitizes junk and drops http buttons", () => {
+    const f = sanitizeFlows([{ name: "x", steps: [{ kind: "send_dm", text: "hi", buttonTitle: "Go", buttonUrl: "http://x" }, { kind: "evil" }] }])[0]!;
+    expect(f.steps).toHaveLength(1);
+    expect(f.steps[0]).not.toHaveProperty("buttonUrl");
+    expect(f.active).toBe(false);
+  });
+  it("blocks public reply on DM trigger", () => {
+    expect(validateFlow({ ...base, trigger: "new_dm" }).length).toBeGreaterThan(0);
+    expect(validateFlow(base)).toEqual([]);
+  });
+});

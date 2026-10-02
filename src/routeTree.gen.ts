@@ -55,6 +55,7 @@ import { Route as AuthenticatedAdminSettingsRouteImport } from './routes/_authen
 import { Route as AuthenticatedAdminUsersRouteImport } from './routes/_authenticated/admin.users'
 import { Route as AuthenticatedAdminWebhooksRouteImport } from './routes/_authenticated/admin.webhooks'
 import { Route as AuthenticatedAutomationsActivityRouteImport } from './routes/_authenticated/automations_.activity'
+import { Route as AuthenticatedAutomationsFlowsRouteImport } from './routes/_authenticated/automations_.flows'
 import { Route as AuthenticatedAutomationsSimulatorRouteImport } from './routes/_authenticated/automations_.simulator'
 import { Route as AuthenticatedInviteTokenRouteImport } from './routes/_authenticated/invite.$token'
 import { Route as AuthenticatedAdminOrgOrgIdRouteImport } from './routes/_authenticated/admin.org.$orgId'
@@ -308,6 +309,12 @@ const AuthenticatedAutomationsActivityRoute =
     path: '/automations/activity',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedAutomationsFlowsRoute =
+  AuthenticatedAutomationsFlowsRouteImport.update({
+    id: '/automations_/flows',
+    path: '/automations/flows',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedAutomationsSimulatorRoute =
   AuthenticatedAutomationsSimulatorRouteImport.update({
     id: '/automations_/simulator',
@@ -405,6 +412,7 @@ export interface FileRoutesByFullPath {
   '/admin/users': typeof AuthenticatedAdminUsersRoute
   '/admin/webhooks': typeof AuthenticatedAdminWebhooksRoute
   '/automations/activity': typeof AuthenticatedAutomationsActivityRoute
+  '/automations/flows': typeof AuthenticatedAutomationsFlowsRoute
   '/automations/simulator': typeof AuthenticatedAutomationsSimulatorRoute
   '/invite/$token': typeof AuthenticatedInviteTokenRoute
   '/admin/': typeof AuthenticatedAdminIndexRoute
@@ -460,6 +468,7 @@ export interface FileRoutesByTo {
   '/admin/users': typeof AuthenticatedAdminUsersRoute
   '/admin/webhooks': typeof AuthenticatedAdminWebhooksRoute
   '/automations/activity': typeof AuthenticatedAutomationsActivityRoute
+  '/automations/flows': typeof AuthenticatedAutomationsFlowsRoute
   '/automations/simulator': typeof AuthenticatedAutomationsSimulatorRoute
   '/invite/$token': typeof AuthenticatedInviteTokenRoute
   '/admin': typeof AuthenticatedAdminIndexRoute
@@ -518,6 +527,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/users': typeof AuthenticatedAdminUsersRoute
   '/_authenticated/admin/webhooks': typeof AuthenticatedAdminWebhooksRoute
   '/_authenticated/automations_/activity': typeof AuthenticatedAutomationsActivityRoute
+  '/_authenticated/automations_/flows': typeof AuthenticatedAutomationsFlowsRoute
   '/_authenticated/automations_/simulator': typeof AuthenticatedAutomationsSimulatorRoute
   '/_authenticated/invite/$token': typeof AuthenticatedInviteTokenRoute
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
@@ -576,6 +586,7 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/admin/webhooks'
     | '/automations/activity'
+    | '/automations/flows'
     | '/automations/simulator'
     | '/invite/$token'
     | '/admin/'
@@ -631,6 +642,7 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/admin/webhooks'
     | '/automations/activity'
+    | '/automations/flows'
     | '/automations/simulator'
     | '/invite/$token'
     | '/admin'
@@ -688,6 +700,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/users'
     | '/_authenticated/admin/webhooks'
     | '/_authenticated/automations_/activity'
+    | '/_authenticated/automations_/flows'
     | '/_authenticated/automations_/simulator'
     | '/_authenticated/invite/$token'
     | '/_authenticated/admin/'
@@ -1046,6 +1059,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAutomationsActivityRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/automations_/flows': {
+      id: '/_authenticated/automations_/flows'
+      path: '/automations/flows'
+      fullPath: '/automations/flows'
+      preLoaderRoute: typeof AuthenticatedAutomationsFlowsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/automations_/simulator': {
       id: '/_authenticated/automations_/simulator'
       path: '/automations/simulator'
@@ -1171,6 +1191,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedTeamRoute: typeof AuthenticatedTeamRoute
   AuthenticatedUsageRoute: typeof AuthenticatedUsageRoute
   AuthenticatedAutomationsActivityRoute: typeof AuthenticatedAutomationsActivityRoute
+  AuthenticatedAutomationsFlowsRoute: typeof AuthenticatedAutomationsFlowsRoute
   AuthenticatedAutomationsSimulatorRoute: typeof AuthenticatedAutomationsSimulatorRoute
   AuthenticatedInviteTokenRoute: typeof AuthenticatedInviteTokenRoute
   AuthenticatedAutomationsActivityRunIdRoute: typeof AuthenticatedAutomationsActivityRunIdRoute
@@ -1194,6 +1215,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedTeamRoute: AuthenticatedTeamRoute,
   AuthenticatedUsageRoute: AuthenticatedUsageRoute,
   AuthenticatedAutomationsActivityRoute: AuthenticatedAutomationsActivityRoute,
+  AuthenticatedAutomationsFlowsRoute: AuthenticatedAutomationsFlowsRoute,
   AuthenticatedAutomationsSimulatorRoute:
     AuthenticatedAutomationsSimulatorRoute,
   AuthenticatedInviteTokenRoute: AuthenticatedInviteTokenRoute,

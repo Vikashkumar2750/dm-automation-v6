@@ -48,6 +48,7 @@ import {
 } from "@/lib/automations.functions";
 import { getSimulatorAccess } from "@/lib/simulation.functions";
 import { getEntryConfig } from "@/lib/entry-points.functions";
+import { getFlows } from "@/lib/flows.functions";
 
 
 export const Route = createFileRoute("/_authenticated/automations")({
@@ -343,6 +344,13 @@ function AutomationsPage() {
     refetchInterval: 20000,
     queryFn: () => fetchRuns({ data: { organizationId: orgId! } }),
   });
+  const fetchFlowsInfo = useServerFn(getFlows);
+  const flowsQuery = useQuery({
+    queryKey: ["flows", orgId],
+    enabled: !!orgId,
+    retry: false,
+    queryFn: () => fetchFlowsInfo({ data: { organizationId: orgId! } }),
+  });
   const simulatorAccess = useQuery({
     queryKey: ["simulator-access", orgId],
     enabled: Boolean(orgId),
@@ -451,6 +459,11 @@ function AutomationsPage() {
         description="Keyword rules that reply to DMs and comments automatically, with cooldowns and daily caps."
         actions={
           <div className="flex gap-2">
+            {flowsQuery.data?.enabled && (
+              <Button asChild variant="outline">
+                <Link to="/automations/flows">Flow builder</Link>
+              </Button>
+            )}
             {simulatorAccess.data?.allowed && (
               <Button asChild variant="outline">
                 <Link to="/automations/simulator">Test console</Link>

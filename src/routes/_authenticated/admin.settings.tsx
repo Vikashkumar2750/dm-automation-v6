@@ -11,6 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { EmailAndResetPanels } from "@/components/app/PlatformConfigPanels";
 import { AiProvidersPanel } from "@/components/app/AiProvidersPanel";
 import { EntryPointsAdminPanel } from "@/components/app/EntryPointsPanels";
+import { FlowsAdminPanel } from "@/components/app/FlowsAdminPanel";
 import { SiteSettingsPanel } from "@/components/app/SiteSettingsPanel";
 import { getPlatformSettings, updatePlatformSettings } from "@/lib/admin.functions";
 
@@ -144,6 +145,7 @@ function SystemSettingsPage() {
 
       <AiProvidersPanel />
       <EntryPointsAdminPanel />
+      <FlowsAdminPanel />
 
       <SiteSettingsPanel />
 
