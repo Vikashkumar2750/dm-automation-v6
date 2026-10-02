@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { ArrowDown, ArrowUp, GitBranch, Plus, Trash2, Zap } from "lucide-react";
+import { ArrowDown, ArrowUp, GitBranch, GripVertical, Plus, Trash2, Zap } from "lucide-react";
 
 import { AppShell } from "@/components/app/AppShell";
 import { EmptyState, PageHeader, Panel, StatusBadge } from "@/components/app/primitives";
@@ -13,7 +13,7 @@ import { Switch } from "@/components/ui/switch";
 import { useTenant } from "@/hooks/useTenant";
 import { getFlows, saveFlows } from "@/lib/flows.functions";
 import {
-  MAX_FLOWS, MAX_STEPS, TRIGGER_LABELS, newStepId, runFlowDry, validateFlow,
+  MAX_FLOWS, MAX_STEPS, TRIGGER_LABELS, moveStep, newStepId, runFlowDry, validateFlow,
   type Flow, type FlowStep, type FlowTrigger,
 } from "@/lib/flows";
 
@@ -55,6 +55,8 @@ function FlowsPage() {
   });
   const [flows, setFlows] = useState<Flow[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
+  const [dragFrom, setDragFrom] = useState<number | null>(null);
+  const [dragOver, setDragOver] = useState<number | null>(null);
   useEffect(() => {
     if (q.data) {
       setFlows(q.data.flows);
@@ -112,7 +114,9 @@ function FlowsPage() {
         }
       />
       <div className="rounded-lg border border-border bg-muted/40 p-3 text-sm text-muted-foreground">
-        Test mode: flows are designed and tested here only. They do not send real messages yet.
+        {q.data?.live
+          ? "Live: active flows send real messages. Keyword rules run first; a flow only acts when no rule replied. Safety limits and quiet hours apply."
+          : "Test mode: flows are designed and tested here only. They do not send real messages until Super Admin turns on live sending."}
       </div>
       <div className="mt-4 grid gap-4 lg:grid-cols-[260px_1fr_320px]">
         <Panel title="Flows" action={<Button size="sm" variant="outline" onClick={addFlow} disabled={flows.length >= MAX_FLOWS}><Plus className="size-4" /></Button>}>
@@ -165,7 +169,20 @@ function FlowsPage() {
             </div>
 
             {flow.steps.map((s, i) => (
-              <div key={s.id}>
+              <div
+                key={s.id}
+                draggable
+                onDragStart={(e) => { setDragFrom(i); e.dataTransfer.effectAllowed = "move"; }}
+                onDragOver={(e) => { e.preventDefault(); setDragOver(i); }}
+                onDragLeave={() => setDragOver((d) => (d === i ? null : d))}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  if (dragFrom !== null) setSteps(moveStep(flow.steps, dragFrom, i));
+                  setDragFrom(null); setDragOver(null);
+                }}
+                onDragEnd={() => { setDragFrom(null); setDragOver(null); }}
+                className={`${dragFrom === i ? "opacity-50" : ""} ${dragOver === i && dragFrom !== i ? "rounded-xl ring-2 ring-primary" : ""}`}
+              >
                 <div className="mx-auto h-4 w-px bg-border" />
                 <StepCard
                   step={s}
@@ -214,7 +231,8 @@ function StepCard({ step, index, onChange, onRemove, onMove }: {
   return (
     <div className={`rounded-xl border bg-card p-4 ${isCond ? "border-warning/50" : "border-border"}`}>
       <div className="flex items-center justify-between">
-        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        <p className="flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          <GripVertical className="size-4 cursor-grab" aria-label="Drag to reorder" />
           {index + 1}. {isCond ? "Condition" : step.kind === "send_dm" ? "Send DM" : step.kind === "public_reply" ? "Public reply" : step.kind === "wait" ? "Wait" : "Tag"}
         </p>
         <div className="flex">
@@ -290,7 +308,7 @@ function TestPanel({ flow }: { flow: Flow }) {
           </div>
         ))}
         {r.stoppedAt !== null && <p className="text-muted-foreground">Stopped at step {r.stoppedAt + 1} (condition not met).</p>}
-        <p className="pt-2 text-xs text-muted-foreground">Preview only — nothing is sent.</p>
+        <p className="pt-2 text-xs text-muted-foreground">Preview only — this box never sends anything.</p>
       </div>
     </Panel>
   );

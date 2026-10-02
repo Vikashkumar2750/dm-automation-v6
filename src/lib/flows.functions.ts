@@ -37,17 +37,26 @@ export const getFlowsFlags = createServerFn({ method: "GET" })
     return {
       enabled: flags["flows_enabled"] === true,
       orgs: Array.isArray(flags["flows_orgs"]) ? (flags["flows_orgs"] as string[]) : [],
+      live: flags["flows_live_enabled"] === true,
+      liveOrgs: Array.isArray(flags["flows_live_orgs"]) ? (flags["flows_live_orgs"] as string[]) : [],
     };
   });
 
 export const saveFlowsFlags = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ enabled: z.boolean(), orgs: z.array(z.string().uuid()).max(500) }).parse(d))
+  .inputValidator((d: unknown) => z.object({
+    enabled: z.boolean(),
+    orgs: z.array(z.string().uuid()).max(500),
+    live: z.boolean().default(false),
+    liveOrgs: z.array(z.string().uuid()).max(500).default([]),
+  }).parse(d))
   .handler(async ({ data, context }) => {
     await assertSuper(context as Ctx);
     const { supabaseAdmin, flags } = await readFlags();
     flags["flows_enabled"] = data.enabled;
     flags["flows_orgs"] = data.orgs;
+    flags["flows_live_enabled"] = data.live;
+    flags["flows_live_orgs"] = data.liveOrgs;
     const { error } = await supabaseAdmin.from("platform_settings").update({ feature_flags: flags as never }).eq("id", true);
     if (error) throw new Error(error.message);
     await supabaseAdmin.from("platform_audit_log").insert({
@@ -55,7 +64,7 @@ export const saveFlowsFlags = createServerFn({ method: "POST" })
       action: "platform.flows_updated",
       target_type: "platform",
       target_id: null,
-      detail: { enabled: data.enabled, orgs: data.orgs.length } as never,
+      detail: { enabled: data.enabled, orgs: data.orgs.length, live: data.live, liveOrgs: data.liveOrgs.length } as never,
     });
     return { ok: true };
   });
@@ -69,7 +78,8 @@ export const getFlows = createServerFn({ method: "GET" })
     await assertOrgRole(context as Ctx, data.organizationId, ["owner", "admin", "manager", "agent", "viewer"]);
     const { sanitizeFlows } = await import("@/lib/flows");
     const { flags } = await readFlags();
-    return { enabled: flowsActive(flags, data.organizationId), flows: sanitizeFlows(flags[flowsKey(data.organizationId)]) };
+    const { liveFlowsActive } = await import("@/lib/flows-runner.server");
+    return { enabled: flowsActive(flags, data.organizationId), live: liveFlowsActive(flags, data.organizationId), flows: sanitizeFlows(flags[flowsKey(data.organizationId)]) };
   });
 
 export const saveFlows = createServerFn({ method: "POST" })

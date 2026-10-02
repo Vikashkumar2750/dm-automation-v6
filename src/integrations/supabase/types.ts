@@ -493,6 +493,104 @@ export type Database = {
           },
         ]
       }
+      contact_tags: {
+        Row: {
+          created_at: string
+          external_user_id: string
+          id: string
+          organization_id: string
+          platform: string
+          source: string
+          tag: string
+        }
+        Insert: {
+          created_at?: string
+          external_user_id: string
+          id?: string
+          organization_id: string
+          platform: string
+          source?: string
+          tag: string
+        }
+        Update: {
+          created_at?: string
+          external_user_id?: string
+          id?: string
+          organization_id?: string
+          platform?: string
+          source?: string
+          tag?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contact_tags_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      conversation_insights: {
+        Row: {
+          confidence: number
+          conversation_id: string | null
+          created_at: string
+          decision: string
+          id: string
+          intent: string
+          lead_score: number
+          message_text: string
+          organization_id: string
+          provider: string | null
+          reply_text: string | null
+          sentiment: string
+        }
+        Insert: {
+          confidence?: number
+          conversation_id?: string | null
+          created_at?: string
+          decision?: string
+          id?: string
+          intent?: string
+          lead_score?: number
+          message_text?: string
+          organization_id: string
+          provider?: string | null
+          reply_text?: string | null
+          sentiment?: string
+        }
+        Update: {
+          confidence?: number
+          conversation_id?: string | null
+          created_at?: string
+          decision?: string
+          id?: string
+          intent?: string
+          lead_score?: number
+          message_text?: string
+          organization_id?: string
+          provider?: string | null
+          reply_text?: string | null
+          sentiment?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversation_insights_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversation_insights_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       conversations: {
         Row: {
           channel: string
@@ -552,6 +650,66 @@ export type Database = {
             columns: ["social_account_id"]
             isOneToOne: false
             referencedRelation: "social_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      flow_runs: {
+        Row: {
+          conversation_id: string | null
+          created_at: string
+          detail: string | null
+          flow_id: string
+          flow_name: string
+          id: string
+          next_step: number
+          organization_id: string
+          resume_at: string
+          state: Json
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          conversation_id?: string | null
+          created_at?: string
+          detail?: string | null
+          flow_id: string
+          flow_name?: string
+          id?: string
+          next_step?: number
+          organization_id: string
+          resume_at?: string
+          state?: Json
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          conversation_id?: string | null
+          created_at?: string
+          detail?: string | null
+          flow_id?: string
+          flow_name?: string
+          id?: string
+          next_step?: number
+          organization_id?: string
+          resume_at?: string
+          state?: Json
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "flow_runs_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "flow_runs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]

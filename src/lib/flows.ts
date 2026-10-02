@@ -121,3 +121,18 @@ export function runFlowDry(flow: Flow, input: FlowInput): { matched: boolean; ac
   }
   return { matched: true, actions, stoppedAt: null };
 }
+
+/** Map an incoming event to the flow trigger it starts. */
+export function flowTriggerFor(channel: string, trigger?: string): FlowTrigger {
+  if (trigger === "story_reply" || trigger === "story_mention") return trigger;
+  return channel === "comment" ? "new_comment" : "new_dm";
+}
+
+/** Move one step from index `from` to index `to` (drag and drop). */
+export function moveStep<T>(steps: T[], from: number, to: number): T[] {
+  if (from === to || from < 0 || from >= steps.length || to < 0 || to >= steps.length) return steps;
+  const arr = [...steps];
+  const [s] = arr.splice(from, 1);
+  arr.splice(to, 0, s!);
+  return arr;
+}

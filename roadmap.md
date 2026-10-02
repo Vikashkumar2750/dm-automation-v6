@@ -55,6 +55,8 @@ Real Meta + YouTube credentials are available when we reach OAuth phases.
 - [x] AI assistant daily limit per user (default 5, super-admin setting)
 - [x] Roadmap Phase A: story reply/mention triggers, ice breakers, Messenger menu (flag off by default, not pushed)
 - [x] Roadmap Phase B: visual flow builder (design + test only, flag off by default, not pushed)
-- [ ] Phase B live sending (waits on user approval after Meta review)
+- [x] Phase B live sending (own Super Admin switch, off by default) + drag-and-drop steps
+- [x] Roadmap Phase C: AI agent (knowledge base, handoff, intent/sentiment/lead score; flag off, not pushed)
+- [ ] Railway DB: apply new tables flow_runs, contact_tags, conversation_insights (needs Railway deploy)
 - [ ] Next: Phase D CRM, then C, E, H, F, G, I
 - [ ] Final user guide covering all features (docs/USER-GUIDE.md, updated after each phase)

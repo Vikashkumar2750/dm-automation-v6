@@ -20,10 +20,26 @@
 3. Social Accounts → "Ice breakers & menu" → add up to 4 questions / 5 menu items → Save → "Sync to Meta".
 4. Answer ice breakers with normal "New DM" keyword rules matching the question text.
 
-## Phase B — Visual flow builder (off by default, test mode)
+## Phase B — Visual flow builder (off by default)
 1. Super Admin → System Settings → "Visual flow builder" → switch on → Save.
 2. Automations → "Flow builder" button.
 3. Click + → name it → pick trigger and platform.
-4. Add steps: conditions (contains keyword, is follower), Send DM (optional button link), Public reply, Wait, Add tag. Use arrows to reorder.
-5. Use "Try it" on the right to see what would happen. Nothing is sent yet.
+4. Add steps: conditions (contains keyword, is follower), Send DM (optional button link), Public reply, Wait, Add tag. Drag a step by its handle to reorder (arrows also work).
+5. Use "Try it" on the right to see what would happen — this box never sends.
 6. Save all. A flow can be marked Active only when it has no problems listed.
+7. Real sending: Super Admin → same panel → "Live sending for flows" → switch on (optionally only for listed workspace IDs) → Save.
+   - Keyword rules always run first. A flow acts only if no rule replied.
+   - Pause, quiet hours, hourly/daily caps, per-contact limit and opt-out words all apply.
+   - After a comment, the first DM goes as a private reply; later DMs only reach the person after they reply (Meta rule).
+   - Wait steps continue automatically every minute (Railway scheduler, needs CRON_SECRET).
+   - Tags are saved on the contact (used later by the contacts/CRM phase).
+
+## Phase C — AI agent for DMs (off by default)
+1. Super Admin → System Settings → "AI agent for DMs" → switch on (optionally only for listed workspace IDs) → Save. It uses the AI keys set in Super Admin.
+2. Automations → "AI agent" button.
+3. Turn on "Agent on". Choose "Reply automatically" (off = only labels messages).
+4. Set "How sure must the agent be?" (default 70%). Below this, the agent sends your handover message (optional) and marks the chat Open in the Inbox for your team.
+5. Add knowledge: FAQs, prices, timings, links, policies. "From my posts" adds your published post captions. The agent answers only from this.
+6. Use "Try it" to test an answer — nothing is sent. Press Save.
+7. "Recent AI decisions" shows each DM: reply / handoff / analyse only / ignore, plus intent, mood, lead score and how sure it was.
+- Only DMs, never comments. It replies only when no keyword rule or flow already handled the message. All safety limits apply. Intent is also saved as a tag on the contact.

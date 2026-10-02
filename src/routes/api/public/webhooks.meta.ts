@@ -367,6 +367,7 @@ async function ingestIntoInbox(
       }
     }
 
+    const flowsStartedAt = new Date(Date.now() - 1000).toISOString();
     await runAutomations(admin, {
       organizationId,
       conversationId: conversation.id,
@@ -381,6 +382,30 @@ async function ingestIntoInbox(
       ...(storyTrigger ? { trigger: storyTrigger } : {}),
     });
     trace("automation", "completed", "rules_evaluated");
+    // Phase B live flows: separate flags, off by default, never throws.
+    const { runLiveFlows } = await import("@/lib/flows-runner.server");
+    await runLiveFlows(admin, {
+      organizationId,
+      conversationId: conversation.id,
+      socialAccountId,
+      platform,
+      channel,
+      body,
+      externalUserId,
+      externalId,
+      ...(storyTrigger ? { trigger: storyTrigger } : {}),
+    }, flowsStartedAt);
+    // Phase C AI agent: own flags, off by default, DMs only, never throws.
+    const { runAiAgent } = await import("@/lib/ai-agent.server");
+    await runAiAgent(admin, {
+      organizationId,
+      conversationId: conversation.id,
+      socialAccountId,
+      platform,
+      channel,
+      body,
+      externalUserId,
+    }, flowsStartedAt);
   } catch (automationError) {
     console.error("automation run failed", automationError);
     throw automationError;

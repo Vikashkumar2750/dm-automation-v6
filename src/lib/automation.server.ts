@@ -1424,3 +1424,16 @@ async function callMessaging(
   }
   return last;
 }
+
+// Phase B live flows reuse the same safe sending helpers. Export-only: no
+// behaviour of the locked rule engine changes.
+export {
+  call as flowGraphCall,
+  callMessaging as flowCallMessaging,
+  buttonMessages as flowButtonMessages,
+  checkFollows as flowCheckFollows,
+  inQuietHours as flowInQuietHours,
+  hitsKeyword as flowHitsKeyword,
+  DEFAULT_SETTINGS as FLOW_DEFAULT_SETTINGS,
+};
+export type { Settings as FlowSafetySettings };

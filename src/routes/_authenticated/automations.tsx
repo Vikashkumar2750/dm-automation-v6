@@ -464,6 +464,9 @@ function AutomationsPage() {
                 <Link to="/automations/flows">Flow builder</Link>
               </Button>
             )}
+            <Button asChild variant="outline">
+              <Link to="/automations/ai-agent">AI agent</Link>
+            </Button>
             {simulatorAccess.data?.allowed && (
               <Button asChild variant="outline">
                 <Link to="/automations/simulator">Test console</Link>
