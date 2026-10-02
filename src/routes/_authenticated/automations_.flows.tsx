@@ -176,7 +176,7 @@ function FlowsPage() {
                     const arr = [...flow.steps];
                     const j = i + d;
                     if (j < 0 || j >= arr.length) return;
-                    [arr[i], arr[j]] = [arr[j], arr[i]];
+                    [arr[i], arr[j]] = [arr[j]!, arr[i]!];
                     setSteps(arr);
                   }}
                 />
