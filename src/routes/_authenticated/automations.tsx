@@ -47,6 +47,7 @@ import {
   type AutomationSettings,
 } from "@/lib/automations.functions";
 import { getSimulatorAccess } from "@/lib/simulation.functions";
+import { getEntryConfig } from "@/lib/entry-points.functions";
 
 
 export const Route = createFileRoute("/_authenticated/automations")({
@@ -320,6 +321,13 @@ function AutomationsPage() {
   const updateFn = useServerFn(updateAutomationRule);
   const deleteFn = useServerFn(deleteAutomationRule);
   const fetchSimulatorAccess = useServerFn(getSimulatorAccess);
+  const fetchEntryConfig = useServerFn(getEntryConfig);
+  const entryQuery = useQuery({
+    queryKey: ["entry-points", orgId],
+    queryFn: () => fetchEntryConfig({ data: { organizationId: orgId! } }),
+    enabled: !!orgId,
+  });
+  const entryPointsOn = entryQuery.data?.enabled === true;
 
   const [draft, setDraft] = useState<Draft | null>(null);
 
