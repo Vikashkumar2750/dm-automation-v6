@@ -67,7 +67,7 @@ export const Route = createFileRoute("/_authenticated/automations")({
   component: AutomationsPage,
 });
 
-type Trigger = "dm_received" | "comment_received";
+type Trigger = "dm_received" | "comment_received" | "story_reply" | "story_mention";
 type MatchType = "any" | "contains" | "exact" | "starts_with";
 type Action =
   | "reply_dm"
@@ -251,6 +251,8 @@ const YOUTUBE_MESSAGE_TEMPLATES: Array<{
 const triggerLabel: Record<Trigger, string> = {
   dm_received: "New DM",
   comment_received: "New comment",
+  story_reply: "Story reply (IG)",
+  story_mention: "Story mention (IG)",
 };
 
 const actionLabel: Record<Action, string> = {
@@ -670,6 +672,12 @@ function AutomationsPage() {
                         <SelectItem value="dm_received">New DM</SelectItem>
                       )}
                       <SelectItem value="comment_received">New comment</SelectItem>
+                      {draft.platform !== "youtube" && entryPointsOn && (
+                        <>
+                          <SelectItem value="story_reply">Story reply (Instagram)</SelectItem>
+                          <SelectItem value="story_mention">Story mention (Instagram)</SelectItem>
+                        </>
+                      )}
                     </SelectContent>
                   </Select>
                 </div>

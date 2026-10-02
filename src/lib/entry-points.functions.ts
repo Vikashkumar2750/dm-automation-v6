@@ -117,7 +117,7 @@ export const syncEntryConfig = createServerFn({ method: "POST" })
     const cfg = ep.sanitizeEntryConfig(flags[ep.entryConfigKey(data.organizationId)]);
     const { data: accounts } = await supabaseAdmin
       .from("social_accounts")
-      .select("id, platform, display_name, external_id")
+      .select("id, platform, name, external_id")
       .eq("organization_id", data.organizationId)
       .in("platform", ["instagram", "facebook"]);
 
@@ -130,7 +130,7 @@ export const syncEntryConfig = createServerFn({ method: "POST" })
         .eq("social_account_id", acc.id)
         .maybeSingle();
       const token = tok?.access_token as string | undefined;
-      const name = (acc.display_name as string | null) ?? platform;
+      const name = (acc.name as string | null) ?? platform;
       if (!token) {
         results.push({ account: name, platform, ok: false, error: "needs_reconnect" });
         continue;

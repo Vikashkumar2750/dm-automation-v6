@@ -11,7 +11,7 @@ export type AutomationRule = {
   is_active: boolean;
   priority: number;
   platform: "instagram" | "facebook" | "youtube" | null;
-  trigger: "dm_received" | "comment_received";
+  trigger: "dm_received" | "comment_received" | "story_reply" | "story_mention";
   match_type: "any" | "contains" | "exact" | "starts_with";
   keywords: string[];
   action:
@@ -55,7 +55,7 @@ const ruleInput = z.object({
   isActive: z.boolean(),
   priority: z.number().int().min(1).max(999),
   platform: z.enum(["instagram", "facebook", "youtube"]).nullable(),
-  trigger: z.enum(["dm_received", "comment_received"]),
+  trigger: z.enum(["dm_received", "comment_received", "story_reply", "story_mention"]),
   matchType: z.enum(["any", "contains", "exact", "starts_with"]),
   keywords: z.array(z.string().trim().min(1).max(60)).max(20),
   action: z.enum([
