@@ -9,6 +9,7 @@ import { AppShell } from "@/components/app/AppShell";
 import { PageHeader, Panel, PlatformBadge, StatusBadge, EmptyState } from "@/components/app/primitives";
 import { Button } from "@/components/ui/button";
 import { useTenant } from "@/hooks/useTenant";
+import { EntryPointsCard } from "@/components/app/EntryPointsPanels";
 import { platformMeta, type SocialPlatform } from "@/lib/social";
 import {
   checkWebhookDelivery,
@@ -436,6 +437,11 @@ function SocialAccountsPage() {
           </ul>
         )}
       </Panel>
+      {orgId && (
+        <div className="mt-6">
+          <EntryPointsCard organizationId={orgId} />
+        </div>
+      )}
     </AppShell>
   );
 }
