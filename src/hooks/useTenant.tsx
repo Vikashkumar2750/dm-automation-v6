@@ -15,6 +15,9 @@ export type Organization = {
   brandName: string | null;
   logoUrl: string | null;
   brandColor: string | null;
+  planKey: string;
+  planExpiresAt: string | null;
+  createdAt: string | null;
 };
 
 const ACTIVE_ORG_KEY = "dmfiy.active_org";
@@ -106,7 +109,7 @@ export function useTenant() {
     queryFn: async (): Promise<Organization[]> => {
       const { data } = await supabase
         .from("organization_members")
-        .select("role, organizations(id, name, slug, plan, brand_name, logo_url, brand_color)")
+        .select("role, organizations(id, name, slug, plan, plan_expires_at, created_at, brand_name, logo_url, brand_color)")
         .eq("user_id", user!.id);
 
       return (data ?? [])
@@ -120,6 +123,9 @@ export function useTenant() {
           brandName: row.organizations!.brand_name,
           logoUrl: row.organizations!.logo_url,
           brandColor: row.organizations!.brand_color,
+          planKey: row.organizations!.plan,
+          planExpiresAt: row.organizations!.plan_expires_at,
+          createdAt: row.organizations!.created_at,
         }));
     },
   });
