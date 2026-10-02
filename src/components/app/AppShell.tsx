@@ -1,3 +1,4 @@
+import { trialEndsAt } from "@/lib/trial";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -296,8 +297,31 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       <div className="lg:pl-64">
         <TopBar onMenu={() => setMobileOpen(true)} />
+        <TrialBanner />
         <main className="p-4 lg:p-6">{children}</main>
       </div>
+    </div>
+  );
+}
+
+function TrialBanner() {
+  const { activeOrg } = useTenant();
+  if (!activeOrg) return null;
+  const end = trialEndsAt(activeOrg.planKey, activeOrg.planExpiresAt, activeOrg.createdAt);
+  if (!end) return null;
+  const msLeft = end.getTime() - Date.now();
+  if (msLeft > 864e5) return null;
+  const expired = msLeft <= 0;
+  return (
+    <div className={`flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3 text-sm lg:px-6 ${expired ? "bg-destructive/10 text-destructive" : "bg-warning/10"}`}>
+      <p>
+        {expired
+          ? "Your 3-day free trial has ended. New automations are paused. Conversations already in progress will still finish."
+          : `Your free trial ends in ${Math.max(1, Math.ceil(msLeft / 36e5))} hours. Upgrade to keep your automations running.`}
+      </p>
+      <Button size="sm" asChild>
+        <Link to="/billing">{expired ? "Upgrade now" : "View plans"}</Link>
+      </Button>
     </div>
   );
 }

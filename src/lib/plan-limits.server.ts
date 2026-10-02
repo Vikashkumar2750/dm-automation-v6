@@ -10,19 +10,25 @@ export type ResolvedLimits = PlanLimits & { plan: string; overridden: boolean };
 /** Effective plan limits for a workspace: super-admin override > plan catalogue > defaults. null = unlimited. */
 export async function resolveOrgLimits(admin: AdminClient, orgId: string): Promise<ResolvedLimits> {
   const [{ data: org }, config, { data: ps }] = await Promise.all([
-    admin.from("organizations").select("plan, plan_expires_at").eq("id", orgId).maybeSingle(),
+    admin.from("organizations").select("plan, plan_expires_at, created_at").eq("id", orgId).maybeSingle(),
     readPlatformConfig(admin),
     admin.from("platform_settings").select("feature_flags").eq("id", true).maybeSingle(),
   ]);
   let plan = (org?.plan as string | undefined) ?? "starter";
   const expires = org?.plan_expires_at as string | null | undefined;
   if (plan !== "starter" && plan !== "agency" && expires && new Date(expires) < new Date()) plan = "starter";
+  // Expired free trial: no new automated flows (mid-flow contacts are still finished by the caller).
+  const { isTrialExpired } = await import("@/lib/trial");
+  const trialOver = isTrialExpired(plan, plan === "starter" ? expires : null, org?.created_at as string | undefined);
   const base =
     config.plans.find((p) => p.key === plan)?.limits ??
     DEFAULT_PLAN_LIMITS[plan as keyof typeof DEFAULT_PLAN_LIMITS] ??
     DEFAULT_PLAN_LIMITS.starter;
   const flags = (ps?.feature_flags ?? {}) as Record<string, unknown>;
   const ov = flags[overrideKey(orgId)] as Partial<PlanLimits> | undefined;
+  if (trialOver && !(ov && typeof ov === "object")) {
+    return { plan, overridden: false, monthlyDms: 0, maxRules: 0 };
+  }
   if (ov && typeof ov === "object") {
     return {
       plan,
