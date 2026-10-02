@@ -105,7 +105,7 @@ export function runFlowDry(flow: Flow, input: FlowInput): { matched: boolean; ac
   const actions: FlowOutcome[] = [];
   const text = input.text.toLowerCase();
   for (let i = 0; i < flow.steps.length; i++) {
-    const s = flow.steps[i];
+    const s = flow.steps[i]!;
     if (s.kind === "condition") {
       const ok =
         s.check === "contains"
