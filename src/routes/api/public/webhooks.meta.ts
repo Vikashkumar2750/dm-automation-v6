@@ -223,6 +223,8 @@ async function ingestIntoInbox(
   let sentAt = new Date();
   let postExternalId: string | null = null;
   let followPayload: string | null = null;
+  // Phase A (flagged, off by default): story reply / mention entry points.
+  let storyTrigger: "story_reply" | "story_mention" | null = null;
 
   if (isMessagingEventType(type)) {
     const m = normalizeMessagingEvent(value) as MessagingEvent;
@@ -241,6 +243,20 @@ async function ingestIntoInbox(
     // must not be used as the inbound id or the tap is dropped as a duplicate.
     externalId = content.externalId;
     if (m.timestamp) sentAt = new Date(m.timestamp);
+
+    const { detectStoryEvent, entryPointsEnabled, hasActiveTriggerRule } = await import(
+      "@/lib/entry-points.server"
+    );
+    const storyKind = detectStoryEvent(value) ?? detectStoryEvent(m);
+    if (
+      storyKind &&
+      (await entryPointsEnabled(admin, organizationId)) &&
+      (await hasActiveTriggerRule(admin, organizationId, storyKind))
+    ) {
+      storyTrigger = storyKind;
+      if (!body) body = storyKind === "story_mention" ? "[story mention]" : "[story reply]";
+      trace("entry_point", "matched", storyKind);
+    }
 
     const gateId = followGateId(followPayload);
     trace("button_payload", gateId ? "matched" : "missing", gateId ? "follow_gate_id_found" : "no_follow_gate_payload");
@@ -333,7 +349,7 @@ async function ingestIntoInbox(
 
     // Resolve both payload-bearing buttons and Instagram's text-only quick
     // reply delivery before trying ordinary DM keyword rules.
-    if (followPayload || body) {
+    if (!storyTrigger && (followPayload || body)) {
       const handled = await handleFollowGateReply(admin, {
         organizationId,
         conversationId: conversation.id,
@@ -362,6 +378,7 @@ async function ingestIntoInbox(
       externalId,
       postExternalId,
       correlationId: args.correlationId,
+      ...(storyTrigger ? { trigger: storyTrigger } : {}),
     });
     trace("automation", "completed", "rules_evaluated");
   } catch (automationError) {

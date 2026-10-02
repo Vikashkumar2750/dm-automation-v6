@@ -41,6 +41,8 @@ export type AutomationContext = {
   /** Post/media id the comment belongs to (comment channel only). */
   postExternalId?: string | null;
   correlationId?: string;
+  /** Phase A only: explicit trigger (story_reply / story_mention). */
+  trigger?: string;
 };
 
 type Rule = {
@@ -194,7 +196,7 @@ async function log(
 }
 
 export async function runAutomations(admin: AdminClient, ctx: AutomationContext) {
-  const trigger = ctx.channel === "comment" ? "comment_received" : "dm_received";
+  const trigger = ctx.trigger ?? (ctx.channel === "comment" ? "comment_received" : "dm_received");
 
   // Platform-wide kill switch controlled from the operations console.
   const { data: platform } = await admin
