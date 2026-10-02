@@ -1282,7 +1282,11 @@ export type Database = {
         | "set_status"
       automation_match: "any" | "contains" | "exact" | "starts_with"
       automation_run_status: "matched" | "sent" | "skipped" | "failed"
-      automation_trigger: "dm_received" | "comment_received"
+      automation_trigger:
+        | "dm_received"
+        | "comment_received"
+        | "story_reply"
+        | "story_mention"
       conversation_status: "open" | "pending" | "resolved"
       message_direction: "inbound" | "outbound"
       org_role: "owner" | "admin" | "manager" | "agent" | "viewer"
@@ -1427,7 +1431,12 @@ export const Constants = {
       ],
       automation_match: ["any", "contains", "exact", "starts_with"],
       automation_run_status: ["matched", "sent", "skipped", "failed"],
-      automation_trigger: ["dm_received", "comment_received"],
+      automation_trigger: [
+        "dm_received",
+        "comment_received",
+        "story_reply",
+        "story_mention",
+      ],
       conversation_status: ["open", "pending", "resolved"],
       message_direction: ["inbound", "outbound"],
       org_role: ["owner", "admin", "manager", "agent", "viewer"],
