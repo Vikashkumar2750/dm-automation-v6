@@ -39,7 +39,7 @@ export async function runAiAgent(
 
     // Anything else (rule or flow) already answered → stay quiet.
     const { count } = await admin.from("automation_runs").select("id", { count: "exact", head: true })
-      .eq("conversation_id", ev.conversationId).in("status", ["sent", "matched"]).gte("created_at", startedAt);
+      .eq("conversation_id", ev.conversationId).or("rule_id.not.is.null,status.in.(sent,matched)").gte("created_at", startedAt);
     if ((count ?? 0) > 0) return;
 
     const { readAiProviders, generateWithFailover, sanitisePromptInput } = await import("@/lib/ai-providers.server");

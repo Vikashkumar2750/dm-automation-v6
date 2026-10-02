@@ -395,6 +395,17 @@ async function ingestIntoInbox(
       externalId,
       ...(storyTrigger ? { trigger: storyTrigger } : {}),
     }, flowsStartedAt);
+    // Phase C AI agent: own flags, off by default, DMs only, never throws.
+    const { runAiAgent } = await import("@/lib/ai-agent.server");
+    await runAiAgent(admin, {
+      organizationId,
+      conversationId: conversation.id,
+      socialAccountId,
+      platform,
+      channel,
+      body,
+      externalUserId,
+    }, flowsStartedAt);
   } catch (automationError) {
     console.error("automation run failed", automationError);
     throw automationError;

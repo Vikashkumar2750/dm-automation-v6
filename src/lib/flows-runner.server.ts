@@ -236,3 +236,7 @@ export async function resumeDueFlows(admin: AdminClient) {
   }
   return { due: due?.length ?? 0, resumed };
 }
+
+/** Shared safety gate for other new sending paths (Phase C AI agent). */
+export const safetyBlockFor = (admin: AdminClient, ev: Pick<FlowEvent, "organizationId" | "conversationId" | "body">) =>
+  safetyBlock(admin, ev as FlowEvent);
