@@ -53,3 +53,4 @@ Real Meta + YouTube credentials are available when we reach OAuth phases.
 - [x] Phase 5: starter draft articles
 - [x] Phase 6: GA4/GTM/AdSense/Pixel/GSC/Bing settings + cookie banner
 - [x] AI assistant daily limit per user (default 5, super-admin setting)
+- [x] Roadmap Phase A: story reply/mention triggers, ice breakers, Messenger menu (flag off by default, not pushed)
