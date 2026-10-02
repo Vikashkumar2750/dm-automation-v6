@@ -24,7 +24,7 @@ describe("flows", () => {
     expect(runFlowDry(base, { text: "price", isFollower: null, platform: "facebook", trigger: "new_dm" }).matched).toBe(false);
   });
   it("sanitizes junk and drops http buttons", () => {
-    const [f] = sanitizeFlows([{ name: "x", steps: [{ kind: "send_dm", text: "hi", buttonTitle: "Go", buttonUrl: "http://x" }, { kind: "evil" }] }]);
+    const f = sanitizeFlows([{ name: "x", steps: [{ kind: "send_dm", text: "hi", buttonTitle: "Go", buttonUrl: "http://x" }, { kind: "evil" }] }])[0]!;
     expect(f.steps).toHaveLength(1);
     expect(f.steps[0]).not.toHaveProperty("buttonUrl");
     expect(f.active).toBe(false);

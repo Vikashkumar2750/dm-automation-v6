@@ -45,7 +45,7 @@ export function sanitizeFlows(raw: unknown): Flow[] {
     const trigger = triggers.includes(String(r.trigger)) ? (r.trigger as FlowTrigger) : "new_comment";
     const platform = r.platform === "instagram" || r.platform === "facebook" ? r.platform : "both";
     const steps = (Array.isArray(r.steps) ? r.steps : []).slice(0, MAX_STEPS).flatMap((s): FlowStep[] => {
-      const x = s as Record<string, unknown>;
+      const x = s as { id?: unknown; kind?: unknown; check?: unknown; value?: unknown; text?: unknown; buttonTitle?: unknown; buttonUrl?: unknown; minutes?: unknown };
       const sid = typeof x.id === "string" ? x.id.slice(0, 20) : id();
       const text = (v: unknown, n: number) => String(v ?? "").trim().slice(0, n);
       switch (x.kind) {
