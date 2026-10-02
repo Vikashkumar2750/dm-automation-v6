@@ -34,3 +34,25 @@ describe("flows", () => {
     expect(validateFlow(base)).toEqual([]);
   });
 });
+
+import { flowTriggerFor, moveStep } from "./flows";
+import { liveFlowsActive } from "./flows-runner.server";
+describe("phase B live helpers", () => {
+  it("maps events to triggers", () => {
+    expect(flowTriggerFor("comment")).toBe("new_comment");
+    expect(flowTriggerFor("dm")).toBe("new_dm");
+    expect(flowTriggerFor("dm", "story_reply")).toBe("story_reply");
+  });
+  it("moves steps for drag and drop", () => {
+    expect(moveStep([1, 2, 3], 0, 2)).toEqual([2, 3, 1]);
+    expect(moveStep([1, 2, 3], 2, 0)).toEqual([3, 1, 2]);
+    expect(moveStep([1, 2], 0, 5)).toEqual([1, 2]);
+  });
+  it("live sending needs both switches", () => {
+    const org = "00000000-0000-0000-0000-000000000001";
+    expect(liveFlowsActive({}, org)).toBe(false);
+    expect(liveFlowsActive({ flows_enabled: true }, org)).toBe(false);
+    expect(liveFlowsActive({ flows_enabled: true, flows_live_enabled: true }, org)).toBe(true);
+    expect(liveFlowsActive({ flows_enabled: true, flows_live_enabled: true, flows_live_orgs: ["x"] }, org)).toBe(false);
+  });
+});

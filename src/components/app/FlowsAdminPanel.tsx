@@ -9,6 +9,8 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { getFlowsFlags, saveFlowsFlags } from "@/lib/flows.functions";
 
+const split = (v: string) => v.split(/[\s,]+/).map((s) => s.trim()).filter(Boolean);
+
 /** Super Admin switch for the Phase B flow builder (off by default). */
 export function FlowsAdminPanel() {
   const qc = useQueryClient();
@@ -17,15 +19,19 @@ export function FlowsAdminPanel() {
   const q = useQuery({ queryKey: ["flows-flags"], queryFn: () => fetchFlags() });
   const [enabled, setEnabled] = useState(false);
   const [orgs, setOrgs] = useState("");
+  const [live, setLive] = useState(false);
+  const [liveOrgs, setLiveOrgs] = useState("");
   useEffect(() => {
     if (q.data) {
       setEnabled(q.data.enabled);
       setOrgs(q.data.orgs.join("\n"));
+      setLive(q.data.live);
+      setLiveOrgs(q.data.liveOrgs.join("\n"));
     }
   }, [q.data]);
   const m = useMutation({
     mutationFn: () =>
-      saveFlags({ data: { enabled, orgs: orgs.split(/[\s,]+/).map((s) => s.trim()).filter(Boolean) } }),
+      saveFlags({ data: { enabled, orgs: split(orgs), live, liveOrgs: split(liveOrgs) } }),
     onSuccess: () => {
       toast.success("Flow builder setting saved");
       qc.invalidateQueries({ queryKey: ["flows-flags"] });
@@ -38,7 +44,7 @@ export function FlowsAdminPanel() {
         <div>
           <h3 className="font-semibold">Visual flow builder</h3>
           <p className="mt-1 text-sm text-muted-foreground">
-            Lets workspaces design and test multi-step flows. Off by default. Flows are design and test only for now — they never send real messages, so existing automations are not affected.
+            Lets workspaces design and test multi-step flows. Off by default. Builder on its own only designs and tests flows; nothing is sent.
           </p>
         </div>
         <Switch checked={enabled} onCheckedChange={setEnabled} aria-label="Enable flow builder" />
@@ -48,6 +54,25 @@ export function FlowsAdminPanel() {
         <textarea
           value={orgs}
           onChange={(e) => setOrgs(e.target.value)}
+          rows={3}
+          className="rounded-md border border-input bg-background px-3 py-2 text-sm"
+          placeholder="One workspace ID per line"
+        />
+      </div>
+      <div className="mt-6 flex items-start justify-between gap-4 border-t border-border pt-4">
+        <div>
+          <h4 className="font-semibold">Live sending for flows</h4>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Off by default. When on, active flows really send DMs and replies. Keyword rules always run first — a flow only acts when no rule replied. All safety limits, quiet hours and opt-out words apply. Tip: test on one workspace first.
+          </p>
+        </div>
+        <Switch checked={live} onCheckedChange={setLive} aria-label="Enable live flow sending" />
+      </div>
+      <div className="mt-4 grid gap-2">
+        <Label>Live only for these workspace IDs (leave empty for everyone)</Label>
+        <textarea
+          value={liveOrgs}
+          onChange={(e) => setLiveOrgs(e.target.value)}
           rows={3}
           className="rounded-md border border-input bg-background px-3 py-2 text-sm"
           placeholder="One workspace ID per line"
