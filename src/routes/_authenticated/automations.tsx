@@ -768,7 +768,7 @@ function AutomationsPage() {
                       <SelectItem value="comment_public_reply">
                         {actionLabel.comment_public_reply}
                       </SelectItem>
-                    ) : draft.trigger === "dm_received" ? (
+                    ) : draft.trigger !== "comment_received" ? (
                       <>
                         <SelectItem value="reply_dm">{actionLabel.reply_dm}</SelectItem>
                         <SelectItem value="set_status">{actionLabel.set_status}</SelectItem>
