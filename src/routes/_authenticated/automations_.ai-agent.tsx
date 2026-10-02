@@ -52,7 +52,7 @@ function AiAgentPage() {
   const imp = useMutation({
     mutationFn: () => importPosts({ data: { organizationId: orgId! } }),
     onSuccess: (r) => {
-      if (r.items.length === 0) return toast.info("No published posts with captions found");
+      if (r.items.length === 0) { toast.info("No published posts with captions found"); return; }
       setCfg((c) => {
         const have = new Set(c.knowledge.map((k) => k.id));
         return { ...c, knowledge: [...c.knowledge, ...r.items.filter((i) => !have.has(i.id))].slice(0, MAX_KNOWLEDGE) };
