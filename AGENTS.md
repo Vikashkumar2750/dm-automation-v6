@@ -13,3 +13,4 @@
 - Unsigned webhook probes stay rejected and audited but are excluded from Breaking alerts — why: public callback scans are not Meta delivery failures.
 - New automation drafts default to comment-to-DM, and deployment repairs only rules with clear comment intent that were saved as DM rules — why: prevents valid comments from being skipped without changing delivery flow.
 - YouTube comment polling, AI replies, inbox sync and public replies stay isolated in YouTube modules; never route them through Meta automation — why: protects the locked Instagram/Facebook delivery flows.
+- Phase A entry points (story reply/mention, ice breakers, menu) live in entry-points.* modules behind the `entry_points_enabled` flag (off by default) and only add an early branch to the Meta webhook — why: the locked comment/DM flows must behave identically when the flag is off.
