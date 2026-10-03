@@ -27,7 +27,7 @@ export function readEntryPointFlags(flags: Record<string, unknown> | null | unde
   const orgs = Array.isArray(f["entry_points_orgs"])
     ? (f["entry_points_orgs"] as unknown[]).filter((x): x is string => typeof x === "string")
     : [];
-  return { enabled: f["entry_points_enabled"] === true, orgs };
+  return { enabled: f["entry_points_enabled"] !== false, orgs };
 }
 
 /** Enabled globally (orgs list empty) or only for the listed workspaces. */

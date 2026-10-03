@@ -91,7 +91,7 @@ export const saveOrgSafety = createServerFn({ method: "POST" })
       .maybeSingle();
     const flags = { ...((ps?.feature_flags as Record<string, unknown> | null) ?? {}) };
     flags[safetyLockFlag(data.organizationId)] = data.locked;
-    await supabaseAdmin.from("platform_settings").update({ feature_flags: flags as never }).eq("id", true);
+    await supabaseAdmin.from("platform_settings").upsert({ id: true, feature_flags: flags as never });
     await supabaseAdmin.from("platform_audit_log").insert({
       actor_user_id: context.userId,
       action: "organization.safety_updated",

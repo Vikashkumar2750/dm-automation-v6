@@ -35,9 +35,9 @@ export const getFlowsFlags = createServerFn({ method: "GET" })
     await assertSuper(context as Ctx);
     const { flags } = await readFlags();
     return {
-      enabled: flags["flows_enabled"] === true,
+      enabled: flags["flows_enabled"] !== false,
       orgs: Array.isArray(flags["flows_orgs"]) ? (flags["flows_orgs"] as string[]) : [],
-      live: flags["flows_live_enabled"] === true,
+      live: flags["flows_live_enabled"] !== false,
       liveOrgs: Array.isArray(flags["flows_live_orgs"]) ? (flags["flows_live_orgs"] as string[]) : [],
     };
   });
@@ -57,7 +57,7 @@ export const saveFlowsFlags = createServerFn({ method: "POST" })
     flags["flows_orgs"] = data.orgs;
     flags["flows_live_enabled"] = data.live;
     flags["flows_live_orgs"] = data.liveOrgs;
-    const { error } = await supabaseAdmin.from("platform_settings").update({ feature_flags: flags as never }).eq("id", true);
+    const { error } = await supabaseAdmin.from("platform_settings").upsert({ id: true, feature_flags: flags as never });
     if (error) throw new Error(error.message);
     await supabaseAdmin.from("platform_audit_log").insert({
       actor_user_id: (context as Ctx).userId,
@@ -93,7 +93,7 @@ export const saveFlows = createServerFn({ method: "POST" })
     // A flow with problems can be saved as a draft, but never stays active.
     const flows = sanitizeFlows(data.flows).map((f) => ({ ...f, active: f.active && validateFlow(f).length === 0 }));
     flags[flowsKey(data.organizationId)] = flows;
-    const { error } = await supabaseAdmin.from("platform_settings").update({ feature_flags: flags as never }).eq("id", true);
+    const { error } = await supabaseAdmin.from("platform_settings").upsert({ id: true, feature_flags: flags as never });
     if (error) throw new Error(error.message);
     return { ok: true, flows };
   });

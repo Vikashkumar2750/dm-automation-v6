@@ -11,9 +11,9 @@ describe("entry points", () => {
     expect(detectStoryEvent({ message: { text: "wow", reply_to: { story: { id: "1" } } } })).toBe("story_reply");
     expect(detectStoryEvent({ message: { attachments: [{ type: "story_mention" }] } })).toBe("story_mention");
   });
-  it("is off by default", () => {
-    expect(entryPointsActiveFor(readEntryPointFlags({}), "o")).toBe(false);
-    expect(entryPointsActiveFor(readEntryPointFlags({ entry_points_enabled: true }), "o")).toBe(true);
+  it("is on by default", () => {
+    expect(entryPointsActiveFor(readEntryPointFlags({}), "o")).toBe(true);
+    expect(entryPointsActiveFor(readEntryPointFlags({ entry_points_enabled: false }), "o")).toBe(false);
     expect(entryPointsActiveFor(readEntryPointFlags({ entry_points_enabled: true, entry_points_orgs: ["a"] }), "o")).toBe(false);
   });
   it("sanitizes config", () => {

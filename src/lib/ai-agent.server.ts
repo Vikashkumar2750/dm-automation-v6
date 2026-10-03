@@ -8,7 +8,7 @@ import { agentDecision, buildKnowledgeText, parseAgentVerdict, sanitizeAgentConf
 type AdminClient = import("@supabase/supabase-js").SupabaseClient;
 
 export function agentFlagActive(flags: Record<string, unknown>, orgId: string) {
-  if (flags["ai_agent_enabled"] !== true) return false;
+  if (flags["ai_agent_enabled"] === false) return false;
   const orgs = Array.isArray(flags["ai_agent_orgs"]) ? (flags["ai_agent_orgs"] as string[]) : [];
   return orgs.length === 0 || orgs.includes(orgId);
 }
