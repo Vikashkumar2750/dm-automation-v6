@@ -60,6 +60,12 @@ function FlowsPage() {
     enabled: !!orgId,
     queryFn: () => fetchFlows({ data: { organizationId: orgId! } }),
   });
+  const fetchRev = useServerFn(getRevenue);
+  const revQ = useQuery({ queryKey: ["revenue", orgId], enabled: !!orgId, queryFn: () => fetchRev({ data: { organizationId: orgId! } }) });
+  const revOpts = {
+    products: (revQ.data?.products ?? []).map((p: any) => ({ id: p.id as string, name: p.name as string })),
+    campaigns: (revQ.data?.campaigns ?? []).map((c: any) => ({ id: c.id as string, name: c.name as string })),
+  };
   const [flows, setFlows] = useState<Flow[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
   const [dragFrom, setDragFrom] = useState<number | null>(null);
@@ -117,7 +123,7 @@ function FlowsPage() {
   const issues = flow ? validateFlow(flow) : [];
 
   return (
-    <AppShell>
+    <RevenueOptions.Provider value={revOpts}><AppShell>
       <PageHeader
         title="Flow Builder"
         description="Advanced mode: chain conditions and actions into one flow. Keyword rules stay as simple mode."
@@ -253,7 +259,7 @@ function FlowsPage() {
 
         {flow && <TestPanel flow={flow} />}
       </div>
-    </AppShell>
+    </AppShell></RevenueOptions.Provider>
   );
 }
 
