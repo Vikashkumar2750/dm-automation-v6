@@ -25,7 +25,7 @@ export const getAgentFlags = createServerFn({ method: "GET" })
     await assertSuper(context as Ctx);
     const { flags } = await readFlags();
     return {
-      enabled: flags["ai_agent_enabled"] === true,
+      enabled: flags["ai_agent_enabled"] !== false,
       orgs: Array.isArray(flags["ai_agent_orgs"]) ? (flags["ai_agent_orgs"] as string[]) : [],
     };
   });
@@ -38,7 +38,7 @@ export const saveAgentFlags = createServerFn({ method: "POST" })
     const { supabaseAdmin, flags } = await readFlags();
     flags["ai_agent_enabled"] = data.enabled;
     flags["ai_agent_orgs"] = data.orgs;
-    const { error } = await supabaseAdmin.from("platform_settings").update({ feature_flags: flags as never }).eq("id", true);
+    const { error } = await supabaseAdmin.from("platform_settings").upsert({ id: true, feature_flags: flags as never });
     if (error) throw new Error(error.message);
     await supabaseAdmin.from("platform_audit_log").insert({
       actor_user_id: (context as Ctx).userId, action: "platform.ai_agent_updated", target_type: "platform", target_id: null,
@@ -78,7 +78,7 @@ export const saveAgent = createServerFn({ method: "POST" })
     if (!agentFlagActive(flags, data.organizationId)) throw new Error("ai_agent_disabled");
     const config = sanitizeAgentConfig(data.config);
     flags[agentKey(data.organizationId)] = config;
-    const { error } = await supabaseAdmin.from("platform_settings").update({ feature_flags: flags as never }).eq("id", true);
+    const { error } = await supabaseAdmin.from("platform_settings").upsert({ id: true, feature_flags: flags as never });
     if (error) throw new Error(error.message);
     return { ok: true, config };
   });

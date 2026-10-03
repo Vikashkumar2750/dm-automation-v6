@@ -33,9 +33,9 @@ function listed(flags: Record<string, unknown>, key: string, orgId: string) {
 
 export function liveFlowsActive(flags: Record<string, unknown>, orgId: string) {
   return (
-    flags["flows_enabled"] === true &&
+    flags["flows_enabled"] !== false &&
     listed(flags, "flows_orgs", orgId) &&
-    flags["flows_live_enabled"] === true &&
+    flags["flows_live_enabled"] !== false &&
     listed(flags, "flows_live_orgs", orgId)
   );
 }
