@@ -1,7 +1,8 @@
 import { newStepId, type Flow, type FlowStep } from "@/lib/flows";
 
 /** Ready-to-use flows. Each is created as a Draft so nothing sends until the user switches it on. */
-type Tpl = { key: string; name: string; description: string; trigger: Flow["trigger"]; steps: Omit<FlowStep, "id">[] };
+type Tpl = { key: string; name: string; description: string; trigger: Flow["trigger"]; steps: StepNoId[] };
+type StepNoId = FlowStep extends infer S ? (S extends FlowStep ? Omit<S, "id"> : never) : never;
 
 export const FLOW_TEMPLATES: Tpl[] = [
   {

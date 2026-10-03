@@ -22,7 +22,7 @@ export const getCrm = createServerFn({ method: "GET" })
     return {
       tags: (tags.data ?? []) as Array<{ id: string; platform: string; external_user_id: string; tag: string }>,
       profiles: (profiles.data ?? []) as Array<{ platform: string; external_user_id: string; email: string | null; phone: string | null; notes: string | null; custom_fields: Record<string, string> }>,
-      segments: (segments.data ?? []) as Array<{ id: string; name: string; filter: Record<string, unknown> }>,
+      segments: (segments.data ?? []) as Array<{ id: string; name: string; filter: { tag?: string; platform?: "instagram" | "facebook" | "youtube"; hasEmail?: boolean; hasPhone?: boolean; search?: string } }>,
     };
   });
 
