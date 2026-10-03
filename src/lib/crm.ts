@@ -1,5 +1,5 @@
 /** Phase D CRM: pure helpers (client-safe). */
-export type SegmentFilter = { tag?: string; platform?: "instagram" | "facebook" | "youtube"; hasEmail?: boolean; hasPhone?: boolean; search?: string };
+export type SegmentFilter = { tag?: string | undefined; platform?: "instagram" | "facebook" | "youtube" | undefined; hasEmail?: boolean | undefined; hasPhone?: boolean | undefined; search?: string | undefined };
 
 export type CrmContact = {
   key: string; // platform:external_user_id
