@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
@@ -138,8 +138,10 @@ function CalendarPage() {
         title="Content Calendar"
         description="Plan and schedule your content across every connected platform."
         actions={
-          <Button onClick={() => openOn(new Date())}>
-            <Plus className="mr-2 size-4" /> New post
+          <Button asChild>
+            <Link to="/create-post/new">
+              <Plus className="mr-2 size-4" /> New post
+            </Link>
           </Button>
         }
       />
