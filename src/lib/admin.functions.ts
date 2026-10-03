@@ -413,7 +413,7 @@ export const getAdminOrganization = createServerFn({ method: "POST" })
         conversations: (convs.data ?? []).length,
         posts: (posts.data ?? []).length,
         automationsPaused: Boolean(settings.data?.is_paused),
-        simulatorEnabled: simulatorFlags[`simulator_org_${id}`] !== false,
+        simulatorEnabled: simulatorFlags[`simulator_org_${id}`] === true,
       },
       settings: settings.data ?? null,
       accounts: (accounts.data ?? []).map((a) => ({
@@ -434,8 +434,7 @@ export const getAdminOrganization = createServerFn({ method: "POST" })
           ? false
           : Boolean(
               simulatorFlags[`simulator_user_${id}_${m.user_id}`] ??
-                simulatorFlags[`simulator_org_${id}`] ??
-                true,
+                (simulatorFlags[`simulator_org_${id}`] === true),
             ),
       })),
       recentErrors,

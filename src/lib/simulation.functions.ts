@@ -19,6 +19,19 @@ export type SimResult = {
   steps: SimStep[];
 };
 
+export function resolveSimulatorAllowed(
+  flags: Record<string, boolean>,
+  organizationId: string,
+  userId: string,
+) {
+  const userKey = `simulator_user_${organizationId}_${userId}`;
+  const denyKey = `simulator_user_deny_${organizationId}_${userId}`;
+  const orgKey = `simulator_org_${organizationId}`;
+  // Disabled by default; a super admin opts a workspace or user in explicitly.
+  if (flags[denyKey]) return false;
+  return Boolean(flags[userKey] ?? flags[orgKey]);
+}
+
 async function readSimulatorAccess(
   context: { supabase: any; userId: string },
   organizationId: string,
@@ -39,11 +52,7 @@ async function readSimulatorAccess(
     .eq("id", true)
     .maybeSingle();
   const flags = (settings?.feature_flags ?? {}) as Record<string, boolean>;
-  const userKey = `simulator_user_${organizationId}_${context.userId}`;
-  const denyKey = `simulator_user_deny_${organizationId}_${context.userId}`;
-  const orgKey = `simulator_org_${organizationId}`;
-  // Enabled by default; a super admin can switch it off per workspace or user.
-  const allowed = flags[denyKey] ? false : Boolean(flags[userKey] ?? flags[orgKey] ?? true);
+  const allowed = resolveSimulatorAllowed(flags, organizationId, context.userId);
   return { allowed, isSuperAdmin: false };
 }
 

@@ -181,6 +181,9 @@ function OrgDetailPage() {
 
       <Panel title="Automation test console">
         <div className="space-y-3 text-sm">
+          <p className="text-xs text-muted-foreground">
+            The test console is off for everyone by default. Enable it per workspace or per member — super admins always have access.
+          </p>
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border px-3 py-2">
             <div>
               <p className="font-medium">Workspace access</p>
