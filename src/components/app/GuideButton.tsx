@@ -1,0 +1,42 @@
+import { marked } from "marked";
+import { BookOpen, Download } from "lucide-react";
+import { useMemo } from "react";
+
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import automationsMd from "@/content/guides/automations.md?raw";
+import aiAgentMd from "@/content/guides/ai-agent.md?raw";
+
+const GUIDES = {
+  automations: { title: "Automations guide", file: "automations-guide.md", md: automationsMd },
+  "ai-agent": { title: "AI Agent guide", file: "ai-agent-guide.md", md: aiAgentMd },
+} as const;
+
+/** Opens a readable .md guide in a dialog, with a download of the raw file. */
+export function GuideButton({ guide }: { guide: keyof typeof GUIDES }) {
+  const g = GUIDES[guide];
+  const html = useMemo(() => marked.parse(g.md, { async: false }) as string, [g.md]);
+  const download = () => {
+    const url = URL.createObjectURL(new Blob([g.md], { type: "text/markdown" }));
+    const a = document.createElement("a");
+    a.href = url; a.download = g.file; a.click();
+    URL.revokeObjectURL(url);
+  };
+  return (
+    <Dialog>
+      <DialogTrigger asChild>
+        <Button variant="outline"><BookOpen className="size-4" /> Guide</Button>
+      </DialogTrigger>
+      <DialogContent className="max-h-[85vh] max-w-2xl overflow-y-auto">
+        <DialogHeader className="flex-row items-center justify-between gap-2 pr-6">
+          <DialogTitle>{g.title}</DialogTitle>
+          <Button size="sm" variant="ghost" onClick={download}><Download className="size-4" /> .md</Button>
+        </DialogHeader>
+        <div
+          className="space-y-3 text-sm leading-relaxed [&_h2]:mt-5 [&_h2]:text-base [&_h2]:font-semibold [&_h3]:mt-3 [&_h3]:font-semibold [&_li]:ml-5 [&_ol]:list-decimal [&_ul]:list-disc [&_code]:rounded [&_code]:bg-muted [&_code]:px-1"
+          dangerouslySetInnerHTML={{ __html: html }}
+        />
+      </DialogContent>
+    </Dialog>
+  );
+}

@@ -1,3 +1,4 @@
+import { GuideButton } from "@/components/app/GuideButton";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -83,6 +84,7 @@ function AiAgentPage() {
         description="Answers DMs from your own knowledge when no keyword rule or flow replied. Unsure answers go to your team."
         actions={
           <div className="flex gap-2">
+            <GuideButton guide="ai-agent" />
             <Button asChild variant="outline"><Link to="/automations">Back to rules</Link></Button>
             <Button onClick={() => save.mutate()} disabled={save.isPending || !orgId}>Save</Button>
           </div>

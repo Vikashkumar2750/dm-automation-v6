@@ -1,3 +1,4 @@
+import { GuideButton } from "@/components/app/GuideButton";
 import { getPlanUsage } from "@/lib/plan-limits.functions";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -464,6 +465,7 @@ function AutomationsPage() {
                 <Link to="/automations/flows">Flow builder</Link>
               </Button>
             )}
+            <GuideButton guide="automations" />
             <Button asChild variant="outline">
               <Link to="/automations/ai-agent">AI agent</Link>
             </Button>
