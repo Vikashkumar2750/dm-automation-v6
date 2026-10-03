@@ -150,8 +150,10 @@ function CreatePostPage() {
               title="No posts yet"
               description="Write your first caption, pick a time, and it will go out automatically."
               action={
-                <Button onClick={openNew}>
-                  <Plus className="mr-2 size-4" /> New post
+                <Button asChild>
+                  <Link to="/create-post/new">
+                    <Plus className="mr-2 size-4" /> New post
+                  </Link>
                 </Button>
               }
             />
