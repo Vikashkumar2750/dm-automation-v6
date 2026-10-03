@@ -13,7 +13,6 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -92,18 +91,20 @@ function MediaThumb({ refValue, isVideo, onRemove }: { refValue: string; isVideo
   );
 }
 
-export function PostComposer({
-  open,
-  onOpenChange,
+/**
+ * The composer fields themselves, usable both inside the dialog and as a
+ * standalone full page. `onDone` fires after a save/publish completes.
+ */
+export function PostComposerForm({
   organizationId,
   accounts,
   draft,
+  onDone,
 }: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
   organizationId: string;
   accounts: SocialAccountRow[];
   draft: ComposerDraft | null;
+  onDone: () => void;
 }) {
   const queryClient = useQueryClient();
   const save = useServerFn(savePost);
@@ -126,8 +127,11 @@ export function PostComposer({
     (a) => a.platform === "instagram" || a.platform === "facebook" || a.platform === "youtube",
   );
 
+  const editing = Boolean(draft?.post) && !draft?.duplicate;
+  const storyEligible = !editing && (format === "feed" || format === "reel" || format === "trial_reel");
+
+  // Load content from the draft (runs when the draft changes, e.g. dialog opens).
   useEffect(() => {
-    if (!open) return;
     const post = draft?.post;
     setCaption(post?.caption ?? "");
     setMedia(post?.media_urls?.length ? post.media_urls : post?.media_url ? [post.media_url] : []);
@@ -138,17 +142,19 @@ export function PostComposer({
     setAlsoStory(false);
     setProgress(null);
     setSelected(
-      post?.social_account_id
-        ? [post.social_account_id]
-        : publishable.length === 1
-          ? [publishable[0]!.id]
-          : [],
+      post?.social_account_id ? [post.social_account_id] : [],
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, draft, accounts]);
+  }, [draft]);
 
-  const editing = Boolean(draft?.post) && !draft?.duplicate;
-  const storyEligible = !editing && (format === "feed" || format === "reel" || format === "trial_reel");
+  // Default to the only connected account once the list is available.
+  useEffect(() => {
+    if (draft?.post) return;
+    setSelected((current) =>
+      current.length === 0 && publishable.length === 1 ? [publishable[0]!.id] : current,
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [accounts, draft]);
 
   function toggleAccount(id: string) {
     setSelected((current) =>
@@ -251,7 +257,7 @@ export function PostComposer({
       // Let the user see the finished progress briefly, then close automatically.
       setTimeout(() => {
         setProgress(null);
-        onOpenChange(false);
+        onDone();
       }, status === "now" ? 900 : 0);
     },
     onError: (error: Error) =>
@@ -270,227 +276,253 @@ export function PostComposer({
   const disabled = mutation.isPending || uploading || selected.length === 0;
 
   return (
+    <>
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <Label>Publish to</Label>
+          {publishable.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              Connect an Instagram or Facebook account first.
+            </p>
+          ) : (
+            <div className="space-y-1.5 rounded-xl border p-2">
+              {publishable.map((account) => (
+                <label
+                  key={account.id}
+                  className="flex cursor-pointer items-center gap-3 rounded-lg px-2 py-1.5 hover:bg-surface-secondary"
+                >
+                  <Checkbox
+                    checked={selected.includes(account.id)}
+                    onCheckedChange={() => toggleAccount(account.id)}
+                  />
+                  <PlatformBadge platform={account.platform} size="sm" />
+                  <span className="min-w-0 flex-1 truncate text-sm">{account.name}</span>
+                </label>
+              ))}
+              {!editing && publishable.length > 1 && (
+                <button
+                  type="button"
+                  className="px-2 text-xs text-primary"
+                  onClick={() =>
+                    setSelected(
+                      selected.length === publishable.length
+                        ? []
+                        : publishable.map((a) => a.id),
+                    )
+                  }
+                >
+                  {selected.length === publishable.length ? "Clear all" : "Select all"}
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+
+        <div className="space-y-1.5">
+          <Label>Post type</Label>
+          <Select value={format} onValueChange={(value) => setFormat(value as PostFormat)}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {formats.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-subtle-foreground">
+            {formats.find((f) => f.value === format)?.hint}
+          </p>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="caption">Caption</Label>
+          <Textarea
+            id="caption"
+            rows={5}
+            value={caption}
+            onChange={(event) => setCaption(event.target.value)}
+            placeholder="Write your caption…"
+          />
+          <p className="num text-xs text-subtle-foreground">{caption.length} / 2200</p>
+        </div>
+
+        <div className="space-y-2">
+          <Label>Media</Label>
+          <div className="flex flex-wrap gap-2">
+            {media.map((ref, index) => (
+              <MediaThumb
+                key={`${ref}-${index}`}
+                refValue={ref}
+                isVideo={mediaType === "video"}
+                onRemove={() => setMedia((current) => current.filter((_, i) => i !== index))}
+              />
+            ))}
+            <button
+              type="button"
+              onClick={() => fileInput.current?.click()}
+              disabled={uploading}
+              className="flex size-20 flex-col items-center justify-center gap-1 rounded-lg border border-dashed text-xs text-muted-foreground hover:bg-surface-secondary"
+            >
+              {uploading ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <>
+                  <Upload className="size-4" />
+                  Upload
+                </>
+              )}
+            </button>
+          </div>
+          <input
+            ref={fileInput}
+            type="file"
+            accept="image/*,video/*"
+            multiple
+            className="hidden"
+            onChange={(event) => void handleFiles(event.target.files)}
+          />
+          <div className="flex gap-2">
+            <Input
+              value={link}
+              onChange={(event) => setLink(event.target.value)}
+              placeholder="…or paste a public media link"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                if (!/^https?:\/\//.test(link.trim())) {
+                  toast.error("Paste a link that starts with https://");
+                  return;
+                }
+                setMedia((current) => [...current, link.trim()].slice(0, 10));
+                setLink("");
+              }}
+            >
+              Add
+            </Button>
+          </div>
+          <div className="flex items-center gap-2">
+            <Label className="text-xs text-muted-foreground">Media is</Label>
+            <Select
+              value={mediaType}
+              onValueChange={(value) => setMediaType(value as "image" | "video")}
+            >
+              <SelectTrigger className="h-8 w-28">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="image">Photos</SelectItem>
+                <SelectItem value="video">Video</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        {storyEligible && (
+          <label className="flex cursor-pointer items-start gap-3 rounded-xl border p-3">
+            <Checkbox checked={alsoStory} onCheckedChange={(v) => setAlsoStory(v === true)} />
+            <span className="space-y-0.5">
+              <span className="block text-sm font-medium">Also publish to Story</span>
+              <span className="block text-xs text-muted-foreground">
+                Instagram and Facebook only. Uses the first photo or video, without the caption. Best in 9:16, videos up to 60 seconds. Facebook stories take photos only.
+              </span>
+            </span>
+          </label>
+        )}
+
+        {format === "trial_reel" && mediaType !== "video" && (
+          <p className="text-xs text-warning">A trial reel needs a video.</p>
+        )}
+
+        {igSelected && media.length === 0 && (
+          <p className="text-xs text-warning">
+            Instagram needs at least one photo or video — a text-only post will fail there.
+          </p>
+        )}
+
+        <div className="space-y-1.5">
+          <Label htmlFor="when">Schedule for</Label>
+          <Input
+            id="when"
+            type="datetime-local"
+            value={when}
+            onChange={(event) => setWhen(event.target.value)}
+          />
+        </div>
+      </div>
+
+      {progress && (
+        <div className="mt-4 space-y-2 rounded-xl border p-3">
+          <p className="text-sm font-medium">Publishing progress</p>
+          <ul className="space-y-1.5">
+            {progress.map((step) => (
+              <li key={step.id} className="flex items-start gap-2 text-sm">
+                {step.state === "running" ? (
+                  <Loader2 className="mt-0.5 size-4 shrink-0 animate-spin text-primary" />
+                ) : step.state === "done" ? (
+                  <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-success" />
+                ) : step.state === "failed" ? (
+                  <XCircle className="mt-0.5 size-4 shrink-0 text-destructive" />
+                ) : (
+                  <Circle className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+                )}
+                <span className="min-w-0">
+                  <span className="block truncate">{step.label}</span>
+                  {step.detail && <span className="block text-xs text-destructive">{step.detail}</span>}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      <div className="mt-5 flex flex-wrap justify-end gap-2">
+        <Button variant="outline" disabled={disabled} onClick={() => mutation.mutate("draft")}>
+          Save draft
+        </Button>
+        <Button disabled={disabled || !when} onClick={() => mutation.mutate("scheduled")}>
+          {mutation.isPending && <Loader2 className="mr-2 size-4 animate-spin" />}
+          Schedule
+        </Button>
+        <Button disabled={disabled} variant="secondary" onClick={() => mutation.mutate("now")}>
+          Publish now
+        </Button>
+      </div>
+    </>
+  );
+}
+
+export function PostComposer({
+  open,
+  onOpenChange,
+  organizationId,
+  accounts,
+  draft,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  organizationId: string;
+  accounts: SocialAccountRow[];
+  draft: ComposerDraft | null;
+}) {
+  const editing = Boolean(draft?.post) && !draft?.duplicate;
+
+  return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>{editing ? "Edit post" : draft?.duplicate ? "Duplicate post" : "New post"}</DialogTitle>
         </DialogHeader>
-
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Label>Publish to</Label>
-            {publishable.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                Connect an Instagram or Facebook account first.
-              </p>
-            ) : (
-              <div className="space-y-1.5 rounded-xl border p-2">
-                {publishable.map((account) => (
-                  <label
-                    key={account.id}
-                    className="flex cursor-pointer items-center gap-3 rounded-lg px-2 py-1.5 hover:bg-surface-secondary"
-                  >
-                    <Checkbox
-                      checked={selected.includes(account.id)}
-                      onCheckedChange={() => toggleAccount(account.id)}
-                    />
-                    <PlatformBadge platform={account.platform} size="sm" />
-                    <span className="min-w-0 flex-1 truncate text-sm">{account.name}</span>
-                  </label>
-                ))}
-                {!editing && publishable.length > 1 && (
-                  <button
-                    type="button"
-                    className="px-2 text-xs text-primary"
-                    onClick={() =>
-                      setSelected(
-                        selected.length === publishable.length
-                          ? []
-                          : publishable.map((a) => a.id),
-                      )
-                    }
-                  >
-                    {selected.length === publishable.length ? "Clear all" : "Select all"}
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-
-          <div className="space-y-1.5">
-            <Label>Post type</Label>
-            <Select value={format} onValueChange={(value) => setFormat(value as PostFormat)}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {formats.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-subtle-foreground">
-              {formats.find((f) => f.value === format)?.hint}
-            </p>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label htmlFor="caption">Caption</Label>
-            <Textarea
-              id="caption"
-              rows={5}
-              value={caption}
-              onChange={(event) => setCaption(event.target.value)}
-              placeholder="Write your caption…"
-            />
-            <p className="num text-xs text-subtle-foreground">{caption.length} / 2200</p>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Media</Label>
-            <div className="flex flex-wrap gap-2">
-              {media.map((ref, index) => (
-                <MediaThumb
-                  key={`${ref}-${index}`}
-                  refValue={ref}
-                  isVideo={mediaType === "video"}
-                  onRemove={() => setMedia((current) => current.filter((_, i) => i !== index))}
-                />
-              ))}
-              <button
-                type="button"
-                onClick={() => fileInput.current?.click()}
-                disabled={uploading}
-                className="flex size-20 flex-col items-center justify-center gap-1 rounded-lg border border-dashed text-xs text-muted-foreground hover:bg-surface-secondary"
-              >
-                {uploading ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : (
-                  <>
-                    <Upload className="size-4" />
-                    Upload
-                  </>
-                )}
-              </button>
-            </div>
-            <input
-              ref={fileInput}
-              type="file"
-              accept="image/*,video/*"
-              multiple
-              className="hidden"
-              onChange={(event) => void handleFiles(event.target.files)}
-            />
-            <div className="flex gap-2">
-              <Input
-                value={link}
-                onChange={(event) => setLink(event.target.value)}
-                placeholder="…or paste a public media link"
-              />
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  if (!/^https?:\/\//.test(link.trim())) {
-                    toast.error("Paste a link that starts with https://");
-                    return;
-                  }
-                  setMedia((current) => [...current, link.trim()].slice(0, 10));
-                  setLink("");
-                }}
-              >
-                Add
-              </Button>
-            </div>
-            <div className="flex items-center gap-2">
-              <Label className="text-xs text-muted-foreground">Media is</Label>
-              <Select
-                value={mediaType}
-                onValueChange={(value) => setMediaType(value as "image" | "video")}
-              >
-                <SelectTrigger className="h-8 w-28">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="image">Photos</SelectItem>
-                  <SelectItem value="video">Video</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          {storyEligible && (
-            <label className="flex cursor-pointer items-start gap-3 rounded-xl border p-3">
-              <Checkbox checked={alsoStory} onCheckedChange={(v) => setAlsoStory(v === true)} />
-              <span className="space-y-0.5">
-                <span className="block text-sm font-medium">Also publish to Story</span>
-                <span className="block text-xs text-muted-foreground">
-                  Instagram and Facebook only. Uses the first photo or video, without the caption. Best in 9:16, videos up to 60 seconds. Facebook stories take photos only.
-                </span>
-              </span>
-            </label>
-          )}
-
-          {format === "trial_reel" && mediaType !== "video" && (
-            <p className="text-xs text-warning">A trial reel needs a video.</p>
-          )}
-
-          {igSelected && media.length === 0 && (
-            <p className="text-xs text-warning">
-              Instagram needs at least one photo or video — a text-only post will fail there.
-            </p>
-          )}
-
-          <div className="space-y-1.5">
-            <Label htmlFor="when">Schedule for</Label>
-            <Input
-              id="when"
-              type="datetime-local"
-              value={when}
-              onChange={(event) => setWhen(event.target.value)}
-            />
-          </div>
-        </div>
-
-        {progress && (
-          <div className="space-y-2 rounded-xl border p-3">
-            <p className="text-sm font-medium">Publishing progress</p>
-            <ul className="space-y-1.5">
-              {progress.map((step) => (
-                <li key={step.id} className="flex items-start gap-2 text-sm">
-                  {step.state === "running" ? (
-                    <Loader2 className="mt-0.5 size-4 shrink-0 animate-spin text-primary" />
-                  ) : step.state === "done" ? (
-                    <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-success" />
-                  ) : step.state === "failed" ? (
-                    <XCircle className="mt-0.5 size-4 shrink-0 text-destructive" />
-                  ) : (
-                    <Circle className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-                  )}
-                  <span className="min-w-0">
-                    <span className="block truncate">{step.label}</span>
-                    {step.detail && <span className="block text-xs text-destructive">{step.detail}</span>}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-
-        <DialogFooter className="gap-2">
-          <Button variant="outline" disabled={disabled} onClick={() => mutation.mutate("draft")}>
-            Save draft
-          </Button>
-          <Button disabled={disabled || !when} onClick={() => mutation.mutate("scheduled")}>
-            {mutation.isPending && <Loader2 className="mr-2 size-4 animate-spin" />}
-            Schedule
-          </Button>
-          <Button disabled={disabled} variant="secondary" onClick={() => mutation.mutate("now")}>
-            Publish now
-          </Button>
-        </DialogFooter>
+        <PostComposerForm
+          organizationId={organizationId}
+          accounts={accounts}
+          draft={draft}
+          onDone={() => onOpenChange(false)}
+        />
       </DialogContent>
     </Dialog>
   );
