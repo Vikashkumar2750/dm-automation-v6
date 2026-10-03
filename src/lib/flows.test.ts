@@ -48,11 +48,11 @@ describe("phase B live helpers", () => {
     expect(moveStep([1, 2, 3], 2, 0)).toEqual([3, 1, 2]);
     expect(moveStep([1, 2], 0, 5)).toEqual([1, 2]);
   });
-  it("live sending needs both switches", () => {
+  it("live sending is on by default, off when either switch is off", () => {
     const org = "00000000-0000-0000-0000-000000000001";
-    expect(liveFlowsActive({}, org)).toBe(false);
-    expect(liveFlowsActive({ flows_enabled: true }, org)).toBe(false);
-    expect(liveFlowsActive({ flows_enabled: true, flows_live_enabled: true }, org)).toBe(true);
+    expect(liveFlowsActive({}, org)).toBe(true);
+    expect(liveFlowsActive({ flows_live_enabled: false }, org)).toBe(false);
+    expect(liveFlowsActive({ flows_enabled: false }, org)).toBe(false);
     expect(liveFlowsActive({ flows_enabled: true, flows_live_enabled: true, flows_live_orgs: ["x"] }, org)).toBe(false);
   });
 });

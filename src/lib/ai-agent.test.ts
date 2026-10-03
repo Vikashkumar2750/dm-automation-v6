@@ -5,9 +5,9 @@ import { agentFlagActive } from "./ai-agent.server";
 const org = "00000000-0000-0000-0000-000000000001";
 
 describe("phase C ai agent", () => {
-  it("is off unless both switches are on", () => {
-    expect(agentFlagActive({}, org)).toBe(false);
-    expect(agentFlagActive({ ai_agent_enabled: true }, org)).toBe(true);
+  it("is on by default, off only when switched off", () => {
+    expect(agentFlagActive({}, org)).toBe(true);
+    expect(agentFlagActive({ ai_agent_enabled: false }, org)).toBe(false);
     expect(sanitizeAgentConfig({}).enabled).toBe(false);
   });
   it("parses model JSON defensively", () => {
