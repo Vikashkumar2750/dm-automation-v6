@@ -222,6 +222,8 @@ async function captureContactInfo(admin: AdminClient, ev: FlowEvent) {
     const phone = cur?.phone || found.phone;
     if (cur && cur.email === email && cur.phone === phone) return;
     await admin.from("contact_profiles").upsert({ ...key, email, phone, updated_at: new Date().toISOString() }, { onConflict: "organization_id,platform,external_user_id" });
+    const { syncContactToWebhook } = await import("@/lib/nudges.server");
+    await syncContactToWebhook(admin, ev.organizationId, { platform: ev.platform, external_user_id: ev.externalUserId, email, phone });
   } catch (e) {
     console.error("contact capture failed", e);
   }

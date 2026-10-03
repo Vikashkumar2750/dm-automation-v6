@@ -65,6 +65,7 @@ import { Route as AuthenticatedInviteTokenRouteImport } from './routes/_authenti
 import { Route as AuthenticatedAdminOrgOrgIdRouteImport } from './routes/_authenticated/admin.org.$orgId'
 import { Route as AuthenticatedAutomationsActivityRunIdRouteImport } from './routes/_authenticated/automations_.activity_.$runId'
 import { Route as ApiPublicCronFlowsRouteImport } from './routes/api/public/cron.flows'
+import { Route as ApiPublicCronNudgesRouteImport } from './routes/api/public/cron.nudges'
 import { Route as ApiPublicCronPublishDueRouteImport } from './routes/api/public/cron.publish-due'
 import { Route as ApiPublicCronRevenueRouteImport } from './routes/api/public/cron.revenue'
 import { Route as ApiPublicCronYoutubeCommentsRouteImport } from './routes/api/public/cron.youtube-comments'
@@ -374,6 +375,11 @@ const ApiPublicCronFlowsRoute = ApiPublicCronFlowsRouteImport.update({
   path: '/api/public/cron/flows',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicCronNudgesRoute = ApiPublicCronNudgesRouteImport.update({
+  id: '/api/public/cron/nudges',
+  path: '/api/public/cron/nudges',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicCronPublishDueRoute = ApiPublicCronPublishDueRouteImport.update({
   id: '/api/public/cron/publish-due',
   path: '/api/public/cron/publish-due',
@@ -474,6 +480,7 @@ export interface FileRoutesByFullPath {
   '/admin/org/$orgId': typeof AuthenticatedAdminOrgOrgIdRoute
   '/automations/activity/$runId': typeof AuthenticatedAutomationsActivityRunIdRoute
   '/api/public/cron/flows': typeof ApiPublicCronFlowsRoute
+  '/api/public/cron/nudges': typeof ApiPublicCronNudgesRoute
   '/api/public/cron/publish-due': typeof ApiPublicCronPublishDueRoute
   '/api/public/cron/revenue': typeof ApiPublicCronRevenueRoute
   '/api/public/cron/youtube-comments': typeof ApiPublicCronYoutubeCommentsRoute
@@ -538,6 +545,7 @@ export interface FileRoutesByTo {
   '/admin/org/$orgId': typeof AuthenticatedAdminOrgOrgIdRoute
   '/automations/activity/$runId': typeof AuthenticatedAutomationsActivityRunIdRoute
   '/api/public/cron/flows': typeof ApiPublicCronFlowsRoute
+  '/api/public/cron/nudges': typeof ApiPublicCronNudgesRoute
   '/api/public/cron/publish-due': typeof ApiPublicCronPublishDueRoute
   '/api/public/cron/revenue': typeof ApiPublicCronRevenueRoute
   '/api/public/cron/youtube-comments': typeof ApiPublicCronYoutubeCommentsRoute
@@ -605,6 +613,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/org/$orgId': typeof AuthenticatedAdminOrgOrgIdRoute
   '/_authenticated/automations_/activity_/$runId': typeof AuthenticatedAutomationsActivityRunIdRoute
   '/api/public/cron/flows': typeof ApiPublicCronFlowsRoute
+  '/api/public/cron/nudges': typeof ApiPublicCronNudgesRoute
   '/api/public/cron/publish-due': typeof ApiPublicCronPublishDueRoute
   '/api/public/cron/revenue': typeof ApiPublicCronRevenueRoute
   '/api/public/cron/youtube-comments': typeof ApiPublicCronYoutubeCommentsRoute
@@ -672,6 +681,7 @@ export interface FileRouteTypes {
     | '/admin/org/$orgId'
     | '/automations/activity/$runId'
     | '/api/public/cron/flows'
+    | '/api/public/cron/nudges'
     | '/api/public/cron/publish-due'
     | '/api/public/cron/revenue'
     | '/api/public/cron/youtube-comments'
@@ -736,6 +746,7 @@ export interface FileRouteTypes {
     | '/admin/org/$orgId'
     | '/automations/activity/$runId'
     | '/api/public/cron/flows'
+    | '/api/public/cron/nudges'
     | '/api/public/cron/publish-due'
     | '/api/public/cron/revenue'
     | '/api/public/cron/youtube-comments'
@@ -802,6 +813,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/org/$orgId'
     | '/_authenticated/automations_/activity_/$runId'
     | '/api/public/cron/flows'
+    | '/api/public/cron/nudges'
     | '/api/public/cron/publish-due'
     | '/api/public/cron/revenue'
     | '/api/public/cron/youtube-comments'
@@ -829,6 +841,7 @@ export interface RootRouteChildren {
   PSlugRoute: typeof PSlugRoute
   BlogIndexRoute: typeof BlogIndexRoute
   ApiPublicCronFlowsRoute: typeof ApiPublicCronFlowsRoute
+  ApiPublicCronNudgesRoute: typeof ApiPublicCronNudgesRoute
   ApiPublicCronPublishDueRoute: typeof ApiPublicCronPublishDueRoute
   ApiPublicCronRevenueRoute: typeof ApiPublicCronRevenueRoute
   ApiPublicCronYoutubeCommentsRoute: typeof ApiPublicCronYoutubeCommentsRoute
@@ -1233,6 +1246,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicCronFlowsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/cron/nudges': {
+      id: '/api/public/cron/nudges'
+      path: '/api/public/cron/nudges'
+      fullPath: '/api/public/cron/nudges'
+      preLoaderRoute: typeof ApiPublicCronNudgesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/cron/publish-due': {
       id: '/api/public/cron/publish-due'
       path: '/api/public/cron/publish-due'
@@ -1409,6 +1429,7 @@ const rootRouteChildren: RootRouteChildren = {
   PSlugRoute: PSlugRoute,
   BlogIndexRoute: BlogIndexRoute,
   ApiPublicCronFlowsRoute: ApiPublicCronFlowsRoute,
+  ApiPublicCronNudgesRoute: ApiPublicCronNudgesRoute,
   ApiPublicCronPublishDueRoute: ApiPublicCronPublishDueRoute,
   ApiPublicCronRevenueRoute: ApiPublicCronRevenueRoute,
   ApiPublicCronYoutubeCommentsRoute: ApiPublicCronYoutubeCommentsRoute,
