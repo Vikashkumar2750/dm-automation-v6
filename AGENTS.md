@@ -17,3 +17,5 @@
 - Phase B flows live in flows.* modules; live sending (flows-runner.server) needs both `flows_enabled` and `flows_live_enabled` (each on unless set to false), runs after keyword rules only when no rule sent, and Wait steps resume via /api/public/cron/flows — why: the locked rule engine runs first and unchanged.
 - Phase C AI agent lives in ai-agent.* modules behind `ai_agent_enabled` plus a per-workspace switch, answers DMs only after rules and flows stayed silent, and reuses the flow safety gate — why: AI can never override or double-send over locked flows.
 - Phase D CRM data (contact_profiles, contact_segments, contact_tags) is read/written only via crm.* modules with RLS as the user — why: CRM never touches the locked Meta delivery flow.
+
+- Phase E revenue lives in revenue.* modules; Razorpay keys sit in a server-only table (no browser grants) per workspace and payment/coupon steps reuse the flow sending + safety path — why: creators get paid directly and the locked rule engine stays untouched.
