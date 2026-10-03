@@ -253,9 +253,10 @@ function Payments({ orgId, d }: { orgId: string; d: Data }) {
           </div>
         )}
         <div className="mt-4 rounded-lg bg-muted p-3 text-xs">
-          <p className="font-medium">Webhook address (Razorpay → Webhooks → Add, event “payment_link.paid”):</p>
+          <p className="font-medium">Step 2 — Webhook address (Razorpay → Webhooks → Add, event “payment_link.paid”):</p>
           <div className="mt-1 flex items-center gap-2"><code className="break-all">{hook}</code>
             <Button size="icon" variant="ghost" aria-label="Copy webhook address" onClick={() => { navigator.clipboard.writeText(hook); toast.success("Copied"); }}><Copy className="size-4" /></Button></div>
+          <p className="mt-2 text-muted-foreground">Yeh zaroori hai — iske bina Razorpay ko pata nahi chalega ki payment hui, isliye “paid” tag, sale report aur reminder kaam nahi karenge. Address apke live site ke domain se shuru hota hai (jaise autodm.techaasvik.com) — yahin se copy karke Razorpay mein paste karo.</p>
         </div>
       </Panel>
       <Panel title="Payment reminder">
