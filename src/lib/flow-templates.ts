@@ -72,6 +72,17 @@ export const FLOW_TEMPLATES: Tpl[] = [
       { kind: "tag", value: "mentioned-us" },
     ],
   },
+  {
+    key: "capture",
+    name: "Collect email / phone",
+    description: "Asks for an email or WhatsApp number on keyword DETAILS; the reply is saved to the contact automatically.",
+    trigger: "new_dm",
+    steps: [
+      { kind: "condition", check: "contains", value: "details, info, catalog" },
+      { kind: "send_dm", text: "Sure! 😊 Reply with your email or WhatsApp number and we'll send the full details." },
+      { kind: "tag", value: "lead" },
+    ],
+  },
 ];
 
 export function flowFromTemplate(key: string): Flow | null {

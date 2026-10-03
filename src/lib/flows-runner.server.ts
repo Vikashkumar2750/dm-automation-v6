@@ -7,6 +7,7 @@
  * All org safety settings (pause, quiet hours, caps, opt-out) apply.
  */
 import { sanitizeFlows, flowTriggerFor, type Flow, type FlowStep } from "@/lib/flows";
+import { extractContactInfo } from "@/lib/crm";
 
 type AdminClient = import("@supabase/supabase-js").SupabaseClient;
 
@@ -185,8 +186,27 @@ async function executeSteps(admin: AdminClient, flow: Flow, st: RunState, from: 
   return acted;
 }
 
+/** Phase D: save an email/phone found in an incoming DM to the CRM (never overwrites, never sends). */
+async function captureContactInfo(admin: AdminClient, ev: FlowEvent) {
+  try {
+    if (ev.channel === "comment") return;
+    const found = extractContactInfo(ev.body ?? "");
+    if (!found.email && !found.phone) return;
+    const key = { organization_id: ev.organizationId, platform: ev.platform, external_user_id: ev.externalUserId };
+    const { data: cur } = await admin.from("contact_profiles").select("email, phone")
+      .eq("organization_id", key.organization_id).eq("platform", key.platform).eq("external_user_id", key.external_user_id).maybeSingle();
+    const email = cur?.email || found.email;
+    const phone = cur?.phone || found.phone;
+    if (cur && cur.email === email && cur.phone === phone) return;
+    await admin.from("contact_profiles").upsert({ ...key, email, phone, updated_at: new Date().toISOString() }, { onConflict: "organization_id,platform,external_user_id" });
+  } catch (e) {
+    console.error("contact capture failed", e);
+  }
+}
+
 /** Called by the webhook after keyword rules. Never throws. */
 export async function runLiveFlows(admin: AdminClient, ev: FlowEvent, startedAt: string) {
+  await captureContactInfo(admin, ev);
   try {
     const { data } = await admin.from("platform_settings").select("feature_flags").eq("id", true).maybeSingle();
     const flags = (data?.feature_flags as Record<string, unknown> | null) ?? {};
