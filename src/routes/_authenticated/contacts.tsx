@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { AppShell } from "@/components/app/AppShell";
+import { GuideButton } from "@/components/app/GuideButton";
 import { EmptyState, PageHeader, Panel, PlatformBadge, StatusBadge } from "@/components/app/primitives";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -104,6 +105,7 @@ function ContactsPage() {
         description="Your CRM: tag people, store email/phone and custom fields, and save segments."
         actions={
           <div className="flex gap-2">
+            <GuideButton guide="contacts" />
             <Button variant="outline" onClick={exportCsv} disabled={visible.length === 0}><Download className="size-4" /> Export CSV</Button>
             <Button asChild variant="outline"><Link to="/inbox">Open inbox</Link></Button>
           </div>
