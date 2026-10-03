@@ -11,7 +11,9 @@ export type FlowStep =
   | { id: string; kind: "send_dm"; text: string; buttonTitle?: string; buttonUrl?: string }
   | { id: string; kind: "public_reply"; text: string }
   | { id: string; kind: "wait"; minutes: number }
-  | { id: string; kind: "tag"; value: string };
+  | { id: string; kind: "tag"; value: string }
+  | { id: string; kind: "send_payment"; productId: string; text: string }
+  | { id: string; kind: "send_coupon"; campaignId: string; text: string };
 
 export type Flow = {
   id: string;
@@ -65,6 +67,14 @@ export function sanitizeFlows(raw: unknown): Flow[] {
           return [{ id: sid, kind: "wait", minutes: Math.min(1440, Math.max(1, Math.round(Number(x.minutes) || 1))) }];
         case "tag":
           return [{ id: sid, kind: "tag", value: text(x.value, 40) }];
+        case "send_payment": {
+          const y = s as { productId?: unknown };
+          return [{ id: sid, kind: "send_payment", productId: text(y.productId, 40), text: text(x.text, 600) }];
+        }
+        case "send_coupon": {
+          const y = s as { campaignId?: unknown };
+          return [{ id: sid, kind: "send_coupon", campaignId: text(y.campaignId, 40), text: text(x.text, 600) }];
+        }
         default:
           return [];
       }
@@ -84,12 +94,15 @@ export function sanitizeFlows(raw: unknown): Flow[] {
 /** Problems that block activating a flow. Empty array = ready. */
 export function validateFlow(flow: Flow): string[] {
   const issues: string[] = [];
-  if (!flow.steps.some((s) => s.kind === "send_dm" || s.kind === "public_reply")) {
+  if (!flow.steps.some((s) => s.kind === "send_dm" || s.kind === "public_reply" || s.kind === "send_payment" || s.kind === "send_coupon")) {
     issues.push("Add at least one message step.");
   }
   flow.steps.forEach((s, i) => {
     if ((s.kind === "send_dm" || s.kind === "public_reply") && !s.text) issues.push(`Step ${i + 1}: message is empty.`);
     if (s.kind === "condition" && s.check === "contains" && !s.value) issues.push(`Step ${i + 1}: keyword is empty.`);
+    if (s.kind === "send_payment" && !s.productId) issues.push(`Step ${i + 1}: choose a product.`);
+    if (s.kind === "send_coupon" && !s.campaignId) issues.push(`Step ${i + 1}: choose a coupon campaign.`);
+    if (s.kind === "send_coupon" && !s.text.includes("{code}")) issues.push(`Step ${i + 1}: message must include {code}.`);
     if (s.kind === "public_reply" && flow.trigger !== "new_comment") issues.push(`Step ${i + 1}: public replies only work on comments.`);
   });
   return issues;
@@ -118,6 +131,8 @@ export function runFlowDry(flow: Flow, input: FlowInput): { matched: boolean; ac
     if (s.kind === "public_reply") actions.push({ kind: "Public reply", detail: s.text });
     if (s.kind === "wait") actions.push({ kind: "Wait", detail: `${s.minutes} min` });
     if (s.kind === "tag") actions.push({ kind: "Tag", detail: s.value });
+    if (s.kind === "send_payment") actions.push({ kind: "Payment link DM", detail: (s.text || "Pay here") + " [Pay now]" });
+    if (s.kind === "send_coupon") actions.push({ kind: "Coupon DM", detail: s.text.replace("{code}", "ABC-1234") });
   }
   return { matched: true, actions, stoppedAt: null };
 }

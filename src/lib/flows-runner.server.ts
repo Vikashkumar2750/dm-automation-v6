@@ -164,12 +164,35 @@ async function executeSteps(admin: AdminClient, flow: Flow, st: RunState, from: 
       acted = true;
       continue;
     }
+    // Phase E: payment link / coupon steps become a normal DM (same safety + sending path).
+    let msgText = "";
+    let btn: { title: string; url: string } | null = null;
+    if (s.kind === "send_dm") {
+      msgText = s.text;
+      if (s.buttonTitle && s.buttonUrl) btn = { title: s.buttonTitle, url: s.buttonUrl };
+    } else if (s.kind === "send_payment" || s.kind === "send_coupon") {
+      const r = await import("@/lib/revenue.server");
+      const target = { organizationId: st.organizationId, platform: st.platform, externalUserId: st.externalUserId, conversationId: st.conversationId, socialAccountId: st.socialAccountId };
+      if (s.kind === "send_payment") {
+        const link = await r.createPaymentLinkFor(admin, target, s.productId);
+        if ("error" in link) { await log(admin, st, "failed", `${flow.name}:${link.error}`); return true; }
+        const { formatInr } = await import("@/lib/revenue");
+        msgText = s.text || `${link.name} — ${formatInr(link.amount)}`;
+        btn = { title: "Pay now", url: link.url };
+      } else {
+        const code = await r.issueCoupon(admin, target, s.campaignId);
+        if (!code) { await log(admin, st, "skipped", `${flow.name}:coupon_unavailable`); continue; }
+        msgText = s.text.replace(/\{code\}/g, code);
+      }
+    } else {
+      continue;
+    }
     // send_dm — first DM after a comment is a private reply to that comment.
     const viaComment = st.channel === "comment" && st.externalId && !st.usedCommentReply;
     const recipient = viaComment ? { comment_id: st.externalId } : { id: st.externalUserId };
-    const shapes = s.buttonTitle && s.buttonUrl
-      ? a.flowButtonMessages(s.text, [{ type: "web_url", url: s.buttonUrl, title: s.buttonTitle }])
-      : [{ text: s.text }];
+    const shapes = btn
+      ? a.flowButtonMessages(msgText, [{ type: "web_url", url: btn.url, title: btn.title }])
+      : [{ text: msgText }];
     let sentId: string | undefined;
     let err = "";
     for (const message of shapes) {
@@ -179,8 +202,8 @@ async function executeSteps(admin: AdminClient, flow: Flow, st: RunState, from: 
     }
     if (err) { await log(admin, st, "failed", `${flow.name}:${err}`); return true; }
     if (viaComment) st.usedCommentReply = true;
-    await recordOutbound(admin, st, flow, (viaComment ? "[private reply] " : "") + s.text + (s.buttonTitle ? `\n[${s.buttonTitle}] ${s.buttonUrl}` : ""), sentId ?? null);
-    await log(admin, st, "sent", `${flow.name}:send_dm`);
+    await recordOutbound(admin, st, flow, (viaComment ? "[private reply] " : "") + msgText + (btn ? `\n[${btn.title}] ${btn.url}` : ""), sentId ?? null);
+    await log(admin, st, "sent", `${flow.name}:${s.kind}`);
     acted = true;
   }
   return acted;
@@ -260,3 +283,36 @@ export async function resumeDueFlows(admin: AdminClient) {
 /** Shared safety gate for other new sending paths (Phase C AI agent). */
 export const safetyBlockFor = (admin: AdminClient, ev: Pick<FlowEvent, "organizationId" | "conversationId" | "body">) =>
   safetyBlock(admin, ev as FlowEvent);
+
+/** Phase E: send one plain DM (with optional button) through the same safety gate. Never throws. */
+export async function sendDirectDm(
+  admin: AdminClient,
+  t: { organizationId: string; conversationId: string; socialAccountId: string | null; platform: string; externalUserId: string },
+  text: string,
+  button: { title: string; url: string } | null,
+  label: string,
+): Promise<boolean> {
+  try {
+    const ev: FlowEvent = { ...t, platform: t.platform as "instagram" | "facebook", channel: "dm", body: "", externalId: null };
+    const block = await safetyBlock(admin, ev);
+    const pseudo = { id: "revenue", name: label } as Flow;
+    if (block) { await log(admin, ev, "skipped", `${label}:${block}`); return false; }
+    const c = await credentials(admin, ev);
+    if (!c) { await log(admin, ev, "failed", `${label}:no_token`); return false; }
+    const a = await import("@/lib/automation.server");
+    const shapes = button ? a.flowButtonMessages(text, [{ type: "web_url", url: button.url, title: button.title }]) : [{ text }];
+    for (const message of shapes) {
+      const r = await a.flowCallMessaging(ev.platform, c.accountId, { recipient: { id: ev.externalUserId }, message, access_token: c.token });
+      if (!r.error) {
+        await recordOutbound(admin, ev, pseudo, text + (button ? `\n[${button.title}] ${button.url}` : ""), r.id ?? null);
+        await log(admin, ev, "sent", label);
+        return true;
+      }
+      await log(admin, ev, "failed", `${label}:${r.error}`);
+    }
+    return false;
+  } catch (e) {
+    console.error("direct dm failed", e);
+    return false;
+  }
+}

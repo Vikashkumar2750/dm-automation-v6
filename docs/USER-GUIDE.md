@@ -53,3 +53,13 @@
 - Filters (platform, tag, has email/phone, search) → **Save segment** to reuse the group.
 - **Export CSV** downloads the people currently shown.
 - Test: Flow builder → "Collect email / phone" template → on → DM "details" from a test account → reply with an email → open Contacts → the person shows the email and the "lead" tag.
+
+## Phase E — Revenue (sell inside DMs)
+**Where:** left menu → **Revenue** (below Contacts). "Guide" button on that page explains everything.
+- **Payments setup:** connect your own Razorpay (Key ID, Key secret, webhook secret) and add the shown webhook address in Razorpay with event `payment_link.paid`. Money goes to your Razorpay account.
+- **Products:** name + price. Without Razorpay you can add your own payment link per product.
+- **Flow builder steps:** "Send payment link" (each person gets their own link + Pay now button) and "Send coupon" (unique code, message must include `{code}`).
+- When someone pays: link shows Paid, contact gets the "paid" tag, sale shows in the report.
+- **Delivery pages:** simple page (title, text, one button) for your final DM link; views and clicks counted.
+- **Payment reminder:** one reminder per unpaid link after your chosen wait, only within 24 hours of the person's last message. All safety limits apply.
+- **Sales report:** last 30 days, DMs → page views → clicks → payment links → paid, plus revenue.

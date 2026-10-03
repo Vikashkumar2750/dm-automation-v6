@@ -1,7 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
+import { getRevenue } from "@/lib/revenue.functions";
 import { toast } from "sonner";
 import { ArrowDown, ArrowUp, GitBranch, GripVertical, Plus, Trash2, Zap } from "lucide-react";
 
@@ -33,6 +34,8 @@ export const Route = createFileRoute("/_authenticated/automations_/flows")({
   component: FlowsPage,
 });
 
+const RevenueOptions = createContext<{ products: { id: string; name: string }[]; campaigns: { id: string; name: string }[] }>({ products: [], campaigns: [] });
+
 const sel = "h-9 rounded-md border border-input bg-background px-2 text-sm";
 
 const STEP_TEMPLATES: { label: string; make: () => FlowStep }[] = [
@@ -42,6 +45,8 @@ const STEP_TEMPLATES: { label: string; make: () => FlowStep }[] = [
   { label: "Public reply", make: () => ({ id: newStepId(), kind: "public_reply", text: "" }) },
   { label: "Wait", make: () => ({ id: newStepId(), kind: "wait", minutes: 5 }) },
   { label: "Add tag", make: () => ({ id: newStepId(), kind: "tag", value: "" }) },
+  { label: "Send payment link", make: () => ({ id: newStepId(), kind: "send_payment", productId: "", text: "" }) },
+  { label: "Send coupon", make: () => ({ id: newStepId(), kind: "send_coupon", campaignId: "", text: "Here is your code: {code}" }) },
 ];
 
 function FlowsPage() {
@@ -55,6 +60,12 @@ function FlowsPage() {
     enabled: !!orgId,
     queryFn: () => fetchFlows({ data: { organizationId: orgId! } }),
   });
+  const fetchRev = useServerFn(getRevenue);
+  const revQ = useQuery({ queryKey: ["revenue", orgId], enabled: !!orgId, queryFn: () => fetchRev({ data: { organizationId: orgId! } }) });
+  const revOpts = {
+    products: (revQ.data?.products ?? []).map((p: any) => ({ id: p.id as string, name: p.name as string })),
+    campaigns: (revQ.data?.campaigns ?? []).map((c: any) => ({ id: c.id as string, name: c.name as string })),
+  };
   const [flows, setFlows] = useState<Flow[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
   const [dragFrom, setDragFrom] = useState<number | null>(null);
@@ -112,7 +123,7 @@ function FlowsPage() {
   const issues = flow ? validateFlow(flow) : [];
 
   return (
-    <AppShell>
+    <RevenueOptions.Provider value={revOpts}><AppShell>
       <PageHeader
         title="Flow Builder"
         description="Advanced mode: chain conditions and actions into one flow. Keyword rules stay as simple mode."
@@ -248,7 +259,7 @@ function FlowsPage() {
 
         {flow && <TestPanel flow={flow} />}
       </div>
-    </AppShell>
+    </AppShell></RevenueOptions.Provider>
   );
 }
 
@@ -256,12 +267,13 @@ function StepCard({ step, index, onChange, onRemove, onMove }: {
   step: FlowStep; index: number; onChange: (s: FlowStep) => void; onRemove: () => void; onMove: (d: number) => void;
 }) {
   const isCond = step.kind === "condition";
+  const rev = useContext(RevenueOptions);
   return (
     <div className={`rounded-xl border bg-card p-4 ${isCond ? "border-warning/50" : "border-border"}`}>
       <div className="flex items-center justify-between">
         <p className="flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           <GripVertical className="size-4 cursor-grab" aria-label="Drag to reorder" />
-          {index + 1}. {isCond ? "Condition" : step.kind === "send_dm" ? "Send DM" : step.kind === "public_reply" ? "Public reply" : step.kind === "wait" ? "Wait" : "Tag"}
+          {index + 1}. {isCond ? "Condition" : step.kind === "send_dm" ? "Send DM" : step.kind === "public_reply" ? "Public reply" : step.kind === "wait" ? "Wait" : step.kind === "send_payment" ? "Payment link" : step.kind === "send_coupon" ? "Coupon" : "Tag"}
         </p>
         <div className="flex">
           <Button size="icon" variant="ghost" aria-label="Move up" onClick={() => onMove(-1)}><ArrowUp className="size-4" /></Button>
@@ -297,6 +309,25 @@ function StepCard({ step, index, onChange, onRemove, onMove }: {
         )}
         {step.kind === "wait" && (
           <Input type="number" min={1} max={1440} value={step.minutes} onChange={(e) => onChange({ ...step, minutes: Number(e.target.value) })} />
+        )}
+        {step.kind === "send_payment" && (
+          <>
+            <select className={sel} value={step.productId} onChange={(e) => onChange({ ...step, productId: e.target.value })}>
+              <option value="">Choose a product…</option>
+              {rev.products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+            <Input placeholder="Message (optional, default: product name + price)" maxLength={600} value={step.text} onChange={(e) => onChange({ ...step, text: e.target.value })} />
+            {rev.products.length === 0 && <p className="text-xs text-muted-foreground">Add products on the Revenue page first.</p>}
+          </>
+        )}
+        {step.kind === "send_coupon" && (
+          <>
+            <select className={sel} value={step.campaignId} onChange={(e) => onChange({ ...step, campaignId: e.target.value })}>
+              <option value="">Choose a coupon campaign…</option>
+              {rev.campaigns.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+            <Input placeholder="Message with {code}" maxLength={600} value={step.text} onChange={(e) => onChange({ ...step, text: e.target.value })} />
+          </>
         )}
         {step.kind === "tag" && (
           <Input placeholder="Tag name (e.g. hot-lead)" maxLength={40} value={step.value} onChange={(e) => onChange({ ...step, value: e.target.value })} />

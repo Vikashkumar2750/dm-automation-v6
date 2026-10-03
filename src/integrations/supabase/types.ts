@@ -733,6 +733,152 @@ export type Database = {
           },
         ]
       }
+      coupon_campaigns: {
+        Row: {
+          active: boolean
+          created_at: string
+          discount_label: string
+          expires_at: string | null
+          id: string
+          max_codes: number
+          name: string
+          organization_id: string
+          prefix: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          discount_label: string
+          expires_at?: string | null
+          id?: string
+          max_codes?: number
+          name: string
+          organization_id: string
+          prefix: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          discount_label?: string
+          expires_at?: string | null
+          id?: string
+          max_codes?: number
+          name?: string
+          organization_id?: string
+          prefix?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coupon_campaigns_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      coupon_codes: {
+        Row: {
+          campaign_id: string
+          code: string
+          external_user_id: string
+          id: string
+          issued_at: string
+          organization_id: string
+          platform: string
+        }
+        Insert: {
+          campaign_id: string
+          code: string
+          external_user_id: string
+          id?: string
+          issued_at?: string
+          organization_id: string
+          platform: string
+        }
+        Update: {
+          campaign_id?: string
+          code?: string
+          external_user_id?: string
+          id?: string
+          issued_at?: string
+          organization_id?: string
+          platform?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coupon_codes_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "coupon_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coupon_codes_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      delivery_pages: {
+        Row: {
+          active: boolean
+          body: string | null
+          button_label: string | null
+          button_url: string | null
+          created_at: string
+          id: string
+          organization_id: string
+          product_id: string | null
+          slug: string
+          title: string
+          views: number
+        }
+        Insert: {
+          active?: boolean
+          body?: string | null
+          button_label?: string | null
+          button_url?: string | null
+          created_at?: string
+          id?: string
+          organization_id: string
+          product_id?: string | null
+          slug: string
+          title: string
+          views?: number
+        }
+        Update: {
+          active?: boolean
+          body?: string | null
+          button_label?: string | null
+          button_url?: string | null
+          created_at?: string
+          id?: string
+          organization_id?: string
+          product_id?: string | null
+          slug?: string
+          title?: string
+          views?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_pages_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "delivery_pages_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "revenue_products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       flow_runs: {
         Row: {
           conversation_id: string | null
@@ -1019,6 +1165,107 @@ export type Database = {
           },
         ]
       }
+      payment_credentials: {
+        Row: {
+          organization_id: string
+          razorpay_key_id: string
+          razorpay_key_secret: string
+          updated_at: string
+          webhook_secret: string
+        }
+        Insert: {
+          organization_id: string
+          razorpay_key_id: string
+          razorpay_key_secret: string
+          updated_at?: string
+          webhook_secret: string
+        }
+        Update: {
+          organization_id?: string
+          razorpay_key_id?: string
+          razorpay_key_secret?: string
+          updated_at?: string
+          webhook_secret?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_credentials_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_links: {
+        Row: {
+          amount_paise: number
+          conversation_id: string | null
+          created_at: string
+          external_user_id: string
+          id: string
+          nudged_at: string | null
+          organization_id: string
+          paid_at: string | null
+          platform: string
+          product_id: string | null
+          provider: string
+          provider_link_id: string | null
+          social_account_id: string | null
+          status: string
+          url: string
+        }
+        Insert: {
+          amount_paise: number
+          conversation_id?: string | null
+          created_at?: string
+          external_user_id: string
+          id?: string
+          nudged_at?: string | null
+          organization_id: string
+          paid_at?: string | null
+          platform: string
+          product_id?: string | null
+          provider: string
+          provider_link_id?: string | null
+          social_account_id?: string | null
+          status?: string
+          url: string
+        }
+        Update: {
+          amount_paise?: number
+          conversation_id?: string | null
+          created_at?: string
+          external_user_id?: string
+          id?: string
+          nudged_at?: string | null
+          organization_id?: string
+          paid_at?: string | null
+          platform?: string
+          product_id?: string | null
+          provider?: string
+          provider_link_id?: string | null
+          social_account_id?: string | null
+          status?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_links_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_links_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "revenue_products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       plan_orders: {
         Row: {
           amount_paise: number
@@ -1266,6 +1513,123 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      revenue_events: {
+        Row: {
+          amount_paise: number | null
+          created_at: string
+          external_user_id: string | null
+          id: string
+          kind: string
+          organization_id: string
+          platform: string | null
+          ref_id: string | null
+        }
+        Insert: {
+          amount_paise?: number | null
+          created_at?: string
+          external_user_id?: string | null
+          id?: string
+          kind: string
+          organization_id: string
+          platform?: string | null
+          ref_id?: string | null
+        }
+        Update: {
+          amount_paise?: number | null
+          created_at?: string
+          external_user_id?: string | null
+          id?: string
+          kind?: string
+          organization_id?: string
+          platform?: string | null
+          ref_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "revenue_events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      revenue_products: {
+        Row: {
+          active: boolean
+          created_at: string
+          currency: string
+          description: string | null
+          id: string
+          manual_url: string | null
+          name: string
+          organization_id: string
+          price_paise: number
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          currency?: string
+          description?: string | null
+          id?: string
+          manual_url?: string | null
+          name: string
+          organization_id: string
+          price_paise: number
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          currency?: string
+          description?: string | null
+          id?: string
+          manual_url?: string | null
+          name?: string
+          organization_id?: string
+          price_paise?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "revenue_products_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      revenue_settings: {
+        Row: {
+          nudge_delay_minutes: number
+          nudge_enabled: boolean
+          nudge_text: string
+          organization_id: string
+          updated_at: string
+        }
+        Insert: {
+          nudge_delay_minutes?: number
+          nudge_enabled?: boolean
+          nudge_text?: string
+          organization_id: string
+          updated_at?: string
+        }
+        Update: {
+          nudge_delay_minutes?: number
+          nudge_enabled?: boolean
+          nudge_text?: string
+          organization_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "revenue_settings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       social_account_tokens: {
         Row: {

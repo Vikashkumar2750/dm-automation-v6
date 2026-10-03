@@ -62,5 +62,7 @@ Real Meta + YouTube credentials are available when we reach OAuth phases.
 - [x] Phase D CRM (part): tags, email/phone, custom fields, saved segments, CSV export, contact detail
 - [ ] Phase D rest: capture email/phone inside flows, broadcasts, Sheets/webhook sync
 - [x] Flow templates, ice breaker presets, in-app guides
-- [ ] Next: Phase E, H, F, G, I
+- [x] Phase E: Razorpay payment links (per workspace keys), coupons, delivery pages, 24h payment reminder, sales report
+- [ ] Phase E live test: needs a real Razorpay account + Instagram DM on Railway
+- [ ] Next: Phase H, F, G, I
 - [ ] Final user guide covering all features (docs/USER-GUIDE.md, updated after each phase)
