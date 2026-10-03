@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Loader2 } from "lucide-react";
 
 import { AppShell } from "@/components/app/AppShell";
 import { PageHeader, Panel } from "@/components/app/primitives";
@@ -31,7 +31,7 @@ export const Route = createFileRoute("/_authenticated/create-post_/new")({
 });
 
 function NewPostPage() {
-  const { activeOrg } = useTenant();
+  const { activeOrg, loading: tenantLoading } = useTenant();
   const orgId = activeOrg?.id ?? "";
 
   const fetchAccounts = useServerFn(listSocialAccounts);
@@ -57,7 +57,13 @@ function NewPostPage() {
         }
       />
 
-      {orgId ? (
+      {tenantLoading ? (
+        <Panel>
+          <div className="flex items-center justify-center py-10">
+            <Loader2 className="size-5 animate-spin text-muted-foreground" />
+          </div>
+        </Panel>
+      ) : orgId ? (
         <Panel title="Compose">
           <PostComposerForm
             organizationId={orgId}
