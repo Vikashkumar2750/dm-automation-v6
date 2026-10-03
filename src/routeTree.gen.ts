@@ -33,6 +33,7 @@ import { Route as AuthenticatedContactsRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedCreatePostRouteImport } from './routes/_authenticated/create-post'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedInboxRouteImport } from './routes/_authenticated/inbox'
+import { Route as AuthenticatedRevenueRouteImport } from './routes/_authenticated/revenue'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedSocialAccountsRouteImport } from './routes/_authenticated/social-accounts'
 import { Route as AuthenticatedTeamRouteImport } from './routes/_authenticated/team'
@@ -193,6 +194,11 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
 const AuthenticatedInboxRoute = AuthenticatedInboxRouteImport.update({
   id: '/inbox',
   path: '/inbox',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedRevenueRoute = AuthenticatedRevenueRouteImport.update({
+  id: '/revenue',
+  path: '/revenue',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
@@ -436,6 +442,7 @@ export interface FileRoutesByFullPath {
   '/create-post': typeof AuthenticatedCreatePostRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/inbox': typeof AuthenticatedInboxRoute
+  '/revenue': typeof AuthenticatedRevenueRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/social-accounts': typeof AuthenticatedSocialAccountsRoute
   '/team': typeof AuthenticatedTeamRoute
@@ -499,6 +506,7 @@ export interface FileRoutesByTo {
   '/create-post': typeof AuthenticatedCreatePostRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/inbox': typeof AuthenticatedInboxRoute
+  '/revenue': typeof AuthenticatedRevenueRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/social-accounts': typeof AuthenticatedSocialAccountsRoute
   '/team': typeof AuthenticatedTeamRoute
@@ -565,6 +573,7 @@ export interface FileRoutesById {
   '/_authenticated/create-post': typeof AuthenticatedCreatePostRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/inbox': typeof AuthenticatedInboxRoute
+  '/_authenticated/revenue': typeof AuthenticatedRevenueRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/social-accounts': typeof AuthenticatedSocialAccountsRoute
   '/_authenticated/team': typeof AuthenticatedTeamRoute
@@ -631,6 +640,7 @@ export interface FileRouteTypes {
     | '/create-post'
     | '/dashboard'
     | '/inbox'
+    | '/revenue'
     | '/settings'
     | '/social-accounts'
     | '/team'
@@ -694,6 +704,7 @@ export interface FileRouteTypes {
     | '/create-post'
     | '/dashboard'
     | '/inbox'
+    | '/revenue'
     | '/settings'
     | '/social-accounts'
     | '/team'
@@ -759,6 +770,7 @@ export interface FileRouteTypes {
     | '/_authenticated/create-post'
     | '/_authenticated/dashboard'
     | '/_authenticated/inbox'
+    | '/_authenticated/revenue'
     | '/_authenticated/settings'
     | '/_authenticated/social-accounts'
     | '/_authenticated/team'
@@ -995,6 +1007,13 @@ declare module '@tanstack/react-router' {
       path: '/inbox'
       fullPath: '/inbox'
       preLoaderRoute: typeof AuthenticatedInboxRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/revenue': {
+      id: '/_authenticated/revenue'
+      path: '/revenue'
+      fullPath: '/revenue'
+      preLoaderRoute: typeof AuthenticatedRevenueRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/settings': {
@@ -1327,6 +1346,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedCreatePostRoute: typeof AuthenticatedCreatePostRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedInboxRoute: typeof AuthenticatedInboxRoute
+  AuthenticatedRevenueRoute: typeof AuthenticatedRevenueRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedSocialAccountsRoute: typeof AuthenticatedSocialAccountsRoute
   AuthenticatedTeamRoute: typeof AuthenticatedTeamRoute
@@ -1353,6 +1373,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedCreatePostRoute: AuthenticatedCreatePostRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedInboxRoute: AuthenticatedInboxRoute,
+  AuthenticatedRevenueRoute: AuthenticatedRevenueRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedSocialAccountsRoute: AuthenticatedSocialAccountsRoute,
   AuthenticatedTeamRoute: AuthenticatedTeamRoute,
