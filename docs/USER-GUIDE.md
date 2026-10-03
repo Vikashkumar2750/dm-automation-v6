@@ -63,3 +63,11 @@
 - **Delivery pages:** simple page (title, text, one button) for your final DM link; views and clicks counted.
 - **Payment reminder:** one reminder per unpaid link after your chosen wait, only within 24 hours of the person's last message. All safety limits apply.
 - **Sales report:** last 30 days, DMs → page views → clicks → payment links → paid, plus revenue.
+
+## Security (how your data is protected)
+- Every table is locked per workspace: people only see their own workspace's data.
+- Social tokens, Razorpay keys and login states sit in server-only tables — the browser can never read them.
+- Internal counters (AI daily limit, unread count) can only be changed by the server, not by visitors or users.
+- Webhooks (Meta, Razorpay) are accepted only with a valid signature; scheduler endpoints need CRON_SECRET.
+- Blog categories are public on purpose (shown on the blog).
+- Super Admin tip: keep CRON_SECRET and Razorpay webhook secrets long and private; rotate them if ever shared.
