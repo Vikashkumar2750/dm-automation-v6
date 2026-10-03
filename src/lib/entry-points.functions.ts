@@ -140,12 +140,16 @@ export const syncEntryConfig = createServerFn({ method: "POST" })
       if (platform === "instagram") hosts.push("https://graph.instagram.com/v21.0");
       let lastError = "unknown";
       let ok = false;
+      // Empty config = remove what was published before (Meta rejects empty lists).
+      const clearing = Object.keys(body).every((k) => k === "platform");
+      const clearFields = platform === "facebook" ? ["ice_breakers", "persistent_menu"] : ["ice_breakers"];
       for (const host of hosts) {
         try {
-          const res = await fetch(`${host}/me/messenger_profile?access_token=${encodeURIComponent(token)}`, {
-            method: "POST",
+          const qs = `access_token=${encodeURIComponent(token)}${platform === "instagram" ? "&platform=instagram" : ""}`;
+          const res = await fetch(`${host}/me/messenger_profile?${qs}`, {
+            method: clearing ? "DELETE" : "POST",
             headers: { "content-type": "application/json" },
-            body: JSON.stringify(body),
+            body: JSON.stringify(clearing ? { fields: clearFields, ...(platform === "instagram" ? { platform: "instagram" } : {}) } : body),
           });
           const json = (await res.json().catch(() => ({}))) as { error?: { message?: string } };
           if (res.ok && !json.error) { ok = true; break; }

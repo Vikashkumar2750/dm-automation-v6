@@ -493,6 +493,85 @@ export type Database = {
           },
         ]
       }
+      contact_profiles: {
+        Row: {
+          created_at: string
+          custom_fields: Json
+          email: string | null
+          external_user_id: string
+          id: string
+          notes: string | null
+          organization_id: string
+          phone: string | null
+          platform: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          custom_fields?: Json
+          email?: string | null
+          external_user_id: string
+          id?: string
+          notes?: string | null
+          organization_id: string
+          phone?: string | null
+          platform: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          custom_fields?: Json
+          email?: string | null
+          external_user_id?: string
+          id?: string
+          notes?: string | null
+          organization_id?: string
+          phone?: string | null
+          platform?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contact_profiles_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contact_segments: {
+        Row: {
+          created_at: string
+          filter: Json
+          id: string
+          name: string
+          organization_id: string
+        }
+        Insert: {
+          created_at?: string
+          filter?: Json
+          id?: string
+          name: string
+          organization_id: string
+        }
+        Update: {
+          created_at?: string
+          filter?: Json
+          id?: string
+          name?: string
+          organization_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contact_segments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contact_tags: {
         Row: {
           created_at: string
