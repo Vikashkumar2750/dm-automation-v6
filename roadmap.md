@@ -58,5 +58,8 @@ Real Meta + YouTube credentials are available when we reach OAuth phases.
 - [x] Phase B live sending (own Super Admin switch, off by default) + drag-and-drop steps
 - [x] Roadmap Phase C: AI agent (knowledge base, handoff, intent/sentiment/lead score; flag off, not pushed)
 - [ ] Railway DB: apply new tables flow_runs, contact_tags, conversation_insights (needs Railway deploy)
-- [ ] Next: Phase D CRM, then C, E, H, F, G, I
+- [x] Phase D CRM (part): tags, email/phone, custom fields, saved segments, CSV export, contact detail
+- [ ] Phase D rest: capture email/phone inside flows, broadcasts, Sheets/webhook sync
+- [x] Flow templates, ice breaker presets, in-app guides
+- [ ] Next: Phase E, H, F, G, I
 - [ ] Final user guide covering all features (docs/USER-GUIDE.md, updated after each phase)
