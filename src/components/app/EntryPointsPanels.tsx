@@ -15,6 +15,7 @@ import {
   saveEntryPointsFlags,
   syncEntryConfig,
 } from "@/lib/entry-points.functions";
+import { ENTRY_PRESETS } from "@/lib/flow-templates";
 
 /** Super Admin switch for Phase A entry points (off by default). */
 export function EntryPointsAdminPanel() {
@@ -112,7 +113,7 @@ export function EntryPointsCard({ organizationId }: { organizationId: string }) 
     onSuccess: (r) => {
       const failed = r.results.filter((x) => !x.ok);
       if (r.results.length === 0) toast.info("No Instagram or Facebook account connected");
-      else if (failed.length === 0) toast.success("Synced to all accounts");
+      else if (failed.length === 0) toast.success(`Synced to ${r.results.length} account(s)`);
       else toast.warning(`${failed.length} account(s) failed: ${failed[0]!.error}`);
     },
     onError: () => toast.error("Sync failed"),
@@ -128,6 +129,16 @@ export function EntryPointsCard({ organizationId }: { organizationId: string }) 
       <p className="mt-1 text-sm text-muted-foreground">
         Questions people see when they open your DMs for the first time. To answer one, create a “New DM” rule with the question as its keyword.
       </p>
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <span className="text-xs text-muted-foreground">Use a ready-made set:</span>
+        {ENTRY_PRESETS.map((p) => (
+          <Button key={p.key} size="sm" variant="outline" onClick={() => {
+            setQuestions([...p.questions, "", "", "", ""].slice(0, 4));
+            setMenu(p.menu.map((m) => ({ ...m })));
+            toast.info("Preset filled in — change links if needed, then Save and Sync to Meta.");
+          }}>{p.label}</Button>
+        ))}
+      </div>
       <div className="mt-4 grid gap-2">
         {questions.map((v, i) => (
           <Input

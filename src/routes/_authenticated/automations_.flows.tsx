@@ -12,6 +12,8 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { useTenant } from "@/hooks/useTenant";
 import { getFlows, saveFlows } from "@/lib/flows.functions";
+import { FLOW_TEMPLATES, flowFromTemplate } from "@/lib/flow-templates";
+import { GuideButton } from "@/components/app/GuideButton";
 import {
   MAX_FLOWS, MAX_STEPS, TRIGGER_LABELS, moveStep, newStepId, runFlowDry, validateFlow,
   type Flow, type FlowStep, type FlowTrigger,
@@ -88,6 +90,14 @@ function FlowsPage() {
     setSelected(f.id);
   }
 
+  function addTemplate(key: string) {
+    const f = flowFromTemplate(key);
+    if (!f || flows.length >= MAX_FLOWS) return;
+    setFlows((all) => [...all, f]);
+    setSelected(f.id);
+    toast.success("Template added as a draft — edit the texts and links, then Save all.");
+  }
+
   if (q.data && !q.data.enabled) {
     return (
       <AppShell>
@@ -108,6 +118,7 @@ function FlowsPage() {
         description="Advanced mode: chain conditions and actions into one flow. Keyword rules stay as simple mode."
         actions={
           <div className="flex gap-2">
+            <GuideButton guide="automations" />
             <Button asChild variant="outline"><Link to="/automations">Back to rules</Link></Button>
             <Button onClick={() => m.mutate(flows)} disabled={m.isPending || !orgId}>Save all</Button>
           </div>
@@ -137,6 +148,23 @@ function FlowsPage() {
               ))}
             </ul>
           )}
+          <div className="mt-4 border-t border-border pt-3">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Ready-made templates</p>
+            <ul className="space-y-1">
+              {FLOW_TEMPLATES.map((t) => (
+                <li key={t.key}>
+                  <button
+                    onClick={() => addTemplate(t.key)}
+                    disabled={flows.length >= MAX_FLOWS}
+                    className="w-full rounded-md border border-dashed border-border px-3 py-2 text-left text-sm hover:bg-muted disabled:opacity-50"
+                  >
+                    <span className="block font-medium">{t.name}</span>
+                    <span className="text-xs text-muted-foreground">{t.description}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
         </Panel>
 
         {flow ? (

@@ -98,12 +98,14 @@ export function sanitizeEntryConfig(raw: unknown): EntryConfig {
 export function messengerProfileBody(platform: "instagram" | "facebook", cfg: EntryConfig) {
   const body: Record<string, unknown> = {};
   if (platform === "instagram") body["platform"] = "instagram";
-  body["ice_breakers"] = [
-    {
-      locale: "default",
-      call_to_actions: cfg.iceBreakers.map((b, i) => ({ question: b.question, payload: `IB:${i}` })),
-    },
-  ];
+  if (cfg.iceBreakers.length > 0) {
+    body["ice_breakers"] = [
+      {
+        locale: "default",
+        call_to_actions: cfg.iceBreakers.map((b, i) => ({ question: b.question, payload: `IB:${i}` })),
+      },
+    ];
+  }
   if (platform === "facebook" && cfg.menu.length > 0) {
     body["persistent_menu"] = [
       {
