@@ -32,6 +32,12 @@ if (!secret) {
     } catch (e) {
       console.warn("[flows] tick failed", e?.message ?? e);
     }
+    try {
+      const { status, body } = await post("/api/public/cron/revenue");
+      if (status !== 200 || !body.includes('"sent":0')) console.log("[revenue]", status, body);
+    } catch (e) {
+      console.warn("[revenue] tick failed", e?.message ?? e);
+    }
   };
   setTimeout(tick, 20000);
   setInterval(tick, 60000);
