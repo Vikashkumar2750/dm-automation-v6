@@ -119,7 +119,7 @@ function Products({ orgId, items }: { orgId: string; items: any[] }) {
   const [f, setF] = useState({ name: "", price: "", description: "", manualUrl: "" });
   const submit = () => {
     const p = rupeesToPaise(f.price);
-    if (!f.name || !p) return toast.error("Name and price (at least ₹1) are needed");
+    if (!f.name || !p) { toast.error("Name and price (at least ₹1) are needed"); return; }
     save.mutate({ organizationId: orgId, name: f.name, pricePaise: p, description: f.description || null, manualUrl: f.manualUrl || null, active: true },
       { onSuccess: () => setF({ name: "", price: "", description: "", manualUrl: "" }) });
   };
