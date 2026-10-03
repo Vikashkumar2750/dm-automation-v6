@@ -16,6 +16,7 @@ export const Route = createFileRoute("/data-deletion")({
       { property: "og:type", content: "article" },
       { name: "twitter:card", content: "summary" },
     ],
+    links: [{ rel: "canonical", href: "https://autodm.techaasvik.com/data-deletion" }],
   }),
   component: DataDeletion,
 });
