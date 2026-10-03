@@ -43,3 +43,13 @@
 6. Use "Try it" to test an answer — nothing is sent. Press Save.
 7. "Recent AI decisions" shows each DM: reply / handoff / analyse only / ignore, plus intent, mood, lead score and how sure it was.
 - Only DMs, never comments. It replies only when no keyword rule or flow already handled the message. All safety limits apply. Intent is also saved as a tag on the contact.
+
+## Phase D — Contacts (CRM)
+**Where:** left menu → **Contacts** (below Automations). In-app "Guide" button on that page explains everything.
+- Everyone who DM'd or commented on Instagram/Facebook is listed here.
+- **Email / phone** are saved automatically when a person writes them in a DM (e.g. after the "Collect email / phone" flow asks). You can also edit them.
+- **Tags** come from flows ("Add tag" step), the AI agent (intent), or you.
+- Click a person → edit email, phone, notes, custom fields, tags → Save.
+- Filters (platform, tag, has email/phone, search) → **Save segment** to reuse the group.
+- **Export CSV** downloads the people currently shown.
+- Test: Flow builder → "Collect email / phone" template → on → DM "details" from a test account → reply with an email → open Contacts → the person shows the email and the "lead" tag.
