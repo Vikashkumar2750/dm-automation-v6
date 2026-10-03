@@ -39,6 +39,7 @@ import { Route as AuthenticatedTeamRouteImport } from './routes/_authenticated/t
 import { Route as AuthenticatedUsageRouteImport } from './routes/_authenticated/usage'
 import { Route as BlogIndexRouteImport } from './routes/blog.index'
 import { Route as BlogSlugRouteImport } from './routes/blog.$slug'
+import { Route as PSlugRouteImport } from './routes/p.$slug'
 import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated/admin.index'
 import { Route as AuthenticatedAdminAccountsRouteImport } from './routes/_authenticated/admin.accounts'
 import { Route as AuthenticatedAdminAlertsRouteImport } from './routes/_authenticated/admin.alerts'
@@ -64,10 +65,13 @@ import { Route as AuthenticatedAdminOrgOrgIdRouteImport } from './routes/_authen
 import { Route as AuthenticatedAutomationsActivityRunIdRouteImport } from './routes/_authenticated/automations_.activity_.$runId'
 import { Route as ApiPublicCronFlowsRouteImport } from './routes/api/public/cron.flows'
 import { Route as ApiPublicCronPublishDueRouteImport } from './routes/api/public/cron.publish-due'
+import { Route as ApiPublicCronRevenueRouteImport } from './routes/api/public/cron.revenue'
 import { Route as ApiPublicCronYoutubeCommentsRouteImport } from './routes/api/public/cron.youtube-comments'
+import { Route as ApiPublicPgSlugRouteImport } from './routes/api/public/pg.$slug'
 import { Route as ApiPublicTTokenRouteImport } from './routes/api/public/t.$token'
 import { Route as ApiPublicWebhooksMetaRouteImport } from './routes/api/public/webhooks.meta'
 import { Route as ApiPublicOauthProviderCallbackRouteImport } from './routes/api/public/oauth.$provider.callback'
+import { Route as ApiPublicWebhooksRazorpayOrgIdRouteImport } from './routes/api/public/webhooks.razorpay.$orgId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -222,6 +226,11 @@ const BlogSlugRoute = BlogSlugRouteImport.update({
   path: '/blog/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PSlugRoute = PSlugRouteImport.update({
+  id: '/p/$slug',
+  path: '/p/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedAdminIndexRoute = AuthenticatedAdminIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -364,12 +373,22 @@ const ApiPublicCronPublishDueRoute = ApiPublicCronPublishDueRouteImport.update({
   path: '/api/public/cron/publish-due',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicCronRevenueRoute = ApiPublicCronRevenueRouteImport.update({
+  id: '/api/public/cron/revenue',
+  path: '/api/public/cron/revenue',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicCronYoutubeCommentsRoute =
   ApiPublicCronYoutubeCommentsRouteImport.update({
     id: '/api/public/cron/youtube-comments',
     path: '/api/public/cron/youtube-comments',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicPgSlugRoute = ApiPublicPgSlugRouteImport.update({
+  id: '/api/public/pg/$slug',
+  path: '/api/public/pg/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicTTokenRoute = ApiPublicTTokenRouteImport.update({
   id: '/api/public/t/$token',
   path: '/api/public/t/$token',
@@ -384,6 +403,12 @@ const ApiPublicOauthProviderCallbackRoute =
   ApiPublicOauthProviderCallbackRouteImport.update({
     id: '/api/public/oauth/$provider/callback',
     path: '/api/public/oauth/$provider/callback',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicWebhooksRazorpayOrgIdRoute =
+  ApiPublicWebhooksRazorpayOrgIdRouteImport.update({
+    id: '/api/public/webhooks/razorpay/$orgId',
+    path: '/api/public/webhooks/razorpay/$orgId',
     getParentRoute: () => rootRouteImport,
   } as any)
 
@@ -416,6 +441,7 @@ export interface FileRoutesByFullPath {
   '/team': typeof AuthenticatedTeamRoute
   '/usage': typeof AuthenticatedUsageRoute
   '/blog/$slug': typeof BlogSlugRoute
+  '/p/$slug': typeof PSlugRoute
   '/blog/': typeof BlogIndexRoute
   '/admin/accounts': typeof AuthenticatedAdminAccountsRoute
   '/admin/alerts': typeof AuthenticatedAdminAlertsRoute
@@ -442,10 +468,13 @@ export interface FileRoutesByFullPath {
   '/automations/activity/$runId': typeof AuthenticatedAutomationsActivityRunIdRoute
   '/api/public/cron/flows': typeof ApiPublicCronFlowsRoute
   '/api/public/cron/publish-due': typeof ApiPublicCronPublishDueRoute
+  '/api/public/cron/revenue': typeof ApiPublicCronRevenueRoute
   '/api/public/cron/youtube-comments': typeof ApiPublicCronYoutubeCommentsRoute
+  '/api/public/pg/$slug': typeof ApiPublicPgSlugRoute
   '/api/public/t/$token': typeof ApiPublicTTokenRoute
   '/api/public/webhooks/meta': typeof ApiPublicWebhooksMetaRoute
   '/api/public/oauth/$provider/callback': typeof ApiPublicOauthProviderCallbackRoute
+  '/api/public/webhooks/razorpay/$orgId': typeof ApiPublicWebhooksRazorpayOrgIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -475,6 +504,7 @@ export interface FileRoutesByTo {
   '/team': typeof AuthenticatedTeamRoute
   '/usage': typeof AuthenticatedUsageRoute
   '/blog/$slug': typeof BlogSlugRoute
+  '/p/$slug': typeof PSlugRoute
   '/blog': typeof BlogIndexRoute
   '/admin/accounts': typeof AuthenticatedAdminAccountsRoute
   '/admin/alerts': typeof AuthenticatedAdminAlertsRoute
@@ -501,10 +531,13 @@ export interface FileRoutesByTo {
   '/automations/activity/$runId': typeof AuthenticatedAutomationsActivityRunIdRoute
   '/api/public/cron/flows': typeof ApiPublicCronFlowsRoute
   '/api/public/cron/publish-due': typeof ApiPublicCronPublishDueRoute
+  '/api/public/cron/revenue': typeof ApiPublicCronRevenueRoute
   '/api/public/cron/youtube-comments': typeof ApiPublicCronYoutubeCommentsRoute
+  '/api/public/pg/$slug': typeof ApiPublicPgSlugRoute
   '/api/public/t/$token': typeof ApiPublicTTokenRoute
   '/api/public/webhooks/meta': typeof ApiPublicWebhooksMetaRoute
   '/api/public/oauth/$provider/callback': typeof ApiPublicOauthProviderCallbackRoute
+  '/api/public/webhooks/razorpay/$orgId': typeof ApiPublicWebhooksRazorpayOrgIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -537,6 +570,7 @@ export interface FileRoutesById {
   '/_authenticated/team': typeof AuthenticatedTeamRoute
   '/_authenticated/usage': typeof AuthenticatedUsageRoute
   '/blog/$slug': typeof BlogSlugRoute
+  '/p/$slug': typeof PSlugRoute
   '/blog/': typeof BlogIndexRoute
   '/_authenticated/admin/accounts': typeof AuthenticatedAdminAccountsRoute
   '/_authenticated/admin/alerts': typeof AuthenticatedAdminAlertsRoute
@@ -563,10 +597,13 @@ export interface FileRoutesById {
   '/_authenticated/automations_/activity_/$runId': typeof AuthenticatedAutomationsActivityRunIdRoute
   '/api/public/cron/flows': typeof ApiPublicCronFlowsRoute
   '/api/public/cron/publish-due': typeof ApiPublicCronPublishDueRoute
+  '/api/public/cron/revenue': typeof ApiPublicCronRevenueRoute
   '/api/public/cron/youtube-comments': typeof ApiPublicCronYoutubeCommentsRoute
+  '/api/public/pg/$slug': typeof ApiPublicPgSlugRoute
   '/api/public/t/$token': typeof ApiPublicTTokenRoute
   '/api/public/webhooks/meta': typeof ApiPublicWebhooksMetaRoute
   '/api/public/oauth/$provider/callback': typeof ApiPublicOauthProviderCallbackRoute
+  '/api/public/webhooks/razorpay/$orgId': typeof ApiPublicWebhooksRazorpayOrgIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -599,6 +636,7 @@ export interface FileRouteTypes {
     | '/team'
     | '/usage'
     | '/blog/$slug'
+    | '/p/$slug'
     | '/blog/'
     | '/admin/accounts'
     | '/admin/alerts'
@@ -625,10 +663,13 @@ export interface FileRouteTypes {
     | '/automations/activity/$runId'
     | '/api/public/cron/flows'
     | '/api/public/cron/publish-due'
+    | '/api/public/cron/revenue'
     | '/api/public/cron/youtube-comments'
+    | '/api/public/pg/$slug'
     | '/api/public/t/$token'
     | '/api/public/webhooks/meta'
     | '/api/public/oauth/$provider/callback'
+    | '/api/public/webhooks/razorpay/$orgId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -658,6 +699,7 @@ export interface FileRouteTypes {
     | '/team'
     | '/usage'
     | '/blog/$slug'
+    | '/p/$slug'
     | '/blog'
     | '/admin/accounts'
     | '/admin/alerts'
@@ -684,10 +726,13 @@ export interface FileRouteTypes {
     | '/automations/activity/$runId'
     | '/api/public/cron/flows'
     | '/api/public/cron/publish-due'
+    | '/api/public/cron/revenue'
     | '/api/public/cron/youtube-comments'
+    | '/api/public/pg/$slug'
     | '/api/public/t/$token'
     | '/api/public/webhooks/meta'
     | '/api/public/oauth/$provider/callback'
+    | '/api/public/webhooks/razorpay/$orgId'
   id:
     | '__root__'
     | '/'
@@ -719,6 +764,7 @@ export interface FileRouteTypes {
     | '/_authenticated/team'
     | '/_authenticated/usage'
     | '/blog/$slug'
+    | '/p/$slug'
     | '/blog/'
     | '/_authenticated/admin/accounts'
     | '/_authenticated/admin/alerts'
@@ -745,10 +791,13 @@ export interface FileRouteTypes {
     | '/_authenticated/automations_/activity_/$runId'
     | '/api/public/cron/flows'
     | '/api/public/cron/publish-due'
+    | '/api/public/cron/revenue'
     | '/api/public/cron/youtube-comments'
+    | '/api/public/pg/$slug'
     | '/api/public/t/$token'
     | '/api/public/webhooks/meta'
     | '/api/public/oauth/$provider/callback'
+    | '/api/public/webhooks/razorpay/$orgId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -765,13 +814,17 @@ export interface RootRouteChildren {
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   TermsRoute: typeof TermsRoute
   BlogSlugRoute: typeof BlogSlugRoute
+  PSlugRoute: typeof PSlugRoute
   BlogIndexRoute: typeof BlogIndexRoute
   ApiPublicCronFlowsRoute: typeof ApiPublicCronFlowsRoute
   ApiPublicCronPublishDueRoute: typeof ApiPublicCronPublishDueRoute
+  ApiPublicCronRevenueRoute: typeof ApiPublicCronRevenueRoute
   ApiPublicCronYoutubeCommentsRoute: typeof ApiPublicCronYoutubeCommentsRoute
+  ApiPublicPgSlugRoute: typeof ApiPublicPgSlugRoute
   ApiPublicTTokenRoute: typeof ApiPublicTTokenRoute
   ApiPublicWebhooksMetaRoute: typeof ApiPublicWebhooksMetaRoute
   ApiPublicOauthProviderCallbackRoute: typeof ApiPublicOauthProviderCallbackRoute
+  ApiPublicWebhooksRazorpayOrgIdRoute: typeof ApiPublicWebhooksRazorpayOrgIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -986,6 +1039,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BlogSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/p/$slug': {
+      id: '/p/$slug'
+      path: '/p/$slug'
+      fullPath: '/p/$slug'
+      preLoaderRoute: typeof PSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/admin/': {
       id: '/_authenticated/admin/'
       path: '/'
@@ -1161,11 +1221,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicCronPublishDueRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/cron/revenue': {
+      id: '/api/public/cron/revenue'
+      path: '/api/public/cron/revenue'
+      fullPath: '/api/public/cron/revenue'
+      preLoaderRoute: typeof ApiPublicCronRevenueRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/cron/youtube-comments': {
       id: '/api/public/cron/youtube-comments'
       path: '/api/public/cron/youtube-comments'
       fullPath: '/api/public/cron/youtube-comments'
       preLoaderRoute: typeof ApiPublicCronYoutubeCommentsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/pg/$slug': {
+      id: '/api/public/pg/$slug'
+      path: '/api/public/pg/$slug'
+      fullPath: '/api/public/pg/$slug'
+      preLoaderRoute: typeof ApiPublicPgSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/t/$token': {
@@ -1187,6 +1261,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public/oauth/$provider/callback'
       fullPath: '/api/public/oauth/$provider/callback'
       preLoaderRoute: typeof ApiPublicOauthProviderCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/webhooks/razorpay/$orgId': {
+      id: '/api/public/webhooks/razorpay/$orgId'
+      path: '/api/public/webhooks/razorpay/$orgId'
+      fullPath: '/api/public/webhooks/razorpay/$orgId'
+      preLoaderRoute: typeof ApiPublicWebhooksRazorpayOrgIdRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -1304,13 +1385,17 @@ const rootRouteChildren: RootRouteChildren = {
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   TermsRoute: TermsRoute,
   BlogSlugRoute: BlogSlugRoute,
+  PSlugRoute: PSlugRoute,
   BlogIndexRoute: BlogIndexRoute,
   ApiPublicCronFlowsRoute: ApiPublicCronFlowsRoute,
   ApiPublicCronPublishDueRoute: ApiPublicCronPublishDueRoute,
+  ApiPublicCronRevenueRoute: ApiPublicCronRevenueRoute,
   ApiPublicCronYoutubeCommentsRoute: ApiPublicCronYoutubeCommentsRoute,
+  ApiPublicPgSlugRoute: ApiPublicPgSlugRoute,
   ApiPublicTTokenRoute: ApiPublicTTokenRoute,
   ApiPublicWebhooksMetaRoute: ApiPublicWebhooksMetaRoute,
   ApiPublicOauthProviderCallbackRoute: ApiPublicOauthProviderCallbackRoute,
+  ApiPublicWebhooksRazorpayOrgIdRoute: ApiPublicWebhooksRazorpayOrgIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
