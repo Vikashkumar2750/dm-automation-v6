@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
@@ -114,10 +114,6 @@ function CreatePostPage() {
   const posts = postsQuery.data ?? [];
   const accounts = accountsQuery.data ?? [];
 
-  const openNew = () => {
-    setDraft(null);
-    setOpen(true);
-  };
   const openEdit = (post: Post) => {
     setDraft({ post });
     setOpen(true);
@@ -134,8 +130,10 @@ function CreatePostPage() {
         title="Create Post"
         description="Compose once, schedule it, and let the queue publish for you."
         actions={
-          <Button onClick={openNew}>
-            <Plus className="mr-2 size-4" /> New post
+          <Button asChild>
+            <Link to="/create-post/new">
+              <Plus className="mr-2 size-4" /> New post
+            </Link>
           </Button>
         }
       />
@@ -152,8 +150,10 @@ function CreatePostPage() {
               title="No posts yet"
               description="Write your first caption, pick a time, and it will go out automatically."
               action={
-                <Button onClick={openNew}>
-                  <Plus className="mr-2 size-4" /> New post
+                <Button asChild>
+                  <Link to="/create-post/new">
+                    <Plus className="mr-2 size-4" /> New post
+                  </Link>
                 </Button>
               }
             />

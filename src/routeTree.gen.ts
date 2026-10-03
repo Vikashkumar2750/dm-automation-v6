@@ -58,6 +58,7 @@ import { Route as AuthenticatedAutomationsActivityRouteImport } from './routes/_
 import { Route as AuthenticatedAutomationsAiAgentRouteImport } from './routes/_authenticated/automations_.ai-agent'
 import { Route as AuthenticatedAutomationsFlowsRouteImport } from './routes/_authenticated/automations_.flows'
 import { Route as AuthenticatedAutomationsSimulatorRouteImport } from './routes/_authenticated/automations_.simulator'
+import { Route as AuthenticatedCreatePostNewRouteImport } from './routes/_authenticated/create-post_.new'
 import { Route as AuthenticatedInviteTokenRouteImport } from './routes/_authenticated/invite.$token'
 import { Route as AuthenticatedAdminOrgOrgIdRouteImport } from './routes/_authenticated/admin.org.$orgId'
 import { Route as AuthenticatedAutomationsActivityRunIdRouteImport } from './routes/_authenticated/automations_.activity_.$runId'
@@ -329,6 +330,12 @@ const AuthenticatedAutomationsSimulatorRoute =
     path: '/automations/simulator',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedCreatePostNewRoute =
+  AuthenticatedCreatePostNewRouteImport.update({
+    id: '/create-post_/new',
+    path: '/create-post/new',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedInviteTokenRoute =
   AuthenticatedInviteTokenRouteImport.update({
     id: '/invite/$token',
@@ -428,6 +435,7 @@ export interface FileRoutesByFullPath {
   '/automations/ai-agent': typeof AuthenticatedAutomationsAiAgentRoute
   '/automations/flows': typeof AuthenticatedAutomationsFlowsRoute
   '/automations/simulator': typeof AuthenticatedAutomationsSimulatorRoute
+  '/create-post/new': typeof AuthenticatedCreatePostNewRoute
   '/invite/$token': typeof AuthenticatedInviteTokenRoute
   '/admin/': typeof AuthenticatedAdminIndexRoute
   '/admin/org/$orgId': typeof AuthenticatedAdminOrgOrgIdRoute
@@ -486,6 +494,7 @@ export interface FileRoutesByTo {
   '/automations/ai-agent': typeof AuthenticatedAutomationsAiAgentRoute
   '/automations/flows': typeof AuthenticatedAutomationsFlowsRoute
   '/automations/simulator': typeof AuthenticatedAutomationsSimulatorRoute
+  '/create-post/new': typeof AuthenticatedCreatePostNewRoute
   '/invite/$token': typeof AuthenticatedInviteTokenRoute
   '/admin': typeof AuthenticatedAdminIndexRoute
   '/admin/org/$orgId': typeof AuthenticatedAdminOrgOrgIdRoute
@@ -547,6 +556,7 @@ export interface FileRoutesById {
   '/_authenticated/automations_/ai-agent': typeof AuthenticatedAutomationsAiAgentRoute
   '/_authenticated/automations_/flows': typeof AuthenticatedAutomationsFlowsRoute
   '/_authenticated/automations_/simulator': typeof AuthenticatedAutomationsSimulatorRoute
+  '/_authenticated/create-post_/new': typeof AuthenticatedCreatePostNewRoute
   '/_authenticated/invite/$token': typeof AuthenticatedInviteTokenRoute
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
   '/_authenticated/admin/org/$orgId': typeof AuthenticatedAdminOrgOrgIdRoute
@@ -608,6 +618,7 @@ export interface FileRouteTypes {
     | '/automations/ai-agent'
     | '/automations/flows'
     | '/automations/simulator'
+    | '/create-post/new'
     | '/invite/$token'
     | '/admin/'
     | '/admin/org/$orgId'
@@ -666,6 +677,7 @@ export interface FileRouteTypes {
     | '/automations/ai-agent'
     | '/automations/flows'
     | '/automations/simulator'
+    | '/create-post/new'
     | '/invite/$token'
     | '/admin'
     | '/admin/org/$orgId'
@@ -726,6 +738,7 @@ export interface FileRouteTypes {
     | '/_authenticated/automations_/ai-agent'
     | '/_authenticated/automations_/flows'
     | '/_authenticated/automations_/simulator'
+    | '/_authenticated/create-post_/new'
     | '/_authenticated/invite/$token'
     | '/_authenticated/admin/'
     | '/_authenticated/admin/org/$orgId'
@@ -1106,6 +1119,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAutomationsSimulatorRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/create-post_/new': {
+      id: '/_authenticated/create-post_/new'
+      path: '/create-post/new'
+      fullPath: '/create-post/new'
+      preLoaderRoute: typeof AuthenticatedCreatePostNewRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/invite/$token': {
       id: '/_authenticated/invite/$token'
       path: '/invite/$token'
@@ -1234,6 +1254,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAutomationsAiAgentRoute: typeof AuthenticatedAutomationsAiAgentRoute
   AuthenticatedAutomationsFlowsRoute: typeof AuthenticatedAutomationsFlowsRoute
   AuthenticatedAutomationsSimulatorRoute: typeof AuthenticatedAutomationsSimulatorRoute
+  AuthenticatedCreatePostNewRoute: typeof AuthenticatedCreatePostNewRoute
   AuthenticatedInviteTokenRoute: typeof AuthenticatedInviteTokenRoute
   AuthenticatedAutomationsActivityRunIdRoute: typeof AuthenticatedAutomationsActivityRunIdRoute
 }
@@ -1260,6 +1281,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAutomationsFlowsRoute: AuthenticatedAutomationsFlowsRoute,
   AuthenticatedAutomationsSimulatorRoute:
     AuthenticatedAutomationsSimulatorRoute,
+  AuthenticatedCreatePostNewRoute: AuthenticatedCreatePostNewRoute,
   AuthenticatedInviteTokenRoute: AuthenticatedInviteTokenRoute,
   AuthenticatedAutomationsActivityRunIdRoute:
     AuthenticatedAutomationsActivityRunIdRoute,
