@@ -493,6 +493,47 @@ export type Database = {
           },
         ]
       }
+      broadcasts: {
+        Row: {
+          created_at: string
+          filter: Json
+          id: string
+          message: string
+          name: string
+          organization_id: string
+          sent_count: number
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          filter?: Json
+          id?: string
+          message: string
+          name: string
+          organization_id: string
+          sent_count?: number
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          filter?: Json
+          id?: string
+          message?: string
+          name?: string
+          organization_id?: string
+          sent_count?: number
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "broadcasts_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contact_profiles: {
         Row: {
           created_at: string
@@ -670,6 +711,42 @@ export type Database = {
           },
         ]
       }
+      conversation_nudge_log: {
+        Row: {
+          conversation_id: string
+          id: string
+          organization_id: string
+          sent_at: string
+        }
+        Insert: {
+          conversation_id: string
+          id?: string
+          organization_id: string
+          sent_at?: string
+        }
+        Update: {
+          conversation_id?: string
+          id?: string
+          organization_id?: string
+          sent_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversation_nudge_log_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: true
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversation_nudge_log_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       conversations: {
         Row: {
           channel: string
@@ -817,6 +894,35 @@ export type Database = {
             foreignKeyName: "coupon_codes_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_sync_settings: {
+        Row: {
+          enabled: boolean
+          organization_id: string
+          updated_at: string
+          webhook_url: string | null
+        }
+        Insert: {
+          enabled?: boolean
+          organization_id: string
+          updated_at?: string
+          webhook_url?: string | null
+        }
+        Update: {
+          enabled?: boolean
+          organization_id?: string
+          updated_at?: string
+          webhook_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_sync_settings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
@@ -979,6 +1085,38 @@ export type Database = {
             columns: ["conversation_id"]
             isOneToOne: false
             referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      nudge_settings: {
+        Row: {
+          delay_minutes: number
+          enabled: boolean
+          organization_id: string
+          text: string
+          updated_at: string
+        }
+        Insert: {
+          delay_minutes?: number
+          enabled?: boolean
+          organization_id: string
+          text?: string
+          updated_at?: string
+        }
+        Update: {
+          delay_minutes?: number
+          enabled?: boolean
+          organization_id?: string
+          text?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nudge_settings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]

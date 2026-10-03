@@ -71,3 +71,15 @@
 - Webhooks (Meta, Razorpay) are accepted only with a valid signature; scheduler endpoints need CRON_SECRET.
 - Blog categories are public on purpose (shown on the blog).
 - Super Admin tip: keep CRON_SECRET and Razorpay webhook secrets long and private; rotate them if ever shared.
+
+## Phase D (cont.) — Outreach: nudges, broadcasts, Sheet sync
+All three live on the **Contacts** page, below the people list.
+
+### Abandoned-conversation nudge
+When a person stops replying in the middle of a conversation, the app sends one gentle follow-up after the wait you choose (default 2 hours). Safety rules: only inside Meta's 24-hour window, only once per conversation, and your pause/quiet-hours settings still apply. Turn it on from Contacts → "Abandoned-conversation nudge" → Save nudge.
+
+### Broadcast
+Send one message to many contacts at once — everyone, or only one tag. Because of Meta's rules, only people who messaged you in the last 24 hours can receive it; others are skipped automatically. Contacts → "Broadcast" → name + message + optional tag → Send broadcast. The history below shows how many people got it.
+
+### Sync to Google Sheets / webhook
+Paste a Zapier or Make webhook address (must start with https://) and turn it on. From then on, every new email or phone number captured from DMs is also posted to that address — connect it to a Google Sheets step in Zapier/Make and your sheet fills up automatically.

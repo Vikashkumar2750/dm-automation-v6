@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useTenant } from "@/hooks/useTenant";
 import { contactsToCsv, extractContactInfo, matchesSegment, type CrmContact, type SegmentFilter } from "@/lib/crm";
-import { addContactTag, deleteSegment, getCrm, removeContactTag, saveContactProfile, saveSegment } from "@/lib/crm.functions";
+import { addContactTag, deleteBroadcast, deleteSegment, getCrm, getOutreach, removeContactTag, saveContactProfile, saveNudgeSettings, saveSegment, saveSyncSettings, sendBroadcast } from "@/lib/crm.functions";
 import { listConversations } from "@/lib/inbox.functions";
 
 export const Route = createFileRoute("/_authenticated/contacts")({
@@ -174,12 +174,123 @@ function ContactsPage() {
         )}
       </Panel>
 
+      {orgId && <OutreachPanel orgId={orgId} allTags={allTags} />}
+
       <Sheet open={!!open} onOpenChange={(v) => !v && setOpenKey(null)}>
         <SheetContent className="overflow-y-auto sm:max-w-md">
           {open && orgId && <ContactDetail key={open.key} orgId={orgId} contact={open} crm={crm.data} onSaved={refresh} />}
         </SheetContent>
       </Sheet>
     </AppShell>
+  );
+}
+
+/** Nudges, broadcasts and webhook sync for this workspace. */
+function OutreachPanel({ orgId, allTags }: { orgId: string; allTags: string[] }) {
+  const qc = useQueryClient();
+  const fetchOutreach = useServerFn(getOutreach);
+  const saveNudge = useServerFn(saveNudgeSettings);
+  const saveSync = useServerFn(saveSyncSettings);
+  const sendBc = useServerFn(sendBroadcast);
+  const delBc = useServerFn(deleteBroadcast);
+  const outreach = useQuery({ queryKey: ["outreach", orgId], queryFn: () => fetchOutreach({ data: { organizationId: orgId } }) });
+  const refresh = () => qc.invalidateQueries({ queryKey: ["outreach", orgId] });
+
+  const [nudgeOn, setNudgeOn] = useState<boolean | null>(null);
+  const [nudgeDelay, setNudgeDelay] = useState("120");
+  const [nudgeText, setNudgeText] = useState("");
+  const [syncOn, setSyncOn] = useState<boolean | null>(null);
+  const [syncUrl, setSyncUrl] = useState("");
+  const [bcName, setBcName] = useState("");
+  const [bcMessage, setBcMessage] = useState("");
+  const [bcTag, setBcTag] = useState("");
+
+  useEffect(() => {
+    if (!outreach.data) return;
+    if (nudgeOn === null) {
+      setNudgeOn(outreach.data.nudge?.enabled ?? false);
+      setNudgeDelay(String(outreach.data.nudge?.delay_minutes ?? 120));
+      setNudgeText(outreach.data.nudge?.text ?? "Hi! Just checking in — can I help you with anything?");
+    }
+    if (syncOn === null) {
+      setSyncOn(outreach.data.sync?.enabled ?? false);
+      setSyncUrl(outreach.data.sync?.webhook_url ?? "");
+    }
+  }, [outreach.data, nudgeOn, syncOn]);
+
+  const saveNudgeMut = useMutation({
+    mutationFn: () => saveNudge({ data: { organizationId: orgId, enabled: nudgeOn ?? false, delayMinutes: Number(nudgeDelay) || 120, text: nudgeText.trim() } }),
+    onSuccess: () => { toast.success("Nudge settings saved"); refresh(); },
+    onError: () => toast.error("Could not save nudge settings"),
+  });
+  const saveSyncMut = useMutation({
+    mutationFn: () => saveSync({ data: { organizationId: orgId, enabled: syncOn ?? false, webhookUrl: syncUrl.trim() || null } }),
+    onSuccess: () => { toast.success("Sync settings saved"); refresh(); },
+    onError: () => toast.error("Webhook address must start with https://"),
+  });
+  const sendMut = useMutation({
+    mutationFn: () => sendBc({ data: { organizationId: orgId, name: bcName.trim(), message: bcMessage.trim(), filter: bcTag ? { tag: bcTag } : {} } }),
+    onSuccess: (r) => { toast.success(`Broadcast sent to ${r.sent} of ${r.matched} people`); setBcName(""); setBcMessage(""); refresh(); },
+    onError: () => toast.error("Could not send broadcast"),
+  });
+
+  return (
+    <div className="mt-6 grid gap-4 lg:grid-cols-3">
+      <Panel title="Abandoned-conversation nudge" >
+        <p className="mb-3 text-xs text-muted-foreground">
+          If someone stops replying mid-conversation, send one gentle follow-up. Only inside Meta's 24-hour window, one nudge per conversation.
+        </p>
+        <label className="flex items-center gap-2 text-sm">
+          <input type="checkbox" checked={nudgeOn ?? false} onChange={(e) => setNudgeOn(e.target.checked)} /> Enabled
+        </label>
+        <div className="mt-3 grid gap-2">
+          <Label>Wait before nudging (minutes)</Label>
+          <Input type="number" min={15} max={1200} value={nudgeDelay} onChange={(e) => setNudgeDelay(e.target.value)} />
+          <Label>Nudge message</Label>
+          <textarea rows={2} maxLength={500} className="rounded-md border border-input bg-background px-3 py-2 text-sm" value={nudgeText} onChange={(e) => setNudgeText(e.target.value)} />
+          <Button size="sm" onClick={() => saveNudgeMut.mutate()} disabled={saveNudgeMut.isPending || !nudgeText.trim()}>Save nudge</Button>
+        </div>
+      </Panel>
+
+      <Panel title="Broadcast">
+        <p className="mb-3 text-xs text-muted-foreground">
+          Send one message to everyone (or one tag) who messaged you in the last 24 hours.
+        </p>
+        <div className="grid gap-2">
+          <Input placeholder="Broadcast name" maxLength={80} value={bcName} onChange={(e) => setBcName(e.target.value)} />
+          <textarea rows={2} maxLength={1000} placeholder="Message" className="rounded-md border border-input bg-background px-3 py-2 text-sm" value={bcMessage} onChange={(e) => setBcMessage(e.target.value)} />
+          <select className={sel} value={bcTag} onChange={(e) => setBcTag(e.target.value)}>
+            <option value="">Everyone in the 24h window</option>
+            {allTags.map((t) => <option key={t} value={t}>Only tag: {t}</option>)}
+          </select>
+          <Button size="sm" onClick={() => sendMut.mutate()} disabled={sendMut.isPending || !bcName.trim() || !bcMessage.trim()}>Send broadcast</Button>
+        </div>
+        {(outreach.data?.broadcasts.length ?? 0) > 0 && (
+          <ul className="mt-3 space-y-1 text-xs text-muted-foreground">
+            {outreach.data!.broadcasts.map((b) => (
+              <li key={b.id} className="flex items-center justify-between gap-2">
+                <span className="truncate">{b.name} — {b.status}, sent {b.sent_count}</span>
+                <button aria-label={`Delete ${b.name}`} className="hover:text-destructive" onClick={() => delBc({ data: { organizationId: orgId, id: b.id } }).then(refresh)}><X className="size-3.5" /></button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Panel>
+
+      <Panel title="Sync to Google Sheets / webhook">
+        <p className="mb-3 text-xs text-muted-foreground">
+          Every new email or phone captured from DMs is posted to this address. Use a Zapier/Make webhook to fill a Google Sheet automatically.
+        </p>
+        <label className="flex items-center gap-2 text-sm">
+          <input type="checkbox" checked={syncOn ?? false} onChange={(e) => setSyncOn(e.target.checked)} /> Enabled
+        </label>
+        <div className="mt-3 grid gap-2">
+          <Label>Webhook address (https://…)</Label>
+          <Input placeholder="https://hooks.zapier.com/…" maxLength={500} value={syncUrl} onChange={(e) => setSyncUrl(e.target.value)} />
+          <Button size="sm" onClick={() => saveSyncMut.mutate()} disabled={saveSyncMut.isPending}>Save sync</Button>
+        </div>
+      </Panel>
+    </div>
   );
 }
 

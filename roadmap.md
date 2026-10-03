@@ -60,7 +60,7 @@ Real Meta + YouTube credentials are available when we reach OAuth phases.
 - [x] Contacts link in left menu + Contacts guide (in-app and USER-GUIDE)
 - [ ] Railway DB: apply new tables flow_runs, contact_tags, conversation_insights (needs Railway deploy)
 - [x] Phase D CRM (part): tags, email/phone, custom fields, saved segments, CSV export, contact detail
-- [ ] Phase D rest: capture email/phone inside flows, broadcasts, Sheets/webhook sync
+- [x] Phase D rest: capture email/phone inside flows, broadcasts, Sheets/webhook sync, abandoned-conversation nudges (24h window, once per conversation)
 - [x] Flow templates, ice breaker presets, in-app guides
 - [x] Phase E: Razorpay payment links (per workspace keys), coupons, delivery pages, 24h payment reminder, sales report
 - [ ] Phase E live test: needs a real Razorpay account + Instagram DM on Railway

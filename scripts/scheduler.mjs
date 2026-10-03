@@ -38,6 +38,12 @@ if (!secret) {
     } catch (e) {
       console.warn("[revenue] tick failed", e?.message ?? e);
     }
+    try {
+      const { status, body } = await post("/api/public/cron/nudges");
+      if (status !== 200 || !body.includes('"sent":0')) console.log("[nudges]", status, body);
+    } catch (e) {
+      console.warn("[nudges] tick failed", e?.message ?? e);
+    }
   };
   setTimeout(tick, 20000);
   setInterval(tick, 60000);
