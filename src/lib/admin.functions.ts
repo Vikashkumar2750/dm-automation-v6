@@ -434,8 +434,7 @@ export const getAdminOrganization = createServerFn({ method: "POST" })
           ? false
           : Boolean(
               simulatorFlags[`simulator_user_${id}_${m.user_id}`] ??
-                simulatorFlags[`simulator_org_${id}`] ??
-                true,
+                (simulatorFlags[`simulator_org_${id}`] === true),
             ),
       })),
       recentErrors,
