@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { normalizeTag } from "@/lib/crm";
+import { normalizeTag, type SegmentFilter } from "@/lib/crm";
 
 type Ctx = { supabase: any; userId: string };
 const org = z.string().uuid();
