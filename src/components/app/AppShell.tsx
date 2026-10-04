@@ -21,6 +21,7 @@ import {
   Share2,
   Sparkles,
   ShieldCheck,
+  ShieldAlert,
   Gauge,
   UsersRound,
   Settings,
@@ -62,6 +63,7 @@ const primaryNav: NavItem[] = [
 
 const secondaryNav: NavItem[] = [
   { label: "Account Health", to: "/account-health", icon: ShieldCheck },
+  { label: "Trust & safety", to: "/trust-safety", icon: ShieldAlert },
   { label: "Usage & Limits", to: "/usage", icon: Gauge },
   { label: "Team", to: "/team", icon: UsersRound },
   { label: "Settings", to: "/settings", icon: Settings },

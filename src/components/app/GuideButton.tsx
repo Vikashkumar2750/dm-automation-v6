@@ -9,6 +9,7 @@ import aiAgentMd from "@/content/guides/ai-agent.md?raw";
 import contactsMd from "@/content/guides/contacts.md?raw";
 import revenueMd from "@/content/guides/revenue.md?raw";
 import teamDeskMd from "@/content/guides/team-desk.md?raw";
+import trustSafetyMd from "@/content/guides/trust-safety.md?raw";
 
 const GUIDES = {
   automations: { title: "Automations guide", file: "automations-guide.md", md: automationsMd },
@@ -16,6 +17,7 @@ const GUIDES = {
   contacts: { title: "Contacts guide", file: "contacts-guide.md", md: contactsMd },
   revenue: { title: "Revenue guide", file: "revenue-guide.md", md: revenueMd },
   "team-desk": { title: "Team desk guide", file: "team-desk-guide.md", md: teamDeskMd },
+  "trust-safety": { title: "Trust & safety guide", file: "trust-safety-guide.md", md: trustSafetyMd },
 } as const;
 
 /** Opens a readable .md guide in a dialog, with a download of the raw file. */
