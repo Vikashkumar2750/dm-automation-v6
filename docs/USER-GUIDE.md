@@ -145,3 +145,13 @@ Open **Trust & safety** in the left menu (below Account Health). It keeps your I
 - Owners, admins and managers see a list of every change in the workspace: who did it, when, what (automation, safety settings, team member, API key, webhook, payment keys, invoices…) and which fields changed.
 - Secret values (keys, tokens) are never stored in the audit trail — only that they changed.
 - Filter by type and **Download CSV** to keep a record.
+
+## Phase I — Growth insights
+
+Left menu → **Growth insights** (read-only; never sends messages or changes Instagram/Facebook automations). Full "How it works / How to use" is in the page's **Guide** button.
+
+- **Anomaly alerts** — last 24h vs your usual day (previous 7 days). Warns when received comments/DMs or sent DMs fall to half or less, or failed sends double.
+- **Best time to post** — busiest day+hour (India time) from 60 days of comments/DMs; needs 10+ to suggest.
+- **Funnel heatmap** — Comment/DM → DM sent → page opened → link clicked → sale, per weekday, with % moving to the next step.
+- **AI content ideas** — 6 ideas with hook, format and comment keyword; uses 1 daily AI request.
+- **Competitor benchmark** — type competitor public numbers; compares posts/week and engagement with yours and gives tips.

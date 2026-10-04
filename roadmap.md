@@ -66,5 +66,5 @@ Real Meta + YouTube credentials are available when we reach OAuth phases.
 - [ ] Phase E live test: needs a real Razorpay account + Instagram DM on Railway
 - [x] Phase G: Team desk (shared inbox assignment, approval queue, client reports + CSV, per-client billing invoices, API keys, signed outgoing webhooks); Phase F skipped by user
 - [x] Phase H: Trust & safety (health score, predictive guard, policy checker + compliance centre, audit trail)
-- [ ] Next: Phase I
+- [x] Next: Phase I
 - [ ] Final user guide covering all features (docs/USER-GUIDE.md, updated after each phase)

@@ -5,7 +5,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const memoryUsage = new Map<string, number>();
 
-async function runModel<T>(
+export async function runModel<T>(
   prompt: string,
   system: string,
   schema: z.ZodType<T>,

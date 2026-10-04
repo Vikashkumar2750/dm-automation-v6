@@ -22,6 +22,7 @@ import {
   Sparkles,
   ShieldCheck,
   ShieldAlert,
+  LineChart as GrowthIcon,
   Gauge,
   UsersRound,
   Settings,
@@ -64,6 +65,7 @@ const primaryNav: NavItem[] = [
 const secondaryNav: NavItem[] = [
   { label: "Account Health", to: "/account-health", icon: ShieldCheck },
   { label: "Trust & safety", to: "/trust-safety", icon: ShieldAlert },
+  { label: "Growth insights", to: "/growth", icon: GrowthIcon },
   { label: "Usage & Limits", to: "/usage", icon: Gauge },
   { label: "Team", to: "/team", icon: UsersRound },
   { label: "Settings", to: "/settings", icon: Settings },
