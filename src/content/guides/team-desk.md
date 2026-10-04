@@ -26,3 +26,9 @@ Team desk is for teams and agencies. Open it from **Team desk** in the left menu
 - **Outgoing webhook**: give a public https address (e.g. Zapier/Make "catch hook"). Every minute new messages are POSTed there.
   - Check `X-AutoDM-Signature` = HMAC-SHA256 of `timestamp + "." + body` using your `whsec_` secret, with `X-AutoDM-Timestamp`.
   - Failed deliveries retry automatically on the next minute.
+
+## 5. Client billing (managers and above)
+- Under **Client reports**, the **Client billing** box lets an agency bill each client workspace.
+- Choose the client, period (e.g. "October 2026"), amount in ₹ and optionally paste your own payment link (e.g. a Razorpay link).
+- Copy the link to the client, then press **Mark paid** when money arrives. **Cancel** voids an unpaid invoice.
+- The top line shows total **Due** and **Received**; **Invoices CSV** downloads everything for your accounts.
