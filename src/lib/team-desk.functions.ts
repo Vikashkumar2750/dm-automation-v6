@@ -229,3 +229,66 @@ export const updateWebhook = createServerFn({ method: "POST" })
     else await q.update({ enabled: !!data.enabled }).eq("id", data.id).eq("organization_id", data.organizationId);
     return { ok: true };
   });
+
+// ---------- Per-client billing (agency invoices for client workspaces) ----------
+
+export const listClientInvoices = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => orgInput.parse(d))
+  .handler(async ({ data, context }) => {
+    await requireReviewer(context, data.organizationId);
+    const { data: rows, error } = await context.supabase
+      .from("client_invoices")
+      .select("id, client_organization_id, period_label, amount_inr, status, payment_url, notes, paid_at, created_at")
+      .eq("organization_id", data.organizationId)
+      .order("created_at", { ascending: false })
+      .limit(300);
+    if (error) throw new Error(error.message);
+    return rows ?? [];
+  });
+
+export const createClientInvoice = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({
+      organizationId: z.string().uuid(),
+      clientOrganizationId: z.string().uuid(),
+      periodLabel: z.string().trim().min(1).max(60),
+      amountInr: z.number().positive().max(10_000_000),
+      paymentUrl: z.string().trim().url().max(500).startsWith("https://").optional().or(z.literal("")),
+      notes: z.string().trim().max(300).optional(),
+    }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    await requireReviewer(context, data.organizationId);
+    // The client must be a workspace this user also belongs to.
+    const { data: member } = await context.supabase
+      .from("organization_members").select("organization_id")
+      .eq("organization_id", data.clientOrganizationId).eq("user_id", context.userId).maybeSingle();
+    if (!member) throw new Error("You can only bill workspaces you belong to.");
+    const { error } = await context.supabase.from("client_invoices").insert({
+      organization_id: data.organizationId,
+      client_organization_id: data.clientOrganizationId,
+      period_label: data.periodLabel,
+      amount_inr: data.amountInr,
+      payment_url: data.paymentUrl || null,
+      notes: data.notes || null,
+      created_by: context.userId,
+    });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const setClientInvoiceStatus = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ organizationId: z.string().uuid(), id: z.string().uuid(), status: z.enum(["unpaid", "paid", "void"]) }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    await requireReviewer(context, data.organizationId);
+    const { error } = await context.supabase.from("client_invoices")
+      .update({ status: data.status, paid_at: data.status === "paid" ? new Date().toISOString() : null })
+      .eq("id", data.id).eq("organization_id", data.organizationId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });

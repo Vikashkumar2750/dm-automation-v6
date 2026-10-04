@@ -36,3 +36,16 @@ export function clampLimit(raw: string | null): number {
   if (!Number.isFinite(n) || n < 1) return 50;
   return Math.min(n, 100);
 }
+
+export type InvoiceStatus = "unpaid" | "paid" | "void";
+/** Per-client billing summary: unpaid total and paid total (void ignored). */
+export function summarizeInvoices(rows: { amount_inr: number | string; status: InvoiceStatus }[]) {
+  let due = 0;
+  let paid = 0;
+  for (const r of rows) {
+    const n = Number(r.amount_inr) || 0;
+    if (r.status === "unpaid") due += n;
+    else if (r.status === "paid") paid += n;
+  }
+  return { due: Math.round(due * 100) / 100, paid: Math.round(paid * 100) / 100 };
+}
