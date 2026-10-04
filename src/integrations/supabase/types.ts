@@ -53,6 +53,53 @@ export type Database = {
         }
         Relationships: []
       }
+      api_keys: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          key_hash: string
+          last_used_at: string | null
+          name: string
+          organization_id: string
+          prefix: string
+          revoked_at: string | null
+          scopes: string[]
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          key_hash: string
+          last_used_at?: string | null
+          name: string
+          organization_id: string
+          prefix: string
+          revoked_at?: string | null
+          scopes?: string[]
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          key_hash?: string
+          last_used_at?: string | null
+          name?: string
+          organization_id?: string
+          prefix?: string
+          revoked_at?: string | null
+          scopes?: string[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_keys_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       automation_follow_gates: {
         Row: {
           attempts: number
@@ -644,6 +691,45 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "contact_tags_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      conversation_assignments: {
+        Row: {
+          assigned_by: string | null
+          assigned_to: string | null
+          conversation_id: string
+          organization_id: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_by?: string | null
+          assigned_to?: string | null
+          conversation_id: string
+          organization_id: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_by?: string | null
+          assigned_to?: string | null
+          conversation_id?: string
+          organization_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversation_assignments_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: true
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversation_assignments_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
@@ -1303,6 +1389,56 @@ export type Database = {
           },
         ]
       }
+      outgoing_webhooks: {
+        Row: {
+          created_at: string
+          cursor_at: string
+          enabled: boolean
+          events: string[]
+          id: string
+          last_error: string | null
+          last_sent_at: string | null
+          last_status: number | null
+          organization_id: string
+          secret: string
+          url: string
+        }
+        Insert: {
+          created_at?: string
+          cursor_at?: string
+          enabled?: boolean
+          events?: string[]
+          id?: string
+          last_error?: string | null
+          last_sent_at?: string | null
+          last_status?: number | null
+          organization_id: string
+          secret: string
+          url: string
+        }
+        Update: {
+          created_at?: string
+          cursor_at?: string
+          enabled?: boolean
+          events?: string[]
+          id?: string
+          last_error?: string | null
+          last_sent_at?: string | null
+          last_status?: number | null
+          organization_id?: string
+          secret?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "outgoing_webhooks_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payment_credentials: {
         Row: {
           organization_id: string
@@ -1652,6 +1788,60 @@ export type Database = {
         }
         Relationships: []
       }
+      reply_approvals: {
+        Row: {
+          body: string
+          conversation_id: string
+          created_at: string
+          id: string
+          note: string | null
+          organization_id: string
+          requested_by: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+        }
+        Insert: {
+          body: string
+          conversation_id: string
+          created_at?: string
+          id?: string
+          note?: string | null
+          organization_id: string
+          requested_by: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+        }
+        Update: {
+          body?: string
+          conversation_id?: string
+          created_at?: string
+          id?: string
+          note?: string | null
+          organization_id?: string
+          requested_by?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reply_approvals_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reply_approvals_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       revenue_events: {
         Row: {
           amount_paise: number | null
@@ -1916,6 +2106,32 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      team_settings: {
+        Row: {
+          organization_id: string
+          require_approval: boolean
+          updated_at: string
+        }
+        Insert: {
+          organization_id: string
+          require_approval?: boolean
+          updated_at?: string
+        }
+        Update: {
+          organization_id?: string
+          require_approval?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_settings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       webhook_events: {
         Row: {
