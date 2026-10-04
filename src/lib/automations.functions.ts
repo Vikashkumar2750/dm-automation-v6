@@ -6,7 +6,8 @@ import { explainReason, webhookEventLabel } from "@/lib/activity-explain";
 import { checkPolicy } from "@/lib/trust-safety";
 
 /** Phase H: refuse rule text that clearly breaks Meta messaging policy (warnings are shown in the UI only). */
-function assertPolicy(t: { responseText?: string | null; responseVariations?: string[] | null; commentReplyText?: string | null; commentReplyVariations?: string[] | null; followPromptText?: string | null }) {
+function assertPolicy(input: object) {
+  const t = input as { responseText?: string | null; responseVariations?: string[] | null; commentReplyText?: string | null; commentReplyVariations?: string[] | null; followPromptText?: string | null };
   const b = checkPolicy([t.responseText, ...(t.responseVariations ?? []), t.commentReplyText, ...(t.commentReplyVariations ?? []), t.followPromptText]).find((i) => i.severity === "block");
   if (b) throw new Error(`Policy check: ${b.message}`);
 }
