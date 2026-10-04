@@ -56,7 +56,7 @@ export async function dispatchOutgoingWebhooks() {
       .order("created_at", { ascending: true })
       .limit(50);
     const rows = (msgs ?? []).filter((m) => hook.events.includes(eventForDirection(m.direction)));
-    const last = msgs?.length ? msgs[msgs.length - 1].created_at : null;
+    const last = msgs?.length ? msgs[msgs.length - 1]!.created_at : null;
     if (!rows.length) {
       if (last) await supabaseAdmin.from("outgoing_webhooks").update({ cursor_at: last }).eq("id", hook.id);
       continue;

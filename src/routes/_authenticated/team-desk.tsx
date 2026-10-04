@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Copy, Download } from "lucide-react";
+import { Copy, Download, Inbox, ShieldCheck } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -121,7 +121,7 @@ function SharedInbox({ orgId, desk, names, members }: { orgId: string; desk: Des
       </div>
       <Panel bodyClassName="p-0">
         {!rows.length ? (
-          <EmptyState title="No conversations here" description="Change the filter or wait for new messages." />
+          <EmptyState icon={Inbox} title="No conversations here" description="Change the filter or wait for new messages." />
         ) : (
           <ul className="divide-y divide-border">
             {rows.map((c) => (
@@ -177,7 +177,7 @@ function Approvals({ orgId, desk, names, reviewer }: { orgId: string; desk: Desk
     onSuccess: () => { toast.success("Done"); qc.invalidateQueries({ queryKey: ["team-desk", orgId] }); },
     onError: (e) => toast.error(errMsg(e)),
   });
-  if (!desk.approvals.length) return <EmptyState title="No approval requests" description="When agents need approval, their replies appear here." />;
+  if (!desk.approvals.length) return <EmptyState icon={ShieldCheck} title="No approval requests" description="When agents need approval, their replies appear here." />;
   return (
     <Panel bodyClassName="p-0">
       <ul className="divide-y divide-border">
