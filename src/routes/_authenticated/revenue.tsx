@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Copy, IndianRupee, Trash2 } from "lucide-react";
+import { Copy, IndianRupee, Info, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -11,6 +11,7 @@ import { EmptyState, PageHeader, Panel, StatusBadge } from "@/components/app/pri
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useTenant } from "@/hooks/useTenant";
@@ -205,8 +206,24 @@ function Pages({ orgId, items }: { orgId: string; items: any[] }) {
           <Input placeholder="Address (e.g. free-guide)" value={f.slug} onChange={(e) => setF({ ...f, slug: slugify(e.target.value) })} />
           <textarea rows={4} className={area} placeholder="Text shown on the page" value={f.body} onChange={(e) => setF({ ...f, body: e.target.value })} />
           <div className="grid grid-cols-2 gap-2">
-            <Input placeholder="Button text" value={f.buttonLabel} onChange={(e) => setF({ ...f, buttonLabel: e.target.value })} />
-            <Input placeholder="https://button-link" value={f.buttonUrl} onChange={(e) => setF({ ...f, buttonUrl: e.target.value })} />
+            <div className="flex items-center gap-1">
+              <Input placeholder="Button text" value={f.buttonLabel} onChange={(e) => setF({ ...f, buttonLabel: e.target.value })} />
+              <FieldInfo
+                title="Button text"
+                how="Ye us button par likha text hai jo aapki delivery page par dikhega. Chhota aur clear rakho — jaise 'Download Now' ya 'Buy Now'."
+                why="Sahi text se visitor samajh jaata hai button dabane se kya milega, isliye zyada log click karte hain."
+                example="Download Now · Buy Now · Get Free Guide"
+              />
+            </div>
+            <div className="flex items-center gap-1">
+              <Input placeholder="https://button-link" value={f.buttonUrl} onChange={(e) => setF({ ...f, buttonUrl: e.target.value })} />
+              <FieldInfo
+                title="Button link"
+                how="Ye address us page ka hai jo button dabane par khulega. Poora link http:// ya https:// se shuru karo. Delivery page ka apna link (jaise origin/p/slug) bhi daal sakte ho, ya koi bhi website."
+                why="Button isi link par le jaata hai — galat ya adhoora link daala to visitor blank page par pahunchega."
+                example={`https://yoursite.com/your-guide ya apna delivery page: ${origin}/p/free-guide`}
+              />
+            </div>
           </div>
           <Button onClick={submit} disabled={save.isPending}>Save page</Button>
           <p className="text-xs text-muted-foreground">Put the page link in any DM button. Views and button clicks show in the Sales report.</p>
@@ -269,5 +286,36 @@ function Payments({ orgId, d }: { orgId: string; d: Data }) {
         </div>
       </Panel>
     </div>
+  );
+}
+
+function FieldInfo({ title, how, why, example }: { title: string; how: string; why: string; example?: string }) {
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button type="button" size="icon" variant="ghost" className="size-8 shrink-0 text-muted-foreground" aria-label={`About ${title}`}>
+          <Info className="size-4" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-80 max-w-[calc(100vw-2rem)]">
+        <p className="text-sm font-semibold">{title}</p>
+        <div className="mt-3 space-y-3 text-sm">
+          <div>
+            <p className="font-medium">How it works</p>
+            <p className="mt-1 text-muted-foreground">{how}</p>
+          </div>
+          <div>
+            <p className="font-medium">Why it matters</p>
+            <p className="mt-1 text-muted-foreground">{why}</p>
+          </div>
+          {example ? (
+            <div>
+              <p className="font-medium">Example</p>
+              <p className="mt-1 break-words font-mono text-xs text-muted-foreground">{example}</p>
+            </div>
+          ) : null}
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 }
