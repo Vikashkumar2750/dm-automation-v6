@@ -19,3 +19,4 @@
 - Phase D CRM data (contact_profiles, contact_segments, contact_tags) is read/written only via crm.* modules with RLS as the user — why: CRM never touches the locked Meta delivery flow.
 
 - Phase E revenue lives in revenue.* modules; Razorpay keys sit in a server-only table (no browser grants) per workspace and payment/coupon steps reuse the flow sending + safety path — why: creators get paid directly and the locked rule engine stays untouched.
+- Phase G team tools live in team-desk.* modules; API keys (hashed) and outgoing webhooks sit in server-only tables, the public API is read-only under /api/public/v1/* with X-API-Key, and webhooks are delivered by cron from stored messages — why: integrations never hook into the locked Meta delivery flow.
