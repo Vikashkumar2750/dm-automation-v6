@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Download } from "lucide-react";
+import { Download, ShieldAlert } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -67,7 +67,7 @@ function TrustSafetyPage() {
 type Overview = Awaited<ReturnType<typeof getTrustOverview>>;
 
 function Health({ data }: { data: Overview }) {
-  if (!data.health.length) return <EmptyState title="No connected accounts" description="Connect Instagram, Facebook or YouTube in Social Accounts to see a health score." />;
+  if (!data.health.length) return <EmptyState icon={ShieldAlert} title="No connected accounts" description="Connect Instagram, Facebook or YouTube in Social Accounts to see a health score." />;
   return (
     <div className="grid gap-4 md:grid-cols-2">
       {data.health.map((a) => (
@@ -117,7 +117,7 @@ function Guard({ orgId, data, manager }: { orgId: string; data: Overview; manage
 }
 
 function Policy({ data }: { data: Overview }) {
-  if (!data.policy.length) return <EmptyState title="No automations yet" description="Your automations will be checked here once you create them." />;
+  if (!data.policy.length) return <EmptyState icon={ShieldAlert} title="No automations yet" description="Your automations will be checked here once you create them." />;
   const bad = data.policy.filter((p) => p.issues.length);
   return (
     <Panel title={`Policy check — ${bad.length ? `${bad.length} automation(s) need attention` : "all clear"}`}>
