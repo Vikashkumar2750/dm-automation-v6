@@ -37,6 +37,7 @@ import { Route as AuthenticatedRevenueRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedSocialAccountsRouteImport } from './routes/_authenticated/social-accounts'
 import { Route as AuthenticatedTeamRouteImport } from './routes/_authenticated/team'
+import { Route as AuthenticatedTeamDeskRouteImport } from './routes/_authenticated/team-desk'
 import { Route as AuthenticatedUsageRouteImport } from './routes/_authenticated/usage'
 import { Route as BlogIndexRouteImport } from './routes/blog.index'
 import { Route as BlogSlugRouteImport } from './routes/blog.$slug'
@@ -218,6 +219,11 @@ const AuthenticatedSocialAccountsRoute =
 const AuthenticatedTeamRoute = AuthenticatedTeamRouteImport.update({
   id: '/team',
   path: '/team',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedTeamDeskRoute = AuthenticatedTeamDeskRouteImport.update({
+  id: '/team-desk',
+  path: '/team-desk',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedUsageRoute = AuthenticatedUsageRouteImport.update({
@@ -465,6 +471,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof AuthenticatedSettingsRoute
   '/social-accounts': typeof AuthenticatedSocialAccountsRoute
   '/team': typeof AuthenticatedTeamRoute
+  '/team-desk': typeof AuthenticatedTeamDeskRoute
   '/usage': typeof AuthenticatedUsageRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/p/$slug': typeof PSlugRoute
@@ -532,6 +539,7 @@ export interface FileRoutesByTo {
   '/settings': typeof AuthenticatedSettingsRoute
   '/social-accounts': typeof AuthenticatedSocialAccountsRoute
   '/team': typeof AuthenticatedTeamRoute
+  '/team-desk': typeof AuthenticatedTeamDeskRoute
   '/usage': typeof AuthenticatedUsageRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/p/$slug': typeof PSlugRoute
@@ -602,6 +610,7 @@ export interface FileRoutesById {
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/social-accounts': typeof AuthenticatedSocialAccountsRoute
   '/_authenticated/team': typeof AuthenticatedTeamRoute
+  '/_authenticated/team-desk': typeof AuthenticatedTeamDeskRoute
   '/_authenticated/usage': typeof AuthenticatedUsageRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/p/$slug': typeof PSlugRoute
@@ -672,6 +681,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/social-accounts'
     | '/team'
+    | '/team-desk'
     | '/usage'
     | '/blog/$slug'
     | '/p/$slug'
@@ -739,6 +749,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/social-accounts'
     | '/team'
+    | '/team-desk'
     | '/usage'
     | '/blog/$slug'
     | '/p/$slug'
@@ -808,6 +819,7 @@ export interface FileRouteTypes {
     | '/_authenticated/settings'
     | '/_authenticated/social-accounts'
     | '/_authenticated/team'
+    | '/_authenticated/team-desk'
     | '/_authenticated/usage'
     | '/blog/$slug'
     | '/p/$slug'
@@ -1075,6 +1087,13 @@ declare module '@tanstack/react-router' {
       path: '/team'
       fullPath: '/team'
       preLoaderRoute: typeof AuthenticatedTeamRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/team-desk': {
+      id: '/_authenticated/team-desk'
+      path: '/team-desk'
+      fullPath: '/team-desk'
+      preLoaderRoute: typeof AuthenticatedTeamDeskRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/usage': {
@@ -1411,6 +1430,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedSocialAccountsRoute: typeof AuthenticatedSocialAccountsRoute
   AuthenticatedTeamRoute: typeof AuthenticatedTeamRoute
+  AuthenticatedTeamDeskRoute: typeof AuthenticatedTeamDeskRoute
   AuthenticatedUsageRoute: typeof AuthenticatedUsageRoute
   AuthenticatedAutomationsActivityRoute: typeof AuthenticatedAutomationsActivityRoute
   AuthenticatedAutomationsAiAgentRoute: typeof AuthenticatedAutomationsAiAgentRoute
@@ -1438,6 +1458,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedSocialAccountsRoute: AuthenticatedSocialAccountsRoute,
   AuthenticatedTeamRoute: AuthenticatedTeamRoute,
+  AuthenticatedTeamDeskRoute: AuthenticatedTeamDeskRoute,
   AuthenticatedUsageRoute: AuthenticatedUsageRoute,
   AuthenticatedAutomationsActivityRoute: AuthenticatedAutomationsActivityRoute,
   AuthenticatedAutomationsAiAgentRoute: AuthenticatedAutomationsAiAgentRoute,
