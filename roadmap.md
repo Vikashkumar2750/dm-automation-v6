@@ -64,6 +64,6 @@ Real Meta + YouTube credentials are available when we reach OAuth phases.
 - [x] Flow templates, ice breaker presets, in-app guides
 - [x] Phase E: Razorpay payment links (per workspace keys), coupons, delivery pages, 24h payment reminder, sales report
 - [ ] Phase E live test: needs a real Razorpay account + Instagram DM on Railway
-- [x] Phase G: Team desk (shared inbox assignment, approval queue, client reports + CSV, API keys, signed outgoing webhooks); Phase F skipped by user
+- [x] Phase G: Team desk (shared inbox assignment, approval queue, client reports + CSV, per-client billing invoices, API keys, signed outgoing webhooks); Phase F skipped by user
 - [ ] Next: Phase H, I
 - [ ] Final user guide covering all features (docs/USER-GUIDE.md, updated after each phase)
