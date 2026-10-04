@@ -288,3 +288,34 @@ function Payments({ orgId, d }: { orgId: string; d: Data }) {
     </div>
   );
 }
+
+function FieldInfo({ title, how, why, example }: { title: string; how: string; why: string; example?: string }) {
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button type="button" size="icon" variant="ghost" className="size-8 shrink-0 text-muted-foreground" aria-label={`About ${title}`}>
+          <Info className="size-4" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-80 max-w-[calc(100vw-2rem)]">
+        <p className="text-sm font-semibold">{title}</p>
+        <div className="mt-3 space-y-3 text-sm">
+          <div>
+            <p className="font-medium">How it works</p>
+            <p className="mt-1 text-muted-foreground">{how}</p>
+          </div>
+          <div>
+            <p className="font-medium">Why it matters</p>
+            <p className="mt-1 text-muted-foreground">{why}</p>
+          </div>
+          {example ? (
+            <div>
+              <p className="font-medium">Example</p>
+              <p className="mt-1 break-words font-mono text-xs text-muted-foreground">{example}</p>
+            </div>
+          ) : null}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
