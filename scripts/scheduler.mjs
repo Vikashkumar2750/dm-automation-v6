@@ -50,6 +50,12 @@ if (!secret) {
     } catch (e) {
       console.warn("[team-webhooks] tick failed", e?.message ?? e);
     }
+    try {
+      const { status, body } = await post("/api/public/cron/trust-guard");
+      if (status !== 200 || !body.includes('"paused":0')) console.log("[trust-guard]", status, body);
+    } catch (e) {
+      console.warn("[trust-guard] tick failed", e?.message ?? e);
+    }
   };
   setTimeout(tick, 20000);
   setInterval(tick, 60000);

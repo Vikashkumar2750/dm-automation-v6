@@ -70,6 +70,7 @@ import { Route as ApiPublicCronNudgesRouteImport } from './routes/api/public/cro
 import { Route as ApiPublicCronPublishDueRouteImport } from './routes/api/public/cron.publish-due'
 import { Route as ApiPublicCronRevenueRouteImport } from './routes/api/public/cron.revenue'
 import { Route as ApiPublicCronTeamWebhooksRouteImport } from './routes/api/public/cron.team-webhooks'
+import { Route as ApiPublicCronTrustGuardRouteImport } from './routes/api/public/cron.trust-guard'
 import { Route as ApiPublicCronYoutubeCommentsRouteImport } from './routes/api/public/cron.youtube-comments'
 import { Route as ApiPublicPgSlugRouteImport } from './routes/api/public/pg.$slug'
 import { Route as ApiPublicTTokenRouteImport } from './routes/api/public/t.$token'
@@ -404,6 +405,11 @@ const ApiPublicCronTeamWebhooksRoute =
     path: '/api/public/cron/team-webhooks',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicCronTrustGuardRoute = ApiPublicCronTrustGuardRouteImport.update({
+  id: '/api/public/cron/trust-guard',
+  path: '/api/public/cron/trust-guard',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicCronYoutubeCommentsRoute =
   ApiPublicCronYoutubeCommentsRouteImport.update({
     id: '/api/public/cron/youtube-comments',
@@ -504,6 +510,7 @@ export interface FileRoutesByFullPath {
   '/api/public/cron/publish-due': typeof ApiPublicCronPublishDueRoute
   '/api/public/cron/revenue': typeof ApiPublicCronRevenueRoute
   '/api/public/cron/team-webhooks': typeof ApiPublicCronTeamWebhooksRoute
+  '/api/public/cron/trust-guard': typeof ApiPublicCronTrustGuardRoute
   '/api/public/cron/youtube-comments': typeof ApiPublicCronYoutubeCommentsRoute
   '/api/public/pg/$slug': typeof ApiPublicPgSlugRoute
   '/api/public/t/$token': typeof ApiPublicTTokenRoute
@@ -572,6 +579,7 @@ export interface FileRoutesByTo {
   '/api/public/cron/publish-due': typeof ApiPublicCronPublishDueRoute
   '/api/public/cron/revenue': typeof ApiPublicCronRevenueRoute
   '/api/public/cron/team-webhooks': typeof ApiPublicCronTeamWebhooksRoute
+  '/api/public/cron/trust-guard': typeof ApiPublicCronTrustGuardRoute
   '/api/public/cron/youtube-comments': typeof ApiPublicCronYoutubeCommentsRoute
   '/api/public/pg/$slug': typeof ApiPublicPgSlugRoute
   '/api/public/t/$token': typeof ApiPublicTTokenRoute
@@ -643,6 +651,7 @@ export interface FileRoutesById {
   '/api/public/cron/publish-due': typeof ApiPublicCronPublishDueRoute
   '/api/public/cron/revenue': typeof ApiPublicCronRevenueRoute
   '/api/public/cron/team-webhooks': typeof ApiPublicCronTeamWebhooksRoute
+  '/api/public/cron/trust-guard': typeof ApiPublicCronTrustGuardRoute
   '/api/public/cron/youtube-comments': typeof ApiPublicCronYoutubeCommentsRoute
   '/api/public/pg/$slug': typeof ApiPublicPgSlugRoute
   '/api/public/t/$token': typeof ApiPublicTTokenRoute
@@ -714,6 +723,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/publish-due'
     | '/api/public/cron/revenue'
     | '/api/public/cron/team-webhooks'
+    | '/api/public/cron/trust-guard'
     | '/api/public/cron/youtube-comments'
     | '/api/public/pg/$slug'
     | '/api/public/t/$token'
@@ -782,6 +792,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/publish-due'
     | '/api/public/cron/revenue'
     | '/api/public/cron/team-webhooks'
+    | '/api/public/cron/trust-guard'
     | '/api/public/cron/youtube-comments'
     | '/api/public/pg/$slug'
     | '/api/public/t/$token'
@@ -852,6 +863,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/publish-due'
     | '/api/public/cron/revenue'
     | '/api/public/cron/team-webhooks'
+    | '/api/public/cron/trust-guard'
     | '/api/public/cron/youtube-comments'
     | '/api/public/pg/$slug'
     | '/api/public/t/$token'
@@ -882,6 +894,7 @@ export interface RootRouteChildren {
   ApiPublicCronPublishDueRoute: typeof ApiPublicCronPublishDueRoute
   ApiPublicCronRevenueRoute: typeof ApiPublicCronRevenueRoute
   ApiPublicCronTeamWebhooksRoute: typeof ApiPublicCronTeamWebhooksRoute
+  ApiPublicCronTrustGuardRoute: typeof ApiPublicCronTrustGuardRoute
   ApiPublicCronYoutubeCommentsRoute: typeof ApiPublicCronYoutubeCommentsRoute
   ApiPublicPgSlugRoute: typeof ApiPublicPgSlugRoute
   ApiPublicTTokenRoute: typeof ApiPublicTTokenRoute
@@ -1320,6 +1333,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicCronTeamWebhooksRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/cron/trust-guard': {
+      id: '/api/public/cron/trust-guard'
+      path: '/api/public/cron/trust-guard'
+      fullPath: '/api/public/cron/trust-guard'
+      preLoaderRoute: typeof ApiPublicCronTrustGuardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/cron/youtube-comments': {
       id: '/api/public/cron/youtube-comments'
       path: '/api/public/cron/youtube-comments'
@@ -1495,6 +1515,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicCronPublishDueRoute: ApiPublicCronPublishDueRoute,
   ApiPublicCronRevenueRoute: ApiPublicCronRevenueRoute,
   ApiPublicCronTeamWebhooksRoute: ApiPublicCronTeamWebhooksRoute,
+  ApiPublicCronTrustGuardRoute: ApiPublicCronTrustGuardRoute,
   ApiPublicCronYoutubeCommentsRoute: ApiPublicCronYoutubeCommentsRoute,
   ApiPublicPgSlugRoute: ApiPublicPgSlugRoute,
   ApiPublicTTokenRoute: ApiPublicTTokenRoute,
