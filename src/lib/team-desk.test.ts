@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { canReview, clampLimit, eventForDirection, isApiKeyFormat, matchesAssignment, mustRequestApproval } from "./team-desk";
+import { canReview, clampLimit, summarizeInvoices, eventForDirection, isApiKeyFormat, matchesAssignment, mustRequestApproval } from "./team-desk";
 import { generateApiKey, hmacHex, sha256Hex } from "./team-desk.server";
 
 describe("Phase G team desk rules", () => {
@@ -34,5 +34,15 @@ describe("Phase G team desk rules", () => {
     expect(clampLimit(null)).toBe(50);
     expect(clampLimit("500")).toBe(100);
     expect(eventForDirection("inbound")).toBe("message.received");
+  });
+});
+
+describe("client billing", () => {
+  it("counts only unpaid as due and ignores void", () => {
+    expect(summarizeInvoices([
+      { amount_inr: 999, status: "unpaid" },
+      { amount_inr: "500.50", status: "paid" },
+      { amount_inr: 2000, status: "void" },
+    ])).toEqual({ due: 999, paid: 500.5 });
   });
 });
