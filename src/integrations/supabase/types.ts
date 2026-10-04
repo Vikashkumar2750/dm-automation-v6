@@ -581,6 +581,63 @@ export type Database = {
           },
         ]
       }
+      client_invoices: {
+        Row: {
+          amount_inr: number
+          client_organization_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          notes: string | null
+          organization_id: string
+          paid_at: string | null
+          payment_url: string | null
+          period_label: string
+          status: string
+        }
+        Insert: {
+          amount_inr: number
+          client_organization_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          organization_id: string
+          paid_at?: string | null
+          payment_url?: string | null
+          period_label: string
+          status?: string
+        }
+        Update: {
+          amount_inr?: number
+          client_organization_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          organization_id?: string
+          paid_at?: string | null
+          payment_url?: string | null
+          period_label?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_invoices_client_organization_id_fkey"
+            columns: ["client_organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_invoices_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contact_profiles: {
         Row: {
           created_at: string
