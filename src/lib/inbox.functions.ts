@@ -145,6 +145,13 @@ export const sendReply = createServerFn({ method: "POST" })
     });
     if (!allowed) throw new Error("not_allowed");
 
+    // Phase G: agents must use the approval queue when the workspace requires it.
+    const [{ data: teamSettings }, { data: member }] = await Promise.all([
+      context.supabase.from("team_settings").select("require_approval").eq("organization_id", conversation.organization_id).maybeSingle(),
+      context.supabase.from("organization_members").select("role").eq("organization_id", conversation.organization_id).eq("user_id", context.userId).maybeSingle(),
+    ]);
+    if (teamSettings?.require_approval && member?.role === "agent") throw new Error("approval_required");
+
     if (conversation.channel !== "dm") {
       throw new Error("comment_unsupported");
     }

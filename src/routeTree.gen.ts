@@ -37,6 +37,7 @@ import { Route as AuthenticatedRevenueRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedSocialAccountsRouteImport } from './routes/_authenticated/social-accounts'
 import { Route as AuthenticatedTeamRouteImport } from './routes/_authenticated/team'
+import { Route as AuthenticatedTeamDeskRouteImport } from './routes/_authenticated/team-desk'
 import { Route as AuthenticatedUsageRouteImport } from './routes/_authenticated/usage'
 import { Route as BlogIndexRouteImport } from './routes/blog.index'
 import { Route as BlogSlugRouteImport } from './routes/blog.$slug'
@@ -68,9 +69,11 @@ import { Route as ApiPublicCronFlowsRouteImport } from './routes/api/public/cron
 import { Route as ApiPublicCronNudgesRouteImport } from './routes/api/public/cron.nudges'
 import { Route as ApiPublicCronPublishDueRouteImport } from './routes/api/public/cron.publish-due'
 import { Route as ApiPublicCronRevenueRouteImport } from './routes/api/public/cron.revenue'
+import { Route as ApiPublicCronTeamWebhooksRouteImport } from './routes/api/public/cron.team-webhooks'
 import { Route as ApiPublicCronYoutubeCommentsRouteImport } from './routes/api/public/cron.youtube-comments'
 import { Route as ApiPublicPgSlugRouteImport } from './routes/api/public/pg.$slug'
 import { Route as ApiPublicTTokenRouteImport } from './routes/api/public/t.$token'
+import { Route as ApiPublicV1ResourceRouteImport } from './routes/api/public/v1.$resource'
 import { Route as ApiPublicWebhooksMetaRouteImport } from './routes/api/public/webhooks.meta'
 import { Route as ApiPublicOauthProviderCallbackRouteImport } from './routes/api/public/oauth.$provider.callback'
 import { Route as ApiPublicWebhooksRazorpayOrgIdRouteImport } from './routes/api/public/webhooks.razorpay.$orgId'
@@ -216,6 +219,11 @@ const AuthenticatedSocialAccountsRoute =
 const AuthenticatedTeamRoute = AuthenticatedTeamRouteImport.update({
   id: '/team',
   path: '/team',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedTeamDeskRoute = AuthenticatedTeamDeskRouteImport.update({
+  id: '/team-desk',
+  path: '/team-desk',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedUsageRoute = AuthenticatedUsageRouteImport.update({
@@ -390,6 +398,12 @@ const ApiPublicCronRevenueRoute = ApiPublicCronRevenueRouteImport.update({
   path: '/api/public/cron/revenue',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicCronTeamWebhooksRoute =
+  ApiPublicCronTeamWebhooksRouteImport.update({
+    id: '/api/public/cron/team-webhooks',
+    path: '/api/public/cron/team-webhooks',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicCronYoutubeCommentsRoute =
   ApiPublicCronYoutubeCommentsRouteImport.update({
     id: '/api/public/cron/youtube-comments',
@@ -404,6 +418,11 @@ const ApiPublicPgSlugRoute = ApiPublicPgSlugRouteImport.update({
 const ApiPublicTTokenRoute = ApiPublicTTokenRouteImport.update({
   id: '/api/public/t/$token',
   path: '/api/public/t/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicV1ResourceRoute = ApiPublicV1ResourceRouteImport.update({
+  id: '/api/public/v1/$resource',
+  path: '/api/public/v1/$resource',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPublicWebhooksMetaRoute = ApiPublicWebhooksMetaRouteImport.update({
@@ -452,6 +471,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof AuthenticatedSettingsRoute
   '/social-accounts': typeof AuthenticatedSocialAccountsRoute
   '/team': typeof AuthenticatedTeamRoute
+  '/team-desk': typeof AuthenticatedTeamDeskRoute
   '/usage': typeof AuthenticatedUsageRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/p/$slug': typeof PSlugRoute
@@ -483,9 +503,11 @@ export interface FileRoutesByFullPath {
   '/api/public/cron/nudges': typeof ApiPublicCronNudgesRoute
   '/api/public/cron/publish-due': typeof ApiPublicCronPublishDueRoute
   '/api/public/cron/revenue': typeof ApiPublicCronRevenueRoute
+  '/api/public/cron/team-webhooks': typeof ApiPublicCronTeamWebhooksRoute
   '/api/public/cron/youtube-comments': typeof ApiPublicCronYoutubeCommentsRoute
   '/api/public/pg/$slug': typeof ApiPublicPgSlugRoute
   '/api/public/t/$token': typeof ApiPublicTTokenRoute
+  '/api/public/v1/$resource': typeof ApiPublicV1ResourceRoute
   '/api/public/webhooks/meta': typeof ApiPublicWebhooksMetaRoute
   '/api/public/oauth/$provider/callback': typeof ApiPublicOauthProviderCallbackRoute
   '/api/public/webhooks/razorpay/$orgId': typeof ApiPublicWebhooksRazorpayOrgIdRoute
@@ -517,6 +539,7 @@ export interface FileRoutesByTo {
   '/settings': typeof AuthenticatedSettingsRoute
   '/social-accounts': typeof AuthenticatedSocialAccountsRoute
   '/team': typeof AuthenticatedTeamRoute
+  '/team-desk': typeof AuthenticatedTeamDeskRoute
   '/usage': typeof AuthenticatedUsageRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/p/$slug': typeof PSlugRoute
@@ -548,9 +571,11 @@ export interface FileRoutesByTo {
   '/api/public/cron/nudges': typeof ApiPublicCronNudgesRoute
   '/api/public/cron/publish-due': typeof ApiPublicCronPublishDueRoute
   '/api/public/cron/revenue': typeof ApiPublicCronRevenueRoute
+  '/api/public/cron/team-webhooks': typeof ApiPublicCronTeamWebhooksRoute
   '/api/public/cron/youtube-comments': typeof ApiPublicCronYoutubeCommentsRoute
   '/api/public/pg/$slug': typeof ApiPublicPgSlugRoute
   '/api/public/t/$token': typeof ApiPublicTTokenRoute
+  '/api/public/v1/$resource': typeof ApiPublicV1ResourceRoute
   '/api/public/webhooks/meta': typeof ApiPublicWebhooksMetaRoute
   '/api/public/oauth/$provider/callback': typeof ApiPublicOauthProviderCallbackRoute
   '/api/public/webhooks/razorpay/$orgId': typeof ApiPublicWebhooksRazorpayOrgIdRoute
@@ -585,6 +610,7 @@ export interface FileRoutesById {
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/social-accounts': typeof AuthenticatedSocialAccountsRoute
   '/_authenticated/team': typeof AuthenticatedTeamRoute
+  '/_authenticated/team-desk': typeof AuthenticatedTeamDeskRoute
   '/_authenticated/usage': typeof AuthenticatedUsageRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/p/$slug': typeof PSlugRoute
@@ -616,9 +642,11 @@ export interface FileRoutesById {
   '/api/public/cron/nudges': typeof ApiPublicCronNudgesRoute
   '/api/public/cron/publish-due': typeof ApiPublicCronPublishDueRoute
   '/api/public/cron/revenue': typeof ApiPublicCronRevenueRoute
+  '/api/public/cron/team-webhooks': typeof ApiPublicCronTeamWebhooksRoute
   '/api/public/cron/youtube-comments': typeof ApiPublicCronYoutubeCommentsRoute
   '/api/public/pg/$slug': typeof ApiPublicPgSlugRoute
   '/api/public/t/$token': typeof ApiPublicTTokenRoute
+  '/api/public/v1/$resource': typeof ApiPublicV1ResourceRoute
   '/api/public/webhooks/meta': typeof ApiPublicWebhooksMetaRoute
   '/api/public/oauth/$provider/callback': typeof ApiPublicOauthProviderCallbackRoute
   '/api/public/webhooks/razorpay/$orgId': typeof ApiPublicWebhooksRazorpayOrgIdRoute
@@ -653,6 +681,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/social-accounts'
     | '/team'
+    | '/team-desk'
     | '/usage'
     | '/blog/$slug'
     | '/p/$slug'
@@ -684,9 +713,11 @@ export interface FileRouteTypes {
     | '/api/public/cron/nudges'
     | '/api/public/cron/publish-due'
     | '/api/public/cron/revenue'
+    | '/api/public/cron/team-webhooks'
     | '/api/public/cron/youtube-comments'
     | '/api/public/pg/$slug'
     | '/api/public/t/$token'
+    | '/api/public/v1/$resource'
     | '/api/public/webhooks/meta'
     | '/api/public/oauth/$provider/callback'
     | '/api/public/webhooks/razorpay/$orgId'
@@ -718,6 +749,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/social-accounts'
     | '/team'
+    | '/team-desk'
     | '/usage'
     | '/blog/$slug'
     | '/p/$slug'
@@ -749,9 +781,11 @@ export interface FileRouteTypes {
     | '/api/public/cron/nudges'
     | '/api/public/cron/publish-due'
     | '/api/public/cron/revenue'
+    | '/api/public/cron/team-webhooks'
     | '/api/public/cron/youtube-comments'
     | '/api/public/pg/$slug'
     | '/api/public/t/$token'
+    | '/api/public/v1/$resource'
     | '/api/public/webhooks/meta'
     | '/api/public/oauth/$provider/callback'
     | '/api/public/webhooks/razorpay/$orgId'
@@ -785,6 +819,7 @@ export interface FileRouteTypes {
     | '/_authenticated/settings'
     | '/_authenticated/social-accounts'
     | '/_authenticated/team'
+    | '/_authenticated/team-desk'
     | '/_authenticated/usage'
     | '/blog/$slug'
     | '/p/$slug'
@@ -816,9 +851,11 @@ export interface FileRouteTypes {
     | '/api/public/cron/nudges'
     | '/api/public/cron/publish-due'
     | '/api/public/cron/revenue'
+    | '/api/public/cron/team-webhooks'
     | '/api/public/cron/youtube-comments'
     | '/api/public/pg/$slug'
     | '/api/public/t/$token'
+    | '/api/public/v1/$resource'
     | '/api/public/webhooks/meta'
     | '/api/public/oauth/$provider/callback'
     | '/api/public/webhooks/razorpay/$orgId'
@@ -844,9 +881,11 @@ export interface RootRouteChildren {
   ApiPublicCronNudgesRoute: typeof ApiPublicCronNudgesRoute
   ApiPublicCronPublishDueRoute: typeof ApiPublicCronPublishDueRoute
   ApiPublicCronRevenueRoute: typeof ApiPublicCronRevenueRoute
+  ApiPublicCronTeamWebhooksRoute: typeof ApiPublicCronTeamWebhooksRoute
   ApiPublicCronYoutubeCommentsRoute: typeof ApiPublicCronYoutubeCommentsRoute
   ApiPublicPgSlugRoute: typeof ApiPublicPgSlugRoute
   ApiPublicTTokenRoute: typeof ApiPublicTTokenRoute
+  ApiPublicV1ResourceRoute: typeof ApiPublicV1ResourceRoute
   ApiPublicWebhooksMetaRoute: typeof ApiPublicWebhooksMetaRoute
   ApiPublicOauthProviderCallbackRoute: typeof ApiPublicOauthProviderCallbackRoute
   ApiPublicWebhooksRazorpayOrgIdRoute: typeof ApiPublicWebhooksRazorpayOrgIdRoute
@@ -1048,6 +1087,13 @@ declare module '@tanstack/react-router' {
       path: '/team'
       fullPath: '/team'
       preLoaderRoute: typeof AuthenticatedTeamRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/team-desk': {
+      id: '/_authenticated/team-desk'
+      path: '/team-desk'
+      fullPath: '/team-desk'
+      preLoaderRoute: typeof AuthenticatedTeamDeskRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/usage': {
@@ -1267,6 +1313,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicCronRevenueRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/cron/team-webhooks': {
+      id: '/api/public/cron/team-webhooks'
+      path: '/api/public/cron/team-webhooks'
+      fullPath: '/api/public/cron/team-webhooks'
+      preLoaderRoute: typeof ApiPublicCronTeamWebhooksRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/cron/youtube-comments': {
       id: '/api/public/cron/youtube-comments'
       path: '/api/public/cron/youtube-comments'
@@ -1286,6 +1339,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public/t/$token'
       fullPath: '/api/public/t/$token'
       preLoaderRoute: typeof ApiPublicTTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/v1/$resource': {
+      id: '/api/public/v1/$resource'
+      path: '/api/public/v1/$resource'
+      fullPath: '/api/public/v1/$resource'
+      preLoaderRoute: typeof ApiPublicV1ResourceRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/webhooks/meta': {
@@ -1370,6 +1430,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedSocialAccountsRoute: typeof AuthenticatedSocialAccountsRoute
   AuthenticatedTeamRoute: typeof AuthenticatedTeamRoute
+  AuthenticatedTeamDeskRoute: typeof AuthenticatedTeamDeskRoute
   AuthenticatedUsageRoute: typeof AuthenticatedUsageRoute
   AuthenticatedAutomationsActivityRoute: typeof AuthenticatedAutomationsActivityRoute
   AuthenticatedAutomationsAiAgentRoute: typeof AuthenticatedAutomationsAiAgentRoute
@@ -1397,6 +1458,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedSocialAccountsRoute: AuthenticatedSocialAccountsRoute,
   AuthenticatedTeamRoute: AuthenticatedTeamRoute,
+  AuthenticatedTeamDeskRoute: AuthenticatedTeamDeskRoute,
   AuthenticatedUsageRoute: AuthenticatedUsageRoute,
   AuthenticatedAutomationsActivityRoute: AuthenticatedAutomationsActivityRoute,
   AuthenticatedAutomationsAiAgentRoute: AuthenticatedAutomationsAiAgentRoute,
@@ -1432,9 +1494,11 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicCronNudgesRoute: ApiPublicCronNudgesRoute,
   ApiPublicCronPublishDueRoute: ApiPublicCronPublishDueRoute,
   ApiPublicCronRevenueRoute: ApiPublicCronRevenueRoute,
+  ApiPublicCronTeamWebhooksRoute: ApiPublicCronTeamWebhooksRoute,
   ApiPublicCronYoutubeCommentsRoute: ApiPublicCronYoutubeCommentsRoute,
   ApiPublicPgSlugRoute: ApiPublicPgSlugRoute,
   ApiPublicTTokenRoute: ApiPublicTTokenRoute,
+  ApiPublicV1ResourceRoute: ApiPublicV1ResourceRoute,
   ApiPublicWebhooksMetaRoute: ApiPublicWebhooksMetaRoute,
   ApiPublicOauthProviderCallbackRoute: ApiPublicOauthProviderCallbackRoute,
   ApiPublicWebhooksRazorpayOrgIdRoute: ApiPublicWebhooksRazorpayOrgIdRoute,
