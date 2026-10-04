@@ -205,8 +205,24 @@ function Pages({ orgId, items }: { orgId: string; items: any[] }) {
           <Input placeholder="Address (e.g. free-guide)" value={f.slug} onChange={(e) => setF({ ...f, slug: slugify(e.target.value) })} />
           <textarea rows={4} className={area} placeholder="Text shown on the page" value={f.body} onChange={(e) => setF({ ...f, body: e.target.value })} />
           <div className="grid grid-cols-2 gap-2">
-            <Input placeholder="Button text" value={f.buttonLabel} onChange={(e) => setF({ ...f, buttonLabel: e.target.value })} />
-            <Input placeholder="https://button-link" value={f.buttonUrl} onChange={(e) => setF({ ...f, buttonUrl: e.target.value })} />
+            <div className="flex items-center gap-1">
+              <Input placeholder="Button text" value={f.buttonLabel} onChange={(e) => setF({ ...f, buttonLabel: e.target.value })} />
+              <FieldInfo
+                title="Button text"
+                how="Ye us button par likha text hai jo aapki delivery page par dikhega. Chhota aur clear rakho — jaise 'Download Now' ya 'Buy Now'."
+                why="Sahi text se visitor samajh jaata hai button dabane se kya milega, isliye zyada log click karte hain."
+                example="Download Now · Buy Now · Get Free Guide"
+              />
+            </div>
+            <div className="flex items-center gap-1">
+              <Input placeholder="https://button-link" value={f.buttonUrl} onChange={(e) => setF({ ...f, buttonUrl: e.target.value })} />
+              <FieldInfo
+                title="Button link"
+                how="Ye address us page ka hai jo button dabane par khulega. Poora link http:// ya https:// se shuru karo. Delivery page ka apna link (jaise origin/p/slug) bhi daal sakte ho, ya koi bhi website."
+                why="Button isi link par le jaata hai — galat ya adhoora link daala to visitor blank page par pahunchega."
+                example="https://yoursite.com/your-guide ya apna delivery page: origin/p/free-guide"
+              />
+            </div>
           </div>
           <Button onClick={submit} disabled={save.isPending}>Save page</Button>
           <p className="text-xs text-muted-foreground">Put the page link in any DM button. Views and button clicks show in the Sales report.</p>
