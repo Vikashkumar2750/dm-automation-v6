@@ -44,6 +44,12 @@ if (!secret) {
     } catch (e) {
       console.warn("[nudges] tick failed", e?.message ?? e);
     }
+    try {
+      const { status, body } = await post("/api/public/cron/team-webhooks");
+      if (status !== 200 || !body.includes('"sent":0')) console.log("[team-webhooks]", status, body);
+    } catch (e) {
+      console.warn("[team-webhooks] tick failed", e?.message ?? e);
+    }
   };
   setTimeout(tick, 20000);
   setInterval(tick, 60000);
