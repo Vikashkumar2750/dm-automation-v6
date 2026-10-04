@@ -38,6 +38,7 @@ import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedSocialAccountsRouteImport } from './routes/_authenticated/social-accounts'
 import { Route as AuthenticatedTeamRouteImport } from './routes/_authenticated/team'
 import { Route as AuthenticatedTeamDeskRouteImport } from './routes/_authenticated/team-desk'
+import { Route as AuthenticatedTrustSafetyRouteImport } from './routes/_authenticated/trust-safety'
 import { Route as AuthenticatedUsageRouteImport } from './routes/_authenticated/usage'
 import { Route as BlogIndexRouteImport } from './routes/blog.index'
 import { Route as BlogSlugRouteImport } from './routes/blog.$slug'
@@ -70,6 +71,7 @@ import { Route as ApiPublicCronNudgesRouteImport } from './routes/api/public/cro
 import { Route as ApiPublicCronPublishDueRouteImport } from './routes/api/public/cron.publish-due'
 import { Route as ApiPublicCronRevenueRouteImport } from './routes/api/public/cron.revenue'
 import { Route as ApiPublicCronTeamWebhooksRouteImport } from './routes/api/public/cron.team-webhooks'
+import { Route as ApiPublicCronTrustGuardRouteImport } from './routes/api/public/cron.trust-guard'
 import { Route as ApiPublicCronYoutubeCommentsRouteImport } from './routes/api/public/cron.youtube-comments'
 import { Route as ApiPublicPgSlugRouteImport } from './routes/api/public/pg.$slug'
 import { Route as ApiPublicTTokenRouteImport } from './routes/api/public/t.$token'
@@ -226,6 +228,12 @@ const AuthenticatedTeamDeskRoute = AuthenticatedTeamDeskRouteImport.update({
   path: '/team-desk',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedTrustSafetyRoute =
+  AuthenticatedTrustSafetyRouteImport.update({
+    id: '/trust-safety',
+    path: '/trust-safety',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedUsageRoute = AuthenticatedUsageRouteImport.update({
   id: '/usage',
   path: '/usage',
@@ -404,6 +412,11 @@ const ApiPublicCronTeamWebhooksRoute =
     path: '/api/public/cron/team-webhooks',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicCronTrustGuardRoute = ApiPublicCronTrustGuardRouteImport.update({
+  id: '/api/public/cron/trust-guard',
+  path: '/api/public/cron/trust-guard',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicCronYoutubeCommentsRoute =
   ApiPublicCronYoutubeCommentsRouteImport.update({
     id: '/api/public/cron/youtube-comments',
@@ -472,6 +485,7 @@ export interface FileRoutesByFullPath {
   '/social-accounts': typeof AuthenticatedSocialAccountsRoute
   '/team': typeof AuthenticatedTeamRoute
   '/team-desk': typeof AuthenticatedTeamDeskRoute
+  '/trust-safety': typeof AuthenticatedTrustSafetyRoute
   '/usage': typeof AuthenticatedUsageRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/p/$slug': typeof PSlugRoute
@@ -504,6 +518,7 @@ export interface FileRoutesByFullPath {
   '/api/public/cron/publish-due': typeof ApiPublicCronPublishDueRoute
   '/api/public/cron/revenue': typeof ApiPublicCronRevenueRoute
   '/api/public/cron/team-webhooks': typeof ApiPublicCronTeamWebhooksRoute
+  '/api/public/cron/trust-guard': typeof ApiPublicCronTrustGuardRoute
   '/api/public/cron/youtube-comments': typeof ApiPublicCronYoutubeCommentsRoute
   '/api/public/pg/$slug': typeof ApiPublicPgSlugRoute
   '/api/public/t/$token': typeof ApiPublicTTokenRoute
@@ -540,6 +555,7 @@ export interface FileRoutesByTo {
   '/social-accounts': typeof AuthenticatedSocialAccountsRoute
   '/team': typeof AuthenticatedTeamRoute
   '/team-desk': typeof AuthenticatedTeamDeskRoute
+  '/trust-safety': typeof AuthenticatedTrustSafetyRoute
   '/usage': typeof AuthenticatedUsageRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/p/$slug': typeof PSlugRoute
@@ -572,6 +588,7 @@ export interface FileRoutesByTo {
   '/api/public/cron/publish-due': typeof ApiPublicCronPublishDueRoute
   '/api/public/cron/revenue': typeof ApiPublicCronRevenueRoute
   '/api/public/cron/team-webhooks': typeof ApiPublicCronTeamWebhooksRoute
+  '/api/public/cron/trust-guard': typeof ApiPublicCronTrustGuardRoute
   '/api/public/cron/youtube-comments': typeof ApiPublicCronYoutubeCommentsRoute
   '/api/public/pg/$slug': typeof ApiPublicPgSlugRoute
   '/api/public/t/$token': typeof ApiPublicTTokenRoute
@@ -611,6 +628,7 @@ export interface FileRoutesById {
   '/_authenticated/social-accounts': typeof AuthenticatedSocialAccountsRoute
   '/_authenticated/team': typeof AuthenticatedTeamRoute
   '/_authenticated/team-desk': typeof AuthenticatedTeamDeskRoute
+  '/_authenticated/trust-safety': typeof AuthenticatedTrustSafetyRoute
   '/_authenticated/usage': typeof AuthenticatedUsageRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/p/$slug': typeof PSlugRoute
@@ -643,6 +661,7 @@ export interface FileRoutesById {
   '/api/public/cron/publish-due': typeof ApiPublicCronPublishDueRoute
   '/api/public/cron/revenue': typeof ApiPublicCronRevenueRoute
   '/api/public/cron/team-webhooks': typeof ApiPublicCronTeamWebhooksRoute
+  '/api/public/cron/trust-guard': typeof ApiPublicCronTrustGuardRoute
   '/api/public/cron/youtube-comments': typeof ApiPublicCronYoutubeCommentsRoute
   '/api/public/pg/$slug': typeof ApiPublicPgSlugRoute
   '/api/public/t/$token': typeof ApiPublicTTokenRoute
@@ -682,6 +701,7 @@ export interface FileRouteTypes {
     | '/social-accounts'
     | '/team'
     | '/team-desk'
+    | '/trust-safety'
     | '/usage'
     | '/blog/$slug'
     | '/p/$slug'
@@ -714,6 +734,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/publish-due'
     | '/api/public/cron/revenue'
     | '/api/public/cron/team-webhooks'
+    | '/api/public/cron/trust-guard'
     | '/api/public/cron/youtube-comments'
     | '/api/public/pg/$slug'
     | '/api/public/t/$token'
@@ -750,6 +771,7 @@ export interface FileRouteTypes {
     | '/social-accounts'
     | '/team'
     | '/team-desk'
+    | '/trust-safety'
     | '/usage'
     | '/blog/$slug'
     | '/p/$slug'
@@ -782,6 +804,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/publish-due'
     | '/api/public/cron/revenue'
     | '/api/public/cron/team-webhooks'
+    | '/api/public/cron/trust-guard'
     | '/api/public/cron/youtube-comments'
     | '/api/public/pg/$slug'
     | '/api/public/t/$token'
@@ -820,6 +843,7 @@ export interface FileRouteTypes {
     | '/_authenticated/social-accounts'
     | '/_authenticated/team'
     | '/_authenticated/team-desk'
+    | '/_authenticated/trust-safety'
     | '/_authenticated/usage'
     | '/blog/$slug'
     | '/p/$slug'
@@ -852,6 +876,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/publish-due'
     | '/api/public/cron/revenue'
     | '/api/public/cron/team-webhooks'
+    | '/api/public/cron/trust-guard'
     | '/api/public/cron/youtube-comments'
     | '/api/public/pg/$slug'
     | '/api/public/t/$token'
@@ -882,6 +907,7 @@ export interface RootRouteChildren {
   ApiPublicCronPublishDueRoute: typeof ApiPublicCronPublishDueRoute
   ApiPublicCronRevenueRoute: typeof ApiPublicCronRevenueRoute
   ApiPublicCronTeamWebhooksRoute: typeof ApiPublicCronTeamWebhooksRoute
+  ApiPublicCronTrustGuardRoute: typeof ApiPublicCronTrustGuardRoute
   ApiPublicCronYoutubeCommentsRoute: typeof ApiPublicCronYoutubeCommentsRoute
   ApiPublicPgSlugRoute: typeof ApiPublicPgSlugRoute
   ApiPublicTTokenRoute: typeof ApiPublicTTokenRoute
@@ -1094,6 +1120,13 @@ declare module '@tanstack/react-router' {
       path: '/team-desk'
       fullPath: '/team-desk'
       preLoaderRoute: typeof AuthenticatedTeamDeskRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/trust-safety': {
+      id: '/_authenticated/trust-safety'
+      path: '/trust-safety'
+      fullPath: '/trust-safety'
+      preLoaderRoute: typeof AuthenticatedTrustSafetyRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/usage': {
@@ -1320,6 +1353,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicCronTeamWebhooksRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/cron/trust-guard': {
+      id: '/api/public/cron/trust-guard'
+      path: '/api/public/cron/trust-guard'
+      fullPath: '/api/public/cron/trust-guard'
+      preLoaderRoute: typeof ApiPublicCronTrustGuardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/cron/youtube-comments': {
       id: '/api/public/cron/youtube-comments'
       path: '/api/public/cron/youtube-comments'
@@ -1431,6 +1471,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedSocialAccountsRoute: typeof AuthenticatedSocialAccountsRoute
   AuthenticatedTeamRoute: typeof AuthenticatedTeamRoute
   AuthenticatedTeamDeskRoute: typeof AuthenticatedTeamDeskRoute
+  AuthenticatedTrustSafetyRoute: typeof AuthenticatedTrustSafetyRoute
   AuthenticatedUsageRoute: typeof AuthenticatedUsageRoute
   AuthenticatedAutomationsActivityRoute: typeof AuthenticatedAutomationsActivityRoute
   AuthenticatedAutomationsAiAgentRoute: typeof AuthenticatedAutomationsAiAgentRoute
@@ -1459,6 +1500,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedSocialAccountsRoute: AuthenticatedSocialAccountsRoute,
   AuthenticatedTeamRoute: AuthenticatedTeamRoute,
   AuthenticatedTeamDeskRoute: AuthenticatedTeamDeskRoute,
+  AuthenticatedTrustSafetyRoute: AuthenticatedTrustSafetyRoute,
   AuthenticatedUsageRoute: AuthenticatedUsageRoute,
   AuthenticatedAutomationsActivityRoute: AuthenticatedAutomationsActivityRoute,
   AuthenticatedAutomationsAiAgentRoute: AuthenticatedAutomationsAiAgentRoute,
@@ -1495,6 +1537,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicCronPublishDueRoute: ApiPublicCronPublishDueRoute,
   ApiPublicCronRevenueRoute: ApiPublicCronRevenueRoute,
   ApiPublicCronTeamWebhooksRoute: ApiPublicCronTeamWebhooksRoute,
+  ApiPublicCronTrustGuardRoute: ApiPublicCronTrustGuardRoute,
   ApiPublicCronYoutubeCommentsRoute: ApiPublicCronYoutubeCommentsRoute,
   ApiPublicPgSlugRoute: ApiPublicPgSlugRoute,
   ApiPublicTTokenRoute: ApiPublicTTokenRoute,

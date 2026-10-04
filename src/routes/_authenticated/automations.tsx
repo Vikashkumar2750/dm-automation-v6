@@ -2,6 +2,7 @@ import { GuideButton } from "@/components/app/GuideButton";
 import { getPlanUsage } from "@/lib/plan-limits.functions";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { checkPolicy } from "@/lib/trust-safety";
 import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
 import { ChevronDown, Copy, Loader2, Plus, ShieldCheck, Trash2, Workflow, Zap } from "lucide-react";
@@ -399,6 +400,10 @@ function AutomationsPage() {
         requireFollow: value.requireFollow,
         followPromptText: value.followPromptText.trim() || null,
       };
+      const issues = checkPolicy([payload.responseText, ...payload.responseVariations, payload.commentReplyText, ...payload.commentReplyVariations, payload.followPromptText]);
+      const blocker = issues.find((i) => i.severity === "block");
+      if (blocker) throw new Error(`Policy check: ${blocker.message}`);
+      for (const w of issues) toast.warning(`Policy tip: ${w.message}`);
       if (value.id) {
         return updateFn({ data: { id: value.id, ...payload } });
       }
