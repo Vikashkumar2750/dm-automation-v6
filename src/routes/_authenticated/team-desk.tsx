@@ -17,9 +17,9 @@ import { useTenant } from "@/hooks/useTenant";
 import { sendReply } from "@/lib/inbox.functions";
 import type { SocialPlatform } from "@/lib/social";
 import { listTeam } from "@/lib/team.functions";
-import { canReview, matchesAssignment, mustRequestApproval, type AssignmentFilter } from "@/lib/team-desk";
+import { canReview, matchesAssignment, summarizeInvoices, mustRequestApproval, type AssignmentFilter } from "@/lib/team-desk";
 import {
-  assignConversation, createApiKey, createWebhook, getClientReports, getTeamDesk, listIntegrations,
+  assignConversation, createApiKey, createClientInvoice, listClientInvoices, setClientInvoiceStatus, createWebhook, getClientReports, getTeamDesk, listIntegrations,
   requestApproval, reviewApproval, revokeApiKey, saveTeamSettings, updateWebhook,
 } from "@/lib/team-desk.functions";
 
@@ -70,7 +70,7 @@ function TeamDeskPage() {
           </TabsList>
           <TabsContent value="inbox"><SharedInbox orgId={orgId} desk={desk.data} names={names} members={team.data ?? []} /></TabsContent>
           <TabsContent value="approvals"><Approvals orgId={orgId} desk={desk.data} names={names} reviewer={reviewer} /></TabsContent>
-          <TabsContent value="reports"><Reports /></TabsContent>
+          <TabsContent value="reports"><Reports />{reviewer && <ClientBilling orgId={orgId} />}</TabsContent>
           {reviewer && <TabsContent value="api"><Integrations orgId={orgId} /></TabsContent>}
         </Tabs>
       )}
@@ -242,6 +242,77 @@ function Reports() {
         </div>
       )}
     </Panel>
+  );
+}
+
+function ClientBilling({ orgId }: { orgId: string }) {
+  const qc = useQueryClient();
+  const fetchList = useServerFn(listClientInvoices);
+  const fetchReports = useServerFn(getClientReports);
+  const create = useServerFn(createClientInvoice);
+  const setStatus = useServerFn(setClientInvoiceStatus);
+  const list = useQuery({ queryKey: ["client-invoices", orgId], queryFn: () => fetchList({ data: { organizationId: orgId } }) });
+  const ws = useQuery({ queryKey: ["client-reports", 30], queryFn: () => fetchReports({ data: { days: 30 } }) });
+  const clients = (ws.data ?? []).filter((w) => w.id !== orgId);
+  const nameOf = (id: string) => (ws.data ?? []).find((w) => w.id === id)?.name ?? "Workspace";
+  const [form, setForm] = useState({ client: "", period: new Date().toLocaleDateString("en-IN", { month: "long", year: "numeric" }), amount: "", link: "", notes: "" });
+  const refresh = () => qc.invalidateQueries({ queryKey: ["client-invoices", orgId] });
+  const add = useMutation({
+    mutationFn: () => create({ data: { organizationId: orgId, clientOrganizationId: form.client, periodLabel: form.period, amountInr: Number(form.amount), paymentUrl: form.link, notes: form.notes } }),
+    onSuccess: () => { toast.success("Invoice added"); setForm((f) => ({ ...f, amount: "", link: "", notes: "" })); refresh(); },
+    onError: (e) => toast.error(errMsg(e)),
+  });
+  const mark = useMutation({ mutationFn: (v: { id: string; status: "unpaid" | "paid" | "void" }) => setStatus({ data: { organizationId: orgId, ...v } }), onSuccess: refresh, onError: (e) => toast.error(errMsg(e)) });
+  const rows = list.data ?? [];
+  const sum = summarizeInvoices(rows as { amount_inr: number; status: "unpaid" | "paid" | "void" }[]);
+  const csv = () => {
+    const head = "client,period,amount_inr,status,paid_at,payment_link,notes";
+    const lines = rows.map((r) => [nameOf(r.client_organization_id), r.period_label, r.amount_inr, r.status, r.paid_at ?? "", r.payment_url ?? "", r.notes ?? ""].map((v) => `"${String(v).replace(/"/g, '""')}"`).join(","));
+    const url = URL.createObjectURL(new Blob([[head, ...lines].join("\n")], { type: "text/csv" }));
+    const a = document.createElement("a"); a.href = url; a.download = "client-invoices.csv"; a.click(); URL.revokeObjectURL(url);
+  };
+  return (
+    <div className="mt-4">
+      <Panel title="Client billing" action={<Button size="sm" variant="outline" onClick={csv} disabled={!rows.length}><Download className="mr-1 h-4 w-4" />Invoices CSV</Button>}>
+        <p className="mb-3 text-sm text-muted-foreground">Bill each client workspace. Paste your own payment link (e.g. Razorpay) so the client can pay, then mark it paid. Due: <b>₹{sum.due}</b> · Received: <b>₹{sum.paid}</b></p>
+        {clients.length === 0 ? <p className="text-sm text-muted-foreground">No client workspaces yet. Create or join a client workspace to bill it.</p> : (
+          <div className="mb-4 grid gap-2 md:grid-cols-6">
+            <select className={sel + " md:col-span-2"} value={form.client} onChange={(e) => setForm({ ...form, client: e.target.value })}>
+              <option value="">Choose client…</option>
+              {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+            <Input placeholder="Period (e.g. October 2026)" value={form.period} onChange={(e) => setForm({ ...form, period: e.target.value })} />
+            <Input type="number" min={1} placeholder="Amount ₹" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} />
+            <Input placeholder="https://payment-link (optional)" value={form.link} onChange={(e) => setForm({ ...form, link: e.target.value })} />
+            <Button disabled={!form.client || !(Number(form.amount) > 0) || add.isPending} onClick={() => add.mutate()}>Add invoice</Button>
+            <Input className="md:col-span-6" placeholder="Note (optional)" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
+          </div>
+        )}
+        {rows.length === 0 ? <p className="text-sm text-muted-foreground">No invoices yet.</p> : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="text-left text-xs text-muted-foreground"><tr><th className="py-2">Client</th><th>Period</th><th>Amount</th><th>Status</th><th></th></tr></thead>
+              <tbody>
+                {rows.map((r) => (
+                  <tr key={r.id} className="border-t border-border">
+                    <td className="py-2 font-medium">{nameOf(r.client_organization_id)}{r.notes ? <span className="block text-xs text-muted-foreground">{r.notes}</span> : null}</td>
+                    <td>{r.period_label}</td>
+                    <td>₹{Number(r.amount_inr)}</td>
+                    <td className="capitalize">{r.status}{r.paid_at ? <span className="block text-xs text-muted-foreground">{new Date(r.paid_at).toLocaleDateString()}</span> : null}</td>
+                    <td className="space-x-1 text-right">
+                      {r.payment_url && <Button size="sm" variant="ghost" onClick={() => { navigator.clipboard.writeText(r.payment_url!); toast.success("Payment link copied"); }}><Copy className="h-4 w-4" /></Button>}
+                      {r.status !== "paid" && <Button size="sm" variant="outline" onClick={() => mark.mutate({ id: r.id, status: "paid" })}>Mark paid</Button>}
+                      {r.status === "paid" && <Button size="sm" variant="ghost" onClick={() => mark.mutate({ id: r.id, status: "unpaid" })}>Undo</Button>}
+                      {r.status === "unpaid" && <Button size="sm" variant="ghost" onClick={() => mark.mutate({ id: r.id, status: "void" })}>Cancel</Button>}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Panel>
+    </div>
   );
 }
 
