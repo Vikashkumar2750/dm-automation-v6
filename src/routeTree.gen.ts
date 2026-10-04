@@ -32,6 +32,7 @@ import { Route as AuthenticatedCommentsRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedContactsRouteImport } from './routes/_authenticated/contacts'
 import { Route as AuthenticatedCreatePostRouteImport } from './routes/_authenticated/create-post'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedGrowthRouteImport } from './routes/_authenticated/growth'
 import { Route as AuthenticatedInboxRouteImport } from './routes/_authenticated/inbox'
 import { Route as AuthenticatedRevenueRouteImport } from './routes/_authenticated/revenue'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
@@ -195,6 +196,11 @@ const AuthenticatedCreatePostRoute = AuthenticatedCreatePostRouteImport.update({
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedGrowthRoute = AuthenticatedGrowthRouteImport.update({
+  id: '/growth',
+  path: '/growth',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedInboxRoute = AuthenticatedInboxRouteImport.update({
@@ -479,6 +485,7 @@ export interface FileRoutesByFullPath {
   '/contacts': typeof AuthenticatedContactsRoute
   '/create-post': typeof AuthenticatedCreatePostRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/growth': typeof AuthenticatedGrowthRoute
   '/inbox': typeof AuthenticatedInboxRoute
   '/revenue': typeof AuthenticatedRevenueRoute
   '/settings': typeof AuthenticatedSettingsRoute
@@ -549,6 +556,7 @@ export interface FileRoutesByTo {
   '/contacts': typeof AuthenticatedContactsRoute
   '/create-post': typeof AuthenticatedCreatePostRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/growth': typeof AuthenticatedGrowthRoute
   '/inbox': typeof AuthenticatedInboxRoute
   '/revenue': typeof AuthenticatedRevenueRoute
   '/settings': typeof AuthenticatedSettingsRoute
@@ -622,6 +630,7 @@ export interface FileRoutesById {
   '/_authenticated/contacts': typeof AuthenticatedContactsRoute
   '/_authenticated/create-post': typeof AuthenticatedCreatePostRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/growth': typeof AuthenticatedGrowthRoute
   '/_authenticated/inbox': typeof AuthenticatedInboxRoute
   '/_authenticated/revenue': typeof AuthenticatedRevenueRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
@@ -695,6 +704,7 @@ export interface FileRouteTypes {
     | '/contacts'
     | '/create-post'
     | '/dashboard'
+    | '/growth'
     | '/inbox'
     | '/revenue'
     | '/settings'
@@ -765,6 +775,7 @@ export interface FileRouteTypes {
     | '/contacts'
     | '/create-post'
     | '/dashboard'
+    | '/growth'
     | '/inbox'
     | '/revenue'
     | '/settings'
@@ -837,6 +848,7 @@ export interface FileRouteTypes {
     | '/_authenticated/contacts'
     | '/_authenticated/create-post'
     | '/_authenticated/dashboard'
+    | '/_authenticated/growth'
     | '/_authenticated/inbox'
     | '/_authenticated/revenue'
     | '/_authenticated/settings'
@@ -1078,6 +1090,13 @@ declare module '@tanstack/react-router' {
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/growth': {
+      id: '/_authenticated/growth'
+      path: '/growth'
+      fullPath: '/growth'
+      preLoaderRoute: typeof AuthenticatedGrowthRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/inbox': {
@@ -1465,6 +1484,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedContactsRoute: typeof AuthenticatedContactsRoute
   AuthenticatedCreatePostRoute: typeof AuthenticatedCreatePostRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedGrowthRoute: typeof AuthenticatedGrowthRoute
   AuthenticatedInboxRoute: typeof AuthenticatedInboxRoute
   AuthenticatedRevenueRoute: typeof AuthenticatedRevenueRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
@@ -1494,6 +1514,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedContactsRoute: AuthenticatedContactsRoute,
   AuthenticatedCreatePostRoute: AuthenticatedCreatePostRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedGrowthRoute: AuthenticatedGrowthRoute,
   AuthenticatedInboxRoute: AuthenticatedInboxRoute,
   AuthenticatedRevenueRoute: AuthenticatedRevenueRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
