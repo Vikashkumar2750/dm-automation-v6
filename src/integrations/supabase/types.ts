@@ -1188,6 +1188,53 @@ export type Database = {
           },
         ]
       }
+      growth_competitors: {
+        Row: {
+          avg_comments: number
+          created_at: string
+          followers: number
+          handle: string | null
+          id: string
+          name: string
+          organization_id: string
+          platform: string
+          posts_per_week: number
+          updated_at: string
+        }
+        Insert: {
+          avg_comments?: number
+          created_at?: string
+          followers?: number
+          handle?: string | null
+          id?: string
+          name: string
+          organization_id: string
+          platform?: string
+          posts_per_week?: number
+          updated_at?: string
+        }
+        Update: {
+          avg_comments?: number
+          created_at?: string
+          followers?: number
+          handle?: string | null
+          id?: string
+          name?: string
+          organization_id?: string
+          platform?: string
+          posts_per_week?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "growth_competitors_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       messages: {
         Row: {
           body: string
