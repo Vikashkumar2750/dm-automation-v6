@@ -220,7 +220,7 @@ function Pages({ orgId, items }: { orgId: string; items: any[] }) {
                 title="Button link"
                 how="Ye address us page ka hai jo button dabane par khulega. Poora link http:// ya https:// se shuru karo. Delivery page ka apna link (jaise origin/p/slug) bhi daal sakte ho, ya koi bhi website."
                 why="Button isi link par le jaata hai — galat ya adhoora link daala to visitor blank page par pahunchega."
-                example="https://yoursite.com/your-guide ya apna delivery page: origin/p/free-guide"
+                example={`https://yoursite.com/your-guide ya apna delivery page: ${origin}/p/free-guide`}
               />
             </div>
           </div>
