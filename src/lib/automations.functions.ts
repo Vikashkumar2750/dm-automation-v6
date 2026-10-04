@@ -3,6 +3,13 @@ import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { explainReason, webhookEventLabel } from "@/lib/activity-explain";
+import { checkPolicy } from "@/lib/trust-safety";
+
+/** Phase H: refuse rule text that clearly breaks Meta messaging policy (warnings are shown in the UI only). */
+function assertPolicy(t: { responseText?: string | null; responseVariations?: string[]; commentReplyText?: string | null; commentReplyVariations?: string[]; followPromptText?: string | null }) {
+  const b = checkPolicy([t.responseText, ...(t.responseVariations ?? []), t.commentReplyText, ...(t.commentReplyVariations ?? []), t.followPromptText]).find((i) => i.severity === "block");
+  if (b) throw new Error(`Policy check: ${b.message}`);
+}
 
 export type AutomationRule = {
   id: string;
@@ -139,6 +146,7 @@ export const createAutomationRule = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { organizationId, ...rest } = data;
+    assertPolicy(rest);
     if (rest.isActive) {
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
       const { assertRuleSlot } = await import("@/lib/plan-limits.server");
@@ -160,6 +168,7 @@ export const updateAutomationRule = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { id, ...rest } = data;
+    assertPolicy(rest);
     const patch: Partial<ReturnType<typeof toRow>> = {};
     if (rest.name !== undefined) patch.name = rest.name;
     if (rest.isActive !== undefined) patch.is_active = rest.isActive;

@@ -38,6 +38,7 @@ import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedSocialAccountsRouteImport } from './routes/_authenticated/social-accounts'
 import { Route as AuthenticatedTeamRouteImport } from './routes/_authenticated/team'
 import { Route as AuthenticatedTeamDeskRouteImport } from './routes/_authenticated/team-desk'
+import { Route as AuthenticatedTrustSafetyRouteImport } from './routes/_authenticated/trust-safety'
 import { Route as AuthenticatedUsageRouteImport } from './routes/_authenticated/usage'
 import { Route as BlogIndexRouteImport } from './routes/blog.index'
 import { Route as BlogSlugRouteImport } from './routes/blog.$slug'
@@ -227,6 +228,12 @@ const AuthenticatedTeamDeskRoute = AuthenticatedTeamDeskRouteImport.update({
   path: '/team-desk',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedTrustSafetyRoute =
+  AuthenticatedTrustSafetyRouteImport.update({
+    id: '/trust-safety',
+    path: '/trust-safety',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedUsageRoute = AuthenticatedUsageRouteImport.update({
   id: '/usage',
   path: '/usage',
@@ -478,6 +485,7 @@ export interface FileRoutesByFullPath {
   '/social-accounts': typeof AuthenticatedSocialAccountsRoute
   '/team': typeof AuthenticatedTeamRoute
   '/team-desk': typeof AuthenticatedTeamDeskRoute
+  '/trust-safety': typeof AuthenticatedTrustSafetyRoute
   '/usage': typeof AuthenticatedUsageRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/p/$slug': typeof PSlugRoute
@@ -547,6 +555,7 @@ export interface FileRoutesByTo {
   '/social-accounts': typeof AuthenticatedSocialAccountsRoute
   '/team': typeof AuthenticatedTeamRoute
   '/team-desk': typeof AuthenticatedTeamDeskRoute
+  '/trust-safety': typeof AuthenticatedTrustSafetyRoute
   '/usage': typeof AuthenticatedUsageRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/p/$slug': typeof PSlugRoute
@@ -619,6 +628,7 @@ export interface FileRoutesById {
   '/_authenticated/social-accounts': typeof AuthenticatedSocialAccountsRoute
   '/_authenticated/team': typeof AuthenticatedTeamRoute
   '/_authenticated/team-desk': typeof AuthenticatedTeamDeskRoute
+  '/_authenticated/trust-safety': typeof AuthenticatedTrustSafetyRoute
   '/_authenticated/usage': typeof AuthenticatedUsageRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/p/$slug': typeof PSlugRoute
@@ -691,6 +701,7 @@ export interface FileRouteTypes {
     | '/social-accounts'
     | '/team'
     | '/team-desk'
+    | '/trust-safety'
     | '/usage'
     | '/blog/$slug'
     | '/p/$slug'
@@ -760,6 +771,7 @@ export interface FileRouteTypes {
     | '/social-accounts'
     | '/team'
     | '/team-desk'
+    | '/trust-safety'
     | '/usage'
     | '/blog/$slug'
     | '/p/$slug'
@@ -831,6 +843,7 @@ export interface FileRouteTypes {
     | '/_authenticated/social-accounts'
     | '/_authenticated/team'
     | '/_authenticated/team-desk'
+    | '/_authenticated/trust-safety'
     | '/_authenticated/usage'
     | '/blog/$slug'
     | '/p/$slug'
@@ -1107,6 +1120,13 @@ declare module '@tanstack/react-router' {
       path: '/team-desk'
       fullPath: '/team-desk'
       preLoaderRoute: typeof AuthenticatedTeamDeskRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/trust-safety': {
+      id: '/_authenticated/trust-safety'
+      path: '/trust-safety'
+      fullPath: '/trust-safety'
+      preLoaderRoute: typeof AuthenticatedTrustSafetyRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/usage': {
@@ -1451,6 +1471,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedSocialAccountsRoute: typeof AuthenticatedSocialAccountsRoute
   AuthenticatedTeamRoute: typeof AuthenticatedTeamRoute
   AuthenticatedTeamDeskRoute: typeof AuthenticatedTeamDeskRoute
+  AuthenticatedTrustSafetyRoute: typeof AuthenticatedTrustSafetyRoute
   AuthenticatedUsageRoute: typeof AuthenticatedUsageRoute
   AuthenticatedAutomationsActivityRoute: typeof AuthenticatedAutomationsActivityRoute
   AuthenticatedAutomationsAiAgentRoute: typeof AuthenticatedAutomationsAiAgentRoute
@@ -1479,6 +1500,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedSocialAccountsRoute: AuthenticatedSocialAccountsRoute,
   AuthenticatedTeamRoute: AuthenticatedTeamRoute,
   AuthenticatedTeamDeskRoute: AuthenticatedTeamDeskRoute,
+  AuthenticatedTrustSafetyRoute: AuthenticatedTrustSafetyRoute,
   AuthenticatedUsageRoute: AuthenticatedUsageRoute,
   AuthenticatedAutomationsActivityRoute: AuthenticatedAutomationsActivityRoute,
   AuthenticatedAutomationsAiAgentRoute: AuthenticatedAutomationsAiAgentRoute,
