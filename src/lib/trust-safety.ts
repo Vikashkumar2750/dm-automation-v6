@@ -19,7 +19,10 @@ export function computeHealthScore(i: HealthInput): HealthResult {
   const now = i.now ?? Date.now();
   let score = 100;
   const reasons: string[] = [];
-  if (i.status !== "connected" && i.status !== "active") {
+  if (i.status === "attention") {
+    score -= 25;
+    reasons.push("Account needs attention — open Social accounts.");
+  } else if (i.status !== "connected") {
     score -= 50;
     reasons.push("Account is not connected — reconnect it.");
   }
