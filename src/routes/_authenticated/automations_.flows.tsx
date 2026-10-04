@@ -4,12 +4,13 @@ import { useServerFn } from "@tanstack/react-start";
 import { createContext, useContext, useEffect, useState } from "react";
 import { getRevenue } from "@/lib/revenue.functions";
 import { toast } from "sonner";
-import { ArrowDown, ArrowUp, GitBranch, GripVertical, Plus, Trash2, Zap } from "lucide-react";
+import { ArrowDown, ArrowUp, GitBranch, GripVertical, Info, Plus, Trash2, Zap } from "lucide-react";
 
 import { AppShell } from "@/components/app/AppShell";
 import { EmptyState, PageHeader, Panel, StatusBadge } from "@/components/app/primitives";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Switch } from "@/components/ui/switch";
 import { useTenant } from "@/hooks/useTenant";
 import { getFlows, saveFlows } from "@/lib/flows.functions";
@@ -48,6 +49,54 @@ const STEP_TEMPLATES: { label: string; make: () => FlowStep }[] = [
   { label: "Send payment link", make: () => ({ id: newStepId(), kind: "send_payment", productId: "", text: "" }) },
   { label: "Send coupon", make: () => ({ id: newStepId(), kind: "send_coupon", campaignId: "", text: "Here is your code: {code}" }) },
 ];
+
+const STEP_HELP = {
+  contains: {
+    title: "If comment/DM contains",
+    how: "Checks whether the person's comment or DM contains any keyword entered here. Separate multiple keywords with commas.",
+    why: "Use it to continue this flow only for messages about a specific topic, such as price, link or catalog.",
+  },
+  follower: {
+    title: "If follower",
+    how: "Checks whether the person currently follows the connected Instagram or Facebook account.",
+    why: "Use it to give follower-only links or to ask non-followers to follow before continuing.",
+  },
+  send_dm: {
+    title: "Send DM",
+    how: "Sends a private message to the person. You can also add one optional button with a secure https link.",
+    why: "Use it for links, details or replies that should not appear publicly under a post.",
+  },
+  public_reply: {
+    title: "Public reply",
+    how: "Posts this message as a public reply below the person's comment. It works only with a New comment trigger.",
+    why: "Use it to acknowledge a comment publicly before sending any private follow-up.",
+  },
+  wait: {
+    title: "Wait",
+    how: "Pauses this person's flow for the number of minutes entered, then continues with the next step.",
+    why: "Use it to space out follow-ups instead of sending several messages at once.",
+  },
+  tag: {
+    title: "Add tag",
+    how: "Adds a label to the person's record in Contacts, for example hot-lead, pricing or customer.",
+    why: "Use it to organise contacts, create filtered groups and target future broadcasts. It does not send a message.",
+  },
+  send_payment: {
+    title: "Send payment link",
+    how: "Creates a unique payment link for the selected product and sends it privately to this person.",
+    why: "Use it to take payment inside a sales conversation and track whether that person paid.",
+  },
+  send_coupon: {
+    title: "Send coupon",
+    how: "Creates a unique code from the selected campaign and replaces {code} in your message before sending.",
+    why: "Use it for personal offers without giving every contact the same reusable code.",
+  },
+} as const;
+
+function helpForStep(step: FlowStep) {
+  if (step.kind === "condition") return step.check === "contains" ? STEP_HELP.contains : STEP_HELP.follower;
+  return STEP_HELP[step.kind];
+}
 
 function FlowsPage() {
   const { activeOrg } = useTenant();
@@ -268,13 +317,42 @@ function StepCard({ step, index, onChange, onRemove, onMove }: {
 }) {
   const isCond = step.kind === "condition";
   const rev = useContext(RevenueOptions);
+  const help = helpForStep(step);
   return (
     <div className={`rounded-xl border bg-card p-4 ${isCond ? "border-warning/50" : "border-border"}`}>
       <div className="flex items-center justify-between">
-        <p className="flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          <GripVertical className="size-4 cursor-grab" aria-label="Drag to reorder" />
-          {index + 1}. {isCond ? "Condition" : step.kind === "send_dm" ? "Send DM" : step.kind === "public_reply" ? "Public reply" : step.kind === "wait" ? "Wait" : step.kind === "send_payment" ? "Payment link" : step.kind === "send_coupon" ? "Coupon" : "Tag"}
-        </p>
+        <div className="flex min-w-0 items-center gap-1">
+          <p className="flex min-w-0 items-center gap-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            <GripVertical className="size-4 cursor-grab" aria-label="Drag to reorder" />
+            {index + 1}. {isCond ? "Condition" : step.kind === "send_dm" ? "Send DM" : step.kind === "public_reply" ? "Public reply" : step.kind === "wait" ? "Wait" : step.kind === "send_payment" ? "Payment link" : step.kind === "send_coupon" ? "Coupon" : "Tag"}
+          </p>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                type="button"
+                size="icon"
+                variant="ghost"
+                className="size-7 shrink-0 text-muted-foreground"
+                aria-label={`About ${help.title}`}
+              >
+                <Info className="size-3.5" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="start" className="w-80 max-w-[calc(100vw-2rem)]">
+              <p className="text-sm font-semibold">{help.title}</p>
+              <div className="mt-3 space-y-3 text-sm">
+                <div>
+                  <p className="font-medium">How it works</p>
+                  <p className="mt-1 text-muted-foreground">{help.how}</p>
+                </div>
+                <div>
+                  <p className="font-medium">Why use it</p>
+                  <p className="mt-1 text-muted-foreground">{help.why}</p>
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
+        </div>
         <div className="flex">
           <Button size="icon" variant="ghost" aria-label="Move up" onClick={() => onMove(-1)}><ArrowUp className="size-4" /></Button>
           <Button size="icon" variant="ghost" aria-label="Move down" onClick={() => onMove(1)}><ArrowDown className="size-4" /></Button>
