@@ -165,6 +165,7 @@ type CommentValue = {
   media?: { id?: string };
   post?: { id?: string };
   from?: { id?: string; username?: string; name?: string };
+  created_time?: string | number;
 };
 
 function eventIdentity(item: { type: string; value: unknown }, fallback: string) {
@@ -280,6 +281,8 @@ async function ingestIntoInbox(
     externalId = c.comment_id ?? c.id ?? null;
     postExternalId = c.media?.id ?? c.post?.id ?? c.post_id ?? null;
     channel = "comment";
+    const { withinPrivateReplyWindow } = await import("@/lib/meta-comment-window");
+    if (!withinPrivateReplyWindow(c.created_time)) return "trace:comment_older_than_7_days";
   } else {
     return "trace:unsupported_event";
   }
@@ -492,6 +495,7 @@ export const Route = createFileRoute("/api/public/webhooks/meta")({
         const payloadPlatform = platformFor(payload.object);
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
+        const jobs: Array<() => Promise<void>> = [];
         for (const entry of payload.entry ?? []) {
           const externalId = entry.id ?? null;
 
@@ -565,6 +569,8 @@ export const Route = createFileRoute("/api/public/webhooks/meta")({
 
             // Mirror into the inbox (conversations/messages).
             if (itemOrganizationId && itemPlatform && webhookEvent?.id) {
+              const eventRowId = webhookEvent.id;
+              jobs.push(async () => {
               try {
                 const trace = await ingestIntoInbox(supabaseAdmin, {
                   organizationId: itemOrganizationId,
@@ -585,7 +591,7 @@ export const Route = createFileRoute("/api/public/webhooks/meta")({
                       ? { status: "ignored", error: `trace:${traceId}:${trace}` }
                       : { status: "processed", error: `trace:${traceId}:processed` },
                   )
-                  .eq("id", webhookEvent.id);
+                  .eq("id", eventRowId);
               } catch (ingestError) {
                 console.error("inbox ingest failed", ingestError);
                 await supabaseAdmin
@@ -597,13 +603,36 @@ export const Route = createFileRoute("/api/public/webhooks/meta")({
                         ? `trace:${traceId}:${ingestError.message.slice(0, 450)}`
                         : `trace:${traceId}:Inbox or automation processing failed`,
                   })
-                  .eq("id", webhookEvent.id);
+                  .eq("id", eventRowId);
               }
+              });
             }
           }
         }
 
-        // Always 200 quickly so Meta does not retry storm.
+        // Events are already persisted above. With the Super Admin
+        // `meta_async_webhook` flag (off by default) processing continues after
+        // the 200 reply; otherwise behaviour is unchanged (process, then reply).
+        const runJobs = async () => {
+          for (const job of jobs) await job();
+        };
+        let asyncMode = false;
+        try {
+          const { data: ps } = await supabaseAdmin
+            .from("platform_settings")
+            .select("feature_flags")
+            .eq("id", true)
+            .maybeSingle();
+          asyncMode = (ps?.feature_flags as Record<string, unknown> | null)?.["meta_async_webhook"] === true;
+        } catch {
+          asyncMode = false;
+        }
+        if (asyncMode) {
+          traceLog(traceId, "dispatch", "async", String(jobs.length));
+          void runJobs().catch((e) => console.error("async webhook processing failed", e));
+        } else {
+          await runJobs();
+        }
         return new Response("EVENT_RECEIVED", { status: 200 });
       },
     },
