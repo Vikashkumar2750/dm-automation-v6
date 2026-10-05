@@ -5,9 +5,9 @@ export const Route = createFileRoute("/api/public/cron/team-webhooks")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const secret = process.env["CRON_SECRET"];
-        if (!secret) return new Response("Scheduler not configured", { status: 503 });
-        if (request.headers.get("x-cron-secret") !== secret) return new Response("Unauthorized", { status: 401 });
+        const { cronAuthFailure } = await import("@/lib/cron-secret.server");
+        const denied = cronAuthFailure(request, "/api/public/cron/team-webhooks");
+        if (denied) return denied;
         const { dispatchOutgoingWebhooks } = await import("@/lib/team-desk.server");
         try {
           return Response.json(await dispatchOutgoingWebhooks());

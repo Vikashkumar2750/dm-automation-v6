@@ -5,10 +5,9 @@ export const Route = createFileRoute("/api/public/cron/flows")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const secret = process.env["CRON_SECRET"];
-        if (!secret) return new Response("Scheduler not configured", { status: 503 });
-        const provided = request.headers.get("x-cron-secret") ?? new URL(request.url).searchParams.get("secret");
-        if (provided !== secret) return new Response("Unauthorized", { status: 401 });
+        const { cronAuthFailure } = await import("@/lib/cron-secret.server");
+        const denied = cronAuthFailure(request, "/api/public/cron/flows");
+        if (denied) return denied;
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         const { resumeDueFlows } = await import("@/lib/flows-runner.server");
         try {
