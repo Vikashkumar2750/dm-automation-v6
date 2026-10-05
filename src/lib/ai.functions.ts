@@ -168,3 +168,21 @@ export const suggestAutomation = createServerFn({ method: "POST" })
       } satisfies SuggestedRule,
     };
   });
+
+/** Today's AI request usage for the signed-in user (same counter as runModel). */
+export const getAiUsage = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { readAiDailyLimit } = await import("@/lib/site-settings.server");
+    const limit = await readAiDailyLimit(supabaseAdmin);
+    const day = new Date().toISOString().slice(0, 10);
+    const { data } = await supabaseAdmin
+      .from("ai_usage_daily")
+      .select("requests")
+      .eq("user_id", context.userId)
+      .eq("day", day)
+      .maybeSingle();
+    const used = Math.max(data?.requests ?? 0, memoryUsage.get(`${context.userId}:${day}`) ?? 0);
+    return { used, limit, remaining: Math.max(0, limit - used) };
+  });

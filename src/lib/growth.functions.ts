@@ -149,6 +149,128 @@ const ideasSchema = z.object({
 });
 export type ContentIdea = z.infer<typeof ideasSchema>["ideas"][number];
 
+const PRIVATE_HOST = /^(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|169\.254\.|0\.|\[|::)/i;
+
+async function readPublicPage(raw: string): Promise<string> {
+  try {
+    const url = new URL(/^https?:\/\//i.test(raw) ? raw : `https://${raw}`);
+    if (!/^https?:$/.test(url.protocol) || PRIVATE_HOST.test(url.hostname) || !url.hostname.includes(".")) return "";
+    const res = await fetch(url, { signal: AbortSignal.timeout(6000), headers: { "user-agent": "Mozilla/5.0 AutoDM-Growth" }, redirect: "follow" });
+    if (!res.ok) return "";
+    const html = (await res.text()).slice(0, 200_000);
+    const pick = (re: RegExp) => (html.match(re)?.[1] ?? "").replace(/\s+/g, " ").trim();
+    const title = pick(/<title[^>]*>([\s\S]*?)<\/title>/i);
+    const desc = pick(/<meta[^>]+(?:name|property)=["'](?:og:)?description["'][^>]+content=["']([^"']*)/i);
+    const body = html.replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>/gi, " ").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").slice(0, 1200);
+    return [title && `Title: ${title}`, desc && `Description: ${desc}`, body && `Text: ${body}`].filter(Boolean).join("\n");
+  } catch {
+    return "";
+  }
+}
+
+/** Connected account handles to pre-fill the auto-fill form (no AI, no cost). */
+export const getProfileSources = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => orgInput.parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: accs } = await context.supabase.from("social_accounts").select("platform, handle, name").eq("organization_id", data.organizationId);
+    const out: Record<string, string> = {};
+    for (const a of accs ?? []) if (!out[a.platform]) out[a.platform] = (a.handle || a.name || "") as string;
+    return out;
+  });
+
+/** Guess niche + goal from a website and social handles. Uses 1 AI request. */
+export const autofillProfile = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    orgInput.extend({
+      website: z.string().trim().max(200).optional(),
+      instagram: z.string().trim().max(80).optional(),
+      facebook: z.string().trim().max(120).optional(),
+      youtube: z.string().trim().max(120).optional(),
+    }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    if (!data.website && !data.instagram && !data.facebook && !data.youtube) throw new Error("Add a website or at least one handle.");
+    const clean = (h?: string) => h?.replace(/^@/, "").replace(/^https?:\/\/[^/]+\//, "").replace(/\/$/, "");
+    const [site, yt] = await Promise.all([
+      data.website ? readPublicPage(data.website) : Promise.resolve(""),
+      data.youtube ? readPublicPage(`https://www.youtube.com/@${clean(data.youtube)}`) : Promise.resolve(""),
+    ]);
+    const { data: posts } = await context.supabase.from("posts").select("caption").eq("organization_id", data.organizationId).order("created_at", { ascending: false }).limit(5);
+    const captions = (posts ?? []).map((p) => (p.caption ?? "").slice(0, 120)).filter(Boolean).join(" | ");
+    const prompt = [
+      data.website && `Website: ${data.website}\n${site || "(could not read the page)"}`,
+      data.instagram && `Instagram handle: @${clean(data.instagram)}`,
+      data.facebook && `Facebook page: ${clean(data.facebook)}`,
+      data.youtube && `YouTube channel: @${clean(data.youtube)}\n${yt.slice(0, 600)}`,
+      captions && `Recent captions: ${captions}`,
+    ].filter(Boolean).join("\n\n");
+    return runModel(
+      prompt,
+      "From the business information, infer the creator's niche (max 8 words, specific, e.g. 'eggless home baking classes in Pune') and the most likely social media goal (max 8 words, e.g. 'sell online baking course'). Use handle names as hints if the page is empty.",
+      z.object({ niche: z.string().min(2).transform((s) => s.slice(0, 200)), goal: z.string().transform((s) => s.slice(0, 120)) }),
+      context.userId,
+      '{"niche":"","goal":""}',
+    );
+  });
+
+const planDay = z.object({
+  day: z.coerce.number(),
+  theme: z.string(),
+  title: z.string(),
+  format: z.string(),
+  platform: z.string().default("Instagram"),
+  postTime: z.string().default(""),
+  hook: z.string(),
+  script: z.string(),
+  caption: z.string(),
+  hashtags: z.array(z.string()).default([]),
+  cta: z.string().default(""),
+  keyword: z.string().default(""),
+  dmReply: z.string().default(""),
+});
+const planSchema = z.object({ days: z.array(planDay).min(7).max(7) });
+export type PlanDay = z.infer<typeof planDay>;
+
+/** Complete, ready-to-post 7-day content plan. Uses 1 AI request. */
+export const generateContentPlan = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    orgInput.extend({
+      niche: z.string().trim().min(2).max(200),
+      goal: z.string().trim().max(120).optional(),
+      topic: z.string().trim().max(200).optional(),
+      bestTimes: z.array(z.string().max(30)).max(5).optional(),
+      language: z.enum(["English", "Hinglish", "Hindi"]).default("English"),
+    }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: posts } = await context.supabase.from("posts").select("caption").eq("organization_id", data.organizationId).order("created_at", { ascending: false }).limit(8);
+    const recent = (posts ?? []).map((p) => (p.caption ?? "").slice(0, 160)).filter(Boolean).join("\n- ");
+    const prompt = [
+      `Niche: ${data.niche}`,
+      `Goal: ${data.goal || "more comments and DMs"}`,
+      data.topic && `Focus topic for this week: ${data.topic}`,
+      `Language: ${data.language}`,
+      data.bestTimes?.length ? `Audience is most active at: ${data.bestTimes.join(", ")} (India time)` : "Suggest good India-time posting slots.",
+      `Recent captions (avoid repeating):\n- ${recent || "(none yet)"}`,
+    ].filter(Boolean).join("\n");
+    const out = await runModel(
+      prompt,
+      [
+        "You are a social media growth strategist for Instagram, Facebook and YouTube creators in India.",
+        "Build a complete 7-day content plan (day 1..7), ready to post as-is. Mix formats (Reel, Carousel, Story, Post, YouTube Short) and themes (educate, story, proof, behind-the-scenes, engagement, offer, FAQ).",
+        "For each day give: theme, title, format, platform, postTime (e.g. '7:30 PM'), hook (first line), script (Reel/Short shot-by-shot or carousel slide-by-slide, 4-7 short lines separated by \\n), caption (60-150 words, ends with the CTA), hashtags (6-10, with #), cta, keyword (one UPPERCASE word people comment to get a DM), dmReply (the DM text sent when someone comments the keyword, under 50 words).",
+        "Never suggest misleading claims, giveaways that require tagging, or banned content.",
+      ].join("\n"),
+      planSchema,
+      context.userId,
+      '{"days":[{"day":1,"theme":"","title":"","format":"Reel","platform":"Instagram","postTime":"7:30 PM","hook":"","script":"","caption":"","hashtags":["#tag"],"cta":"","keyword":"LINK","dmReply":""}]}',
+    );
+    return out.days.sort((a, b) => a.day - b.day);
+  });
+
 /** AI content ideas from the niche + recent captions; counts toward the daily AI limit. */
 export const generateContentIdeas = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
