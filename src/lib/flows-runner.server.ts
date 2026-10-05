@@ -54,6 +54,9 @@ async function log(admin: AdminClient, ev: FlowEvent, status: string, detail: st
 /** Safety gate shared with keyword rules. Returns a skip reason or null. */
 async function safetyBlock(admin: AdminClient, ev: FlowEvent): Promise<string | null> {
   const a = await import("@/lib/automation.server");
+  // P2: a human owns this conversation — every automated path stops here (flows, AI, nudges, reminders, broadcasts).
+  const { conversationInTakeover } = await import("@/lib/human-takeover.server");
+  if (await conversationInTakeover(admin, ev.conversationId)) return "human_takeover";
   const { data: platform } = await admin.from("platform_settings").select("global_send_paused").eq("id", true).maybeSingle();
   if (platform?.global_send_paused) return "platform_send_paused";
   const { data: row } = await admin

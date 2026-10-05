@@ -30,6 +30,7 @@ import {
   sendReply,
   setCommentHidden,
   setConversationStatus,
+  resumeBot,
   type ConversationRow,
 } from "@/lib/inbox.functions";
 import { cn } from "@/lib/utils";
@@ -129,6 +130,15 @@ function InboxPage() {
   const replyToCommentFn = useServerFn(replyToComment);
   const setCommentHiddenFn = useServerFn(setCommentHidden);
   const setStatusFn = useServerFn(setConversationStatus);
+  const resumeBotFn = useServerFn(resumeBot);
+  const resume = useMutation({
+    mutationFn: (conversationId: string) => resumeBotFn({ data: { conversationId } }),
+    onSuccess: () => {
+      toast.success("Bot resumed — it will answer the next new message.");
+      queryClient.invalidateQueries({ queryKey: ["conversations", orgId] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
 
   const filters = {
     ...(platform !== "all" ? { platform } : {}),
@@ -414,6 +424,17 @@ function InboxPage() {
                   {selected.status}
                 </StatusBadge>
               </div>
+              {selected.bot_paused_until && new Date(selected.bot_paused_until) > new Date() ? (
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-muted/50 px-5 py-2 text-sm">
+                  <span className="text-muted-foreground">
+                    Bot paused — a teammate is handling this chat until{" "}
+                    {new Date(selected.bot_paused_until).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}.
+                  </span>
+                  <Button size="sm" variant="outline" disabled={resume.isPending} onClick={() => resume.mutate(selected.id)}>
+                    Resume bot
+                  </Button>
+                </div>
+              ) : null}
 
               <div
                 ref={threadRef}

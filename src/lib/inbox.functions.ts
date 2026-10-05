@@ -16,6 +16,8 @@ export type ConversationRow = {
   last_message_at: string;
   last_message_preview: string | null;
   unread_count: number;
+  bot_paused_until?: string | null;
+  bot_paused_by?: string | null;
 };
 
 export type MessageRow = {
@@ -48,7 +50,7 @@ export const listConversations = createServerFn({ method: "GET" })
     let query = context.supabase
       .from("conversations")
       .select(
-        "id, organization_id, social_account_id, platform, external_user_id, external_user_name, channel, status, last_message_at, last_message_preview, unread_count",
+        "id, organization_id, social_account_id, platform, external_user_id, external_user_name, channel, status, last_message_at, last_message_preview, unread_count, bot_paused_until, bot_paused_by",
       )
       .eq("organization_id", data.organizationId)
       .order("last_message_at", { ascending: false })
@@ -222,6 +224,8 @@ export const sendReply = createServerFn({ method: "POST" })
         status: "pending",
       })
       .eq("id", conversation.id);
+    // P2: a genuine manual reply hands the conversation to a human.
+    await (await import("@/lib/human-takeover.server")).startTakeover(supabaseAdmin, { conversationId: conversation.id, organizationId: conversation.organization_id, userId: context.userId, reason: "manual_dm_reply" });
 
     return { ok: true };
   });
@@ -300,6 +304,7 @@ export const replyToComment = createServerFn({ method: "POST" })
           status: "pending",
         })
         .eq("id", conversation.id);
+    await (await import("@/lib/human-takeover.server")).startTakeover(supabaseAdmin, { conversationId: conversation.id, organizationId: conversation.organization_id, userId: context.userId, reason: `manual_comment_${data.mode}` });
       return { ok: true };
     }
 
@@ -511,3 +516,18 @@ async function sendMetaMessage(
   }
   return { error: lastError };
 }
+
+/** P2: manually resume the bot (agents and above). Sends nothing by itself. */
+export const resumeBot = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => z.object({ conversationId: z.string().uuid() }).parse(data))
+  .handler(async ({ data, context }) => {
+    const { data: conv } = await context.supabase.from("conversations").select("id, organization_id").eq("id", data.conversationId).maybeSingle();
+    if (!conv) throw new Error("Conversation not found");
+    const { data: allowed } = await context.supabase.rpc("current_user_has_org_role", { _org_id: conv.organization_id, _roles: [...WRITE_ROLES] });
+    if (!allowed) throw new Error("not_allowed");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    await supabaseAdmin.from("conversations").update({ bot_paused_until: null, bot_paused_reason: "resumed" }).eq("id", conv.id);
+    await supabaseAdmin.from("automation_runs").insert({ organization_id: conv.organization_id, rule_id: null, conversation_id: conv.id, status: "skipped", detail: "human_takeover:resumed" });
+    return { ok: true };
+  });

@@ -516,7 +516,10 @@ export async function runYouTubeCommentAutomation(
   let comments = 0;
   let replied = 0;
 
+  const quota = await import("@/lib/youtube-quota");
   for (const account of rows) {
+    // P2: quota backoff — skip polling (no API call) until the backoff window ends.
+    if (quota.inQuotaBackoff(account.metadata, Date.now())) continue;
     const token = await freshYouTubeToken(admin, account.id);
     if (!token) {
       await log(admin, account.organization_id, null, null, "failed", "youtube:no_token");
@@ -554,7 +557,7 @@ export async function runYouTubeCommentAutomation(
         .from("social_accounts")
         .update({
           last_synced_at: new Date().toISOString(),
-          metadata: { ...(account.metadata ?? {}), youtube_poll_cursor: result.nextCursor },
+          metadata: { ...(account.metadata ?? {}), youtube_poll_cursor: result.nextCursor, youtube_quota_until: null, youtube_quota_streak: 0 },
         })
         .eq("id", account.id);
       for (const videoId of result.disabled) {
@@ -569,6 +572,16 @@ export async function runYouTubeCommentAutomation(
         );
       }
     } catch (error) {
+      const reason = (error as Error & { reason?: string }).reason;
+      if (quota.isQuotaReason(reason)) {
+        const streak = Number(account.metadata?.["youtube_quota_streak"] ?? 0) || 0;
+        const until = quota.quotaBackoffUntil(Date.now(), streak);
+        await admin.from("social_accounts").update({
+          metadata: { ...(account.metadata ?? {}), youtube_quota_until: until, youtube_quota_streak: streak + 1 },
+        }).eq("id", account.id);
+        await log(admin, account.organization_id, null, null, "skipped", `youtube:quota_backoff:${reason}:until_${new Date(until).toISOString()}`);
+        continue;
+      }
       await log(
         admin,
         account.organization_id,

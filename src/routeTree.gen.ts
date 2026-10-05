@@ -69,6 +69,7 @@ import { Route as AuthenticatedAdminOrgOrgIdRouteImport } from './routes/_authen
 import { Route as AuthenticatedAutomationsActivityRunIdRouteImport } from './routes/_authenticated/automations_.activity_.$runId'
 import { Route as ApiPublicCronEncryptTokensRouteImport } from './routes/api/public/cron.encrypt-tokens'
 import { Route as ApiPublicCronFlowsRouteImport } from './routes/api/public/cron.flows'
+import { Route as ApiPublicCronHeartbeatRouteImport } from './routes/api/public/cron.heartbeat'
 import { Route as ApiPublicCronNudgesRouteImport } from './routes/api/public/cron.nudges'
 import { Route as ApiPublicCronPublishDueRouteImport } from './routes/api/public/cron.publish-due'
 import { Route as ApiPublicCronRevenueRouteImport } from './routes/api/public/cron.revenue'
@@ -404,6 +405,11 @@ const ApiPublicCronFlowsRoute = ApiPublicCronFlowsRouteImport.update({
   path: '/api/public/cron/flows',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicCronHeartbeatRoute = ApiPublicCronHeartbeatRouteImport.update({
+  id: '/api/public/cron/heartbeat',
+  path: '/api/public/cron/heartbeat',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicCronNudgesRoute = ApiPublicCronNudgesRouteImport.update({
   id: '/api/public/cron/nudges',
   path: '/api/public/cron/nudges',
@@ -529,6 +535,7 @@ export interface FileRoutesByFullPath {
   '/automations/activity/$runId': typeof AuthenticatedAutomationsActivityRunIdRoute
   '/api/public/cron/encrypt-tokens': typeof ApiPublicCronEncryptTokensRoute
   '/api/public/cron/flows': typeof ApiPublicCronFlowsRoute
+  '/api/public/cron/heartbeat': typeof ApiPublicCronHeartbeatRoute
   '/api/public/cron/nudges': typeof ApiPublicCronNudgesRoute
   '/api/public/cron/publish-due': typeof ApiPublicCronPublishDueRoute
   '/api/public/cron/revenue': typeof ApiPublicCronRevenueRoute
@@ -601,6 +608,7 @@ export interface FileRoutesByTo {
   '/automations/activity/$runId': typeof AuthenticatedAutomationsActivityRunIdRoute
   '/api/public/cron/encrypt-tokens': typeof ApiPublicCronEncryptTokensRoute
   '/api/public/cron/flows': typeof ApiPublicCronFlowsRoute
+  '/api/public/cron/heartbeat': typeof ApiPublicCronHeartbeatRoute
   '/api/public/cron/nudges': typeof ApiPublicCronNudgesRoute
   '/api/public/cron/publish-due': typeof ApiPublicCronPublishDueRoute
   '/api/public/cron/revenue': typeof ApiPublicCronRevenueRoute
@@ -676,6 +684,7 @@ export interface FileRoutesById {
   '/_authenticated/automations_/activity_/$runId': typeof AuthenticatedAutomationsActivityRunIdRoute
   '/api/public/cron/encrypt-tokens': typeof ApiPublicCronEncryptTokensRoute
   '/api/public/cron/flows': typeof ApiPublicCronFlowsRoute
+  '/api/public/cron/heartbeat': typeof ApiPublicCronHeartbeatRoute
   '/api/public/cron/nudges': typeof ApiPublicCronNudgesRoute
   '/api/public/cron/publish-due': typeof ApiPublicCronPublishDueRoute
   '/api/public/cron/revenue': typeof ApiPublicCronRevenueRoute
@@ -751,6 +760,7 @@ export interface FileRouteTypes {
     | '/automations/activity/$runId'
     | '/api/public/cron/encrypt-tokens'
     | '/api/public/cron/flows'
+    | '/api/public/cron/heartbeat'
     | '/api/public/cron/nudges'
     | '/api/public/cron/publish-due'
     | '/api/public/cron/revenue'
@@ -823,6 +833,7 @@ export interface FileRouteTypes {
     | '/automations/activity/$runId'
     | '/api/public/cron/encrypt-tokens'
     | '/api/public/cron/flows'
+    | '/api/public/cron/heartbeat'
     | '/api/public/cron/nudges'
     | '/api/public/cron/publish-due'
     | '/api/public/cron/revenue'
@@ -897,6 +908,7 @@ export interface FileRouteTypes {
     | '/_authenticated/automations_/activity_/$runId'
     | '/api/public/cron/encrypt-tokens'
     | '/api/public/cron/flows'
+    | '/api/public/cron/heartbeat'
     | '/api/public/cron/nudges'
     | '/api/public/cron/publish-due'
     | '/api/public/cron/revenue'
@@ -929,6 +941,7 @@ export interface RootRouteChildren {
   BlogIndexRoute: typeof BlogIndexRoute
   ApiPublicCronEncryptTokensRoute: typeof ApiPublicCronEncryptTokensRoute
   ApiPublicCronFlowsRoute: typeof ApiPublicCronFlowsRoute
+  ApiPublicCronHeartbeatRoute: typeof ApiPublicCronHeartbeatRoute
   ApiPublicCronNudgesRoute: typeof ApiPublicCronNudgesRoute
   ApiPublicCronPublishDueRoute: typeof ApiPublicCronPublishDueRoute
   ApiPublicCronRevenueRoute: typeof ApiPublicCronRevenueRoute
@@ -1365,6 +1378,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicCronFlowsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/cron/heartbeat': {
+      id: '/api/public/cron/heartbeat'
+      path: '/api/public/cron/heartbeat'
+      fullPath: '/api/public/cron/heartbeat'
+      preLoaderRoute: typeof ApiPublicCronHeartbeatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/cron/nudges': {
       id: '/api/public/cron/nudges'
       path: '/api/public/cron/nudges'
@@ -1576,6 +1596,7 @@ const rootRouteChildren: RootRouteChildren = {
   BlogIndexRoute: BlogIndexRoute,
   ApiPublicCronEncryptTokensRoute: ApiPublicCronEncryptTokensRoute,
   ApiPublicCronFlowsRoute: ApiPublicCronFlowsRoute,
+  ApiPublicCronHeartbeatRoute: ApiPublicCronHeartbeatRoute,
   ApiPublicCronNudgesRoute: ApiPublicCronNudgesRoute,
   ApiPublicCronPublishDueRoute: ApiPublicCronPublishDueRoute,
   ApiPublicCronRevenueRoute: ApiPublicCronRevenueRoute,

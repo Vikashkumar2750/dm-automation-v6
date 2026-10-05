@@ -383,6 +383,7 @@ export type Database = {
           quiet_hours_enabled: boolean
           quiet_hours_end: number
           quiet_hours_start: number
+          takeover_minutes: number
           timezone_offset_minutes: number
           updated_at: string
           viral_cooldown_minutes: number
@@ -403,6 +404,7 @@ export type Database = {
           quiet_hours_enabled?: boolean
           quiet_hours_end?: number
           quiet_hours_start?: number
+          takeover_minutes?: number
           timezone_offset_minutes?: number
           updated_at?: string
           viral_cooldown_minutes?: number
@@ -423,6 +425,7 @@ export type Database = {
           quiet_hours_enabled?: boolean
           quiet_hours_end?: number
           quiet_hours_start?: number
+          takeover_minutes?: number
           timezone_offset_minutes?: number
           updated_at?: string
           viral_cooldown_minutes?: number
@@ -892,6 +895,10 @@ export type Database = {
       }
       conversations: {
         Row: {
+          bot_paused_at: string | null
+          bot_paused_by: string | null
+          bot_paused_reason: string | null
+          bot_paused_until: string | null
           channel: string
           created_at: string
           external_user_id: string
@@ -907,6 +914,10 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          bot_paused_at?: string | null
+          bot_paused_by?: string | null
+          bot_paused_reason?: string | null
+          bot_paused_until?: string | null
           channel?: string
           created_at?: string
           external_user_id: string
@@ -922,6 +933,10 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          bot_paused_at?: string | null
+          bot_paused_by?: string | null
+          bot_paused_reason?: string | null
+          bot_paused_until?: string | null
           channel?: string
           created_at?: string
           external_user_id?: string
@@ -2103,6 +2118,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      scheduler_heartbeats: {
+        Row: {
+          consecutive_failures: number
+          job: string
+          last_duration_ms: number | null
+          last_ok_at: string | null
+          last_run_at: string
+          last_status: number | null
+          updated_at: string
+        }
+        Insert: {
+          consecutive_failures?: number
+          job: string
+          last_duration_ms?: number | null
+          last_ok_at?: string | null
+          last_run_at?: string
+          last_status?: number | null
+          updated_at?: string
+        }
+        Update: {
+          consecutive_failures?: number
+          job?: string
+          last_duration_ms?: number | null
+          last_ok_at?: string | null
+          last_run_at?: string
+          last_status?: number | null
+          updated_at?: string
+        }
+        Relationships: []
       }
       social_account_tokens: {
         Row: {
