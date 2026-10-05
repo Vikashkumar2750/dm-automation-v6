@@ -1,66 +1,62 @@
-// Runs next to the web server on Railway: every 60s publishes posts whose scheduled time has passed
-// and polls connected YouTube channels for new comments to auto-reply to.
+// Runs next to the web server on Railway: every 60s calls each cron job, then
+// reports a heartbeat so stopped / failing / slow jobs are detectable.
 const secret = process.env.CRON_SECRET;
 const port = process.env.PORT || 3000;
+const JOBS = [
+  ["publish-due", '"attempted":0'],
+  ["youtube-comments", '"replied":0'],
+  ["flows", '"due":0'],
+  ["revenue", '"sent":0'],
+  ["nudges", '"sent":0'],
+  ["team-webhooks", '"sent":0'],
+  ["trust-guard", '"paused":0'],
+  ["encrypt-tokens", '"sealed":0'],
+];
 if (!secret) {
-  console.warn("[scheduler] CRON_SECRET not set — scheduled posts will not auto-publish");
+  console.warn("[scheduler] CRON_SECRET not set — scheduled jobs will not run");
 } else {
-  const post = async (path) => {
+  const post = async (path, body) => {
     const res = await fetch(`http://127.0.0.1:${port}${path}`, {
       method: "POST",
-      headers: { "x-cron-secret": secret },
+      headers: { "x-cron-secret": secret, ...(body ? { "content-type": "application/json" } : {}) },
+      ...(body ? { body: JSON.stringify(body) } : {}),
     });
     return { status: res.status, body: await res.text() };
   };
 
+  let running = false; // overlap guard: a slow tick never runs twice at once
+  let failStreak = 0;
   const tick = async () => {
-    try {
-      const { status, body } = await post("/api/public/cron/publish-due");
-      if (status !== 200 || !body.includes('"attempted":0')) console.log("[scheduler]", status, body);
-    } catch (e) {
-      console.warn("[scheduler] tick failed", e?.message ?? e);
+    if (running) {
+      console.warn("[scheduler] previous tick still running — skipped");
+      return;
     }
+    running = true;
+    const results = [];
     try {
-      const { status, body } = await post("/api/public/cron/youtube-comments");
-      if (status !== 200 || !body.includes('"replied":0')) console.log("[youtube]", status, body);
-    } catch (e) {
-      console.warn("[youtube] tick failed", e?.message ?? e);
-    }
-    try {
-      const { status, body } = await post("/api/public/cron/flows");
-      if (status !== 200 || !body.includes('"due":0')) console.log("[flows]", status, body);
-    } catch (e) {
-      console.warn("[flows] tick failed", e?.message ?? e);
-    }
-    try {
-      const { status, body } = await post("/api/public/cron/revenue");
-      if (status !== 200 || !body.includes('"sent":0')) console.log("[revenue]", status, body);
-    } catch (e) {
-      console.warn("[revenue] tick failed", e?.message ?? e);
-    }
-    try {
-      const { status, body } = await post("/api/public/cron/nudges");
-      if (status !== 200 || !body.includes('"sent":0')) console.log("[nudges]", status, body);
-    } catch (e) {
-      console.warn("[nudges] tick failed", e?.message ?? e);
-    }
-    try {
-      const { status, body } = await post("/api/public/cron/team-webhooks");
-      if (status !== 200 || !body.includes('"sent":0')) console.log("[team-webhooks]", status, body);
-    } catch (e) {
-      console.warn("[team-webhooks] tick failed", e?.message ?? e);
-    }
-    try {
-      const { status, body } = await post("/api/public/cron/trust-guard");
-      if (status !== 200 || !body.includes('"paused":0')) console.log("[trust-guard]", status, body);
-    } catch (e) {
-      console.warn("[trust-guard] tick failed", e?.message ?? e);
-    }
-    try {
-      const { status, body } = await post("/api/public/cron/encrypt-tokens");
-      if (status !== 200 || !body.includes('"sealed":0')) console.log("[encrypt-tokens]", status, body);
-    } catch (e) {
-      console.warn("[encrypt-tokens] tick failed", e?.message ?? e);
+      for (const [job, quiet] of JOBS) {
+        const started = Date.now();
+        let status = 0;
+        try {
+          const r = await post(`/api/public/cron/${job}`);
+          status = r.status;
+          if (r.status !== 200 || !r.body.includes(quiet)) console.log(`[${job}]`, r.status, r.body.slice(0, 500));
+        } catch (e) {
+          console.warn(`[${job}] tick failed`, e?.message ?? e);
+        }
+        results.push({ job, status, ms: Date.now() - started });
+      }
+      try {
+        await post("/api/public/cron/heartbeat", { results });
+        failStreak = 0;
+      } catch (e) {
+        failStreak += 1;
+        if (failStreak >= 3) console.error("[scheduler] ALERT heartbeat failing", failStreak, e?.message ?? e);
+      }
+      const bad = results.filter((r) => r.status !== 200).map((r) => r.job);
+      if (bad.length) console.error("[scheduler] ALERT jobs failed:", bad.join(", "));
+    } finally {
+      running = false;
     }
   };
   setTimeout(tick, 20000);
