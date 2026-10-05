@@ -191,7 +191,7 @@ function Ideas({ orgId, bestTimes }: { orgId: string; bestTimes: string[] }) {
   });
   const m = useMutation({
     mutationFn: () => gen({ data: { organizationId: orgId, niche, goal: goal || undefined, topic: topic || undefined, bestTimes, language } }),
-    onSuccess: setPlan,
+    onSuccess: (r) => setPlan(r as PlanDay[]),
     onError: (e) => toast.error((e as Error).message),
     onSettled: refreshUsage,
   });
