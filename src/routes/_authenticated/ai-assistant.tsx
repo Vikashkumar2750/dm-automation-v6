@@ -7,6 +7,7 @@ import { toast } from "sonner";
 
 import { AppShell } from "@/components/app/AppShell";
 import { PageHeader, Panel } from "@/components/app/primitives";
+import { AiCreditBadge } from "@/components/app/AiCreditBadge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -328,6 +329,7 @@ function AiAssistantPage() {
       <PageHeader
         title="AI Assistant"
         description="Write captions, draft replies and design automation rules in seconds."
+        actions={<AiCreditBadge />}
       />
       <Tabs defaultValue="captions" className="space-y-4">
         <TabsList>
