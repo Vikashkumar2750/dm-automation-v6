@@ -13,7 +13,8 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useTenant } from "@/hooks/useTenant";
 import { benchmarkTips, engagementRate, FUNNEL_STAGES, hourLabel, WEEKDAYS } from "@/lib/growth";
-import { deleteCompetitor, generateContentIdeas, getGrowthOverview, saveCompetitor, type ContentIdea } from "@/lib/growth.functions";
+import { autofillProfile, deleteCompetitor, generateContentPlan, getGrowthOverview, getProfileSources, saveCompetitor, type PlanDay } from "@/lib/growth.functions";
+import { AI_USAGE_KEY, AiCreditBadge } from "@/components/app/AiCreditBadge";
 
 export const Route = createFileRoute("/_authenticated/growth")({
   head: () => ({
@@ -56,7 +57,7 @@ function GrowthPage() {
             </TabsList>
             <TabsContent value="time"><BestTime data={q.data} /></TabsContent>
             <TabsContent value="funnel"><Funnel data={q.data} /></TabsContent>
-            <TabsContent value="ideas"><Ideas orgId={orgId} /></TabsContent>
+            <TabsContent value="ideas"><Ideas orgId={orgId} bestTimes={(q.data?.best ?? []).map((b) => b.label)} /></TabsContent>
             <TabsContent value="bench"><Bench orgId={orgId} data={q.data} manager={manager} /></TabsContent>
           </Tabs>
         </div>
@@ -166,40 +167,94 @@ function Funnel({ data }: { data: Overview }) {
   );
 }
 
-function Ideas({ orgId }: { orgId: string }) {
-  const gen = useServerFn(generateContentIdeas);
+function Ideas({ orgId, bestTimes }: { orgId: string; bestTimes: string[] }) {
+  const qc = useQueryClient();
+  const refreshUsage = () => qc.invalidateQueries({ queryKey: AI_USAGE_KEY });
+  const gen = useServerFn(generateContentPlan);
+  const fill = useServerFn(autofillProfile);
+  const fetchSources = useServerFn(getProfileSources);
+  const sources = useQuery({ queryKey: ["growth-sources", orgId], queryFn: () => fetchSources({ data: { organizationId: orgId } }) });
+  const [src, setSrc] = useState({ website: "", instagram: "", facebook: "", youtube: "" });
+  const [touched, setTouched] = useState(false);
+  const s = touched ? src : { ...src, ...Object.fromEntries(Object.entries(sources.data ?? {}).filter(([k]) => k in src)) };
+  const setS = (k: keyof typeof src, v: string) => { setSrc({ ...s, [k]: v }); setTouched(true); };
   const [niche, setNiche] = useState("");
   const [goal, setGoal] = useState("");
-  const [ideas, setIdeas] = useState<ContentIdea[]>([]);
-  const m = useMutation({
-    mutationFn: () => gen({ data: { organizationId: orgId, niche, goal: goal || undefined } }),
-    onSuccess: setIdeas,
+  const [topic, setTopic] = useState("");
+  const [language, setLanguage] = useState<"English" | "Hinglish" | "Hindi">("English");
+  const [plan, setPlan] = useState<PlanDay[]>([]);
+  const auto = useMutation({
+    mutationFn: () => fill({ data: { organizationId: orgId, website: s.website || undefined, instagram: s.instagram || undefined, facebook: s.facebook || undefined, youtube: s.youtube || undefined } }),
+    onSuccess: (r) => { setNiche(r.niche); setGoal(r.goal); toast.success("Niche and goal filled — edit if needed"); },
     onError: (e) => toast.error((e as Error).message),
+    onSettled: refreshUsage,
   });
+  const m = useMutation({
+    mutationFn: () => gen({ data: { organizationId: orgId, niche, goal: goal || undefined, topic: topic || undefined, bestTimes, language } }),
+    onSuccess: (r) => setPlan(r as PlanDay[]),
+    onError: (e) => toast.error((e as Error).message),
+    onSettled: refreshUsage,
+  });
+  const copy = (t: string) => { navigator.clipboard.writeText(t); toast.success("Copied"); };
+  const full = (d: PlanDay) => `${d.caption}\n\n${d.hashtags.join(" ")}`;
+  const exportAll = () => {
+    const text = plan.map((d) => `DAY ${d.day} — ${d.title} (${d.format}, ${d.platform}, ${d.postTime})\nTheme: ${d.theme}\nHook: ${d.hook}\n\nScript:\n${d.script}\n\nCaption:\n${full(d)}\n\nComment keyword: ${d.keyword}\nAuto DM: ${d.dmReply}`).join("\n\n-----\n\n");
+    const url = URL.createObjectURL(new Blob([text], { type: "text/plain" }));
+    const a = document.createElement("a"); a.href = url; a.download = "7-day-content-plan.txt"; a.click(); URL.revokeObjectURL(url);
+  };
   return (
     <div className="space-y-5">
-      <Panel title="Get post ideas">
-        <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto]">
+      <Panel title="1. Auto-fill from your website or handles (optional)">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Input placeholder="Website, e.g. mybakery.in" value={s.website} onChange={(e) => setS("website", e.target.value)} />
+          <Input placeholder="Instagram handle, e.g. @mybakery" value={s.instagram} onChange={(e) => setS("instagram", e.target.value)} />
+          <Input placeholder="Facebook page name or link" value={s.facebook} onChange={(e) => setS("facebook", e.target.value)} />
+          <Input placeholder="YouTube handle, e.g. @mybakery" value={s.youtube} onChange={(e) => setS("youtube", e.target.value)} />
+        </div>
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          <Button variant="outline" onClick={() => auto.mutate()} disabled={auto.isPending || !Object.values(s).some((v) => v.trim())}>
+            <Sparkles className="size-4" /> {auto.isPending ? "Reading…" : "Auto-fill niche & goal"}
+          </Button>
+          <AiCreditBadge />
+        </div>
+      </Panel>
+      <Panel title="2. Your 7-day plan">
+        <div className="grid gap-3 sm:grid-cols-2">
           <Input placeholder="Your niche, e.g. home baking classes" value={niche} onChange={(e) => setNiche(e.target.value)} />
           <Input placeholder="Goal (optional), e.g. sell my ebook" value={goal} onChange={(e) => setGoal(e.target.value)} />
-          <Button onClick={() => m.mutate()} disabled={niche.trim().length < 2 || m.isPending}>
-            <Sparkles className="size-4" /> {m.isPending ? "Thinking…" : "Generate ideas"}
-          </Button>
+          <Input placeholder="Specific topic this week (optional), e.g. Diwali sweets" value={topic} onChange={(e) => setTopic(e.target.value)} />
+          <select className={sel} value={language} onChange={(e) => setLanguage(e.target.value as typeof language)} aria-label="Language">
+            <option>English</option><option>Hinglish</option><option>Hindi</option>
+          </select>
         </div>
-        <p className="mt-2 text-xs text-muted-foreground">Uses 1 of your daily AI requests.</p>
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          <Button onClick={() => m.mutate()} disabled={niche.trim().length < 2 || m.isPending}>
+            <Sparkles className="size-4" /> {m.isPending ? "Writing your week… (up to 1 min)" : "Generate 7-day plan"}
+          </Button>
+          <AiCreditBadge />
+          {plan.length > 0 && <Button variant="outline" onClick={exportAll}>Download plan</Button>}
+        </div>
       </Panel>
-      {ideas.length === 0 ? (
-        <EmptyState icon={Lightbulb} title="No ideas yet" description="Type your niche and press Generate ideas." />
+      {plan.length === 0 ? (
+        <EmptyState icon={Lightbulb} title="No plan yet" description="Fill your niche (or use Auto-fill) and press Generate 7-day plan." />
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2">
-          {ideas.map((i, n) => (
-            <div key={n} className="rounded-lg border p-4">
-              <div className="flex items-center justify-between gap-2">
-                <p className="font-semibold">{i.title}</p>
-                <StatusBadge>{i.format}</StatusBadge>
+        <div className="grid gap-3 lg:grid-cols-2">
+          {plan.map((d) => (
+            <div key={d.day} className="space-y-2 rounded-lg border p-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="font-semibold">Day {d.day} · {d.title}</p>
+                <div className="flex gap-1"><StatusBadge>{d.format}</StatusBadge><StatusBadge>{d.platform}</StatusBadge></div>
               </div>
-              <p className="mt-2 text-sm">“{i.hook}”</p>
-              <p className="mt-2 text-xs text-muted-foreground">Comment keyword: <span className="font-mono font-semibold">{i.keyword}</span></p>
+              <p className="text-xs text-muted-foreground">{d.theme}{d.postTime ? ` · Post at ${d.postTime}` : ""}</p>
+              <p className="text-sm font-medium">“{d.hook}”</p>
+              <details className="text-sm"><summary className="cursor-pointer text-muted-foreground">Script / slides</summary><p className="mt-1 whitespace-pre-line">{d.script}</p></details>
+              <p className="whitespace-pre-line text-sm">{d.caption}</p>
+              <p className="text-xs text-muted-foreground">{d.hashtags.join(" ")}</p>
+              {d.keyword && <p className="text-xs">Comment keyword: <span className="font-mono font-semibold">{d.keyword}</span>{d.dmReply ? <> → DM: “{d.dmReply}”</> : null}</p>}
+              <div className="flex gap-2 pt-1">
+                <Button size="sm" variant="outline" onClick={() => copy(full(d))}>Copy caption</Button>
+                {d.dmReply && <Button size="sm" variant="ghost" onClick={() => copy(d.dmReply)}>Copy DM</Button>}
+              </div>
             </div>
           ))}
         </div>

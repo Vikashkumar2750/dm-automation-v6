@@ -45,3 +45,13 @@ Growth insights shows when to post, what to post, how you compare with others, a
 1. Enter your follower count at the top.
 2. Owners, admins and managers can add competitors in **Add a competitor**.
 3. Read the tips under the table — e.g. "Competitors post ~5 times a week; you post 1".
+
+## 7-day content plan (advanced AI ideas)
+
+**How it works:** AI writes a full week — for each day: theme, title, format, platform, post time, hook, script/slides, caption with hashtags, a comment keyword and the auto-DM text. It uses your best posting times when available. **Auto-fill** reads your website and handles (connected accounts are filled in for you) to guess your niche and goal. Each button shows a badge: how many AI requests it uses and how many are left today.
+
+**How to use:**
+1. (Optional) Enter your website / Instagram / Facebook / YouTube handle and press **Auto-fill niche & goal**.
+2. Check the niche and goal, add a specific topic if you want (e.g. "Diwali sweets"), pick a language.
+3. Press **Generate 7-day plan**, then **Copy caption** / **Copy DM** for each day or **Download plan**.
+4. Create an automation with each day's keyword → DM text.

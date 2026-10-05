@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { Copy, Loader2, Sparkles } from "lucide-react";
@@ -7,6 +7,7 @@ import { toast } from "sonner";
 
 import { AppShell } from "@/components/app/AppShell";
 import { PageHeader, Panel } from "@/components/app/primitives";
+import { AI_USAGE_KEY, AiCreditBadge } from "@/components/app/AiCreditBadge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -86,10 +87,12 @@ function CaptionTab() {
   const [withHashtags, setWithHashtags] = useState(true);
   const [options, setOptions] = useState<string[]>([]);
 
+  const qc = useQueryClient();
   const mutation = useMutation({
     mutationFn: () => run({ data: { topic, platform, tone, withHashtags } }),
     onSuccess: (result) => setOptions(result.options),
     onError: (error: Error) => toast.error(error.message),
+    onSettled: () => qc.invalidateQueries({ queryKey: AI_USAGE_KEY }),
   });
 
   return (
@@ -169,10 +172,12 @@ function ReplyTab() {
   const [tone, setTone] = useState(TONES[0]!);
   const [options, setOptions] = useState<string[]>([]);
 
+  const qc = useQueryClient();
   const mutation = useMutation({
     mutationFn: () => run({ data: { message, tone, context } }),
     onSuccess: (result) => setOptions(result.options),
     onError: (error: Error) => toast.error(error.message),
+    onSettled: () => qc.invalidateQueries({ queryKey: AI_USAGE_KEY }),
   });
 
   return (
@@ -254,10 +259,12 @@ function AutomationTab() {
   const [goal, setGoal] = useState("");
   const [rule, setRule] = useState<SuggestedRule | null>(null);
 
+  const qc = useQueryClient();
   const mutation = useMutation({
     mutationFn: () => run({ data: { goal } }),
     onSuccess: (result) => setRule(result.rule),
     onError: (error: Error) => toast.error(error.message),
+    onSettled: () => qc.invalidateQueries({ queryKey: AI_USAGE_KEY }),
   });
 
   return (
@@ -328,6 +335,7 @@ function AiAssistantPage() {
       <PageHeader
         title="AI Assistant"
         description="Write captions, draft replies and design automation rules in seconds."
+        actions={<AiCreditBadge />}
       />
       <Tabs defaultValue="captions" className="space-y-4">
         <TabsList>
