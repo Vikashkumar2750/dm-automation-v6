@@ -68,3 +68,6 @@ Real Meta + YouTube credentials are available when we reach OAuth phases.
 - [x] Phase H: Trust & safety (health score, predictive guard, policy checker + compliance centre, audit trail)
 - [x] Next: Phase I
 - [ ] Final user guide covering all features (docs/USER-GUIDE.md, updated after each phase)
+
+- [x] P2: human takeover, YouTube quota backoff, scheduler heartbeat, P2 reports
+- [ ] Owner: TOKEN_ENCRYPTION_KEY, live IG/FB checklist, App Review, async webhook
