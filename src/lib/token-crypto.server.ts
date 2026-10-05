@@ -38,3 +38,27 @@ export async function openSecret(value: string | null | undefined, keyB64: strin
   );
   return new TextDecoder().decode(pt);
 }
+
+/**
+ * Key from TOKEN_ENCRYPTION_KEY (base64, 32 bytes). Read per call, never at module scope.
+ * Returns undefined when unset; throws when set but malformed (never silently weakens).
+ */
+export function tokenKey(): string | undefined {
+  const k = process.env["TOKEN_ENCRYPTION_KEY"];
+  if (!k) return undefined;
+  if (Buffer.from(k, "base64").length !== 32) throw new Error("encryption_key_must_be_32_bytes");
+  return k;
+}
+
+/** Decrypt a stored token. Legacy plaintext passes through (migrated by the backfill job). */
+export async function readToken(value: string | null | undefined): Promise<string | null> {
+  if (!value) return null;
+  return openSecret(value, tokenKey());
+}
+
+/** Encrypt before storing when a key is configured; otherwise store as-is (pre-rollout). */
+export async function storeToken(plain: string | null | undefined): Promise<string | null> {
+  if (!plain) return plain ?? null;
+  const key = tokenKey();
+  return key ? sealSecret(plain, key) : plain;
+}

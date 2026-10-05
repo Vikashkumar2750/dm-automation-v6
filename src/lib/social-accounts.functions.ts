@@ -173,6 +173,7 @@ export const checkWebhookDelivery = createServerFn({ method: "POST" })
         .eq("social_account_id", account.id)
         .maybeSingle();
 
+      if (tokenRow?.access_token) tokenRow.access_token = (await (await import("@/lib/token-crypto.server")).readToken(tokenRow.access_token)) ?? "";
       if (!tokenRow?.access_token) {
         results.push({
           id: account.id,

@@ -129,7 +129,7 @@ export const syncEntryConfig = createServerFn({ method: "POST" })
         .select("access_token")
         .eq("social_account_id", acc.id)
         .maybeSingle();
-      const token = tok?.access_token as string | undefined;
+      const token = (await (await import("@/lib/token-crypto.server")).readToken(tok?.access_token as string | undefined)) ?? undefined;
       const name = (acc.name as string | null) ?? platform;
       if (!token) {
         results.push({ account: name, platform, ok: false, error: "needs_reconnect" });
