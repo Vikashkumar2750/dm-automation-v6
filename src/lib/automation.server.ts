@@ -209,6 +209,13 @@ export async function runAutomations(admin: AdminClient, ctx: AutomationContext)
     return;
   }
 
+  // P2: human takeover — keyword rules stay silent while a team member owns the conversation.
+  if (await (await import("@/lib/human-takeover.server")).conversationInTakeover(admin, ctx.conversationId)) {
+    await log(admin, ctx, null, "skipped", "human_takeover");
+    return;
+  }
+
+
 
 
   const { data: settingsRow } = await admin
@@ -1110,6 +1117,11 @@ export async function handleFollowGateReply(
   const isTextTap = !args.payload && ["Send me the link", "Send it to me", "I followed ✅"]
     .includes((args.messageText ?? "").trim());
   if (!hasPayload && !isTextTap) return false;
+  // P2: during human takeover the tap is consumed without any automated send.
+  if (await (await import("@/lib/human-takeover.server")).conversationInTakeover(admin, args.conversationId)) {
+    await admin.from("automation_runs").insert({ organization_id: args.organizationId, rule_id: null, conversation_id: args.conversationId, status: "skipped", detail: "human_takeover" });
+    return true;
+  }
   // Payloads include stage and nonce. Always use the shared parser so the UUID
   // lookup never receives "<uuid>:opener:<nonce>".
   const gateId = hasPayload ? followGateId(args.payload) ?? "" : "";
