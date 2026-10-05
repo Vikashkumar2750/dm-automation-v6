@@ -96,6 +96,7 @@ async function send(admin: AdminClient, ev: Parameters<typeof runAiAgent>[1], te
     admin.from("social_account_tokens").select("access_token").eq("social_account_id", ev.socialAccountId).maybeSingle(),
     admin.from("social_accounts").select("external_id, metadata").eq("id", ev.socialAccountId).maybeSingle(),
   ]);
+  if (tok?.access_token) tok.access_token = (await (await import("@/lib/token-crypto.server")).readToken(tok.access_token)) ?? "";
   if (!tok?.access_token || !acc?.external_id) { await logRun("failed", "no_token"); return false; }
   const a = await import("@/lib/automation.server");
   const accountId = a.messagingAccountId(ev.platform, acc.external_id as string, acc.metadata);

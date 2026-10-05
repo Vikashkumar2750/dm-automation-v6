@@ -188,6 +188,7 @@ export const sendReply = createServerFn({ method: "POST" })
         .eq("id", conversation.social_account_id)
         .single(),
     ]);
+    if (tokenRow?.access_token) tokenRow.access_token = (await (await import("@/lib/token-crypto.server")).readToken(tokenRow.access_token)) ?? "";
     if (!tokenRow?.access_token || !account?.external_id) {
       throw new Error("no_token");
     }
@@ -319,6 +320,7 @@ export const replyToComment = createServerFn({ method: "POST" })
         .eq("id", conversation.social_account_id)
         .single(),
     ]);
+    if (tokenRow?.access_token) tokenRow.access_token = (await (await import("@/lib/token-crypto.server")).readToken(tokenRow.access_token)) ?? "";
     if (!tokenRow?.access_token || !account?.external_id) throw new Error("no_token");
 
     const accessToken = tokenRow.access_token;
@@ -443,6 +445,7 @@ export const setCommentHidden = createServerFn({ method: "POST" })
       .select("access_token")
       .eq("social_account_id", conversation.social_account_id)
       .single();
+    if (tokenRow?.access_token) tokenRow.access_token = (await (await import("@/lib/token-crypto.server")).readToken(tokenRow.access_token)) ?? "";
     if (!tokenRow?.access_token) throw new Error("no_token");
 
     const response = await fetch(

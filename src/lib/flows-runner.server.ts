@@ -87,7 +87,7 @@ async function credentials(admin: AdminClient, ev: FlowEvent) {
     admin.from("social_account_tokens").select("access_token").eq("social_account_id", ev.socialAccountId).maybeSingle(),
     admin.from("social_accounts").select("external_id, metadata").eq("id", ev.socialAccountId).maybeSingle(),
   ]);
-  const token = tok?.access_token as string | undefined;
+  const token = (await (await import("@/lib/token-crypto.server")).readToken(tok?.access_token as string | undefined)) ?? undefined;
   if (!token || !acc?.external_id) return null;
   const { messagingAccountId } = await import("@/lib/automation.server");
   return { token, accountId: messagingAccountId(ev.platform, acc.external_id as string, acc.metadata) };

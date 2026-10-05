@@ -118,7 +118,7 @@ export async function publishPost(
       .eq("id", post.social_account_id)
       .maybeSingle(),
   ]);
-  const token = (tokenRow as { access_token?: string } | null)?.access_token;
+  const token = (await (await import("@/lib/token-crypto.server")).readToken((tokenRow as { access_token?: string } | null)?.access_token)) ?? undefined;
   const externalAccountId = (account as { external_id?: string } | null)?.external_id;
   if (!token || !externalAccountId) {
     return fail("This account needs to be reconnected before publishing");

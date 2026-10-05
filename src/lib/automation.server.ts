@@ -474,7 +474,7 @@ export async function runAutomations(admin: AdminClient, ctx: AutomationContext)
         .eq("id", ctx.socialAccountId)
         .maybeSingle(),
     ]);
-    const token = tokenRow?.access_token as string | undefined;
+    const token = (await (await import("@/lib/token-crypto.server")).readToken(tokenRow?.access_token as string | undefined)) ?? undefined;
     if (!token || !account?.external_id) {
       await log(admin, ctx, rule.id, "failed", "no_token");
       return;
@@ -1215,7 +1215,7 @@ export async function handleFollowGateReply(
       .eq("id", socialAccountId)
       .maybeSingle(),
   ]);
-  const token = tokenRow?.access_token as string | undefined;
+  const token = (await (await import("@/lib/token-crypto.server")).readToken(tokenRow?.access_token as string | undefined)) ?? undefined;
   if (!token || !account?.external_id) {
     await log(admin, ctx, typedRule.id, "failed", "no_token");
     return true;
