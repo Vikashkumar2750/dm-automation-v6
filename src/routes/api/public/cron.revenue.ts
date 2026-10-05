@@ -5,9 +5,9 @@ export const Route = createFileRoute("/api/public/cron/revenue")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const secret = process.env["CRON_SECRET"];
-        if (!secret) return new Response("Scheduler not configured", { status: 503 });
-        if (request.headers.get("x-cron-secret") !== secret) return new Response("Unauthorized", { status: 401 });
+        const { cronAuthFailure } = await import("@/lib/cron-secret.server");
+        const denied = cronAuthFailure(request, "/api/public/cron/revenue");
+        if (denied) return denied;
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         const { runPaymentNudges } = await import("@/lib/revenue.server");
         try {
