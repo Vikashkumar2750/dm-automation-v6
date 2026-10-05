@@ -67,6 +67,7 @@ import { Route as AuthenticatedCreatePostNewRouteImport } from './routes/_authen
 import { Route as AuthenticatedInviteTokenRouteImport } from './routes/_authenticated/invite.$token'
 import { Route as AuthenticatedAdminOrgOrgIdRouteImport } from './routes/_authenticated/admin.org.$orgId'
 import { Route as AuthenticatedAutomationsActivityRunIdRouteImport } from './routes/_authenticated/automations_.activity_.$runId'
+import { Route as ApiPublicCronEncryptTokensRouteImport } from './routes/api/public/cron.encrypt-tokens'
 import { Route as ApiPublicCronFlowsRouteImport } from './routes/api/public/cron.flows'
 import { Route as ApiPublicCronNudgesRouteImport } from './routes/api/public/cron.nudges'
 import { Route as ApiPublicCronPublishDueRouteImport } from './routes/api/public/cron.publish-due'
@@ -392,6 +393,12 @@ const AuthenticatedAutomationsActivityRunIdRoute =
     path: '/automations/activity/$runId',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const ApiPublicCronEncryptTokensRoute =
+  ApiPublicCronEncryptTokensRouteImport.update({
+    id: '/api/public/cron/encrypt-tokens',
+    path: '/api/public/cron/encrypt-tokens',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicCronFlowsRoute = ApiPublicCronFlowsRouteImport.update({
   id: '/api/public/cron/flows',
   path: '/api/public/cron/flows',
@@ -520,6 +527,7 @@ export interface FileRoutesByFullPath {
   '/admin/': typeof AuthenticatedAdminIndexRoute
   '/admin/org/$orgId': typeof AuthenticatedAdminOrgOrgIdRoute
   '/automations/activity/$runId': typeof AuthenticatedAutomationsActivityRunIdRoute
+  '/api/public/cron/encrypt-tokens': typeof ApiPublicCronEncryptTokensRoute
   '/api/public/cron/flows': typeof ApiPublicCronFlowsRoute
   '/api/public/cron/nudges': typeof ApiPublicCronNudgesRoute
   '/api/public/cron/publish-due': typeof ApiPublicCronPublishDueRoute
@@ -591,6 +599,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AuthenticatedAdminIndexRoute
   '/admin/org/$orgId': typeof AuthenticatedAdminOrgOrgIdRoute
   '/automations/activity/$runId': typeof AuthenticatedAutomationsActivityRunIdRoute
+  '/api/public/cron/encrypt-tokens': typeof ApiPublicCronEncryptTokensRoute
   '/api/public/cron/flows': typeof ApiPublicCronFlowsRoute
   '/api/public/cron/nudges': typeof ApiPublicCronNudgesRoute
   '/api/public/cron/publish-due': typeof ApiPublicCronPublishDueRoute
@@ -665,6 +674,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
   '/_authenticated/admin/org/$orgId': typeof AuthenticatedAdminOrgOrgIdRoute
   '/_authenticated/automations_/activity_/$runId': typeof AuthenticatedAutomationsActivityRunIdRoute
+  '/api/public/cron/encrypt-tokens': typeof ApiPublicCronEncryptTokensRoute
   '/api/public/cron/flows': typeof ApiPublicCronFlowsRoute
   '/api/public/cron/nudges': typeof ApiPublicCronNudgesRoute
   '/api/public/cron/publish-due': typeof ApiPublicCronPublishDueRoute
@@ -739,6 +749,7 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/admin/org/$orgId'
     | '/automations/activity/$runId'
+    | '/api/public/cron/encrypt-tokens'
     | '/api/public/cron/flows'
     | '/api/public/cron/nudges'
     | '/api/public/cron/publish-due'
@@ -810,6 +821,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/admin/org/$orgId'
     | '/automations/activity/$runId'
+    | '/api/public/cron/encrypt-tokens'
     | '/api/public/cron/flows'
     | '/api/public/cron/nudges'
     | '/api/public/cron/publish-due'
@@ -883,6 +895,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/'
     | '/_authenticated/admin/org/$orgId'
     | '/_authenticated/automations_/activity_/$runId'
+    | '/api/public/cron/encrypt-tokens'
     | '/api/public/cron/flows'
     | '/api/public/cron/nudges'
     | '/api/public/cron/publish-due'
@@ -914,6 +927,7 @@ export interface RootRouteChildren {
   BlogSlugRoute: typeof BlogSlugRoute
   PSlugRoute: typeof PSlugRoute
   BlogIndexRoute: typeof BlogIndexRoute
+  ApiPublicCronEncryptTokensRoute: typeof ApiPublicCronEncryptTokensRoute
   ApiPublicCronFlowsRoute: typeof ApiPublicCronFlowsRoute
   ApiPublicCronNudgesRoute: typeof ApiPublicCronNudgesRoute
   ApiPublicCronPublishDueRoute: typeof ApiPublicCronPublishDueRoute
@@ -1337,6 +1351,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAutomationsActivityRunIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/api/public/cron/encrypt-tokens': {
+      id: '/api/public/cron/encrypt-tokens'
+      path: '/api/public/cron/encrypt-tokens'
+      fullPath: '/api/public/cron/encrypt-tokens'
+      preLoaderRoute: typeof ApiPublicCronEncryptTokensRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/cron/flows': {
       id: '/api/public/cron/flows'
       path: '/api/public/cron/flows'
@@ -1553,6 +1574,7 @@ const rootRouteChildren: RootRouteChildren = {
   BlogSlugRoute: BlogSlugRoute,
   PSlugRoute: PSlugRoute,
   BlogIndexRoute: BlogIndexRoute,
+  ApiPublicCronEncryptTokensRoute: ApiPublicCronEncryptTokensRoute,
   ApiPublicCronFlowsRoute: ApiPublicCronFlowsRoute,
   ApiPublicCronNudgesRoute: ApiPublicCronNudgesRoute,
   ApiPublicCronPublishDueRoute: ApiPublicCronPublishDueRoute,
