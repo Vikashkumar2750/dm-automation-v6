@@ -39,6 +39,33 @@ Set `INSTAGRAM_APP_SECRET` (Instagram app ID `1497788405165320` → Meta → Ins
 
 ---
 
+## 0.6 New features (Phases A–I, P2) — kya koi NAYI permission chahiye? (checked in code, Oct 2026)
+
+**Short answer: koi bhi nayi permission add NAHI karni.** Saare naye features pehle se maangi gayi permissions se hi chalte hain. Connect button ki scope list (`src/lib/social.ts → metaScopes`) change nahi hui hai — wahi 12 permissions hain jo section 1 mein hain.
+
+| Naya feature | Meta API jo use hota hai | Permission (already requested) | Review form mein kya jodna hai |
+|---|---|---|---|
+| Story reply / Story mention trigger (Phase A) | `messages` webhook (story attachment) + Send API | `instagram_manage_messages`, `instagram_business_manage_messages` | Is permission ke "How do you use" answer mein ek line: *"When a user replies to or mentions the business in a Story, we send one DM reply configured by the business."* Screencast mein 1 story reply dikhao |
+| Ice breakers (IG + FB) | `POST /me/messenger_profile` (`ice_breakers`) | IG: `instagram_manage_messages` · FB: `pages_messaging` | Answer mein jodo: *"The business sets ice-breaker questions shown when a user opens a new chat."* |
+| Messenger persistent menu (FB only) | `POST /me/messenger_profile` (`persistent_menu`) | `pages_messaging` | Same answer mein `persistent menu` likho |
+| Button taps (flows, ice breakers, menu) | `messaging_postbacks` webhook | `pages_messaging` / `instagram_manage_messages` | Webhook field `messaging_postbacks` subscribed rehna chahiye (pehle se hai) |
+| Flow builder live sending, Wait steps (Phase B) | Send API (24h window ke andar) | `pages_messaging`, `instagram_manage_messages` | Kuch nahi — same DM sending |
+| AI agent DM replies (Phase C) | Send API, sirf user ke message ke baad | same | Answer mein: *"Optional AI reply is sent only in response to a user's message, inside the 24-hour window, and never overrides a human."* |
+| Contacts / CRM, email-phone capture (Phase D) | Koi naya Meta call nahi (data hamare DB mein) | — | Data handling answer mein "email/phone only when the user types it in DM" likho |
+| Payment link / coupon DMs (Phase E) | Send API | same | Kuch nahi |
+| Broadcasts + abandoned nudges | Send API, **sirf last 24h mein active contacts** ko | same | Answer mein: *"No messages are sent outside the 24-hour standard messaging window; no message tags are used."* |
+| Team desk / Human takeover (Phase G, P2) | Inbox se manual reply (Send API) | same | — |
+| Trust & safety, Growth insights (H, I) | Koi Meta call nahi (hamare DB se) | — | `read_insights` / `instagram_manage_insights` ab bhi **mat maango** |
+
+**Human Agent permission — update:** code abhi `HUMAN_AGENT` message tag **use nahi karta** (manual reply bhi 24h window ke andar normal message hai). Isliye:
+- Agar abhi submit kar rahe ho → **Human Agent ko remove kar do** (unused permission = rejection risk).
+- Baad mein 24h ke baad manual reply chahiye to pehle code mein tag jodna padega, phir alag se request karna.
+
+**Webhook fields (check karo, naya kuch nahi):** Page → `feed`, `messages`, `messaging_postbacks`; Instagram → `comments`, `messages`, `messaging_postbacks`. Story mentions `messages` field se hi aate hain.
+
+---
+
+
 ## 1. Permission audit — what to keep, what to remove
 
 What the app's Connect button actually asks for (from the code): `pages_show_list, pages_manage_metadata, pages_read_engagement, pages_read_user_content, pages_manage_engagement, pages_messaging, pages_manage_posts, instagram_basic, instagram_manage_comments, instagram_manage_messages, instagram_content_publish, business_management`.
