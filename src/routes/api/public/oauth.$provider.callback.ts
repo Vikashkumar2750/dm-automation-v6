@@ -174,8 +174,8 @@ async function saveAccount(
 
   const { error: tokenError } = await supabaseAdmin.from("social_account_tokens").upsert({
     social_account_id: row.id,
-    access_token: account.access_token,
-    refresh_token: account.refresh_token ?? null,
+    access_token: (await (await import("@/lib/token-crypto.server")).storeToken(account.access_token)),
+    refresh_token: (await (await import("@/lib/token-crypto.server")).storeToken(account.refresh_token ?? null)),
     expires_at: account.expires_at ?? null,
   });
   if (tokenError) throw new Error(tokenError.message);

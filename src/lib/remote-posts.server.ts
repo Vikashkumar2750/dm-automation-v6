@@ -54,11 +54,12 @@ export async function fetchRemotePosts(
       "social_account_id",
       rows.map((r) => r.id),
     );
+  const { readToken } = await import("@/lib/token-crypto.server");
   const tokenBy = new Map(
-    ((tokens ?? []) as { social_account_id: string; access_token: string }[]).map((t) => [
+    await Promise.all(((tokens ?? []) as { social_account_id: string; access_token: string }[]).map(async (t) => [
       t.social_account_id,
-      t.access_token,
-    ]),
+      (await readToken(t.access_token)) ?? "",
+    ] as const)),
   );
 
   const warnings: string[] = [];

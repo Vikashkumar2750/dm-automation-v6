@@ -37,7 +37,8 @@ export async function createPaymentLinkFor(admin: AdminClient, t: RevenueTarget,
   let url = p.manual_url as string | null;
   let linkId: string | null = null;
   if (cred) {
-    const auth = Buffer.from(`${cred.razorpay_key_id}:${cred.razorpay_key_secret}`).toString("base64");
+    const secret = (await (await import("@/lib/token-crypto.server")).readToken(cred.razorpay_key_secret as string));
+    const auth = Buffer.from(`${cred.razorpay_key_id}:${secret}`).toString("base64");
     const res = await fetch("https://api.razorpay.com/v1/payment_links", {
       method: "POST",
       headers: { Authorization: `Basic ${auth}`, "Content-Type": "application/json" },
@@ -95,7 +96,7 @@ export function validRazorpaySignature(body: string, signature: string | null, s
 /** Razorpay webhook: verified per workspace secret, marks link paid, tags contact "paid". */
 export async function handleRazorpayWebhook(admin: AdminClient, orgId: string, body: string, signature: string | null) {
   const { data: cred } = await admin.from("payment_credentials").select("webhook_secret").eq("organization_id", orgId).maybeSingle();
-  if (!cred || !validRazorpaySignature(body, signature, cred.webhook_secret as string)) return { status: 401 };
+  if (!cred || !validRazorpaySignature(body, signature, ((await (await import("@/lib/token-crypto.server")).readToken(cred.webhook_secret as string))) ?? "")) return { status: 401 };
   const evt = JSON.parse(body) as { event?: string; payload?: { payment_link?: { entity?: { id?: string; amount_paid?: number } } } };
   if (evt.event !== "payment_link.paid") return { status: 200 };
   const ent = evt.payload?.payment_link?.entity;

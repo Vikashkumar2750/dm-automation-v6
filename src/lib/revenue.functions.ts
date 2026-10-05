@@ -134,8 +134,8 @@ export const saveRazorpayKeys = createServerFn({ method: "POST" })
     if (!res || res.status === 401) throw new Error("Razorpay did not accept these keys");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { error } = await supabaseAdmin.from("payment_credentials").upsert({
-      organization_id: data.organizationId, razorpay_key_id: data.keyId, razorpay_key_secret: data.keySecret,
-      webhook_secret: data.webhookSecret, updated_at: new Date().toISOString(),
+      organization_id: data.organizationId, razorpay_key_id: data.keyId, razorpay_key_secret: (await (await import("@/lib/token-crypto.server")).storeToken(data.keySecret)),
+      webhook_secret: (await (await import("@/lib/token-crypto.server")).storeToken(data.webhookSecret)), updated_at: new Date().toISOString(),
     });
     if (error) throw new Error(error.message);
     return { ok: true };

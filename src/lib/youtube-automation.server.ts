@@ -186,6 +186,11 @@ export async function freshYouTubeToken(
   const row = data as
     | { access_token?: string; refresh_token?: string | null; expires_at?: string | null }
     | null;
+  if (row?.access_token) {
+    const { readToken } = await import("@/lib/token-crypto.server");
+    row.access_token = (await readToken(row.access_token)) ?? "";
+    row.refresh_token = await readToken(row.refresh_token);
+  }
   if (!row?.access_token) {
     await admin.from("social_accounts").update({ status: "attention" }).eq("id", accountId);
     return null;
@@ -222,7 +227,7 @@ export async function freshYouTubeToken(
   const expires = new Date(Date.now() + (json.expires_in ?? 3600) * 1000).toISOString();
   await admin
     .from("social_account_tokens")
-    .update({ access_token: json.access_token, expires_at: expires })
+    .update({ access_token: (await (await import("@/lib/token-crypto.server")).storeToken(json.access_token)), expires_at: expires })
     .eq("social_account_id", accountId);
   await admin
     .from("social_accounts")
