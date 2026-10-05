@@ -10,7 +10,7 @@ function b64(bytes: Uint8Array) {
 }
 
 async function importKey(rawB64: string) {
-  const raw = Buffer.from(rawB64, "base64");
+  const raw = new Uint8Array(Buffer.from(rawB64, "base64"));
   if (raw.length !== 32) throw new Error("encryption_key_must_be_32_bytes");
   return crypto.subtle.importKey("raw", raw, "AES-GCM", false, ["encrypt", "decrypt"]);
 }
@@ -32,9 +32,9 @@ export async function openSecret(value: string | null | undefined, keyB64: strin
   const [ivB64, ctB64] = value.slice(PREFIX.length).split(":");
   const key = await importKey(keyB64);
   const pt = await crypto.subtle.decrypt(
-    { name: "AES-GCM", iv: Buffer.from(ivB64, "base64") },
+    { name: "AES-GCM", iv: new Uint8Array(Buffer.from(ivB64 ?? "", "base64")) },
     key,
-    Buffer.from(ctB64, "base64"),
+    new Uint8Array(Buffer.from(ctB64 ?? "", "base64")),
   );
   return new TextDecoder().decode(pt);
 }

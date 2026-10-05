@@ -12,7 +12,7 @@ export function safeSecretEqual(provided: string | null | undefined, expected: s
   const a = enc.encode(provided);
   const b = enc.encode(expected);
   let diff = a.length ^ b.length;
-  for (let i = 0; i < b.length; i++) diff |= (a[i % (a.length || 1)] ?? 0) ^ b[i];
+  for (let i = 0; i < b.length; i++) diff |= (a[i % (a.length || 1)] ?? 0) ^ (b[i] ?? 0);
   return diff === 0;
 }
 
