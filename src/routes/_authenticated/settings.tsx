@@ -96,7 +96,6 @@ function SettingsPage() {
   const planExpired =
     !!workspace.data?.plan_expires_at && new Date(workspace.data.plan_expires_at) < new Date();
   const isAgency = workspace.data?.plan === "agency" && !planExpired;
-  const isClientWorkspace = !!workspace.data?.parent_organization_id;
 
   const save = useMutation({
     mutationFn: () =>
