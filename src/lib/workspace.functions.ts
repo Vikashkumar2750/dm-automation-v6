@@ -84,16 +84,24 @@ export const updateWorkspace = createServerFn({ method: "POST" })
     const role = await roleIn(context.supabase, data.organizationId, context.userId);
     if (!["owner", "admin"].includes(role)) throw new Error("not_allowed");
 
+    const { data: org } = await context.supabase
+      .from("organizations")
+      .select("plan, plan_expires_at")
+      .eq("id", data.organizationId)
+      .single();
+    const agency =
+      org?.plan === "agency" &&
+      (!org.plan_expires_at || new Date(org.plan_expires_at).getTime() > Date.now());
+    const update: Record<string, unknown> = { name: data.name, timezone: data.timezone };
+    if (agency) {
+      update["brand_name"] = data.brandName || null;
+      update["logo_url"] = data.logoUrl || null;
+      update["brand_color"] = data.brandColor || null;
+      update["support_email"] = data.supportEmail || null;
+    }
     const { error } = await context.supabase
       .from("organizations")
-      .update({
-        name: data.name,
-        brand_name: data.brandName || null,
-        logo_url: data.logoUrl || null,
-        brand_color: data.brandColor || null,
-        support_email: data.supportEmail || null,
-        timezone: data.timezone,
-      })
+      .update(update)
       .eq("id", data.organizationId);
     if (error) throw new Error(error.message);
     return { ok: true };

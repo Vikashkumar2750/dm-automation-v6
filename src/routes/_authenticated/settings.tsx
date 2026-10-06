@@ -169,6 +169,18 @@ function SettingsPage() {
       />
 
       <Panel title="Branding" >
+        {!isAgency && (
+          <div className="mb-4 flex flex-col gap-3 rounded-xl border bg-surface-secondary p-4 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-muted-foreground">
+              White-label branding (brand name, logo, colour, support email) is available on the
+              Agency plan. Upgrade to unlock it. You can still change the workspace name and time
+              zone.
+            </p>
+            <Button asChild size="sm">
+              <Link to="/billing">Upgrade to Agency</Link>
+            </Button>
+          </div>
+        )}
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="ws-name">Workspace name</Label>
