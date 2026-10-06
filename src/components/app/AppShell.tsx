@@ -1,5 +1,5 @@
 import { trialEndsAt } from "@/lib/trial";
-import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
+import { Link, Navigate, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { getPlatformStatus } from "@/lib/platform-status.functions";
@@ -268,9 +268,12 @@ export function AppShell({ children }: { children: ReactNode }) {
   const role = useQuery({
     queryKey: ["platform-role"],
     queryFn: () => fetchRole(),
-    enabled: status.data?.maintenanceMode === true,
     retry: false,
+    staleTime: 60_000,
   });
+
+  // Super admins run the platform from the admin console, never the customer app.
+  if (role.data?.isSuperAdmin) return <Navigate to="/admin" replace />;
 
   if (status.data?.maintenanceMode && role.data && !role.data.isSuperAdmin) {
     return (
