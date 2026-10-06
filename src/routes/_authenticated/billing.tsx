@@ -41,6 +41,15 @@ declare global {
   }
 }
 
+function planExpiryLabel(expiresAt: string | null, source: string | null): string {
+  if (!expiresAt) return source === "granted" ? "Given by Techaasvik" : "No end date";
+  const ms = new Date(expiresAt).getTime() - Date.now();
+  const date = new Date(expiresAt).toLocaleDateString("en-IN");
+  if (ms <= 0) return `Expired on ${date}`;
+  const days = Math.ceil(ms / 864e5);
+  return days <= 1 ? `Ends today (${date})` : `${days} days left (ends ${date})`;
+}
+
 function loadRazorpay(): Promise<boolean> {
   if (typeof window === "undefined") return Promise.resolve(false);
   if (window.Razorpay) return Promise.resolve(true);
