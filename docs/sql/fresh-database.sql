@@ -4472,3 +4472,13 @@ insert into public.platform_settings (id) values (true) on conflict (id) do noth
 
 -- Tell the self-hosted migration runner these are already applied
 create table if not exists public._app_migrations (name text primary key, applied_at timestamptz not null default now());
+
+-- Explicit deny rules on server-only tables (clears "RLS enabled, no policy" warnings)
+DO $$
+DECLARE t text;
+BEGIN
+  FOREACH t IN ARRAY ARRAY['ai_usage_daily','api_keys','oauth_states','outgoing_webhooks','payment_credentials','scheduler_heartbeats','social_account_tokens'] LOOP
+    EXECUTE format('DROP POLICY IF EXISTS "Server only - no app access" ON public.%I', t);
+    EXECUTE format('CREATE POLICY "Server only - no app access" ON public.%I AS RESTRICTIVE FOR ALL TO anon, authenticated USING (false) WITH CHECK (false)', t);
+  END LOOP;
+END $$;
