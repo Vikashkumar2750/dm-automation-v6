@@ -41,6 +41,15 @@ declare global {
   }
 }
 
+function planExpiryLabel(expiresAt: string | null, source: string | null): string {
+  if (!expiresAt) return source === "granted" ? "Given by Techaasvik" : "No end date";
+  const ms = new Date(expiresAt).getTime() - Date.now();
+  const date = new Date(expiresAt).toLocaleDateString("en-IN");
+  if (ms <= 0) return `Expired on ${date}`;
+  const days = Math.ceil(ms / 864e5);
+  return days <= 1 ? `Ends today (${date})` : `${days} days left (ends ${date})`;
+}
+
 function loadRazorpay(): Promise<boolean> {
   if (typeof window === "undefined") return Promise.resolve(false);
   if (window.Razorpay) return Promise.resolve(true);
@@ -157,13 +166,7 @@ function BillingPage() {
             icon={CreditCard}
             label="Current plan"
             value={currentPlan}
-            sub={
-              billing.data?.planExpiresAt
-                ? `Renews ${new Date(billing.data.planExpiresAt).toLocaleDateString("en-IN")}`
-                : billing.data?.planSource === "granted"
-                  ? "Given by Techaasvik"
-                  : "No end date"
-            }
+            sub={planExpiryLabel(billing.data?.planExpiresAt ?? null, billing.data?.planSource ?? null)}
           />
           <StatCard
             icon={Check}
@@ -178,6 +181,26 @@ function BillingPage() {
             sub={`Daily limit ${usage.data?.dailyLimit ?? 0}`}
           />
         </div>
+
+        <Panel title="What happens when a plan ends?">
+          <ul className="list-disc space-y-1.5 pl-5 text-sm text-muted-foreground">
+            <li>
+              <span className="font-medium text-foreground">Free trial (3 days):</span> new
+              automations stop starting. Conversations already in progress still finish. Your
+              rules, contacts and data stay saved — upgrade any time to continue.
+            </li>
+            <li>
+              <span className="font-medium text-foreground">Starter / Pro:</span> when the paid
+              period ends, the workspace moves to the free Starter limits. Existing rules stay
+              saved but new ones beyond the Starter limit cannot be switched on.
+            </li>
+            <li>
+              <span className="font-medium text-foreground">Agency:</span> client workspaces can no
+              longer be created; existing client workspaces keep working under their own plans.
+            </li>
+            <li>Nothing is ever deleted — renewing the plan restores full access instantly.</li>
+          </ul>
+        </Panel>
 
         {billing.data?.demoMode && (
           <Panel title="Test mode">
