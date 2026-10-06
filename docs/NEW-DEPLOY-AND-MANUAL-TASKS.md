@@ -41,7 +41,7 @@ App par `/auth` se apne email se sign up → mail confirm → phir SQL Editor:
 ```sql
 insert into public.platform_roles (user_id, role)
 select id, 'super_admin'::platform_role from auth.users
-where lower(email) = 'contact@techaasvik.com'
+where lower(email) = lower('contact@techaasvik.com')
 on conflict do nothing;
 ```
 
