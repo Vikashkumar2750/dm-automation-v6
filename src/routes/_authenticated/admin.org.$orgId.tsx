@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -39,6 +40,14 @@ export const Route = createFileRoute("/_authenticated/admin/org/$orgId")({
 });
 
 const PLANS = ["starter", "pro", "agency"] as const;
+const DURATIONS = [
+  { value: "1", label: "1 month" },
+  { value: "3", label: "3 months" },
+  { value: "6", label: "6 months" },
+  { value: "12", label: "1 year" },
+  { value: "0", label: "No end date" },
+];
+
 
 function OrgDetailPage() {
   const { orgId } = Route.useParams();
@@ -56,9 +65,10 @@ function OrgDetailPage() {
 
   const invalidate = () => void queryClient.invalidateQueries({ queryKey: ["admin-org", orgId] });
 
+  const [months, setMonths] = useState("12");
   const planMutation = useMutation({
     mutationFn: (plan: (typeof PLANS)[number]) =>
-      changePlan({ data: { organizationId: orgId, plan } }),
+      changePlan({ data: { organizationId: orgId, plan, months: Number(months) } }),
     onSuccess: () => {
       toast.success("Plan updated");
       invalidate();
@@ -107,6 +117,18 @@ function OrgDetailPage() {
         description={`Created ${new Date(data.org.created_at).toLocaleDateString()} · ${data.org.slug}`}
         actions={
           <div className="flex items-center gap-2">
+            <Select value={months} onValueChange={setMonths}>
+              <SelectTrigger className="h-9 w-[150px]" aria-label="Plan duration">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {DURATIONS.map((d) => (
+                  <SelectItem key={d.value} value={d.value}>
+                    Duration: {d.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Select
               value={data.org.plan}
               onValueChange={(p) => planMutation.mutate(p as (typeof PLANS)[number])}
