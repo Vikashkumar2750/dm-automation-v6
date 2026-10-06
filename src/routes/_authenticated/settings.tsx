@@ -93,7 +93,10 @@ function SettingsPage() {
   }, [workspace.data]);
 
   const canEdit = ["owner", "admin"].includes(workspace.data?.my_role ?? "");
-  const isAgency = workspace.data?.plan === "agency";
+  const planExpired =
+    !!workspace.data?.plan_expires_at && new Date(workspace.data.plan_expires_at) < new Date();
+  const isAgency = workspace.data?.plan === "agency" && !planExpired;
+  const isClientWorkspace = !!workspace.data?.parent_organization_id;
 
   const save = useMutation({
     mutationFn: () =>
@@ -135,7 +138,9 @@ function SettingsPage() {
       toast.error(
         e.message === "agency_only"
           ? "Client workspaces are available on the Agency plan only"
-          : "Could not create the client workspace",
+          : e.message === "not_allowed"
+            ? "Only the workspace owner or admin can add clients"
+            : `Could not create the client workspace: ${e.message}`,
       ),
   });
 
@@ -274,8 +279,9 @@ function SettingsPage() {
           </div>
         ) : (
           <p className="text-sm text-muted-foreground">
-            Client workspaces are available on the Agency plan. Upgrade to manage separate
-            workspaces for your clients.
+            {workspace.data?.plan === "agency" && planExpired
+              ? "Your Agency plan has expired. Renew it in Billing to add client workspaces."
+              : "Client workspaces are available on the Agency plan. Upgrade to manage separate workspaces for your clients."}
           </p>
         )}
 
