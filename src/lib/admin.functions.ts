@@ -566,16 +566,15 @@ export const setUserSuperAdmin = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     await assertSuperAdmin(context);
-    if (data.userId === context.userId && !data.grant) {
+    if (data.grant) {
+      // New super admins can only be created directly in the database.
+      throw new Error("New super admins can only be added from the database");
+    }
+    if (data.userId === context.userId) {
       throw new Error("You cannot remove your own platform access");
     }
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    if (data.grant) {
-      const { error } = await supabaseAdmin
-        .from("platform_roles")
-        .upsert({ user_id: data.userId, role: "super_admin" }, { onConflict: "user_id,role" });
-      if (error) throw new Error(error.message);
-    } else {
+    {
       const { error } = await supabaseAdmin
         .from("platform_roles")
         .delete()

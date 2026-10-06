@@ -2,7 +2,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Pencil, Users } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 import { AdminTable } from "@/components/app/AdminTable";
@@ -32,6 +33,8 @@ function UsersPage() {
   const setSuper = useServerFn(setUserSuperAdmin);
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
+  const [meId, setMeId] = useState<string | null>(null);
+  useEffect(() => { void supabase.auth.getUser().then(({ data }) => setMeId(data.user?.id ?? null)); }, []);
   const [editing, setEditing] = useState<AdminUserRow | null>(null);
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -147,16 +150,12 @@ function UsersPage() {
                 header: "Platform access",
                 cell: (u) => (
                   <div className="flex items-center gap-2">
-                    {u.isSuperAdmin ? <StatusBadge tone="danger">Super admin</StatusBadge> : null}
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() =>
-                        roleMutation.mutate({ userId: u.id, grant: !u.isSuperAdmin })
-                      }
-                    >
-                      {u.isSuperAdmin ? "Revoke" : "Make super admin"}
-                    </Button>
+                    {u.isSuperAdmin ? <StatusBadge tone="danger">Super admin</StatusBadge> : <span className="text-muted-foreground">—</span>}
+                    {u.isSuperAdmin && u.id !== meId ? (
+                      <Button size="sm" variant="outline" onClick={() => roleMutation.mutate({ userId: u.id, grant: false })}>
+                        Revoke
+                      </Button>
+                    ) : null}
                   </div>
                 ),
               },
@@ -168,6 +167,7 @@ function UsersPage() {
                     <Button size="sm" variant="outline" onClick={() => openEditor(u)}>
                       <Pencil className="size-3.5" /> Edit
                     </Button>
+                    {u.id !== meId ? (
                     <Button
                       size="sm"
                       variant="outline"
@@ -177,6 +177,7 @@ function UsersPage() {
                     >
                       {suspendedSet.has(u.id) ? "Unsuspend" : "Suspend"}
                     </Button>
+                    ) : null}
                     <Button size="sm" variant="ghost" onClick={() => actionMutation.mutate({ userId: u.id, action: "send_reset" })}>
                       Send reset
                     </Button>
