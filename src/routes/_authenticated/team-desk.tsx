@@ -1,3 +1,4 @@
+import { csvCell } from "@/lib/csv-safe";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -209,7 +210,7 @@ function Reports() {
   const q = useQuery({ queryKey: ["client-reports", days], queryFn: () => fetchReports({ data: { days } }) });
   const csv = () => {
     const head = "workspace,type,plan,plan_expires,messages_in,replies_out,automation_runs,active_chats";
-    const lines = (q.data ?? []).map((r) => [r.name, r.isClient ? "client" : "own", r.plan, r.planExpiresAt ?? "", r.inbound, r.outbound, r.runs, r.conversations].map((v) => `"${String(v).replace(/"/g, '""')}"`).join(","));
+    const lines = (q.data ?? []).map((r) => [r.name, r.isClient ? "client" : "own", r.plan, r.planExpiresAt ?? "", r.inbound, r.outbound, r.runs, r.conversations].map(csvCell).join(","));
     const url = URL.createObjectURL(new Blob([[head, ...lines].join("\n")], { type: "text/csv" }));
     const a = document.createElement("a"); a.href = url; a.download = `client-report-${days}d.csv`; a.click(); URL.revokeObjectURL(url);
   };
@@ -267,7 +268,7 @@ function ClientBilling({ orgId }: { orgId: string }) {
   const sum = summarizeInvoices(rows as { amount_inr: number; status: "unpaid" | "paid" | "void" }[]);
   const csv = () => {
     const head = "client,period,amount_inr,status,paid_at,payment_link,notes";
-    const lines = rows.map((r) => [nameOf(r.client_organization_id), r.period_label, r.amount_inr, r.status, r.paid_at ?? "", r.payment_url ?? "", r.notes ?? ""].map((v) => `"${String(v).replace(/"/g, '""')}"`).join(","));
+    const lines = rows.map((r) => [nameOf(r.client_organization_id), r.period_label, r.amount_inr, r.status, r.paid_at ?? "", r.payment_url ?? "", r.notes ?? ""].map(csvCell).join(","));
     const url = URL.createObjectURL(new Blob([[head, ...lines].join("\n")], { type: "text/csv" }));
     const a = document.createElement("a"); a.href = url; a.download = "client-invoices.csv"; a.click(); URL.revokeObjectURL(url);
   };

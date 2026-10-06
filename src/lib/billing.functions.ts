@@ -181,6 +181,9 @@ export const confirmPlanPayment = createServerFn({ method: "POST" })
     await assertBillingRole(context.supabase as never, order.organization_id, context.userId);
     if (order.status === "paid") return { ok: true, alreadyPaid: true };
 
+    if (order.mode !== "live" && process.env["ALLOW_DEMO_PAYMENTS"] !== "true") {
+      throw new Error("Online payment is not available right now. Please contact support.");
+    }
     if (order.mode === "live") {
       const secret = process.env["RAZORPAY_KEY_SECRET"] ?? "";
       if (!data.razorpayPaymentId || !data.razorpaySignature || !order.provider_order_id) {

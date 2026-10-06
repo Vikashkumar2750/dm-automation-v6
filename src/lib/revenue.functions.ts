@@ -12,6 +12,11 @@ async function assertMember(ctx: Ctx, organizationId: string) {
   if (!data) throw new Error("not_a_member");
 }
 
+async function assertPaymentAdmin(ctx: Ctx, organizationId: string) {
+  const { data } = await ctx.supabase.rpc("current_user_has_org_role", { _org_id: organizationId, _roles: ["owner", "admin"] });
+  if (data !== true) throw new Error("Only workspace owners and admins can change payment keys.");
+}
+
 /** Everything the Revenue page shows. Keys are never returned, only whether they exist. */
 export const getRevenue = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -127,7 +132,7 @@ export const saveRazorpayKeys = createServerFn({ method: "POST" })
     keySecret: z.string().trim().min(10).max(100), webhookSecret: z.string().trim().min(6).max(100),
   }).parse(d))
   .handler(async ({ data, context }) => {
-    await assertMember(context as Ctx, data.organizationId);
+    await assertPaymentAdmin(context as Ctx, data.organizationId);
     // Check the keys with a harmless read before saving.
     const auth = Buffer.from(`${data.keyId}:${data.keySecret}`).toString("base64");
     const res = await fetch("https://api.razorpay.com/v1/payment_links?count=1", { headers: { Authorization: `Basic ${auth}` } }).catch(() => null);
@@ -145,7 +150,7 @@ export const removeRazorpayKeys = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ organizationId: org }).parse(d))
   .handler(async ({ data, context }) => {
-    await assertMember(context as Ctx, data.organizationId);
+    await assertPaymentAdmin(context as Ctx, data.organizationId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     await supabaseAdmin.from("payment_credentials").delete().eq("organization_id", data.organizationId);
     return { ok: true };

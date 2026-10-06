@@ -123,7 +123,8 @@ export const requestPasswordReset = createServerFn({ method: "POST" })
       target_id: data.email,
       detail: {},
     });
-    const origin = new URL(data.origin).origin;
+    const { trustedOrigin } = await import("@/lib/allowed-origin.server");
+    const origin = trustedOrigin(data.origin);
     await supabaseAdmin.auth.resetPasswordForEmail(data.email, {
       redirectTo: `${origin}/reset-password`,
     });

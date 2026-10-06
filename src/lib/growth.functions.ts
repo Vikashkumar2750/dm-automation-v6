@@ -151,12 +151,31 @@ export type ContentIdea = z.infer<typeof ideasSchema>["ideas"][number];
 
 const PRIVATE_HOST = /^(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|169\.254\.|0\.|\[|::)/i;
 
+function isSafePublicUrl(url: URL): boolean {
+  const h = url.hostname.toLowerCase();
+  if (url.protocol !== "https:" && url.protocol !== "http:") return false;
+  if (url.port && url.port !== "80" && url.port !== "443") return false;
+  if (url.username || url.password) return false;
+  if (PRIVATE_HOST.test(h) || !h.includes(".")) return false;
+  if (/^[\d.]+$/.test(h) || h.includes(":")) return false; // no raw IP literals
+  if (/(^|\.)(internal|local|localhost|lan|home|corp)$/.test(h)) return false;
+  return true;
+}
+
 async function readPublicPage(raw: string): Promise<string> {
   try {
-    const url = new URL(/^https?:\/\//i.test(raw) ? raw : `https://${raw}`);
-    if (!/^https?:$/.test(url.protocol) || PRIVATE_HOST.test(url.hostname) || !url.hostname.includes(".")) return "";
-    const res = await fetch(url, { signal: AbortSignal.timeout(6000), headers: { "user-agent": "Mozilla/5.0 AutoDM-Growth" }, redirect: "follow" });
-    if (!res.ok) return "";
+    let url = new URL(/^https?:\/\//i.test(raw) ? raw : `https://${raw}`);
+    let res: Response | null = null;
+    for (let hop = 0; hop < 3; hop++) {
+      if (!isSafePublicUrl(url)) return "";
+      res = await fetch(url, { signal: AbortSignal.timeout(6000), headers: { "user-agent": "Mozilla/5.0 AutoDM-Growth" }, redirect: "manual" });
+      const loc = res.status >= 300 && res.status < 400 ? res.headers.get("location") : null;
+      if (!loc) break;
+      url = new URL(loc, url);
+      res = null;
+    }
+    if (!res || !res.ok) return "";
+    if (!(res.headers.get("content-type") ?? "").includes("text/html")) return "";
     const html = (await res.text()).slice(0, 200_000);
     const pick = (re: RegExp) => (html.match(re)?.[1] ?? "").replace(/\s+/g, " ").trim();
     const title = pick(/<title[^>]*>([\s\S]*?)<\/title>/i);
