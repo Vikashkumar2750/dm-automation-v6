@@ -28,3 +28,4 @@
 - YouTube quota backoff (youtube-quota.ts) and the scheduler heartbeat (/api/public/cron/heartbeat + scheduler_heartbeats) are standalone — why: reliability signals without touching the locked Meta delivery flow.
 
 - Pages stay hidden behind a loading placeholder until their first data arrives (PageReadyGate in AppShell and AdminShell), and the signed-in session is one shared store - why: no page ever shows placeholder values that switch a moment later.
+- The signed-in page guard reads the session locally and reuses a background-refreshed super-admin answer; links preload on hover and already-shown pages open without the loading gate - why: switching pages never waits on a network check or re-hides cached pages.
