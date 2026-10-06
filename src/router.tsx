@@ -45,6 +45,10 @@ export const getRouter = () => {
     context: { queryClient },
     scrollRestoration: true,
     defaultPreloadStaleTime: 0,
+    // Start loading a page's code as soon as the pointer rests on its link,
+    // so the click opens it instantly.
+    defaultPreload: "intent",
+    defaultPreloadDelay: 50,
   });
 
   return router;
