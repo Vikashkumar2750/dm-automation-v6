@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -22,23 +22,42 @@ export type Organization = {
 
 const ACTIVE_ORG_KEY = "dmfiy.active_org";
 
+// One shared session for the whole tab. Every component reads the same value, so a
+// page opened later gets the signed-in user instantly instead of starting "logged out"
+// for a moment (which used to show placeholder data on every page change).
+type SessionState = { session: Session | null; loading: boolean };
+let sessionState: SessionState = { session: null, loading: true };
+const sessionListeners = new Set<() => void>();
+let sessionStarted = false;
+
+function setSessionState(session: Session | null) {
+  if (sessionState.session?.access_token === session?.access_token && !sessionState.loading) return;
+  sessionState = { session, loading: false };
+  sessionListeners.forEach((l) => l());
+}
+
+function startSessionStore() {
+  if (sessionStarted || typeof window === "undefined") return;
+  sessionStarted = true;
+  supabase.auth.onAuthStateChange((_event, next) => setSessionState(next));
+  void supabase.auth.getSession().then(({ data }) => setSessionState(data.session));
+}
+
+function subscribeSession(listener: () => void) {
+  startSessionStore();
+  sessionListeners.add(listener);
+  return () => sessionListeners.delete(listener);
+}
+
+const serverSessionState: SessionState = { session: null, loading: true };
+
 export function useSession() {
-  const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const { data } = supabase.auth.onAuthStateChange((_event, next) => {
-      setSession(next);
-      setLoading(false);
-    });
-    supabase.auth.getSession().then(({ data: d }) => {
-      setSession(d.session);
-      setLoading(false);
-    });
-    return () => data.subscription.unsubscribe();
-  }, []);
-
-  return { session, user: session?.user ?? null, loading };
+  const state = useSyncExternalStore(
+    subscribeSession,
+    () => sessionState,
+    () => serverSessionState,
+  );
+  return { session: state.session, user: state.session?.user ?? null, loading: state.loading };
 }
 
 function planLabel(plan: string) {
@@ -98,6 +117,7 @@ export function useTenant() {
   const profile = useQuery({
     queryKey: ["profile", user?.id],
     enabled: !!user,
+    staleTime: 5 * 60_000,
     queryFn: async () => {
       await ensureBootstrap(user!);
       const { data } = await supabase
@@ -112,6 +132,7 @@ export function useTenant() {
   const orgs = useQuery({
     queryKey: ["organizations", user?.id],
     enabled: !!user && profile.isSuccess,
+    staleTime: 60_000,
     queryFn: async (): Promise<Organization[]> => {
       const { data } = await supabase
         .from("organization_members")
@@ -161,7 +182,9 @@ export function useTenant() {
       .toUpperCase() || "U";
 
   return {
-    loading: loading || profile.isLoading || orgs.isLoading,
+    // True until the workspace list is known, so pages never render with a missing workspace.
+    loading: loading || (!!user &&
+        ((profile.data === undefined && !profile.isError) || (orgs.data === undefined && !orgs.isError))),
     user,
     profile: {
       name: fullName,

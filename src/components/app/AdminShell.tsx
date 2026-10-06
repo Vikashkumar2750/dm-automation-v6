@@ -25,6 +25,7 @@ import { useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
+import { PageReadyGate } from "@/components/app/PageReadyGate";
 
 type NavItem = { label: string; to: string; icon: LucideIcon; exact?: boolean };
 
@@ -188,7 +189,9 @@ export function AdminShell({
             {banner}
           </div>
         ) : null}
-        <main className="p-4 lg:p-6">{children}</main>
+        <main className="p-4 lg:p-6">
+          <PageReadyGate>{children}</PageReadyGate>
+        </main>
       </div>
     </div>
   );

@@ -44,6 +44,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useTenant } from "@/hooks/useTenant";
 import { supabase } from "@/integrations/supabase/client";
+import { PageReadyGate } from "@/components/app/PageReadyGate";
 
 type NavItem = { label: string; to: string; icon: LucideIcon; badge?: number };
 
@@ -96,7 +97,7 @@ function NavLink({ item, active }: { item: NavItem; active: boolean }) {
 }
 
 function Sidebar({ pathname }: { pathname: string }) {
-  const { activeOrg } = useTenant();
+  const { activeOrg, loading } = useTenant();
   const brand = activeOrg?.brandName?.trim() || "AutoDM";
   const logo = activeOrg?.logoUrl?.trim() || "/logo.webp";
   const color = activeOrg?.brandColor?.trim() || null;
@@ -104,6 +105,16 @@ function Sidebar({ pathname }: { pathname: string }) {
   return (
     <div className="flex h-full flex-col border-r bg-sidebar">
       <div className="flex items-center gap-3 border-b px-5 py-4">
+        {loading ? (
+          <div className="flex animate-pulse items-center gap-3">
+            <span className="size-9 rounded-xl bg-surface-secondary" />
+            <span className="space-y-1.5">
+              <span className="block h-3.5 w-24 rounded bg-surface-secondary" />
+              <span className="block h-3 w-16 rounded bg-surface-secondary" />
+            </span>
+          </div>
+        ) : (
+        <>
         {logo ? (
           <img
             src={logo}
@@ -127,6 +138,8 @@ function Sidebar({ pathname }: { pathname: string }) {
             {activeOrg?.name ?? "by Techaasvik"}
           </p>
         </div>
+        </>
+        )}
       </div>
 
       <nav className="flex-1 overflow-y-auto px-3 py-4">
@@ -262,6 +275,7 @@ function TopBar({ onMenu }: { onMenu: () => void }) {
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [mobileOpen, setMobileOpen] = useState(false);
+  const tenant = useTenant();
   const fetchStatus = useServerFn(getPlatformStatus);
   const fetchRole = useServerFn(getMyPlatformRole);
   const status = useQuery({ queryKey: ["platform-status"], queryFn: () => fetchStatus(), staleTime: 60_000 });
@@ -310,7 +324,11 @@ export function AppShell({ children }: { children: ReactNode }) {
       <div className="lg:pl-64">
         <TopBar onMenu={() => setMobileOpen(true)} />
         <TrialBanner />
-        <main className="p-4 lg:p-6">{children}</main>
+        <main className="p-4 lg:p-6">
+          <PageReadyGate ready={!tenant.loading && role.isFetched && !role.data?.isSuperAdmin}>
+            {children}
+          </PageReadyGate>
+        </main>
       </div>
     </div>
   );

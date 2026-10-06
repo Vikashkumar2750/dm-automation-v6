@@ -26,3 +26,5 @@
 - OAuth tokens and Razorpay secrets are read via readToken and written via storeToken (token-crypto.server); TOKEN_ENCRYPTION_KEY turns on AES-GCM and /api/public/cron/encrypt-tokens seals legacy rows — why: one switch encrypts at rest without breaking existing connections.
 - Human takeover lives in human-takeover.* modules: a successful manual team reply sets conversations.bot_paused_until (duration from automation_settings.takeover_minutes), and every automated send path checks conversationInTakeover right before sending — why: a human-owned chat never gets a bot reply, and expiry sends nothing by itself.
 - YouTube quota backoff (youtube-quota.ts) and the scheduler heartbeat (/api/public/cron/heartbeat + scheduler_heartbeats) are standalone — why: reliability signals without touching the locked Meta delivery flow.
+
+- Pages stay hidden behind a loading placeholder until their first data arrives (PageReadyGate in AppShell and AdminShell), and the signed-in session is one shared store - why: no page ever shows placeholder values that switch a moment later.

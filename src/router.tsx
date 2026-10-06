@@ -34,6 +34,8 @@ export const getRouter = () => {
           count < (error instanceof TypeError && /fetch/i.test(error.message) ? 4 : 1),
         retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 8000),
         refetchOnWindowFocus: false,
+        // Data opened a moment ago is shown straight away instead of re-loading on every click.
+        staleTime: 20_000,
       },
     },
   });
