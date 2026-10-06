@@ -220,7 +220,7 @@ function BillingPage() {
             return (
               <Panel
                 key={p.key}
-                className={state === "locked" ? "opacity-50" : undefined}
+                className={state === "locked" ? "opacity-50" : ""}
                 title={
                   <span className="flex items-center gap-2">
                     {p.name}
