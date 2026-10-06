@@ -117,6 +117,7 @@ export function useTenant() {
   const profile = useQuery({
     queryKey: ["profile", user?.id],
     enabled: !!user,
+    staleTime: 5 * 60_000,
     queryFn: async () => {
       await ensureBootstrap(user!);
       const { data } = await supabase
@@ -131,6 +132,7 @@ export function useTenant() {
   const orgs = useQuery({
     queryKey: ["organizations", user?.id],
     enabled: !!user && profile.isSuccess,
+    staleTime: 60_000,
     queryFn: async (): Promise<Organization[]> => {
       const { data } = await supabase
         .from("organization_members")
@@ -180,7 +182,8 @@ export function useTenant() {
       .toUpperCase() || "U";
 
   return {
-    loading: loading || profile.isLoading || orgs.isLoading,
+    // True until the workspace list is known, so pages never render with a missing workspace.
+    loading: loading || (!!user && (profile.data === undefined && !profile.isError || orgs.data === undefined && !orgs.isError)),
     user,
     profile: {
       name: fullName,

@@ -103,7 +103,7 @@ function BillingPage() {
     });
     toast.success(`Plan updated to ${res.plan ?? "new plan"}`);
     await queryClient.invalidateQueries({ queryKey: ["billing-state", orgId] });
-    await queryClient.invalidateQueries({ queryKey: ["tenant"] });
+    await queryClient.invalidateQueries({ queryKey: ["organizations"] });
   }
 
   async function buy(plan: PlanKey, cycle: BillingCycle) {
