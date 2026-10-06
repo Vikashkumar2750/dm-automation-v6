@@ -74,3 +74,27 @@ export function findPlanOption(plan: PlanKey, cycle: BillingCycle): PlanOption |
 export function formatPaise(paise: number): string {
   return `₹${(paise / 100).toLocaleString("en-IN")}`;
 }
+
+export type PlanButtonState = "buy" | "renew" | "active" | "locked";
+
+/**
+ * Billing card state. While a plan is active the other plans are locked;
+ * from 7 days before expiry the current plan shows Renew; after expiry all plans are buyable.
+ * A Starter workspace with no end date is treated as "no active plan".
+ */
+export function planButtonState(
+  cardPlan: PlanKey,
+  currentPlan: string,
+  expiresAt: string | null,
+  now: number = Date.now(),
+): PlanButtonState {
+  const isCurrent = cardPlan === currentPlan;
+  if (!expiresAt) {
+    if (currentPlan === "starter") return isCurrent ? "renew" : "buy";
+    return isCurrent ? "active" : "locked";
+  }
+  const msLeft = new Date(expiresAt).getTime() - now;
+  if (msLeft <= 0) return isCurrent ? "renew" : "buy";
+  if (msLeft <= 7 * 864e5) return isCurrent ? "renew" : "locked";
+  return isCurrent ? "active" : "locked";
+}
