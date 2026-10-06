@@ -60,7 +60,7 @@ export const listConversations = createServerFn({ method: "GET" })
     if (data.status) query = query.eq("status", data.status);
     if (data.unreadOnly) query = query.gt("unread_count", 0);
     if (data.search) {
-      const term = data.search.replace(/[%,]/g, " ");
+      const term = data.search.replace(/[^\p{L}\p{N}\s@_'-]/gu, " ").trim();
       query = query.or(
         `external_user_name.ilike.%${term}%,last_message_preview.ilike.%${term}%`,
       );

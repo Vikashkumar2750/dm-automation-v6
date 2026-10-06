@@ -1,3 +1,4 @@
+import { csvCell } from "@/lib/csv-safe";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
@@ -26,7 +27,7 @@ function toCsv(rows: ReportRow[]) {
     "Final DM sent", "Sent time", "Outcome", "Failed stage", "Failed reason",
     "Link opened", "Attachment opened",
   ];
-  const esc = (v: string) => `"${v.replaceAll('"', '""')}"`;
+  const esc = (v: string) => csvCell(v);
   const lines = rows.map((r) =>
     [
       r.handle, r.platform, r.rule, new Date(r.startedAt).toLocaleString(), yn(r.publicReply),

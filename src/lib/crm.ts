@@ -21,7 +21,7 @@ export function matchesSegment(c: CrmContact, f: SegmentFilter): boolean {
   return true;
 }
 
-const cell = (v: string) => (/[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
+import { csvCell as cell } from "@/lib/csv-safe";
 
 export function contactsToCsv(rows: CrmContact[]): string {
   const head = ["name", "platform", "email", "phone", "tags", "last_activity"];

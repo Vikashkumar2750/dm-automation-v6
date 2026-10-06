@@ -1,3 +1,4 @@
+import { csvCell } from "@/lib/csv-safe";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -152,7 +153,7 @@ function Audit({ orgId }: { orgId: string }) {
   const verb = (a: string) => (a === "insert" ? "created" : a === "delete" ? "deleted" : "changed");
   const csv = () => {
     const head = "time,who,what,action,fields";
-    const lines = rows.map((r) => [r.created_at, r.actor, label(r.entity), verb(r.action), (r.changed_fields ?? []).join(" ")].map((v) => `"${String(v).replace(/"/g, '""')}"`).join(","));
+    const lines = rows.map((r) => [r.created_at, r.actor, label(r.entity), verb(r.action), (r.changed_fields ?? []).join(" ")].map(csvCell).join(","));
     const url = URL.createObjectURL(new Blob([[head, ...lines].join("\n")], { type: "text/csv" }));
     const a = document.createElement("a"); a.href = url; a.download = "audit-trail.csv"; a.click(); URL.revokeObjectURL(url);
   };

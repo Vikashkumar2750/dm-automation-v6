@@ -97,7 +97,8 @@ export const startSocialConnect = createServerFn({ method: "POST" })
     });
     if (error) throw new Error(error.message);
 
-    const redirectUri = `${data.origin}/api/public/oauth/${provider}/callback`;
+    const { trustedOrigin } = await import("@/lib/allowed-origin.server");
+    const redirectUri = `${trustedOrigin(data.origin)}/api/public/oauth/${provider}/callback`;
     const { metaScopes, googleScopes } = await import("@/lib/social");
 
     const url =
