@@ -17,6 +17,7 @@ Production address: `https://autodm.techaasvik.com`
 1. Supabase → **SQL Editor** → New query.
 2. Repo ki file **`docs/sql/fresh-database.sql`** poori copy karke paste karo → **Run**.
    - Isse 52 tables, saari security rules (RLS), functions, triggers, `post-media` storage bucket aur zaroori settings row ban jaati hai.
+   - Purane errors fix ho chuke hain: `sandbox_exec` wali GRANT lines aur `ALTER DEFAULT PRIVILEGES` lines hat gayi hain — ab ye file kisi bhi naye Supabase project par chal jayegi.
 3. Sirf **ek baar** chalana. Error aaye to poora error screenshot bhejo — dobara mat chalao.
 4. Check: Table Editor mein `organizations`, `automation_rules`, `platform_settings` dikhne chahiye; `platform_settings` mein 1 row honi chahiye.
 
@@ -36,14 +37,17 @@ Production address: `https://autodm.techaasvik.com`
 - (Optional) Google login: provider ON + Google client ID/secret; Google console mein redirect `https://<ref>.supabase.co/auth/v1/callback`.
 - **SMTP** (Settings → Auth → SMTP): apna email sender (Resend/Zoho) lagao, warna Supabase ka free mailer 2–3 mail/hour hi bhejta hai.
 
-### A5. Super admin banao (deploy ke baad)
-App par `/auth` se apne email se sign up → mail confirm → phir SQL Editor:
+### A5. Super admin banao (deploy ke baad) — sirf isi SQL query se
+App ke andar se naya super admin banane ka koi rasta nahi hai (button nahi hai, server bhi mana kar deta hai). Naya super admin **sirf** neeche wali SQL query chala kar hi banega:
 ```sql
 insert into public.platform_roles (user_id, role)
 select id, 'super_admin'::platform_role from auth.users
 where lower(email) = lower('contact@techaasvik.com')
 on conflict do nothing;
 ```
+- `lower()` zaroori hai — email mein capital letters hon to bhi match hoga.
+- App khud ko super admin ko apna role revoke ya suspend karne nahi deta (button bhi dikhta nahi, seedha server call par bhi block hai).
+- Doosre super admin ka revoke aap kar sakte ho.
 
 ---
 
@@ -76,12 +80,27 @@ INSTAGRAM_APP_SECRET   (Instagram app ID 1497788405165320 ka secret)
 
 `VITE_*` teeno build ke time bhi chahiye — Railway khud pass karta hai, bas Variables mein hone chahiye.
 
-### B3. TOKEN_ENCRYPTION_KEY banao (naye DB par shuru se lagao — sabse aasaan time yahi hai)
-Apne computer par:
+### B3. CRON_SECRET aur TOKEN_ENCRYPTION_KEY banao (naye DB par shuru se lagao — sabse aasaan time yahi hai)
+
+**Mac/Linux/Git Bash** (Git ke saath aata hai):
 ```
-openssl rand -base64 32
+CRON_SECRET:          openssl rand -hex 32
+TOKEN_ENCRYPTION_KEY: openssl rand -base64 32
 ```
-Output Railway variable `TOKEN_ENCRYPTION_KEY` mein daalo. **Is key ko safe rakho** — badla ya kho gaya to saare connected accounts dobara connect karne padenge.
+
+**Windows PowerShell** (Start menu → PowerShell, dono copy-paste karke Enter):
+```powershell
+# CRON_SECRET (64 hex characters)
+-join ((1..64) | ForEach-Object { '{0:x}' -f (Get-Random -Max 16) })
+
+# TOKEN_ENCRYPTION_KEY (base64, exactly 32 bytes — app ka format)
+[Convert]::ToBase64String((1..32 | ForEach-Object { Get-Random -Maximum 256 }))
+```
+
+Dono outputs Railway → Variables mein daalo:
+- `CRON_SECRET` — scheduler/cron endpoints ka secret.
+- `TOKEN_ENCRYPTION_KEY` — connected accounts ke tokens encrypt karne ke liye. **Ye key kabhi badalna ya kho mat dena** — badla ya kho gaya to saare connected accounts dobara connect karne padenge.
+- Dono values kisi ko share mat karo aur kahin aur paste mat karo — sirf Railway variables (aur ek safe note file) mein.
 
 ### B4. Custom domain
 1. Railway → Service → Settings → Networking → **Custom domain** → `autodm.techaasvik.com`.
