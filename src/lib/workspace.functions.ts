@@ -16,6 +16,7 @@ export type WorkspaceSettings = {
   support_email: string | null;
   timezone: string;
   parent_organization_id: string | null;
+  plan_expires_at: string | null;
   my_role: string;
 };
 
@@ -32,7 +33,7 @@ export type ClientWorkspace = {
 };
 
 const SELECT =
-  "id, name, slug, plan, brand_name, logo_url, brand_color, support_email, timezone, parent_organization_id";
+  "id, name, slug, plan, brand_name, logo_url, brand_color, support_email, timezone, parent_organization_id, plan_expires_at";
 
 type AuthedClient = SupabaseClient<Database>;
 
@@ -182,12 +183,18 @@ export const createClientWorkspace = createServerFn({ method: "POST" })
       })
       .select("id")
       .single();
-    if (error || !org) throw new Error(error?.message ?? "create_failed");
+    if (error || !org) {
+      console.error("[createClientWorkspace] org insert failed", error);
+      throw new Error(error?.message ?? "create_failed");
+    }
 
     const { error: memberError } = await context.supabase
       .from("organization_members")
       .insert({ organization_id: org.id, user_id: context.userId, role: "owner" });
-    if (memberError) throw new Error(memberError.message);
+    if (memberError) {
+      console.error("[createClientWorkspace] member insert failed", memberError);
+      throw new Error(memberError.message);
+    }
 
     return { id: org.id };
   });
