@@ -15,7 +15,6 @@ import {
   Settings,
   Share2,
   Siren,
-  ShieldCheck,
   Users,
   Webhook,
   Workflow,
@@ -76,9 +75,11 @@ function Sidebar({ pathname }: { pathname: string }) {
   return (
     <div className="flex h-full flex-col border-r bg-sidebar">
       <div className="flex items-center gap-3 border-b px-5 py-4">
-        <span className="inline-flex size-9 items-center justify-center rounded-xl bg-foreground text-base font-bold text-background">
-          <ShieldCheck className="size-5" />
-        </span>
+        <img
+          src="/logo.webp"
+          alt="Techaasvik"
+          className="size-9 shrink-0 rounded-lg object-contain"
+        />
         <div className="min-w-0">
           <p className="truncate text-sm font-bold">Operations</p>
           <p className="truncate text-xs text-subtle-foreground">Techaasvik platform</p>
