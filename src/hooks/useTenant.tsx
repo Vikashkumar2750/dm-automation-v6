@@ -183,7 +183,8 @@ export function useTenant() {
 
   return {
     // True until the workspace list is known, so pages never render with a missing workspace.
-    loading: loading || (!!user && (profile.data === undefined && !profile.isError || orgs.data === undefined && !orgs.isError)),
+    loading: loading || (!!user &&
+        ((profile.data === undefined && !profile.isError) || (orgs.data === undefined && !orgs.isError))),
     user,
     profile: {
       name: fullName,
