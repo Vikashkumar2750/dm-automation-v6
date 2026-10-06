@@ -157,13 +157,7 @@ function BillingPage() {
             icon={CreditCard}
             label="Current plan"
             value={currentPlan}
-            sub={
-              billing.data?.planExpiresAt
-                ? `Renews ${new Date(billing.data.planExpiresAt).toLocaleDateString("en-IN")}`
-                : billing.data?.planSource === "granted"
-                  ? "Given by Techaasvik"
-                  : "No end date"
-            }
+            sub={planExpiryLabel(billing.data?.planExpiresAt ?? null, billing.data?.planSource ?? null)}
           />
           <StatCard
             icon={Check}
