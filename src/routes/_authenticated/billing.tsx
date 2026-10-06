@@ -13,7 +13,7 @@ import { getAutomationUsage } from "@/lib/automations.functions";
 import { listSocialAccounts } from "@/lib/social-accounts.functions";
 import { confirmPlanPayment, createPlanOrder, getBillingState } from "@/lib/billing.functions";
 import { getPublicPlans } from "@/lib/platform-config.functions";
-import { PLANS as DEFAULT_PLANS, formatPaise, type BillingCycle, type PlanKey } from "@/lib/plans";
+import { PLANS as DEFAULT_PLANS, formatPaise, planButtonState, type BillingCycle, type PlanKey } from "@/lib/plans";
 
 export const Route = createFileRoute("/_authenticated/billing")({
   head: () => ({
@@ -216,9 +216,11 @@ function BillingPage() {
             const selected = cycles[p.key] ?? p.options[0]?.cycle;
             const option = p.options.find((o) => o.cycle === selected) ?? p.options[0];
             const isCurrent = p.key === currentPlan;
+            const state = planButtonState(p.key, currentPlan, billing.data?.planExpiresAt ?? null);
             return (
               <Panel
                 key={p.key}
+                className={state === "locked" ? "opacity-50" : undefined}
                 title={
                   <span className="flex items-center gap-2">
                     {p.name}
@@ -260,16 +262,31 @@ function BillingPage() {
                 ) : (
                   <Button
                     className="mt-5 w-full"
-                    variant={isCurrent ? "outline" : "default"}
-                    disabled={!canPay || !option || busy === `${p.key}-${selected}`}
+                    variant={state === "buy" ? "default" : "outline"}
+                    disabled={
+                      !canPay ||
+                      !option ||
+                      state === "active" ||
+                      state === "locked" ||
+                      busy === `${p.key}-${selected}`
+                    }
                     onClick={() => option && buy(p.key, option.cycle)}
                   >
                     {busy === `${p.key}-${selected}`
                       ? "Opening payment…"
-                      : isCurrent
-                        ? `Renew for ${formatPaise(option?.amountPaise ?? 0)}`
-                        : `Pay ${formatPaise(option?.amountPaise ?? 0)}`}
+                      : state === "active"
+                        ? "Active plan"
+                        : state === "locked"
+                          ? "Available after your plan ends"
+                          : state === "renew"
+                            ? `Renew for ${formatPaise(option?.amountPaise ?? 0)}`
+                            : `Pay ${formatPaise(option?.amountPaise ?? 0)}`}
                   </Button>
+                )}
+                {state === "active" && !p.contactOnly && (
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    Renew button appears 7 days before your plan ends.
+                  </p>
                 )}
                 {!canPay && !p.contactOnly && (
                   <p className="mt-2 text-xs text-muted-foreground">
