@@ -52,7 +52,7 @@ function OrganizationsPage() {
   const setPause = useServerFn(setOrganizationAutomationPause);
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
-  const [months, setMonths] = useState("12");
+  const [drafts, setDrafts] = useState<Record<string, { plan: string; months: string }>>({});
 
   const { data, isLoading } = useQuery({
     queryKey: ["platform-overview"],
@@ -64,9 +64,14 @@ function OrganizationsPage() {
     void queryClient.invalidateQueries({ queryKey: ["platform-overview"] });
 
   const planMutation = useMutation({
-    mutationFn: (vars: { organizationId: string; plan: (typeof PLANS)[number] }) =>
-      changePlan({ data: { ...vars, months: Number(months) } }),
-    onSuccess: () => {
+    mutationFn: (vars: { organizationId: string; plan: (typeof PLANS)[number]; months: number }) =>
+      changePlan({ data: vars }),
+    onSuccess: (_r, vars) => {
+      setDrafts((d) => {
+        const n = { ...d };
+        delete n[vars.organizationId];
+        return n;
+      });
       toast.success("Plan updated");
       invalidate();
     },
@@ -97,18 +102,6 @@ function OrganizationsPage() {
         title={`${rows.length} workspaces`}
         action={
           <div className="flex items-center gap-2">
-          <Select value={months} onValueChange={setMonths}>
-            <SelectTrigger className="h-9 w-[150px]" aria-label="Plan duration">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {DURATIONS.map((d) => (
-                <SelectItem key={d.value} value={d.value}>
-                  Duration: {d.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -129,7 +122,7 @@ function OrganizationsPage() {
         ) : (
           <AdminTable
             rows={rows}
-            minWidth={880}
+            minWidth={1080}
             columns={[
               {
                 header: "Workspace",
@@ -151,29 +144,53 @@ function OrganizationsPage() {
               { header: "Threads", cell: (o) => <span className="num">{o.conversations}</span> },
               { header: "Posts", cell: (o) => <span className="num">{o.posts}</span> },
               {
-                header: "Plan",
-                cell: (o) => (
-                  <Select
-                    value={o.plan}
-                    onValueChange={(plan) =>
-                      planMutation.mutate({
-                        organizationId: o.id,
-                        plan: plan as (typeof PLANS)[number],
-                      })
-                    }
-                  >
-                    <SelectTrigger className="h-8 w-[130px] capitalize">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {PLANS.map((p) => (
-                        <SelectItem key={p} value={p} className="capitalize">
-                          {p}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                ),
+                header: "Plan & duration",
+                cell: (o) => {
+                  const d = drafts[o.id] ?? { plan: o.plan, months: "12" };
+                  const set = (patch: Partial<typeof d>) =>
+                    setDrafts((all) => ({ ...all, [o.id]: { ...d, ...patch } }));
+                  return (
+                    <div className="flex items-center gap-2">
+                      <Select value={d.plan} onValueChange={(plan) => set({ plan })}>
+                        <SelectTrigger className="h-8 w-[110px] capitalize" aria-label="Plan">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {PLANS.map((p) => (
+                            <SelectItem key={p} value={p} className="capitalize">
+                              {p}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Select value={d.months} onValueChange={(months) => set({ months })}>
+                        <SelectTrigger className="h-8 w-[120px]" aria-label="Duration">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {DURATIONS.map((x) => (
+                            <SelectItem key={x.value} value={x.value}>
+                              {x.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Button
+                        size="sm"
+                        disabled={planMutation.isPending}
+                        onClick={() =>
+                          planMutation.mutate({
+                            organizationId: o.id,
+                            plan: d.plan as (typeof PLANS)[number],
+                            months: Number(d.months),
+                          })
+                        }
+                      >
+                        Save
+                      </Button>
+                    </div>
+                  );
+                },
               },
               {
                 header: "Automations",
