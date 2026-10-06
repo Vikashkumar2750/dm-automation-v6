@@ -69,6 +69,12 @@ async function ensureBootstrap(user: User) {
 
   if ((count ?? 0) > 0) return;
 
+  // Super admins run the platform; they never get a personal workspace.
+  const { data: isSuperAdmin } = await supabase.rpc("current_user_has_platform_role", {
+    _role: "super_admin",
+  });
+  if (isSuperAdmin) return;
+
   const base = (fullName.split(" ")[0] ?? "workspace").toLowerCase().replace(/[^a-z0-9]/g, "");
   const slug = `${base || "workspace"}-${user.id.slice(0, 8)}`;
 
