@@ -37,6 +37,14 @@ export const Route = createFileRoute("/_authenticated/admin/organizations")({
 });
 
 const PLANS = ["starter", "pro", "agency"] as const;
+const DURATIONS = [
+  { value: "1", label: "1 month" },
+  { value: "3", label: "3 months" },
+  { value: "6", label: "6 months" },
+  { value: "12", label: "1 year" },
+  { value: "0", label: "No end date" },
+];
+
 
 function OrganizationsPage() {
   const fetchOverview = useServerFn(getPlatformOverview);
@@ -44,6 +52,7 @@ function OrganizationsPage() {
   const setPause = useServerFn(setOrganizationAutomationPause);
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
+  const [months, setMonths] = useState("12");
 
   const { data, isLoading } = useQuery({
     queryKey: ["platform-overview"],
@@ -56,7 +65,7 @@ function OrganizationsPage() {
 
   const planMutation = useMutation({
     mutationFn: (vars: { organizationId: string; plan: (typeof PLANS)[number] }) =>
-      changePlan({ data: vars }),
+      changePlan({ data: { ...vars, months: Number(months) } }),
     onSuccess: () => {
       toast.success("Plan updated");
       invalidate();
@@ -87,12 +96,26 @@ function OrganizationsPage() {
       <Panel
         title={`${rows.length} workspaces`}
         action={
+          <div className="flex items-center gap-2">
+          <Select value={months} onValueChange={setMonths}>
+            <SelectTrigger className="h-9 w-[150px]" aria-label="Plan duration">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {DURATIONS.map((d) => (
+                <SelectItem key={d.value} value={d.value}>
+                  Duration: {d.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search workspaces"
             className="h-9 w-56"
           />
+          </div>
         }
       >
         {isLoading ? (

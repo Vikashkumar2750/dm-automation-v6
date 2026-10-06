@@ -289,21 +289,29 @@ export const setOrganizationPlan = createServerFn({ method: "POST" })
       .object({
         organizationId: z.string().uuid(),
         plan: z.enum(["starter", "pro", "agency"]),
+        /** 0 = no end date */
+        months: z.number().int().min(0).max(120).default(0),
       })
       .parse(data),
   )
   .handler(async ({ data, context }) => {
     await assertSuperAdmin(context);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    let expires: string | null = null;
+    if (data.months > 0) {
+      const d = new Date();
+      d.setMonth(d.getMonth() + data.months);
+      expires = d.toISOString();
+    }
     const { error } = await supabaseAdmin
       .from("organizations")
-      .update({ plan: data.plan })
+      .update({ plan: data.plan, plan_expires_at: expires, plan_source: "granted" })
       .eq("id", data.organizationId);
     if (error) throw new Error(error.message);
     await audit(context, "organization.plan_changed", {
       type: "organization",
       id: data.organizationId,
-      detail: { plan: data.plan },
+      detail: { plan: data.plan, months: data.months },
     });
     return { ok: true };
   });
