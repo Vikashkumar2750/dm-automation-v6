@@ -329,6 +329,9 @@ BEGIN
     IF array_length(changed, 1) IS NULL THEN RETURN NULL; END IF;
   END IF;
   IF (r ->> 'organization_id') IS NULL THEN RETURN NULL; END IF;
+  IF NOT EXISTS (SELECT 1 FROM public.organizations WHERE id = (r ->> 'organization_id')::uuid) THEN
+    RETURN NULL;
+  END IF;
   INSERT INTO public.org_audit_log(organization_id, actor_user_id, action, entity, entity_id, changed_fields)
   VALUES ((r ->> 'organization_id')::uuid, auth.uid(), lower(TG_OP), TG_TABLE_NAME, coalesce(r ->> 'id', r ->> 'organization_id'), changed);
   RETURN NULL;
