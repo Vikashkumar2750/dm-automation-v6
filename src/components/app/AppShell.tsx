@@ -316,20 +316,41 @@ export function AppShell({ children }: { children: ReactNode }) {
 function TrialBanner() {
   const { activeOrg } = useTenant();
   if (!activeOrg) return null;
-  const end = trialEndsAt(activeOrg.planKey, activeOrg.planExpiresAt, activeOrg.createdAt);
-  if (!end) return null;
-  const msLeft = end.getTime() - Date.now();
-  if (msLeft > 864e5) return null;
+  const trialEnd = trialEndsAt(activeOrg.planKey, activeOrg.planExpiresAt, activeOrg.createdAt);
+  if (trialEnd) {
+    const msLeft = trialEnd.getTime() - Date.now();
+    if (msLeft > 864e5) return null;
+    const expired = msLeft <= 0;
+    return (
+      <div className={`flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3 text-sm lg:px-6 ${expired ? "bg-destructive/10 text-destructive" : "bg-warning/10"}`}>
+        <p>
+          {expired
+            ? "Your 3-day free trial has ended. New automations are paused. Conversations already in progress will still finish."
+            : `Your free trial ends in ${Math.max(1, Math.ceil(msLeft / 36e5))} hours. Upgrade to keep your automations running.`}
+        </p>
+        <Button size="sm" asChild>
+          <Link to="/billing">{expired ? "Upgrade now" : "View plans"}</Link>
+        </Button>
+      </div>
+    );
+  }
+  // Paid plan with an end date: warn in the last 7 days and after expiry.
+  if (!activeOrg.planExpiresAt || activeOrg.planKey === "starter") return null;
+  const msLeft = new Date(activeOrg.planExpiresAt).getTime() - Date.now();
+  if (msLeft > 7 * 864e5) return null;
   const expired = msLeft <= 0;
+  const days = Math.ceil(msLeft / 864e5);
   return (
     <div className={`flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3 text-sm lg:px-6 ${expired ? "bg-destructive/10 text-destructive" : "bg-warning/10"}`}>
       <p>
         {expired
-          ? "Your 3-day free trial has ended. New automations are paused. Conversations already in progress will still finish."
-          : `Your free trial ends in ${Math.max(1, Math.ceil(msLeft / 36e5))} hours. Upgrade to keep your automations running.`}
+          ? `Your ${activeOrg.plan} has expired. Your workspace is now on free Starter limits — renew to restore full access.`
+          : days <= 1
+            ? `Your ${activeOrg.plan} ends today. Renew to keep your current limits.`
+            : `Your ${activeOrg.plan} ends in ${days} days. Renew to keep your current limits.`}
       </p>
       <Button size="sm" asChild>
-        <Link to="/billing">{expired ? "Upgrade now" : "View plans"}</Link>
+        <Link to="/billing">{expired ? "Renew now" : "View plans"}</Link>
       </Button>
     </div>
   );
