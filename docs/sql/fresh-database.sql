@@ -4468,7 +4468,11 @@ create policy "post media writers delete" on storage.objects for delete to authe
   using (bucket_id = 'post-media' and app_private.has_org_role(((storage.foldername(name))[1])::uuid, auth.uid(), array['owner'::public.org_role,'admin'::public.org_role,'manager'::public.org_role]));
 
 -- ---------------- Platform settings row (required — features stay hidden without it) ----------------
-insert into public.platform_settings (id) values (true) on conflict (id) do nothing;
+insert into public.platform_settings (id, feature_flags) values (true, '{"flows_enabled":true,"flows_live_enabled":true,"flows_orgs":[],"flows_live_orgs":[]}'::jsonb) on conflict (id) do nothing;
+-- Existing deployments: turn flows on for everyone without overwriting other flags
+update public.platform_settings
+  set feature_flags = feature_flags || '{"flows_enabled":true,"flows_live_enabled":true,"flows_orgs":[],"flows_live_orgs":[]}'::jsonb
+  where id = true and not (feature_flags ? 'flows_enabled');
 
 -- Tell the self-hosted migration runner these are already applied
 create table if not exists public._app_migrations (name text primary key, applied_at timestamptz not null default now());
