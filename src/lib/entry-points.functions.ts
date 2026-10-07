@@ -142,7 +142,7 @@ export const syncEntryConfig = createServerFn({ method: "POST" })
       let ok = false;
       // Empty config = remove what was published before (Meta rejects empty lists).
       const clearing = Object.keys(body).every((k) => k === "platform");
-      const clearFields = platform === "facebook" ? ["ice_breakers", "persistent_menu"] : ["ice_breakers"];
+      const clearFields = platform === "facebook" ? ["ice_breakers", "persistent_menu", "get_started"] : ["ice_breakers"];
       for (const host of hosts) {
         try {
           const qs = `access_token=${encodeURIComponent(token)}${platform === "instagram" ? "&platform=instagram" : ""}`;

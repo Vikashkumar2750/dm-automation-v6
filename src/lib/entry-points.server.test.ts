@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { detectStoryEvent, entryPointsActiveFor, readEntryPointFlags, sanitizeEntryConfig } from "./entry-points.server";
+import { detectStoryEvent, entryPointsActiveFor, messengerProfileBody, readEntryPointFlags, sanitizeEntryConfig } from "./entry-points.server";
 
 describe("entry points", () => {
   it("ignores normal DMs and echoes", () => {
@@ -20,5 +20,10 @@ describe("entry points", () => {
     const c = sanitizeEntryConfig({ iceBreakers: [1,2,3,4,5].map((n) => ({ question: `q${n}` })), menu: [{ title: "x", url: "http://bad" }] });
     expect(c.iceBreakers).toHaveLength(4);
     expect(c.menu[0]!.url).toBeNull();
+  });
+  it("adds Get Started whenever a Facebook menu is sent", () => {
+    const cfg = { iceBreakers: [], menu: [{ title: "Guide", url: "https://x.com" }] };
+    expect(messengerProfileBody("facebook", cfg)["get_started"]).toEqual({ payload: "GET_STARTED" });
+    expect(messengerProfileBody("instagram", cfg)["get_started"]).toBeUndefined();
   });
 });

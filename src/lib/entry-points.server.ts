@@ -107,6 +107,8 @@ export function messengerProfileBody(platform: "instagram" | "facebook", cfg: En
     ];
   }
   if (platform === "facebook" && cfg.menu.length > 0) {
+    // Meta requires a Get Started button whenever a persistent menu is set.
+    body["get_started"] = { payload: "GET_STARTED" };
     body["persistent_menu"] = [
       {
         locale: "default",
