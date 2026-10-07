@@ -13,8 +13,10 @@ async function readFlags() {
   return { supabaseAdmin, flags: { ...((data?.feature_flags as Record<string, unknown> | null) ?? {}) } };
 }
 
+// Default-on, matching the admin panel (getFlowsFlags) and the live runner:
+// flows are available to every workspace unless a Super Admin explicitly turns them off.
 function flowsActive(flags: Record<string, unknown>, orgId: string) {
-  if (flags["flows_enabled"] !== true) return false;
+  if (flags["flows_enabled"] === false) return false;
   const orgs = Array.isArray(flags["flows_orgs"]) ? (flags["flows_orgs"] as string[]) : [];
   return orgs.length === 0 || orgs.includes(orgId);
 }
