@@ -162,12 +162,17 @@ function isSafePublicUrl(url: URL): boolean {
   return true;
 }
 
-async function readPublicPage(raw: string): Promise<string> {
+function sameSite(host: string, base: string) {
+  const strip = (h: string) => h.toLowerCase().replace(/^www\./, "");
+  return strip(host) === strip(base);
+}
+
+async function readPublicPage(raw: string, allowedHost: string): Promise<string> {
   try {
-    let url = new URL(/^https?:\/\//i.test(raw) ? raw : `https://${raw}`);
+    let url = new URL(raw);
     let res: Response | null = null;
     for (let hop = 0; hop < 3; hop++) {
-      if (!isSafePublicUrl(url)) return "";
+      if (!isSafePublicUrl(url) || !sameSite(url.hostname, allowedHost)) return "";
       res = await fetch(url, { signal: AbortSignal.timeout(6000), headers: { "user-agent": "Mozilla/5.0 AutoDM-Growth" }, redirect: "manual" });
       const loc = res.status >= 300 && res.status < 400 ? res.headers.get("location") : null;
       if (!loc) break;
@@ -211,10 +216,22 @@ export const autofillProfile = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     if (!data.website && !data.instagram && !data.facebook && !data.youtube) throw new Error("Add a website or at least one handle.");
+    // Only members of this workspace may trigger outbound reads (RLS as the user).
+    const { data: org } = await context.supabase.from("organizations").select("id").eq("id", data.organizationId).maybeSingle();
+    if (!org) throw new Error("forbidden");
     const clean = (h?: string) => h?.replace(/^@/, "").replace(/^https?:\/\/[^/]+\//, "").replace(/\/$/, "");
+    // Website: read only the site's home page (no custom paths, queries or ports).
+    let siteRoot: string | null = null;
+    if (data.website) {
+      try {
+        const u = new URL(/^https?:\/\//i.test(data.website) ? data.website : `https://${data.website}`);
+        if (isSafePublicUrl(u)) siteRoot = `https://${u.hostname}/`;
+      } catch { /* ignore invalid */ }
+    }
+    const ytHandle = clean(data.youtube)?.replace(/[^A-Za-z0-9._-]/g, "");
     const [site, yt] = await Promise.all([
-      data.website ? readPublicPage(data.website) : Promise.resolve(""),
-      data.youtube ? readPublicPage(`https://www.youtube.com/@${clean(data.youtube)}`) : Promise.resolve(""),
+      siteRoot ? readPublicPage(siteRoot, new URL(siteRoot).hostname) : Promise.resolve(""),
+      ytHandle ? readPublicPage(`https://www.youtube.com/@${ytHandle}`, "www.youtube.com") : Promise.resolve(""),
     ]);
     const { data: posts } = await context.supabase.from("posts").select("caption").eq("organization_id", data.organizationId).order("created_at", { ascending: false }).limit(5);
     const captions = (posts ?? []).map((p) => (p.caption ?? "").slice(0, 120)).filter(Boolean).join(" | ");
