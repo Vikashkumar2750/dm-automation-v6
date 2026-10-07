@@ -167,3 +167,88 @@ Logs mein `[migrate]` line aur server start dikhna chahiye. Phir browser mein `/
 - [ ] Ek comment → DM aaya (Automations → Activity mein "sent")
 - [ ] Create post mein image upload ho rahi hai
 - [ ] Scheduler chal raha hai (Admin → Health mein heartbeat green)
+
+---
+
+## Part G — Meta app setup guide (poora, step-by-step)
+
+### G0. Naya domain `dmautometa.techaasvik.com` — rejection risk?
+- **Haan, risk hai.** Meta ki Brand/Platform policy kehti hai ki app name, domain ya logo mein **"Meta", "Facebook", "Instagram", "Insta", "FB"** jaise trademark words use nahi karne chahiye. `dmauto**meta**` mein "meta" word hai — reviewer ise trademark misuse maan kar reject kar sakta hai, ya App Domain flag ho sakta hai.
+- **Suggestion:** "meta" hata do, jaise `dmauto.techaasvik.com`, `autodm.techaasvik.com` ya `app.techaasvik.com`. Subdomain technical taur par chalega, problem sirf naam ki hai.
+- Agar phir bhi yahi rakhna hai: app ka naam "AutoDM by Techaasvik" hi rakho (Meta word nahi), aur privacy/terms isi domain par khulne chahiye. Risk kam hoga, khatam nahi.
+- Jo bhi domain final ho, neeche har jagah `<DOMAIN>` ki jagah wahi likho aur Railway mein `PUBLIC_APP_URL=https://<DOMAIN>` set karo.
+
+### G1. Same Meta app ya naya?
+- **Same app use karo** (naya mat banao — approval/review history wahi rahegi). Bas saare URLs naye domain par badlo.
+- Ek Meta app ka webhook ek hi callback par jaata hai — purana deployment band karo, warna events naye server par nahi aayenge.
+
+### G2. App Settings → Basic
+| Field | Value |
+|---|---|
+| Display name | AutoDM by Techaasvik |
+| App Domains | `<DOMAIN>` |
+| Privacy Policy URL | `https://<DOMAIN>/privacy` |
+| Terms of Service URL | `https://<DOMAIN>/terms` |
+| User data deletion | Instructions URL: `https://<DOMAIN>/data-deletion` |
+| App icon | 1024×1024 logo (Meta logo use mat karo) |
+| Category | Business and Pages |
+| Contact email | contact@techaasvik.com |
+- Website platform add karo → Site URL `https://<DOMAIN>`.
+- App Secret copy → Railway `META_APP_SECRET`; App ID → `META_APP_ID`.
+
+### G3. Facebook Login for Business
+- Settings → Valid OAuth Redirect URIs: `https://<DOMAIN>/api/public/oauth/meta/callback`
+- Client OAuth login ON, Web OAuth login ON, Enforce HTTPS ON, Strict mode ON.
+- Allowed domains for JS SDK: `https://<DOMAIN>`.
+
+### G4. Instagram API → API setup with Instagram login
+- Business login settings → Redirect URL: `https://<DOMAIN>/api/public/oauth/meta/callback`
+- Instagram app secret → Railway `INSTAGRAM_APP_SECRET`.
+- **Webhooks** → Callback `https://<DOMAIN>/api/public/webhooks/meta`, Verify token = `META_WEBHOOK_VERIFY_TOKEN` → **Verify and save**.
+- Subscribe fields: `comments`, `messages`, `messaging_postbacks`, `mentions` (story mention), `message_reactions` optional.
+
+### G5. Webhooks (Page product, Facebook ke liye)
+- App Dashboard → Webhooks → Object **Page** → same callback + verify token → Verify and save.
+- Fields: `feed`, `messages`, `messaging_postbacks`.
+- Object **Instagram** (Facebook-login path) → `comments`, `messages`, `messaging_postbacks`, `mentions`.
+
+### G6. Roles & test accounts
+- App Roles → reviewer/test user ko **Tester** banao; test Facebook Page + IG Business account usse link karo.
+- Business verification (Business Settings → Security Center) complete honi chahiye — Advanced Access ke liye zaroori.
+
+### G7. Saari permissions (final list)
+**Facebook Login set (Connect button yahi maangta hai — `src/lib/social.ts`):**
+| Permission | Kyun |
+|---|---|
+| pages_show_list | Pages list karke connect |
+| pages_manage_metadata | Page ko webhooks par subscribe |
+| pages_read_engagement | Page posts + commenter naam |
+| pages_read_user_content | Page posts ke user comments |
+| pages_manage_engagement | FB comment ka public reply |
+| pages_messaging | Messenger DM, private reply, ice breakers, menu |
+| pages_manage_posts | FB post publish/schedule |
+| instagram_basic | IG account details |
+| instagram_manage_comments | IG comments padhna + reply |
+| instagram_manage_messages | IG DM, private reply, follow check, story reply |
+| instagram_content_publish | IG post publish |
+| business_management | Business ke under Pages/IG access |
+
+**Instagram Login set (comment/DM webhooks isi product se aate hain — remove mat karna):**
+| Permission | Kyun |
+|---|---|
+| instagram_business_basic | Instagram-login token + webhooks |
+| instagram_business_manage_messages | IG DMs / button taps |
+| instagram_business_manage_comments | IG comment webhooks |
+
+**Remove karo (use nahi hoti = rejection risk):** `read_insights`, `instagram_manage_insights`, `instagram_business_manage_insights`, `instagram_business_content_publish` (optional), **Human Agent** (code `HUMAN_AGENT` tag use nahi karta).
+
+### G8. Kya current Meta app mein koi NAYI permission add hogi?
+**Nahi.** Saare features (story reply/mention, ice breakers, menu, flows, AI agent, CRM, revenue, team desk, trust & safety, growth) upar wali existing permissions se hi chalte hain. Connect button ki scope list change nahi hui. Sirf unused wali remove karni hain (G7). Detail answers + screencast script: `docs/META-APP-REVIEW-SUBMISSION.md`.
+
+### G9. Final Meta checklist
+- [ ] App Domains + Privacy/Terms/Data deletion naye domain par, sab khul rahe hain
+- [ ] OAuth redirect (FB Login + IG Login) naye domain par
+- [ ] Dono webhooks "Verified", fields subscribed
+- [ ] Unused permissions removed
+- [ ] Business verification done, app Live mode
+- [ ] Reviewer test account + test Page/IG ready
