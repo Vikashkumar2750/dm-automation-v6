@@ -1086,6 +1086,45 @@ export type Database = {
           },
         ]
       }
+      delivery_page_leads: {
+        Row: {
+          answers: Json
+          created_at: string
+          delivery_page_id: string
+          id: string
+          organization_id: string
+        }
+        Insert: {
+          answers?: Json
+          created_at?: string
+          delivery_page_id: string
+          id?: string
+          organization_id: string
+        }
+        Update: {
+          answers?: Json
+          created_at?: string
+          delivery_page_id?: string
+          id?: string
+          organization_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_page_leads_delivery_page_id_fkey"
+            columns: ["delivery_page_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_pages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "delivery_page_leads_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       delivery_pages: {
         Row: {
           active: boolean
@@ -1093,7 +1132,10 @@ export type Database = {
           button_label: string | null
           button_url: string | null
           countdown_at: string | null
+          coupon_code: string | null
+          coupon_note: string | null
           created_at: string
+          discount_label: string | null
           expiry_action: string
           expiry_message: string | null
           form_config: Json
@@ -1101,8 +1143,11 @@ export type Database = {
           image_alt: string | null
           image_path: string | null
           organization_id: string
+          price_offer_paise: number | null
+          price_original_paise: number | null
           product_id: string | null
           show_image: boolean
+          show_price: boolean
           slug: string
           title: string
           views: number
@@ -1113,7 +1158,10 @@ export type Database = {
           button_label?: string | null
           button_url?: string | null
           countdown_at?: string | null
+          coupon_code?: string | null
+          coupon_note?: string | null
           created_at?: string
+          discount_label?: string | null
           expiry_action?: string
           expiry_message?: string | null
           form_config?: Json
@@ -1121,8 +1169,11 @@ export type Database = {
           image_alt?: string | null
           image_path?: string | null
           organization_id: string
+          price_offer_paise?: number | null
+          price_original_paise?: number | null
           product_id?: string | null
           show_image?: boolean
+          show_price?: boolean
           slug: string
           title: string
           views?: number
@@ -1133,7 +1184,10 @@ export type Database = {
           button_label?: string | null
           button_url?: string | null
           countdown_at?: string | null
+          coupon_code?: string | null
+          coupon_note?: string | null
           created_at?: string
+          discount_label?: string | null
           expiry_action?: string
           expiry_message?: string | null
           form_config?: Json
@@ -1141,8 +1195,11 @@ export type Database = {
           image_alt?: string | null
           image_path?: string | null
           organization_id?: string
+          price_offer_paise?: number | null
+          price_original_paise?: number | null
           product_id?: string | null
           show_image?: boolean
+          show_price?: boolean
           slug?: string
           title?: string
           views?: number

@@ -1,17 +1,42 @@
-import { CheckCircle2, Clock3, ShieldCheck } from "lucide-react";
+import { CheckCircle2, Clock3, Copy, ShieldCheck, Tag } from "lucide-react";
 import { Fragment, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { inlineParts, parseBody, type Block } from "@/lib/delivery-page";
+import { inlineParts, parseBody, priceDisplay, type Block } from "@/lib/delivery-page";
+
+export type PagePrice = { originalPaise: number | null; offerPaise: number | null; label?: string | null; couponCode?: string | null; couponNote?: string | null };
+
+function PriceBox({ price }: { price: PagePrice }) {
+  const [copied, setCopied] = useState(false);
+  const d = priceDisplay(price.originalPaise, price.offerPaise, price.label);
+  if (!d.offer && !price.couponCode) return null;
+  return (
+    <div className="mx-auto mt-6 max-w-md rounded-2xl border border-primary/30 bg-card p-5 text-card-foreground shadow-sm">
+      {d.offer && <div className="flex flex-wrap items-baseline justify-center gap-3">
+        <span className="text-4xl font-bold tracking-tight text-foreground">{d.offer}</span>
+        {d.original && <span className="text-lg text-muted-foreground line-through">{d.original}</span>}
+        {d.badge && <span className="rounded-full bg-primary px-2.5 py-0.5 text-xs font-semibold text-primary-foreground">{d.badge}</span>}
+      </div>}
+      {price.couponCode && <div className="mt-4 rounded-xl border border-dashed border-primary/50 bg-primary/5 p-3">
+        <p className="flex items-center justify-center gap-1.5 text-xs font-medium text-muted-foreground"><Tag className="size-3.5 text-primary" /> Use coupon code</p>
+        <div className="mt-1.5 flex items-center justify-center gap-2">
+          <code className="rounded-md bg-background px-3 py-1 text-lg font-bold tracking-widest text-foreground">{price.couponCode}</code>
+          <Button type="button" size="sm" variant="outline" onClick={() => { void navigator.clipboard?.writeText(price.couponCode!); setCopied(true); window.setTimeout(() => setCopied(false), 1500); }}><Copy className="size-3.5" /> {copied ? "Copied" : "Copy"}</Button>
+        </div>
+        {price.couponNote && <p className="mt-1.5 text-center text-xs text-muted-foreground">{price.couponNote}</p>}
+      </div>}
+    </div>
+  );
+}
 
 function Inline({ text }: { text: string }) {
   return <>{inlineParts(text).map((p, i) => p.bold ? <strong key={i} className="font-semibold text-foreground">{p.text}</strong> : <Fragment key={i}>{p.text}</Fragment>)}</>;
 }
 
 /** Landing-page style rendering of a delivery page (used publicly and as a live preview). */
-export function DeliveryPageView({ title, body, buttonLabel, buttonHref, imageUrl, imageAlt, countdownAt, expiryAction = "disable_cta", expiryMessage }: {
+export function DeliveryPageView({ title, body, buttonLabel, buttonHref, imageUrl, imageAlt, countdownAt, expiryAction = "disable_cta", expiryMessage, price }: {
   title: string; body: string; buttonLabel?: string | null; buttonHref?: string | null; imageUrl?: string | null; imageAlt?: string | null;
-  countdownAt?: string | null; expiryAction?: "disable_cta" | "hide_cta"; expiryMessage?: string | null;
+  countdownAt?: string | null; expiryAction?: "disable_cta" | "hide_cta"; expiryMessage?: string | null; price?: PagePrice | null;
 }) {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -46,6 +71,7 @@ export function DeliveryPageView({ title, body, buttonLabel, buttonHref, imageUr
         {imageUrl && <div className="mx-auto mt-7 aspect-[4/3] w-full max-w-xl overflow-hidden rounded-xl border border-border bg-muted"><img src={imageUrl} alt={imageAlt || title} className="size-full object-cover" /></div>}
         {countdownAt && !expired && <div className="mx-auto mt-6 max-w-md rounded-lg border border-border bg-card p-3 text-card-foreground"><p className="mb-2 flex items-center justify-center gap-2 text-sm font-medium"><Clock3 className="size-4 text-primary" /> Offer ends in</p><div className="grid grid-cols-4 gap-2">{countdown.map((n, i) => <div key={i} className="rounded-md bg-muted px-2 py-2"><strong className="block text-lg">{String(n).padStart(2, "0")}</strong><span className="text-[10px] text-muted-foreground">{["Days", "Hours", "Mins", "Secs"][i]}</span></div>)}</div></div>}
         {expired && <p className="mx-auto mt-6 max-w-md rounded-lg border border-border bg-muted p-3 text-sm text-muted-foreground">{expiryMessage || "This offer has ended."}</p>}
+        {price && <PriceBox price={price} />}
         {cta && <div className="mt-8">{cta}</div>}
       </section>
 
@@ -82,6 +108,7 @@ export function DeliveryPageView({ title, body, buttonLabel, buttonHref, imageUr
         {cta && (
           <div className="mt-6 rounded-2xl border border-border bg-card p-8 text-center shadow-sm">
             <p className="mb-4 text-lg font-semibold text-foreground">{heading}</p>
+            {price && (() => { const d = priceDisplay(price.originalPaise, price.offerPaise, price.label); return d.offer ? <p className="mb-4 flex items-baseline justify-center gap-2"><span className="text-2xl font-bold text-foreground">{d.offer}</span>{d.original && <span className="text-sm text-muted-foreground line-through">{d.original}</span>}{d.badge && <span className="text-xs font-semibold text-primary">{d.badge}</span>}</p> : null; })()}
             {cta}
           </div>
         )}

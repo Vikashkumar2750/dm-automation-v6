@@ -52,3 +52,12 @@ No Razorpay? Add your own payment link (UPI / Instamojo / any https link) on eac
 
 **How it works:** shows the funnel for the last 30 days: DMs sent → page views → clicks → payment links → paid, plus total revenue.
 **How to use:** open the **Sales report** tab to see the numbers; use them to see which step loses people.
+
+## Price, coupon, lead form and editing (delivery pages)
+
+**How it works:** A delivery page can show a price box (original price crossed out, offer price, automatic "% OFF" badge and a copyable coupon code) and a lead form (Email only, or a full form with Name, Phone, Email, Pincode and your own text/dropdown fields). Form answers from normal page links are listed under the page's **Leads** button; answers from buyer offer links also update the contact.
+
+**How to use:**
+1. Revenue → Delivery pages → switch on **Price & offer**, type the original and offer price, optionally a coupon code.
+2. Pick **Lead form** → Email only or Full lead form, switch fields on/off and mark them required.
+3. Check the **Live preview**, then Save. Use the pencil icon on any saved page to edit it — keep the address the same so old DM links keep working.
