@@ -206,7 +206,7 @@ export const sendBroadcast = createServerFn({ method: "POST" })
       const ok = await sendDirectDm(supabaseAdmin, {
         organizationId: data.organizationId, conversationId: c.id, socialAccountId: c.social_account_id,
         platform: c.platform, externalUserId: c.external_user_id,
-      }, data.message, null, `Broadcast:${data.name}`);
+      }, data.message, data.button ?? null, `Broadcast:${data.name}`);
       if (ok) sent++;
     }
     await supabaseAdmin.from("broadcasts").update({ status: "done", sent_count: sent }).eq("id", row.id);
