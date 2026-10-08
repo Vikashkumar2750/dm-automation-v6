@@ -203,6 +203,10 @@ function OutreachPanel({ orgId, allTags }: { orgId: string; allTags: string[] })
   const [syncUrl, setSyncUrl] = useState("");
   const [bcName, setBcName] = useState("");
   const [bcMessage, setBcMessage] = useState("");
+  const [bcBtnTitle, setBcBtnTitle] = useState("");
+  const [bcBtnUrl, setBcBtnUrl] = useState("");
+  const bcBtnHalf = !!bcBtnTitle.trim() !== !!bcBtnUrl.trim();
+  const bcBtnBadUrl = !!bcBtnUrl.trim() && !/^https:\/\/\S+$/i.test(bcBtnUrl.trim());
   const [bcTag, setBcTag] = useState("");
 
   useEffect(() => {
@@ -229,8 +233,9 @@ function OutreachPanel({ orgId, allTags }: { orgId: string; allTags: string[] })
     onError: () => toast.error("Webhook address must start with https://"),
   });
   const sendMut = useMutation({
-    mutationFn: () => sendBc({ data: { organizationId: orgId, name: bcName.trim(), message: bcMessage.trim(), filter: bcTag ? { tag: bcTag } : {} } }),
-    onSuccess: (r) => { toast.success(`Broadcast sent to ${r.sent} of ${r.matched} people`); setBcName(""); setBcMessage(""); refresh(); },
+    mutationFn: () => sendBc({ data: { organizationId: orgId, name: bcName.trim(), message: bcMessage.trim(), filter: bcTag ? { tag: bcTag } : {},
+      button: bcBtnTitle.trim() && bcBtnUrl.trim() ? { title: bcBtnTitle.trim(), url: bcBtnUrl.trim() } : null } }),
+    onSuccess: (r) => { toast.success(`Broadcast sent to ${r.sent} of ${r.matched} people`); setBcName(""); setBcMessage(""); setBcBtnTitle(""); setBcBtnUrl(""); refresh(); },
     onError: () => toast.error("Could not send broadcast"),
   });
 
@@ -259,11 +264,18 @@ function OutreachPanel({ orgId, allTags }: { orgId: string; allTags: string[] })
         <div className="grid gap-2">
           <Input placeholder="Broadcast name" maxLength={80} value={bcName} onChange={(e) => setBcName(e.target.value)} />
           <textarea rows={2} maxLength={1000} placeholder="Message" className="rounded-md border border-input bg-background px-3 py-2 text-sm" value={bcMessage} onChange={(e) => setBcMessage(e.target.value)} />
+          <div className="grid grid-cols-2 gap-2">
+            <Input placeholder="Button text (optional)" maxLength={20} value={bcBtnTitle} onChange={(e) => setBcBtnTitle(e.target.value)} />
+            <Input placeholder="https://your-link.com" maxLength={500} value={bcBtnUrl} onChange={(e) => setBcBtnUrl(e.target.value)} />
+          </div>
+          {(bcBtnHalf || bcBtnBadUrl) && (
+            <p className="text-xs text-destructive">{bcBtnBadUrl ? "Link must start with https://" : "Fill both button text and link, or leave both empty."}</p>
+          )}
           <select className={sel} value={bcTag} onChange={(e) => setBcTag(e.target.value)}>
             <option value="">Everyone in the 24h window</option>
             {allTags.map((t) => <option key={t} value={t}>Only tag: {t}</option>)}
           </select>
-          <Button size="sm" onClick={() => sendMut.mutate()} disabled={sendMut.isPending || !bcName.trim() || !bcMessage.trim()}>Send broadcast</Button>
+          <Button size="sm" onClick={() => sendMut.mutate()} disabled={sendMut.isPending || !bcName.trim() || !bcMessage.trim() || bcBtnHalf || bcBtnBadUrl}>Send broadcast</Button>
         </div>
         {(outreach.data?.broadcasts.length ?? 0) > 0 && (
           <ul className="mt-3 space-y-1 text-xs text-muted-foreground">
