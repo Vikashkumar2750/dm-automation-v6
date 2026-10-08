@@ -24,7 +24,36 @@ export type FlowStep = StepBase & (
   | { kind: "follow_gate"; text: string; buttonTitle: string; profileUrl: string }
   | { kind: "send_payment"; productId: string; text: string }
   | { kind: "send_coupon"; campaignId: string; text: string }
+  | { kind: "lead_form"; intro: string; fields: LeadField[] }
 );
+
+/** One question in a lead form. `choice` fields show their options as tap buttons. */
+export type LeadField = { key: string; label: string; type: "text" | "email" | "phone" | "choice"; options: string[] };
+export const MAX_LEAD_FIELDS = 6;
+export const MAX_LEAD_OPTIONS = 10;
+
+/** Check one lead-form answer. Choice answers match an option (case-insensitive) or its number. */
+export function leadAnswer(f: LeadField, raw: string): { ok: true; value: string } | { ok: false; hint: string } {
+  const v = raw.trim();
+  if (!v) return { ok: false, hint: "Please type your answer." };
+  if (f.type === "email") {
+    const m = v.match(/[\w.+-]+@[\w-]+\.[\w.-]+/);
+    return m ? { ok: true, value: m[0].toLowerCase() } : { ok: false, hint: "That doesn't look like an email. Please try again." };
+  }
+  if (f.type === "phone") {
+    const d = v.replace(/[^\d+]/g, "");
+    return d.replace(/\D/g, "").length >= 10 ? { ok: true, value: d } : { ok: false, hint: "Please send a valid phone number (10+ digits)." };
+  }
+  if (f.type === "choice") {
+    const n = Number(v);
+    const hit = Number.isInteger(n) && n >= 1 && n <= f.options.length ? f.options[n - 1] : f.options.find((o) => o.toLowerCase() === v.toLowerCase());
+    return hit ? { ok: true, value: hit } : { ok: false, hint: `Please choose one: ${f.options.join(", ")}` };
+  }
+  return { ok: true, value: v.slice(0, 300) };
+}
+
+/** Field key safe for Contacts custom fields. */
+export const leadFieldKey = (label: string) => label.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "").slice(0, 30) || "field";
 
 /** Popular tags offered as one-click presets (custom tags always allowed). */
 export const TAG_PRESETS = [
@@ -124,6 +153,18 @@ function sanitizeStep(s: unknown): FlowStep[] {
           const y = s as { campaignId?: unknown };
           return [{ id: sid, kind: "send_coupon", campaignId: text(y.campaignId, 40), text: text(x.text, 600) }];
         }
+        case "lead_form": {
+          const y = s as { intro?: unknown; fields?: unknown };
+          const fields = (Array.isArray(y.fields) ? y.fields : []).slice(0, MAX_LEAD_FIELDS).map((f): LeadField => {
+            const r = (f ?? {}) as Partial<LeadField>;
+            const type = (["text", "email", "phone", "choice"] as const).includes(r.type as never) ? r.type! : "text";
+            const label = text(r.label, 120);
+            const options = type === "choice" && Array.isArray(r.options)
+              ? [...new Set(r.options.map((o) => text(o, 20)).filter(Boolean))].slice(0, MAX_LEAD_OPTIONS) : [];
+            return { key: leadFieldKey(text(r.key, 30) || label), label, type, options };
+          });
+          return [{ id: sid, kind: "lead_form", intro: text(y.intro, 500), fields }];
+        }
         default:
           return [];
       }
@@ -147,12 +188,19 @@ export function validateFlow(flow: Flow): string[] {
     if (s.kind === "send_payment" && !s.productId) issues.push(`Step ${i + 1}: choose a product.`);
     if (s.kind === "send_coupon" && !s.campaignId) issues.push(`Step ${i + 1}: choose a coupon campaign.`);
     if (s.kind === "send_coupon" && !s.text.includes("{code}")) issues.push(`Step ${i + 1}: message must include {code}.`);
+    if (s.kind === "lead_form") {
+      if (s.fields.length === 0) issues.push(`Step ${i + 1}: add at least one question.`);
+      s.fields.forEach((f, j) => {
+        if (!f.label) issues.push(`Step ${i + 1}: question ${j + 1} is empty.`);
+        if (f.type === "choice" && f.options.length < 2) issues.push(`Step ${i + 1}: question ${j + 1} needs 2+ choices.`);
+      });
+    }
     if (s.kind === "public_reply" && flow.trigger !== "new_comment") issues.push(`Step ${i + 1}: public replies only work on comments.`);
   });
   return issues;
 }
 
-const MESSAGE_KINDS: FlowStep["kind"][] = ["send_dm", "public_reply", "send_payment", "send_coupon", "ask_contact", "follow_gate"];
+const MESSAGE_KINDS: FlowStep["kind"][] = ["send_dm", "public_reply", "send_payment", "send_coupon", "ask_contact", "follow_gate", "lead_form"];
 
 export type FlowInput = {
   text: string; isFollower: boolean | null; platform: "instagram" | "facebook"; trigger: FlowTrigger;
@@ -209,6 +257,10 @@ export function runFlowDry(flow: Flow, input: FlowInput): { matched: boolean; ac
     if (s.kind === "remove_tag") { tags.delete(s.value.toLowerCase()); actions.push({ kind: "Remove tag", detail: s.value }); }
     if (s.kind === "ask_contact") actions.push({ kind: "Ask email / phone DM", detail: s.text });
     if (s.kind === "send_payment") actions.push({ kind: "Payment link DM", detail: (s.text || "Pay here") + " [Pay now]" });
+    if (s.kind === "lead_form") {
+      actions.push({ kind: "Lead form", detail: s.fields.map((f, j) => `${j + 1}. ${f.label}${f.type === "choice" ? ` [${f.options.join(" / ")}]` : ""}`).join("  ") });
+      continue; // live: waits for each answer, then continues
+    }
     if (s.kind === "send_coupon") actions.push({ kind: "Coupon DM", detail: s.text.replace("{code}", "ABC-1234") });
   }
   return { matched: true, actions, stoppedAt: null };

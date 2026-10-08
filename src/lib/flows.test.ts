@@ -105,3 +105,19 @@ describe("advanced flow steps", () => {
     expect(flowFromTemplate("all_in_one")!.steps.some((s) => s.disabled)).toBe(true);
   });
 });
+
+import { leadAnswer } from "./flows";
+describe("lead form", () => {
+  const choice = { key: "size", label: "Size?", type: "choice" as const, options: ["Small", "Large"] };
+  it("checks answers by type", () => {
+    expect(leadAnswer(choice, "large")).toEqual({ ok: true, value: "Large" });
+    expect(leadAnswer(choice, "2")).toEqual({ ok: true, value: "Large" });
+    expect(leadAnswer(choice, "medium").ok).toBe(false);
+    expect(leadAnswer({ ...choice, type: "email", options: [] }, "me: A@b.co").ok).toBe(true);
+    expect(leadAnswer({ ...choice, type: "phone", options: [] }, "98765").ok).toBe(false);
+  });
+  it("choice questions need two options", () => {
+    const f: Flow = { ...base, steps: [{ id: "l", kind: "lead_form", intro: "", fields: [{ ...choice, options: ["Only"] }] }] };
+    expect(validateFlow(sanitizeFlows([f])[0]!).some((x) => x.includes("2+ choices"))).toBe(true);
+  });
+});

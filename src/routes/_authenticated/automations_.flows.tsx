@@ -18,8 +18,8 @@ import { getFlowAiStatus, getFlows, saveFlows, suggestFlowWithAi } from "@/lib/f
 import { FLOW_TEMPLATES, TEMPLATE_CATEGORIES, flowFromTemplate } from "@/lib/flow-templates";
 import { GuideButton } from "@/components/app/GuideButton";
 import {
-  MAX_FLOWS, MAX_STEPS, TAG_PRESETS, TRIGGER_LABELS, moveStep, newStepId, runFlowDry, validateFlow,
-  type Flow, type FlowStep, type FlowTrigger,
+  MAX_FLOWS, MAX_STEPS, MAX_LEAD_FIELDS, MAX_LEAD_OPTIONS, leadFieldKey, TAG_PRESETS, TRIGGER_LABELS, moveStep, newStepId, runFlowDry, validateFlow,
+  type Flow, type FlowStep, type FlowTrigger, type LeadField,
 } from "@/lib/flows";
 
 export const Route = createFileRoute("/_authenticated/automations_/flows")({
@@ -55,6 +55,11 @@ const STEP_TEMPLATES: { group: "Conditions" | "Actions" | "Sales" | "Contacts"; 
   { group: "Contacts", label: "Add tag", make: () => ({ id: newStepId(), kind: "tag", value: "" }) },
   { group: "Contacts", label: "Remove tag", make: () => ({ id: newStepId(), kind: "remove_tag", value: "" }) },
   { group: "Contacts", label: "Ask email / phone", make: () => ({ id: newStepId(), kind: "ask_contact", text: "Reply with your email or WhatsApp number and we'll send you the details 😊" }) },
+  { group: "Contacts", label: "Lead form", make: () => ({ id: newStepId(), kind: "lead_form", intro: "Quick 3 questions so we can help you better 🙌", fields: [
+    { key: "name", label: "What's your name?", type: "text", options: [] },
+    { key: "email", label: "Your email?", type: "email", options: [] },
+    { key: "interest", label: "What are you interested in?", type: "choice", options: ["Product", "Service", "Just browsing"] },
+  ] }) },
   { group: "Sales", label: "Send payment link", make: () => ({ id: newStepId(), kind: "send_payment", productId: "", text: "" }) },
   { group: "Sales", label: "Send coupon", make: () => ({ id: newStepId(), kind: "send_coupon", campaignId: "", text: "Here is your code: {code}" }) },
 ];
@@ -63,7 +68,7 @@ function stepLabel(s: FlowStep): string {
   if (s.kind === "condition") {
     return { contains: "If contains", not_contains: "If does not contain", is_follower: s.value === "no" ? "If non-follower" : "If follower", has_tag: "If has tag", no_tag: "If missing tag", has_contact: "If email / phone" }[s.check];
   }
-  return { send_dm: "Send DM", public_reply: "Public reply", wait: "Wait", tag: "Add tag", remove_tag: "Remove tag", ask_contact: "Ask email / phone", follow_gate: "Follow gate", send_payment: "Payment link", send_coupon: "Coupon" }[s.kind];
+  return { send_dm: "Send DM", public_reply: "Public reply", wait: "Wait", tag: "Add tag", remove_tag: "Remove tag", ask_contact: "Ask email / phone", follow_gate: "Follow gate", send_payment: "Payment link", send_coupon: "Coupon", lead_form: "Lead form" }[s.kind];
 }
 
 const STEP_HELP = {
@@ -136,6 +141,11 @@ const STEP_HELP = {
     title: "Follow gate (Visit profile)",
     how: "Followers pass straight through to the next step. Non-followers get this DM with a Visit profile button and the flow stops — when they follow and comment again, the flow continues for them.",
     why: "Use it to give links or freebies only to followers and grow your audience.",
+  },
+  lead_form: {
+    title: "Lead form",
+    how: "Asks your questions one by one in DM. Choice questions show tap buttons. Each answer is checked (email, phone, choice) and saved to the person's Contacts record; after the last answer the flow continues.",
+    why: "Use it to qualify leads — name, budget, city, interest — without sending people to an outside form.",
   },
 } as const;
 
@@ -547,10 +557,44 @@ function StepCard({ step, index, onChange, onRemove, onMove }: {
             <QuickCreate kind="coupon" onCreated={(id) => onChange({ ...step, campaignId: id })} />
           </>
         )}
+        {step.kind === "lead_form" && <LeadFormEditor step={step} onChange={onChange} />}
         {(step.kind === "tag" || step.kind === "remove_tag") && (
           <TagInput value={step.value} onChange={(v) => onChange({ ...step, value: v })} />
         )}
       </div>
+    </div>
+  );
+}
+
+function LeadFormEditor({ step, onChange }: { step: Extract<FlowStep, { kind: "lead_form" }>; onChange: (s: FlowStep) => void }) {
+  const setField = (j: number, f: LeadField) => onChange({ ...step, fields: step.fields.map((x, k) => (k === j ? f : x)) });
+  return (
+    <div className="space-y-2">
+      <Input placeholder="Intro message (optional)" maxLength={500} value={step.intro} onChange={(e) => onChange({ ...step, intro: e.target.value })} />
+      {step.fields.map((f, j) => (
+        <div key={j} className="space-y-2 rounded-lg border bg-surface-secondary p-2">
+          <div className="flex gap-2">
+            <Input placeholder={`Question ${j + 1}`} maxLength={120} value={f.label} onChange={(e) => setField(j, { ...f, label: e.target.value, key: leadFieldKey(e.target.value) })} />
+            <select className={sel} value={f.type} aria-label="Answer type" onChange={(e) => setField(j, { ...f, type: e.target.value as LeadField["type"], options: e.target.value === "choice" ? (f.options.length ? f.options : ["Option 1", "Option 2"]) : [] })}>
+              <option value="text">Text</option>
+              <option value="email">Email</option>
+              <option value="phone">Phone</option>
+              <option value="choice">Multiple choice</option>
+            </select>
+            <Button size="icon" variant="ghost" aria-label="Remove question" onClick={() => onChange({ ...step, fields: step.fields.filter((_, k) => k !== j) })}><Trash2 className="size-4" /></Button>
+          </div>
+          {f.type === "choice" && (
+            <Input placeholder="Choices, comma separated (max 20 letters each)" value={f.options.join(", ")}
+              onChange={(e) => setField(j, { ...f, options: e.target.value.split(",").map((o) => o.trimStart().slice(0, 20)).slice(0, MAX_LEAD_OPTIONS) })} />
+          )}
+          <p className="text-xs text-muted-foreground">Saved in Contacts as “{f.key}”.</p>
+        </div>
+      ))}
+      {step.fields.length < MAX_LEAD_FIELDS && (
+        <Button size="sm" variant="outline" onClick={() => onChange({ ...step, fields: [...step.fields, { key: "field", label: "", type: "text", options: [] }] })}>
+          <Plus className="size-4" /> Add question
+        </Button>
+      )}
     </div>
   );
 }
