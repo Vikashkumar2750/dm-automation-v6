@@ -20,7 +20,7 @@ Safety limits, quiet hours, cooldowns and the daily cap apply to all of them. No
 6. Switch the rule **on** and save.
 
 ### 2. Flow builder
-**How it works:** a flow runs top to bottom on a zoomable canvas. A condition that fails stops the flow. A step switched **off** is skipped (not deleted). A *Follow gate* lets followers through and sends non-followers a **Visit profile** button — when they follow and comment again, the flow continues.
+**How it works:** a flow runs top to bottom on a zoomable canvas. A condition that fails stops the flow. A step switched **off** is skipped (not deleted). A *Follow gate* lets followers through and sends non-followers a **Visit profile** button — after they follow and tap **I followed**, verified followers continue.
 
 **How to use:**
 1. Click **Flow builder**.

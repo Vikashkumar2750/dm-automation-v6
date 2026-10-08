@@ -168,7 +168,7 @@ async function executeSteps(admin: AdminClient, flow: Flow, st: RunState, from: 
     if (s.kind === "wait") {
       await admin.from("flow_runs").insert({
         organization_id: st.organizationId, conversation_id: st.conversationId, flow_id: flow.id, flow_name: flow.name,
-        state: st as never, next_step: i + 1, resume_at: new Date(Date.now() + s.minutes * 60_000).toISOString(),
+        state: st as never, next_step: i + 1, status: "waiting", resume_at: new Date(Date.now() + s.minutes * 60_000).toISOString(),
       });
       await log(admin, st, "matched", `${flow.name}:waiting_${s.minutes}m`);
       return true;
@@ -208,8 +208,9 @@ async function executeSteps(admin: AdminClient, flow: Flow, st: RunState, from: 
       return true;
     }
     if (s.kind === "public_reply") {
-      if (st.channel !== "comment" || !st.externalId) { await log(admin, st, "skipped", `${flow.name}:not_a_comment`); continue; }
-      const res = await a.flowGraphCall(`${GRAPH}/${st.externalId}/${st.platform === "facebook" ? "comments" : "replies"}`, { message: s.text, access_token: c.token });
+      const commentId = st.originalCommentId ?? (st.channel === "comment" ? st.externalId : null);
+      if (!commentId) { await log(admin, st, "skipped", `${flow.name}:not_a_comment`); continue; }
+      const res = await a.flowGraphCall(`${GRAPH}/${commentId}/${st.platform === "facebook" ? "comments" : "replies"}`, { message: s.text, access_token: c.token });
       if (res.error) { await log(admin, st, "failed", `${flow.name}:${res.error}`); return true; }
       await recordOutbound(admin, st, flow, `[public reply] ${s.text}`, res.id ?? null);
       await log(admin, st, "sent", `${flow.name}:public_reply`);
@@ -232,7 +233,7 @@ async function executeSteps(admin: AdminClient, flow: Flow, st: RunState, from: 
     } else if (s.kind === "follow_gate") {
       msgText = s.text;
       if (s.profileUrl) btn = { title: s.buttonTitle || "Visit profile", url: s.profileUrl };
-      stopAfterSend = true; // non-followers get the follow request; the rest of the flow waits for their next message
+      stopAfterSend = true; // Only the run-bound confirmation button can resume this gate.
     } else if (s.kind === "send_payment" || s.kind === "send_coupon") {
       const r = await import("@/lib/revenue.server");
       const target = { organizationId: st.organizationId, platform: st.platform, externalUserId: st.externalUserId, conversationId: st.conversationId, socialAccountId: st.socialAccountId };
@@ -333,7 +334,7 @@ async function continueLeadForm(admin: AdminClient, ev: FlowEvent, flags: Record
   const step = flow?.steps[run.next_step];
   if (prev.gate || prev.tap) { await finish("awaiting_reply"); return false; }
   if (!flow || !prev.form || step?.kind !== "lead_form") { await finish("cancelled", "flow_off_or_changed"); return false; }
-  const st: RunState = { ...prev, body: ev.body, channel: ev.channel, externalId: ev.externalId };
+  const st: RunState = { ...prev, channel: ev.channel, externalId: ev.externalId, originalCommentId: prev.originalCommentId ?? (prev.channel === "comment" ? prev.externalId : null) };
   const form = { ...prev.form, answers: { ...prev.form.answers } };
   const field = step.fields[form.field];
   if (!field) { await finish("cancelled", "form_changed"); return false; }

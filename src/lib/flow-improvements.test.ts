@@ -55,6 +55,8 @@ describe("comment opt-in sequence", () => {
   it("comment DM templates include exactly one opener before follower checks", () => {
     for (const template of FLOW_TEMPLATES.filter((t) => t.trigger === "new_comment")) {
       const f = flowFromTemplate(template.key);
+      expect(f).not.toBeNull();
+      if (!f) throw new Error("Missing template");
       const opening = f.steps.findIndex((s) => s.kind === "opening_dm");
       if (!f.steps.some((s) => ["send_dm", "follow_gate", "ask_contact", "send_payment", "send_coupon", "lead_form"].includes(s.kind))) continue;
       expect(opening).toBeGreaterThanOrEqual(0);
