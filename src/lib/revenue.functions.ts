@@ -1,12 +1,15 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
+import { validateLeadValue, type LeadField } from "@/lib/delivery-page";
+
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 type Ctx = { supabase: any; userId: string };
 const org = z.string().uuid();
+type FormConfig = { mode: "none" | "optional" | "required"; consent?: string; fields?: LeadField[] };
 const httpsUrl = z.string().trim().max(500).regex(/^https:\/\//i, "Link must start with https://");
-const formField = z.object({ key: z.string().regex(/^[a-z0-9_]{1,30}$/), label: z.string().trim().min(1).max(80), type: z.enum(["text", "email", "phone", "choice"]), required: z.boolean(), options: z.array(z.string().trim().min(1).max(30)).max(10) });
+const formField = z.object({ key: z.string().regex(/^[a-z0-9_]{1,30}$/), label: z.string().trim().min(1).max(80), type: z.enum(["text", "email", "phone", "pincode", "choice"]), required: z.boolean(), options: z.array(z.string().trim().min(1).max(30)).max(10) });
 
 async function assertMember(ctx: Ctx, organizationId: string) {
   const { data } = await ctx.supabase.from("organizations").select("id").eq("id", organizationId).maybeSingle();
@@ -86,11 +89,16 @@ export const savePage = createServerFn({ method: "POST" })
     imagePath: z.string().regex(/^[0-9a-f-]{36}\/[A-Za-z0-9._-]+$/).nullable(), showImage: z.boolean(), imageAlt: z.string().trim().max(160).nullable(),
     countdownAt: z.string().datetime().nullable(), expiryAction: z.enum(["disable_cta", "hide_cta"]), expiryMessage: z.string().trim().max(160).nullable(),
     formConfig: z.object({ mode: z.enum(["none", "optional", "required"]), consent: z.string().trim().max(300), fields: z.array(formField).max(8) }),
+    showPrice: z.boolean().default(false), priceOriginalPaise: z.number().int().min(0).max(100_000_000).nullable().default(null),
+    priceOfferPaise: z.number().int().min(0).max(100_000_000).nullable().default(null), discountLabel: z.string().trim().max(40).nullable().default(null),
+    couponCode: z.string().trim().toUpperCase().regex(/^[A-Z0-9-]{1,30}$/, "Coupon code: letters, numbers or - only").nullable().default(null),
+    couponNote: z.string().trim().max(120).nullable().default(null),
   }).parse(d))
   .handler(async ({ data, context }) => {
     const row = { organization_id: data.organizationId, slug: data.slug, title: data.title, body: data.body, button_label: data.buttonLabel, button_url: data.buttonUrl, active: data.active,
       image_path: data.imagePath, show_image: data.showImage, image_alt: data.imageAlt, countdown_at: data.countdownAt, expiry_action: data.expiryAction, expiry_message: data.expiryMessage,
-      form_config: data.formConfig };
+      form_config: data.formConfig, show_price: data.showPrice, price_original_paise: data.priceOriginalPaise, price_offer_paise: data.priceOfferPaise,
+      discount_label: data.discountLabel, coupon_code: data.couponCode, coupon_note: data.couponNote };
     const q = (context as Ctx).supabase.from("delivery_pages");
     if (data.id) {
       const { error } = await q.update(row).eq("id", data.id).eq("organization_id", data.organizationId);
@@ -182,14 +190,16 @@ export const getPublicPage = createServerFn({ method: "GET" })
   .inputValidator((d: unknown) => z.object({ slug: z.string().regex(/^[a-z0-9-]{3,60}$/) }).parse(d))
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: p } = await supabaseAdmin.from("delivery_pages").select("id, organization_id, title, body, button_label, button_url, views, image_path, show_image, image_alt, countdown_at, expiry_action, expiry_message, form_config")
+    const { data: p } = await supabaseAdmin.from("delivery_pages").select("id, organization_id, title, body, button_label, button_url, views, image_path, show_image, image_alt, countdown_at, expiry_action, expiry_message, form_config, show_price, price_original_paise, price_offer_paise, discount_label, coupon_code, coupon_note")
       .eq("slug", data.slug).eq("active", true).maybeSingle();
     if (!p) return null;
     await supabaseAdmin.from("delivery_pages").update({ views: (p.views ?? 0) + 1 }).eq("id", p.id);
     await supabaseAdmin.from("revenue_events").insert({ organization_id: p.organization_id, kind: "page_view", ref_id: p.id });
     return { title: p.title as string, body: (p.body as string | null) ?? "", buttonLabel: p.button_label as string | null, hasButton: !!p.button_url,
       imageUrl: p.show_image && p.image_path ? `/api/public/delivery-image/${p.image_path as string}` : null, imageAlt: p.image_alt as string | null,
-      countdownAt: p.countdown_at as string | null, expiryAction: p.expiry_action as "disable_cta" | "hide_cta", expiryMessage: p.expiry_message as string | null };
+      countdownAt: p.countdown_at as string | null, expiryAction: p.expiry_action as "disable_cta" | "hide_cta", expiryMessage: p.expiry_message as string | null,
+      price: p.show_price ? { originalPaise: p.price_original_paise as number | null, offerPaise: p.price_offer_paise as number | null, label: p.discount_label as string | null, couponCode: p.coupon_code as string | null, couponNote: p.coupon_note as string | null } : null,
+      formConfig: p.form_config as FormConfig, };
   });
 
 /** Public buyer-bound offer. The token identifies only one stored payment link. */
@@ -198,7 +208,7 @@ export const getOfferPage = createServerFn({ method: "GET" })
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: link } = await supabaseAdmin.from("payment_links")
-      .select("id, organization_id, delivery_pages!inner(id, title, body, button_label, active, image_path, show_image, image_alt, countdown_at, expiry_action, expiry_message, form_config)")
+      .select("id, organization_id, delivery_pages!inner(id, title, body, button_label, active, image_path, show_image, image_alt, countdown_at, expiry_action, expiry_message, form_config, show_price, price_original_paise, price_offer_paise, discount_label, coupon_code, coupon_note)")
       .eq("offer_token", data.token).maybeSingle();
     const p = Array.isArray(link?.delivery_pages) ? link?.delivery_pages[0] : link?.delivery_pages;
     if (!link || !p?.active) return null;
@@ -206,7 +216,8 @@ export const getOfferPage = createServerFn({ method: "GET" })
     return { title: p.title as string, body: (p.body as string | null) ?? "", buttonLabel: (p.button_label as string | null) || "Pay now",
       imageUrl: p.show_image && p.image_path ? `/api/public/delivery-image/${p.image_path as string}` : null, imageAlt: p.image_alt as string | null,
       countdownAt: p.countdown_at as string | null, expiryAction: p.expiry_action as "disable_cta" | "hide_cta", expiryMessage: p.expiry_message as string | null,
-      formConfig: p.form_config as { mode: "none" | "optional" | "required"; consent?: string; fields?: Array<{ key: string; label: string; type: "text" | "email" | "phone" | "choice"; required: boolean; options: string[] }> } };
+      price: p.show_price ? { originalPaise: p.price_original_paise as number | null, offerPaise: p.price_offer_paise as number | null, label: p.discount_label as string | null, couponCode: p.coupon_code as string | null, couponNote: p.coupon_note as string | null } : null,
+      formConfig: p.form_config as FormConfig, };
   });
 
 export const submitOfferForm = createServerFn({ method: "POST" })
@@ -222,12 +233,9 @@ export const submitOfferForm = createServerFn({ method: "POST" })
     const clean: Record<string, string> = {};
     for (const field of fields) {
       const value = String(data.answers[field.key] ?? "").trim();
-      if (field.required && !value) throw new Error("Please complete all required fields");
-      if (!value) continue;
-      if (field.type === "email" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) throw new Error("Enter a valid email address");
-      if (field.type === "phone" && value.replace(/\D/g, "").length < 10) throw new Error("Enter a valid phone number");
-      if (field.type === "choice" && !field.options.includes(value)) throw new Error("Choose one of the available options");
-      clean[field.key] = value;
+      const problem = validateLeadValue(field as LeadField, value);
+      if (problem) throw new Error(problem);
+      if (value) clean[field.key] = value;
     }
     const key = { organization_id: link.organization_id, platform: link.platform, external_user_id: link.external_user_id };
     const { data: current } = await supabaseAdmin.from("contact_profiles").select("email, phone, custom_fields").match(key).maybeSingle();
@@ -237,5 +245,29 @@ export const submitOfferForm = createServerFn({ method: "POST" })
       updated_at: new Date().toISOString(),
     }, { onConflict: "organization_id,platform,external_user_id" });
     await supabaseAdmin.from("revenue_events").insert({ organization_id: link.organization_id, platform: link.platform, external_user_id: link.external_user_id, kind: "form_complete", ref_id: link.id });
+    return { ok: true };
+  });
+
+/** Public: lead form on a normal /p/ page. Stored per page; capped per hour to stop spam floods. */
+export const submitPageForm = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => z.object({ slug: z.string().regex(/^[a-z0-9-]{3,60}$/), answers: z.record(z.string(), z.string().trim().max(500)), website: z.string().max(0).optional() }).parse(d))
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: page } = await supabaseAdmin.from("delivery_pages").select("id, organization_id, form_config").eq("slug", data.slug).eq("active", true).maybeSingle();
+    const config = page?.form_config as FormConfig | null;
+    if (!page || !config || config.mode === "none") throw new Error("Form is not available");
+    const { count } = await supabaseAdmin.from("delivery_page_leads").select("id", { count: "exact", head: true })
+      .eq("delivery_page_id", page.id).gte("created_at", new Date(Date.now() - 3600_000).toISOString());
+    if ((count ?? 0) >= 300) throw new Error("Too many submissions right now. Please try again later.");
+    const clean: Record<string, string> = {};
+    for (const field of config.fields ?? []) {
+      const value = String(data.answers[field.key] ?? "").trim();
+      const problem = validateLeadValue(field, value);
+      if (problem) throw new Error(problem);
+      if (value) clean[field.key] = value;
+    }
+    const { error } = await supabaseAdmin.from("delivery_page_leads").insert({ organization_id: page.organization_id, delivery_page_id: page.id, answers: clean });
+    if (error) throw new Error("Could not save details");
+    await supabaseAdmin.from("revenue_events").insert({ organization_id: page.organization_id, kind: "form_complete", ref_id: page.id });
     return { ok: true };
   });
