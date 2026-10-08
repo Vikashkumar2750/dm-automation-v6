@@ -7,6 +7,7 @@
  * All org safety settings (pause, quiet hours, caps, opt-out) apply.
  */
 import { sanitizeFlows, flowTriggerFor, conditionPasses, leadAnswer, type Flow, type FlowStep, type LeadField } from "@/lib/flows";
+import { callbackMatches, flowCallbackPayload, parseFlowCallback, type FlowCallback } from "@/lib/flow-callback";
 import { extractContactInfo } from "@/lib/crm";
 
 type AdminClient = import("@supabase/supabase-js").SupabaseClient;
@@ -23,11 +24,12 @@ export type FlowEvent = {
   externalUserId: string;
   externalId: string | null;
   trigger?: string;
+  payload?: string | null;
 };
 
 type FormProgress = { step: number; field: number; answers: Record<string, string> };
 type GateProgress = { step: number; tries: number };
-type RunState = FlowEvent & { usedCommentReply?: boolean; form?: FormProgress; gate?: GateProgress };
+type RunState = FlowEvent & { usedCommentReply?: boolean; form?: FormProgress; gate?: GateProgress; tap?: { stage: "opener" | "follow"; nonce: string; stepId: string }; originalCommentId?: string | null };
 const FORM_TIMEOUT_MS = 24 * 3600_000;
 export const FLOW_FOLLOWED_PAYLOAD = "FLOW_FOLLOWED";
 const FOLLOWED_TITLE = "I followed ✅";
@@ -172,8 +174,9 @@ async function executeSteps(admin: AdminClient, flow: Flow, st: RunState, from: 
       return true;
     }
     if (s.kind === "lead_form") {
-      if (s.fields.length === 0) continue;
-      const sent = await sendFormQuestion(admin, flow, st, s.fields[0]!, s.intro);
+      const first = s.fields[0];
+      if (!first) continue;
+      const sent = await sendFormQuestion(admin, flow, st, first, s.intro);
       if (sent) {
         await admin.from("flow_runs").insert({
           organization_id: st.organizationId, conversation_id: st.conversationId, flow_id: flow.id, flow_name: flow.name,
@@ -217,7 +220,11 @@ async function executeSteps(admin: AdminClient, flow: Flow, st: RunState, from: 
     let msgText = "";
     let btn: { title: string; url: string } | null = null;
     let stopAfterSend = false;
-    if (s.kind === "send_dm") {
+    if (s.kind === "opening_dm") {
+      if (st.channel !== "comment" || st.usedCommentReply) { await log(admin, st, "skipped", `${flow.name}:opener_not_first_private_reply`); return true; }
+      msgText = s.text;
+      stopAfterSend = true;
+    } else if (s.kind === "send_dm") {
       msgText = s.text;
       if (s.buttonTitle && s.buttonUrl) btn = { title: s.buttonTitle, url: s.buttonUrl };
     } else if (s.kind === "ask_contact") {
@@ -247,8 +254,24 @@ async function executeSteps(admin: AdminClient, flow: Flow, st: RunState, from: 
     const viaComment = st.channel === "comment" && st.externalId && !st.usedCommentReply;
     const recipient = viaComment ? { comment_id: st.externalId } : { id: st.externalUserId };
     const buttons: Parameters<typeof a.flowButtonMessages>[1] = btn ? [{ type: "web_url", url: btn.url, title: btn.title }] : [];
-    if (s.kind === "follow_gate") buttons.push({ type: "postback", title: FOLLOWED_TITLE, payload: FLOW_FOLLOWED_PAYLOAD });
-    const shapes = buttons.length ? a.flowButtonMessages(msgText, buttons) : [{ text: msgText }];
+    let pendingId: string | null = null;
+    let pendingState: RunState | null = null;
+    let tapPayload = "";
+    if (s.kind === "opening_dm" || s.kind === "follow_gate") {
+      pendingId = crypto.randomUUID();
+      const tap = { stage: s.kind === "opening_dm" ? "opener" as const : "follow" as const, nonce: crypto.randomUUID(), stepId: s.id };
+      pendingState = { ...st, tap, ...(s.kind === "follow_gate" ? { gate: { step: i, tries: st.gate?.tries ?? 0 } } : {}) };
+      tapPayload = flowCallbackPayload({ runId: pendingId, ...tap });
+      const { error } = await admin.from("flow_runs").insert({
+        id: pendingId, organization_id: st.organizationId, conversation_id: st.conversationId,
+        flow_id: flow.id, flow_name: flow.name, state: pendingState as never, next_step: i,
+        status: "running", resume_at: new Date(Date.now() + FORM_TIMEOUT_MS).toISOString(),
+      });
+      if (error) { await log(admin, st, "failed", `${flow.name}:pending_tap_save_failed`); return true; }
+    }
+    if (s.kind === "follow_gate") buttons.push({ type: "postback", title: FOLLOWED_TITLE, payload: tapPayload });
+    const shapes = s.kind === "opening_dm" ? a.openerMessages(msgText, s.buttonTitle, tapPayload)
+      : buttons.length ? a.flowButtonMessages(msgText, buttons) : [{ text: msgText }];
     let sentId: string | undefined;
     let err = "";
     for (const message of shapes) {
@@ -256,19 +279,16 @@ async function executeSteps(admin: AdminClient, flow: Flow, st: RunState, from: 
       if (!r.error) { sentId = r.id; err = ""; break; }
       err = r.error;
     }
-    if (err) { await log(admin, st, "failed", `${flow.name}:${err}`); return true; }
+    if (err) {
+      if (pendingId) await admin.from("flow_runs").update({ status: "failed", detail: "prompt_send_failed" }).eq("id", pendingId);
+      await log(admin, st, "failed", `${flow.name}:${err}`); return true;
+    }
     if (viaComment) st.usedCommentReply = true;
     await recordOutbound(admin, st, flow, (viaComment ? "[private reply] " : "") + msgText + (btn ? `\n[${btn.title}] ${btn.url}` : ""), sentId ?? null);
     await log(admin, st, "sent", `${flow.name}:${s.kind}`);
     acted = true;
-    if (s.kind === "follow_gate") {
-      // Wait for the "I followed" tap (or any next DM), then re-check follow status.
-      const { form: _f, ...rest } = st;
-      await admin.from("flow_runs").insert({
-        organization_id: st.organizationId, conversation_id: st.conversationId, flow_id: flow.id, flow_name: flow.name,
-        state: { ...rest, gate: { step: i, tries: (st.gate?.tries ?? 0) } } as never, next_step: i, status: "awaiting_reply",
-        resume_at: new Date(Date.now() + FORM_TIMEOUT_MS).toISOString(),
-      });
+    if (pendingId && pendingState) {
+      await admin.from("flow_runs").update({ status: "awaiting_reply", state: { ...pendingState, usedCommentReply: st.usedCommentReply } as never }).eq("id", pendingId).eq("status", "running");
     }
     if (stopAfterSend) return true;
   }
@@ -300,7 +320,7 @@ async function sendFormQuestion(admin: AdminClient, flow: Flow, st: RunState, f:
 async function continueLeadForm(admin: AdminClient, ev: FlowEvent, flags: Record<string, unknown>): Promise<boolean> {
   if (ev.channel === "comment") return false;
   const { data: run } = await admin.from("flow_runs").select("id, flow_id, state, next_step")
-    .eq("conversation_id", ev.conversationId).eq("status", "awaiting_reply").gt("resume_at", new Date().toISOString())
+    .eq("conversation_id", ev.conversationId).not("state->form", "is", null).eq("status", "awaiting_reply").gt("resume_at", new Date().toISOString())
     .order("created_at", { ascending: false }).limit(1).maybeSingle();
   if (!run) return false;
   const { data: claimed } = await admin.from("flow_runs").update({ status: "running", updated_at: new Date().toISOString() })
@@ -311,14 +331,7 @@ async function continueLeadForm(admin: AdminClient, ev: FlowEvent, flags: Record
   const flow = sanitizeFlows(flags[`flows_cfg_${ev.organizationId}`]).find((f) => f.id === run.flow_id && f.active);
   const prev = run.state as RunState;
   const step = flow?.steps[run.next_step];
-  if (flow && prev.gate && step?.kind === "follow_gate") {
-    // "I followed" tap (or any reply): the follow_gate step re-checks follow status itself.
-    await finish("done", "gate_reply");
-    if (prev.gate.tries >= MAX_GATE_TRIES) { await log(admin, prev, "skipped", `${flow.name}:gate_gave_up`); return true; }
-    const st: RunState = { ...prev, body: ev.body, channel: ev.channel, externalId: ev.externalId, gate: { step: run.next_step, tries: prev.gate.tries + 1 } };
-    await executeSteps(admin, flow, st, run.next_step);
-    return true;
-  }
+  if (prev.gate || prev.tap) { await finish("awaiting_reply"); return false; }
   if (!flow || !prev.form || step?.kind !== "lead_form") { await finish("cancelled", "flow_off_or_changed"); return false; }
   const st: RunState = { ...prev, body: ev.body, channel: ev.channel, externalId: ev.externalId };
   const form = { ...prev.form, answers: { ...prev.form.answers } };
@@ -356,6 +369,65 @@ async function continueLeadForm(admin: AdminClient, ev: FlowEvent, flags: Record
   return true;
 }
 
+/** Resolve flow payload to its original account before inbox ingestion. No rules table is touched. */
+export async function resolveFlowTapAccount(admin: AdminClient, payload: string | null, receivingId: string | null, senderId: string | null) {
+  const callback = parseFlowCallback(payload);
+  if (!callback || !receivingId || !senderId) return null;
+  const { data: run } = await admin.from("flow_runs").select("organization_id, state").eq("id", callback.runId).maybeSingle();
+  const st = run?.state as RunState | undefined;
+  if (!st?.socialAccountId || !st.tap || st.externalUserId !== senderId || st.tap.nonce !== callback.nonce || st.tap.stage !== callback.stage) return null;
+  const { data: account } = await admin.from("social_accounts").select("id, organization_id, platform, external_id, metadata").eq("id", st.socialAccountId).maybeSingle();
+  const pageId = (account?.metadata as { page_id?: string } | null)?.page_id;
+  if (!account || account.organization_id !== run?.organization_id || st.organizationId !== account.organization_id || st.platform !== account.platform ||
+    (receivingId !== account.external_id && receivingId !== pageId)) return null;
+  return account as { id: string; organization_id: string; platform: "instagram" | "facebook" };
+}
+
+/** Run-bound stage/nonce/contact checks and compare-and-set prevent duplicate or unrelated taps. */
+export async function continueFlowTap(admin: AdminClient, ev: FlowEvent, flags: Record<string, unknown>): Promise<boolean> {
+  if (!ev.payload?.startsWith("FLOW_TAP:")) return false;
+  const callback: FlowCallback | null = parseFlowCallback(ev.payload);
+  if (!callback || ev.channel === "comment" || !liveFlowsActive(flags, ev.organizationId)) return true;
+  const { data: run } = await admin.from("flow_runs").select("id, flow_id, state, next_step")
+    .eq("id", callback.runId).eq("organization_id", ev.organizationId).eq("status", "awaiting_reply")
+    .gt("resume_at", new Date().toISOString()).maybeSingle();
+  if (!run) return true;
+  const prev = run.state as RunState;
+  const flow = sanitizeFlows(flags[`flows_cfg_${ev.organizationId}`]).find((f) => f.id === run.flow_id && f.active);
+  const step = flow?.steps[run.next_step];
+  if (!prev.tap || !step || !callbackMatches(callback, prev.tap, prev, ev, step.id)) return true;
+  if (step.disabled || (callback.stage === "opener" ? step.kind !== "opening_dm" : step.kind !== "follow_gate")) return true;
+  const block = await safetyBlock(admin, ev);
+  if (block) { await log(admin, ev, "skipped", `${flow?.name}:${block}`); return true; }
+  const { data: claimed } = await admin.from("flow_runs").update({ status: "running", updated_at: new Date().toISOString() })
+    .eq("id", run.id).eq("status", "awaiting_reply").select("id");
+  if (!claimed?.length || !flow) return true;
+  try {
+    const { tap: _tap, form: _form, ...rest } = prev;
+    const st: RunState = { ...rest, conversationId: ev.conversationId, externalUserId: ev.externalUserId,
+      channel: ev.channel, externalId: ev.externalId, usedCommentReply: true,
+      originalCommentId: prev.originalCommentId ?? prev.externalId };
+    await log(admin, ev, "matched", `${flow.name}:${callback.stage}_tap_received`);
+    if (callback.stage === "follow") {
+      const c = await credentials(admin, st);
+      const a = await import("@/lib/automation.server");
+      const followed = c ? await a.flowCheckFollows(st.platform, st.externalUserId, c.token) : null;
+      if (followed === true) {
+        const { gate: _gate, ...ungated } = st;
+        await executeSteps(admin, flow, ungated, run.next_step + 1);
+      } else if ((prev.gate?.tries ?? 0) < MAX_GATE_TRIES) {
+        st.gate = { step: run.next_step, tries: (prev.gate?.tries ?? 0) + 1 };
+        await executeSteps(admin, flow, st, run.next_step);
+      } else await log(admin, ev, "skipped", `${flow.name}:gate_gave_up`);
+    } else await executeSteps(admin, flow, st, run.next_step + 1);
+    await admin.from("flow_runs").update({ status: "done", detail: `${callback.stage}_tap_received`, updated_at: new Date().toISOString() }).eq("id", run.id).eq("status", "running");
+  } catch (e) {
+    await admin.from("flow_runs").update({ status: "failed", detail: "tap_resume_failed" }).eq("id", run.id).eq("status", "running");
+    console.error("flow tap resume failed", e);
+  }
+  return true;
+}
+
 /** Phase D: save an email/phone found in an incoming DM to the CRM (never overwrites, never sends). */
 async function captureContactInfo(admin: AdminClient, ev: FlowEvent) {
   try {
@@ -383,6 +455,7 @@ export async function runLiveFlows(admin: AdminClient, ev: FlowEvent, startedAt:
     const { data } = await admin.from("platform_settings").select("feature_flags").eq("id", true).maybeSingle();
     const flags = (data?.feature_flags as Record<string, unknown> | null) ?? {};
     if (!liveFlowsActive(flags, ev.organizationId)) return;
+    if (ev.payload?.startsWith("FLOW_TAP:")) { await continueFlowTap(admin, ev, flags); return; }
     const { count: ruleSent } = await admin.from("automation_runs").select("id", { count: "exact", head: true })
       .eq("conversation_id", ev.conversationId).eq("status", "sent").not("rule_id", "is", null).gte("created_at", startedAt);
     if ((ruleSent ?? 0) === 0 && (await continueLeadForm(admin, ev, flags))) return;
