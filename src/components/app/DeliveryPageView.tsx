@@ -1,5 +1,5 @@
-import { CheckCircle2, ShieldCheck } from "lucide-react";
-import { Fragment } from "react";
+import { CheckCircle2, Clock3, ShieldCheck } from "lucide-react";
+import { Fragment, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { inlineParts, parseBody, type Block } from "@/lib/delivery-page";
@@ -9,7 +9,19 @@ function Inline({ text }: { text: string }) {
 }
 
 /** Landing-page style rendering of a delivery page (used publicly and as a live preview). */
-export function DeliveryPageView({ title, body, buttonLabel, buttonHref }: { title: string; body: string; buttonLabel?: string | null; buttonHref?: string | null }) {
+export function DeliveryPageView({ title, body, buttonLabel, buttonHref, imageUrl, imageAlt, countdownAt, expiryAction = "disable_cta", expiryMessage }: {
+  title: string; body: string; buttonLabel?: string | null; buttonHref?: string | null; imageUrl?: string | null; imageAlt?: string | null;
+  countdownAt?: string | null; expiryAction?: "disable_cta" | "hide_cta"; expiryMessage?: string | null;
+}) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!countdownAt) return;
+    const timer = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, [countdownAt]);
+  const remaining = countdownAt ? Math.max(0, new Date(countdownAt).getTime() - now) : 0;
+  const expired = Boolean(countdownAt) && remaining === 0;
+  const countdown = remaining ? [Math.floor(remaining / 86400000), Math.floor(remaining / 3600000) % 24, Math.floor(remaining / 60000) % 60, Math.floor(remaining / 1000) % 60] : [];
   const blocks = parseBody(body);
   const hasH1 = blocks[0]?.t === "h1";
   const heading = hasH1 ? (blocks[0] as { text: string }).text : title;
@@ -17,9 +29,9 @@ export function DeliveryPageView({ title, body, buttonLabel, buttonHref }: { tit
   const intro = rest[0]?.t === "p" ? (rest[0] as { text: string }).text : null;
   const content = intro ? rest.slice(1) : rest;
   const faqs = content.filter((b): b is Extract<Block, { t: "faq" }> => b.t === "faq");
-  const cta = buttonHref ? (
+  const cta = buttonHref && !(expired && expiryAction === "hide_cta") ? (
     <Button asChild size="lg" className="h-12 w-full rounded-xl text-base shadow-lg sm:w-auto sm:px-10">
-      <a href={buttonHref} rel="nofollow">{buttonLabel || "Open"}</a>
+      <a href={expired ? undefined : buttonHref} aria-disabled={expired} onClick={expired ? (e) => e.preventDefault() : undefined} rel="nofollow">{expired ? (expiryMessage || "Offer ended") : (buttonLabel || "Open")}</a>
     </Button>
   ) : null;
 
@@ -31,6 +43,9 @@ export function DeliveryPageView({ title, body, buttonLabel, buttonHref }: { tit
         </span>
         <h1 className="mx-auto mt-5 max-w-2xl text-balance text-3xl font-bold tracking-tight text-foreground sm:text-5xl"><Inline text={heading} /></h1>
         {intro && <p className="mx-auto mt-4 max-w-xl text-pretty text-base text-muted-foreground sm:text-lg"><Inline text={intro} /></p>}
+        {imageUrl && <div className="mx-auto mt-7 aspect-[4/3] w-full max-w-xl overflow-hidden rounded-xl border border-border bg-muted"><img src={imageUrl} alt={imageAlt || title} className="size-full object-cover" /></div>}
+        {countdownAt && !expired && <div className="mx-auto mt-6 max-w-md rounded-lg border border-border bg-card p-3 text-card-foreground"><p className="mb-2 flex items-center justify-center gap-2 text-sm font-medium"><Clock3 className="size-4 text-primary" /> Offer ends in</p><div className="grid grid-cols-4 gap-2">{countdown.map((n, i) => <div key={i} className="rounded-md bg-muted px-2 py-2"><strong className="block text-lg">{String(n).padStart(2, "0")}</strong><span className="text-[10px] text-muted-foreground">{["Days", "Hours", "Mins", "Secs"][i]}</span></div>)}</div></div>}
+        {expired && <p className="mx-auto mt-6 max-w-md rounded-lg border border-border bg-muted p-3 text-sm text-muted-foreground">{expiryMessage || "This offer has ended."}</p>}
         {cta && <div className="mt-8">{cta}</div>}
       </section>
 

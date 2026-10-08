@@ -6,6 +6,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 type Ctx = { supabase: any; userId: string };
 const org = z.string().uuid();
 const httpsUrl = z.string().trim().max(500).regex(/^https:\/\//i, "Link must start with https://");
+const formField = z.object({ key: z.string().regex(/^[a-z0-9_]{1,30}$/), label: z.string().trim().min(1).max(80), type: z.enum(["text", "email", "phone", "choice"]), required: z.boolean(), options: z.array(z.string().trim().min(1).max(30)).max(10) });
 
 async function assertMember(ctx: Ctx, organizationId: string) {
   const { data } = await ctx.supabase.from("organizations").select("id").eq("id", organizationId).maybeSingle();
@@ -82,13 +83,23 @@ export const savePage = createServerFn({ method: "POST" })
     organizationId: org, id: z.string().uuid().optional(), slug: z.string().regex(/^[a-z0-9-]{3,60}$/),
     title: z.string().trim().min(1).max(120), body: z.string().max(8000).nullable(),
     buttonLabel: z.string().max(40).nullable(), buttonUrl: httpsUrl.nullable(), active: z.boolean(),
+    imagePath: z.string().regex(/^[0-9a-f-]{36}\/[A-Za-z0-9._-]+$/).nullable(), showImage: z.boolean(), imageAlt: z.string().trim().max(160).nullable(),
+    countdownAt: z.string().datetime().nullable(), expiryAction: z.enum(["disable_cta", "hide_cta"]), expiryMessage: z.string().trim().max(160).nullable(),
+    formConfig: z.object({ mode: z.enum(["none", "optional", "required"]), consent: z.string().trim().max(300), fields: z.array(formField).max(8) }),
   }).parse(d))
   .handler(async ({ data, context }) => {
-    const row = { organization_id: data.organizationId, slug: data.slug, title: data.title, body: data.body, button_label: data.buttonLabel, button_url: data.buttonUrl, active: data.active };
+    const row = { organization_id: data.organizationId, slug: data.slug, title: data.title, body: data.body, button_label: data.buttonLabel, button_url: data.buttonUrl, active: data.active,
+      image_path: data.imagePath, show_image: data.showImage, image_alt: data.imageAlt, countdown_at: data.countdownAt, expiry_action: data.expiryAction, expiry_message: data.expiryMessage,
+      form_config: data.formConfig };
     const q = (context as Ctx).supabase.from("delivery_pages");
-    const { error } = data.id ? await q.update(row).eq("id", data.id).eq("organization_id", data.organizationId) : await q.insert(row);
+    if (data.id) {
+      const { error } = await q.update(row).eq("id", data.id).eq("organization_id", data.organizationId);
+      if (error) throw new Error(error.code === "23505" ? "This page address is already taken" : error.message);
+      return { ok: true, id: data.id };
+    }
+    const { data: created, error } = await q.insert(row).select("id").single();
     if (error) throw new Error(error.code === "23505" ? "This page address is already taken" : error.message);
-    return { ok: true };
+    return { ok: true, id: (created as { id: string }).id };
   });
 
 export const saveCampaign = createServerFn({ method: "POST" })
@@ -171,10 +182,60 @@ export const getPublicPage = createServerFn({ method: "GET" })
   .inputValidator((d: unknown) => z.object({ slug: z.string().regex(/^[a-z0-9-]{3,60}$/) }).parse(d))
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: p } = await supabaseAdmin.from("delivery_pages").select("id, organization_id, title, body, button_label, button_url, views")
+    const { data: p } = await supabaseAdmin.from("delivery_pages").select("id, organization_id, title, body, button_label, button_url, views, image_path, show_image, image_alt, countdown_at, expiry_action, expiry_message, form_config")
       .eq("slug", data.slug).eq("active", true).maybeSingle();
     if (!p) return null;
     await supabaseAdmin.from("delivery_pages").update({ views: (p.views ?? 0) + 1 }).eq("id", p.id);
     await supabaseAdmin.from("revenue_events").insert({ organization_id: p.organization_id, kind: "page_view", ref_id: p.id });
-    return { title: p.title as string, body: (p.body as string | null) ?? "", buttonLabel: p.button_label as string | null, hasButton: !!p.button_url };
+    return { title: p.title as string, body: (p.body as string | null) ?? "", buttonLabel: p.button_label as string | null, hasButton: !!p.button_url,
+      imageUrl: p.show_image && p.image_path ? `/api/public/delivery-image/${p.image_path as string}` : null, imageAlt: p.image_alt as string | null,
+      countdownAt: p.countdown_at as string | null, expiryAction: p.expiry_action as "disable_cta" | "hide_cta", expiryMessage: p.expiry_message as string | null };
+  });
+
+/** Public buyer-bound offer. The token identifies only one stored payment link. */
+export const getOfferPage = createServerFn({ method: "GET" })
+  .inputValidator((d: unknown) => z.object({ token: z.string().uuid() }).parse(d))
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: link } = await supabaseAdmin.from("payment_links")
+      .select("id, organization_id, delivery_pages!inner(id, title, body, button_label, active, image_path, show_image, image_alt, countdown_at, expiry_action, expiry_message, form_config)")
+      .eq("offer_token", data.token).maybeSingle();
+    const p = Array.isArray(link?.delivery_pages) ? link?.delivery_pages[0] : link?.delivery_pages;
+    if (!link || !p?.active) return null;
+    await supabaseAdmin.from("revenue_events").insert({ organization_id: link.organization_id, kind: "page_view", ref_id: link.id });
+    return { title: p.title as string, body: (p.body as string | null) ?? "", buttonLabel: (p.button_label as string | null) || "Pay now",
+      imageUrl: p.show_image && p.image_path ? `/api/public/delivery-image/${p.image_path as string}` : null, imageAlt: p.image_alt as string | null,
+      countdownAt: p.countdown_at as string | null, expiryAction: p.expiry_action as "disable_cta" | "hide_cta", expiryMessage: p.expiry_message as string | null,
+      formConfig: p.form_config as { mode: "none" | "optional" | "required"; consent?: string; fields?: Array<{ key: string; label: string; type: "text" | "email" | "phone" | "choice"; required: boolean; options: string[] }> } };
+  });
+
+export const submitOfferForm = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => z.object({ token: z.string().uuid(), answers: z.record(z.string(), z.string().trim().max(500)) }).parse(d))
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: link } = await supabaseAdmin.from("payment_links")
+      .select("id, organization_id, platform, external_user_id, delivery_pages!inner(active, form_config)").eq("offer_token", data.token).maybeSingle();
+    const page = Array.isArray(link?.delivery_pages) ? link?.delivery_pages[0] : link?.delivery_pages;
+    const config = page?.form_config as { mode?: string; consent?: string; fields?: Array<{ key: string; type: string; required: boolean; options: string[] }> } | null;
+    if (!link || !page?.active || !config || config.mode === "none") throw new Error("Form is not available");
+    const fields = config.fields ?? [];
+    const clean: Record<string, string> = {};
+    for (const field of fields) {
+      const value = String(data.answers[field.key] ?? "").trim();
+      if (field.required && !value) throw new Error("Please complete all required fields");
+      if (!value) continue;
+      if (field.type === "email" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) throw new Error("Enter a valid email address");
+      if (field.type === "phone" && value.replace(/\D/g, "").length < 10) throw new Error("Enter a valid phone number");
+      if (field.type === "choice" && !field.options.includes(value)) throw new Error("Choose one of the available options");
+      clean[field.key] = value;
+    }
+    const key = { organization_id: link.organization_id, platform: link.platform, external_user_id: link.external_user_id };
+    const { data: current } = await supabaseAdmin.from("contact_profiles").select("email, phone, custom_fields").match(key).maybeSingle();
+    await supabaseAdmin.from("contact_profiles").upsert({ ...key,
+      email: current?.email || (clean["email"] ?? null), phone: current?.phone || (clean["phone"] ?? null),
+      custom_fields: { ...((current?.custom_fields as Record<string, unknown> | null) ?? {}), ...clean, delivery_form_consent: config.consent || "accepted" },
+      updated_at: new Date().toISOString(),
+    }, { onConflict: "organization_id,platform,external_user_id" });
+    await supabaseAdmin.from("revenue_events").insert({ organization_id: link.organization_id, platform: link.platform, external_user_id: link.external_user_id, kind: "form_complete", ref_id: link.id });
+    return { ok: true };
   });

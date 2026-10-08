@@ -25,7 +25,7 @@ async function event(admin: AdminClient, t: Pick<RevenueTarget, "organizationId"
 }
 
 /** Create a per-customer payment link (Razorpay when keys exist, else the product's own link). */
-export async function createPaymentLinkFor(admin: AdminClient, t: RevenueTarget, productId: string): Promise<{ url: string; amount: number; name: string } | { error: string }> {
+export async function createPaymentLinkFor(admin: AdminClient, t: RevenueTarget, productId: string): Promise<{ id: string; url: string; amount: number; name: string } | { error: string }> {
   const { data: p } = await admin.from("revenue_products").select("id, name, description, price_paise, currency, manual_url, active")
     .eq("id", productId).eq("organization_id", t.organizationId).maybeSingle();
   if (!p || !p.active) return { error: "product_missing" };
@@ -62,7 +62,23 @@ export async function createPaymentLinkFor(admin: AdminClient, t: RevenueTarget,
     platform: t.platform, external_user_id: t.externalUserId, provider, provider_link_id: linkId, url, amount_paise: p.price_paise,
   }).select("id").single();
   await event(admin, t, "payment_link", row?.id ?? null, p.price_paise);
-  return { url, amount: p.price_paise as number, name: p.name as string };
+  if (!row?.id) return { error: "payment_link_save_failed" };
+  return { id: row.id as string, url, amount: p.price_paise as number, name: p.name as string };
+}
+
+/** Create a buyer-bound offer page whose CTA resolves only to this payment link. */
+export async function createOfferLinkFor(admin: AdminClient, t: RevenueTarget, productId: string, pageId: string) {
+  const { data: page } = await admin.from("delivery_pages").select("id").eq("id", pageId)
+    .eq("organization_id", t.organizationId).eq("active", true).maybeSingle();
+  if (!page) return { error: "delivery_page_missing" } as const;
+  const payment = await createPaymentLinkFor(admin, t, productId);
+  if ("error" in payment) return payment;
+  const token = crypto.randomUUID();
+  const { error } = await admin.from("payment_links").update({ delivery_page_id: page.id, offer_token: token }).eq("id", payment.id)
+    .eq("organization_id", t.organizationId).eq("external_user_id", t.externalUserId);
+  if (error) return { error: "offer_link_save_failed" } as const;
+  const origin = (process.env["PUBLIC_APP_URL"] || "https://autodm.techaasvik.com").replace(/\/$/, "");
+  return { ...payment, offerUrl: `${origin}/o/${token}` };
 }
 
 /** Give a contact one unique code per campaign (same code again if already issued). */

@@ -73,7 +73,7 @@ Use a **hybrid funnel**, not one large form in the middle of the DM automation.
 - Update the Follow Gate card and dry-run presentation in the Flow Builder route.
 - Improve the `all_in_one` definition and add the product/delivery-page setup controls used by its offer sequence.
 - Reuse existing products, delivery pages, CRM custom fields and payment-link creation. Add only the narrow association/token storage needed for a buyer-specific delivery-page payment CTA; verify the existing schema and authorization before choosing the migration shape.
-- Extend delivery-page data with optional product-image reference, image visibility, countdown deadline/time zone and expiry action. Store uploaded images in protected project storage with workspace-scoped write access and public read access only for active public-page assets.
+- Extend delivery-page data with optional product-image reference, image visibility, countdown deadline/time zone and expiry action. Store uploaded images in the new private delivery-page image bucket with workspace-scoped write access. Because public buckets are blocked by workspace policy, serve active-page images through a narrowly scoped public resolver rather than exposing the bucket.
 - Render the page from structured, reorderable sections while preserving safe support for existing formatted page bodies. Existing delivery pages keep their current appearance until edited; no silent content rewrite.
 - Validate delivery-page submissions and payment resolution on the server, bind short-lived/unguessable offer tokens to the workspace and generated payment link, and never expose payment credentials.
 - If needed, add a presentation-only outcome for the confirmation button; keep callback generation and live sending logic unchanged.

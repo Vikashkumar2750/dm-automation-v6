@@ -85,3 +85,6 @@ Real Meta + YouTube credentials are available when we reach OAuth phases.
 - [x] Canvas-local anchored wheel and keyboard zoom
 - [x] Regression tests (179 passing), signed-in browser scrolling/zoom checks and guide updates
 - [ ] Owner: deployed Instagram/Facebook opener → follow tap delivery verification
+- [x] Flow Builder: visible automatic “I followed” preview and advanced All-in-one qualification-to-sale template
+- [x] Buyer-bound offer page step with in-place product/page setup and personal payment CTA
+- [x] Delivery pages: optional private product image, fixed countdown/expiry state, professional format and hybrid form configuration

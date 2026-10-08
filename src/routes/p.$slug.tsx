@@ -31,7 +31,8 @@ function DeliveryPage() {
   const { slug } = Route.useParams();
   return (
     <main className="min-h-screen">
-      <DeliveryPageView title={page.title} body={page.body} buttonLabel={page.buttonLabel} buttonHref={page.hasButton ? `/api/public/pg/${slug}` : null} />
+      <DeliveryPageView title={page.title} body={page.body} buttonLabel={page.buttonLabel} buttonHref={page.hasButton ? `/api/public/pg/${slug}` : null}
+        imageUrl={page.imageUrl} imageAlt={page.imageAlt} countdownAt={page.countdownAt} expiryAction={page.expiryAction} expiryMessage={page.expiryMessage} />
     </main>
   );
 }

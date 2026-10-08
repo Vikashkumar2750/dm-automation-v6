@@ -32,8 +32,16 @@ No Razorpay? Add your own payment link (UPI / Instamojo / any https link) on eac
 
 ## 5. Delivery pages
 
-**How it works:** a simple page for your final link (like link-in-bio) with title, text and one button. Views and clicks are counted.
-**How to use:** create the page, copy its link, and use it as the button link in any DM.
+**How it works:** a professionally formatted offer or delivery page with a headline, benefits, proof, FAQ and repeated action button. You can show a product image, set one real fixed deadline, and choose whether an expired button is hidden or disabled. Flow offer pages bind the Pay now button to that buyer’s personal payment link instead of exposing payment details in the page address. Views, form completion and clicks are counted.
+
+**How to use:**
+1. Start from a ready-made design or write with `#` headline, `##` sections, bullets, notes and FAQs.
+2. Optionally upload a product image and switch **Show product image** on or off.
+3. Optionally choose a real end date/time and expiry behaviour. The timer never resets per visitor.
+4. Choose no form for fast purchases, optional form for normal lead capture, or required form only when fulfilment genuinely needs the detail.
+5. In Flow Builder, add **Offer / delivery page**, choose the product and page, then switch the step on. The flow creates a buyer-bound page link automatically.
+
+**Recommended form setup:** ask only one or two multiple-choice questions in DM. Put longer contact/custom fields on the page after the buyer understands the offer. This keeps momentum without losing useful lead data.
 
 ## 6. Payment reminder
 
