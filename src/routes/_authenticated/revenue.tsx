@@ -199,12 +199,27 @@ function Pages({ orgId, items }: { orgId: string; items: any[] }) {
     buttonLabel: f.buttonLabel || null, buttonUrl: f.buttonUrl || null, active: true,
   }, { onSuccess: () => setF({ title: "", slug: "", body: "", buttonLabel: "", buttonUrl: "" }) });
   return (
+    <div className="space-y-4">
     <div className="grid gap-4 lg:grid-cols-2">
       <Panel title="New delivery page">
         <div className="space-y-2">
+          <div>
+            <Label className="text-xs">Start from a ready-made design</Label>
+            <div className="mt-1 flex flex-wrap gap-1.5">
+              {DELIVERY_TEMPLATES.map((t) => (
+                <Button key={t.key} type="button" size="sm" variant="outline" title={t.hint}
+                  onClick={() => setF({ ...f, title: t.title, slug: f.slug || t.slug, body: t.body, buttonLabel: f.buttonLabel || t.buttonLabel })}>
+                  {t.name}
+                </Button>
+              ))}
+            </div>
+          </div>
           <Input placeholder="Title (e.g. Your free guide)" value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} />
           <Input placeholder="Address (e.g. free-guide)" value={f.slug} onChange={(e) => setF({ ...f, slug: slugify(e.target.value) })} />
-          <textarea rows={4} className={area} placeholder="Text shown on the page" value={f.body} onChange={(e) => setF({ ...f, body: e.target.value })} />
+          <textarea rows={12} className={`${area} font-mono text-xs`} placeholder={"# Big headline\nShort intro line\n\n## Section title\n- Point one\n- Point two\n> Highlighted note\n? Question | Answer"} value={f.body} onChange={(e) => setF({ ...f, body: e.target.value })} />
+          <p className="text-xs text-muted-foreground">
+            Formatting: <code># Headline</code> · <code>## Section</code> · <code>- point</code> · <code>&gt; note</code> · <code>? Question | Answer</code> · <code>**bold**</code>. Plain text also looks good.
+          </p>
           <div className="grid grid-cols-2 gap-2">
             <div className="flex items-center gap-1">
               <Input placeholder="Button text" value={f.buttonLabel} onChange={(e) => setF({ ...f, buttonLabel: e.target.value })} />
