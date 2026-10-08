@@ -36,7 +36,7 @@ export const Route = createFileRoute("/_authenticated/automations_/flows")({
   component: FlowsPage,
 });
 
-const RevenueOptions = createContext<{ orgId?: string; products: { id: string; name: string }[]; campaigns: { id: string; name: string }[] }>({ products: [], campaigns: [] });
+const RevenueOptions = createContext<{ orgId?: string | undefined; products: { id: string; name: string }[]; campaigns: { id: string; name: string }[] }>({ products: [], campaigns: [] });
 
 const sel = "h-9 rounded-md border border-input bg-background px-2 text-sm";
 

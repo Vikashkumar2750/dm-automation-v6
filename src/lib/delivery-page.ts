@@ -24,7 +24,7 @@ export function parseBody(body: string): Block[] {
     const line = raw.trim();
     if (!line) { flush(); continue; }
     const m = line.match(/^(#{1,3})\s+(.*)$/);
-    if (m) { flush(); out.push({ t: (["h1", "h2", "h3"] as const)[m[1].length - 1], text: m[2] }); continue; }
+    if (m) { flush(); out.push({ t: (["h1", "h2", "h3"] as const)[(m[1] ?? "#").length - 1] ?? "h3", text: m[2] ?? "" }); continue; }
     if (/^[-*•]\s+/.test(line)) {
       flush();
       const item = line.replace(/^[-*•]\s+/, "");
@@ -36,7 +36,7 @@ export function parseBody(body: string): Block[] {
     if (line.startsWith("?")) {
       flush();
       const [q, ...a] = line.replace(/^\?\s*/, "").split("|");
-      out.push({ t: "faq", q: q.trim(), a: a.join("|").trim() });
+      out.push({ t: "faq", q: (q ?? "").trim(), a: a.join("|").trim() });
       continue;
     }
     para.push(line);
