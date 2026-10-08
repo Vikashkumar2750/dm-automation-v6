@@ -23,3 +23,13 @@ If a product is linked to the page, its price fills the offer price by default, 
 - `DeliveryPageView.tsx`: new price card (strike-through, offer, badge, coupon with copy) using design tokens.
 - `revenue.tsx` form: new "Price & offer" section with info popovers, mismatch warning.
 - Update revenue guide.
+
+## Addition: lead form on the delivery page
+Today the form supports custom fields, but it only shows on buyer-specific offer links. Changes:
+- **Form type picker** on the Revenue page: "No form", "Email only", or "Full lead form".
+- **Full lead form** starts with ready fields you can switch on/off and mark required: **Name, Phone number, Email, Pincode**, plus **custom fields** (text or dropdown choice), up to 8 fields total.
+- Pincode check: exactly 6 digits. Phone: 10–15 digits. Email: valid format.
+- Form also works on the normal public page link (/p/...), not only offer links. Answers are saved as leads on the Revenue page (and to the contact when the visitor came from a DM link).
+- Live preview shows the form.
+
+Technical: add `pincode` field type to `formConfig` zod + `DeliveryLeadForm`; preset builder in `delivery-page.ts` with tests (pincode 110001 valid, 11001 invalid); new `submitPageForm` server function for `/p/$slug` with rate limiting and a new `delivery_page_leads` table (GRANT to service_role only, RLS read for workspace members).
