@@ -193,14 +193,46 @@ export const confirmPlanPayment = createServerFn({ method: "POST" })
         secret,
         `${order.provider_order_id}|${data.razorpayPaymentId}`,
       );
-      if (expected !== data.razorpaySignature) {
+      if (!secret || expected !== data.razorpaySignature) {
         await supabaseAdmin
           .from("plan_orders")
           .update({ status: "failed", error: "signature_mismatch" })
           .eq("id", order.id);
         throw new Error("signature_mismatch");
       }
+      // Confirm with Razorpay itself that this exact payment was captured for this order and amount.
+      const keyId = process.env["RAZORPAY_KEY_ID"] ?? "";
+      if (!keyId) throw new Error("payment_verification_unavailable");
+      const res = await fetch(
+        `https://api.razorpay.com/v1/payments/${encodeURIComponent(data.razorpayPaymentId)}`,
+        { headers: { Authorization: `Basic ${btoa(`${keyId}:${secret}`)}` } },
+      );
+      const payment = res.ok
+        ? ((await res.json()) as { status?: string; order_id?: string; amount?: number; currency?: string })
+        : null;
+      if (
+        !payment ||
+        payment.status !== "captured" ||
+        payment.order_id !== order.provider_order_id ||
+        payment.amount !== order.amount_paise ||
+        (payment.currency ?? "").toUpperCase() !== String(order.currency).toUpperCase()
+      ) {
+        throw new Error("payment_not_verified");
+      }
     }
+
+    // Claim the order atomically so one payment can only ever grant one upgrade.
+    const { data: claimed } = await supabaseAdmin
+      .from("plan_orders")
+      .update({
+        status: "paid",
+        provider_payment_id: data.razorpayPaymentId ?? null,
+        paid_at: new Date().toISOString(),
+      })
+      .eq("id", order.id)
+      .neq("status", "paid")
+      .select("id");
+    if (!claimed || claimed.length === 0) return { ok: true, alreadyPaid: true };
 
     const { findConfiguredOption } = await import("@/lib/platform-config.server");
     const option =
@@ -225,15 +257,6 @@ export const confirmPlanPayment = createServerFn({ method: "POST" })
         plan_source: order.mode === "demo" ? "demo_payment" : "razorpay",
       })
       .eq("id", order.organization_id);
-
-    await supabaseAdmin
-      .from("plan_orders")
-      .update({
-        status: "paid",
-        provider_payment_id: data.razorpayPaymentId ?? null,
-        paid_at: new Date().toISOString(),
-      })
-      .eq("id", order.id);
 
     return { ok: true, plan: order.plan as string, planExpiresAt: expires, mode: order.mode };
   });

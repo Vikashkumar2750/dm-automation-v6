@@ -261,6 +261,8 @@ export const acceptInvite = createServerFn({ method: "POST" })
     const { data: userData } = await context.supabase.auth.getUser();
     const email = userData.user?.email?.toLowerCase() ?? "";
     if (email !== invite.email.toLowerCase()) return { error: "wrong_account" as const };
+    // Only a verified owner of the invited email address may join.
+    if (!userData.user?.email_confirmed_at) return { error: "email_unverified" as const };
 
     const { error } = await supabaseAdmin
       .from("organization_members")
