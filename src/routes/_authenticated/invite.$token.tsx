@@ -25,6 +25,7 @@ const messages: Record<string, string> = {
   expired: "This invite link has expired. Ask for a new one.",
   already_accepted: "This invite was already used.",
   wrong_account: "This invite was sent to a different email address.",
+  email_unverified: "Please verify your email address first, then open this invite again.",
 };
 
 function InvitePage() {
