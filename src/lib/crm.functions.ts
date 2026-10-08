@@ -168,7 +168,10 @@ const segmentFilter = z.object({
 export const sendBroadcast = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
-    z.object({ organizationId: org, name: z.string().trim().min(1).max(80), message: z.string().trim().min(1).max(1000), filter: segmentFilter }).parse(d),
+    z.object({
+      organizationId: org, name: z.string().trim().min(1).max(80), message: z.string().trim().min(1).max(1000), filter: segmentFilter,
+      button: z.object({ title: z.string().trim().min(1).max(20), url: z.string().trim().max(500).regex(/^https:\/\/\S+$/i) }).nullable().optional(),
+    }).parse(d),
   )
   .handler(async ({ data, context }) => {
     const sb = (context as Ctx).supabase;
