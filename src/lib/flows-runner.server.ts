@@ -234,10 +234,15 @@ async function executeSteps(admin: AdminClient, flow: Flow, st: RunState, from: 
       msgText = s.text;
       if (s.profileUrl) btn = { title: s.buttonTitle || "Visit profile", url: s.profileUrl };
       stopAfterSend = true; // Only the run-bound confirmation button can resume this gate.
-    } else if (s.kind === "send_payment" || s.kind === "send_coupon") {
+    } else if (s.kind === "send_offer" || s.kind === "send_payment" || s.kind === "send_coupon") {
       const r = await import("@/lib/revenue.server");
       const target = { organizationId: st.organizationId, platform: st.platform, externalUserId: st.externalUserId, conversationId: st.conversationId, socialAccountId: st.socialAccountId };
-      if (s.kind === "send_payment") {
+      if (s.kind === "send_offer") {
+        const link = await r.createOfferLinkFor(admin, target, s.productId, s.pageId);
+        if ("error" in link) { await log(admin, st, "failed", `${flow.name}:${link.error}`); return true; }
+        msgText = s.text || `${link.name} — your offer is ready`;
+        btn = { title: "View offer", url: link.offerUrl };
+      } else if (s.kind === "send_payment") {
         const link = await r.createPaymentLinkFor(admin, target, s.productId);
         if ("error" in link) { await log(admin, st, "failed", `${flow.name}:${link.error}`); return true; }
         const { formatInr } = await import("@/lib/revenue");

@@ -34,6 +34,7 @@ export type FlowStep = StepBase & (
   | { kind: "opening_dm"; text: string; buttonTitle: string }
   | { kind: "follow_gate"; text: string; buttonTitle: string; profileUrl: string }
   | { kind: "send_payment"; productId: string; text: string }
+  | { kind: "send_offer"; productId: string; pageId: string; text: string }
   | { kind: "send_coupon"; campaignId: string; text: string }
   | { kind: "lead_form"; intro: string; fields: LeadField[] }
 );
@@ -172,6 +173,10 @@ function sanitizeStep(s: unknown): FlowStep[] {
           const y = s as { productId?: unknown };
           return [{ id: sid, kind: "send_payment", productId: text(y.productId, 40), text: text(x.text, 600) }];
         }
+        case "send_offer": {
+          const y = s as { productId?: unknown; pageId?: unknown };
+          return [{ id: sid, kind: "send_offer", productId: text(y.productId, 40), pageId: text(y.pageId, 40), text: text(x.text, 600) }];
+        }
         case "send_coupon": {
           const y = s as { campaignId?: unknown };
           return [{ id: sid, kind: "send_coupon", campaignId: text(y.campaignId, 40), text: text(x.text, 600) }];
@@ -214,6 +219,8 @@ export function validateFlow(flow: Flow): string[] {
     if ((s.kind === "send_dm" || s.kind === "public_reply") && !s.text) issues.push(`Step ${i + 1}: message is empty.`);
     if (s.kind === "condition" && s.check === "contains" && !s.value) issues.push(`Step ${i + 1}: keyword is empty.`);
     if (s.kind === "send_payment" && !s.productId) issues.push(`Step ${i + 1}: choose a product.`);
+    if (s.kind === "send_offer" && !s.productId) issues.push(`Step ${i + 1}: choose a product.`);
+    if (s.kind === "send_offer" && !s.pageId) issues.push(`Step ${i + 1}: choose a delivery page.`);
     if (s.kind === "send_coupon" && !s.campaignId) issues.push(`Step ${i + 1}: choose a coupon campaign.`);
     if (s.kind === "send_coupon" && !s.text.includes("{code}")) issues.push(`Step ${i + 1}: message must include {code}.`);
     if (s.kind === "lead_form") {
@@ -228,7 +235,7 @@ export function validateFlow(flow: Flow): string[] {
   return issues;
 }
 
-const MESSAGE_KINDS: FlowStep["kind"][] = ["send_dm", "public_reply", "send_payment", "send_coupon", "ask_contact", "follow_gate", "lead_form", "opening_dm"];
+const MESSAGE_KINDS: FlowStep["kind"][] = ["send_dm", "public_reply", "send_offer", "send_payment", "send_coupon", "ask_contact", "follow_gate", "lead_form", "opening_dm"];
 
 export type FlowInput = {
   text: string; isFollower: boolean | null; platform: "instagram" | "facebook"; trigger: FlowTrigger;
@@ -280,7 +287,7 @@ export function runFlowDry(flow: Flow, input: FlowInput): { matched: boolean; ac
     }
     if (s.kind === "follow_gate") {
       if (input.isFollower === true) continue;
-      actions.push({ kind: "Follow request DM", detail: `${s.text} [${s.buttonTitle}]` });
+      actions.push({ kind: "Follow request DM", detail: `${s.text} [${s.buttonTitle}] [I followed ✅]` });
       return { matched: true, actions, stoppedAt: i };
     }
     if (s.kind === "send_dm") actions.push({ kind: "DM", detail: s.text + (s.buttonTitle ? ` [${s.buttonTitle}]` : "") });
@@ -290,6 +297,7 @@ export function runFlowDry(flow: Flow, input: FlowInput): { matched: boolean; ac
     if (s.kind === "remove_tag") { tags.delete(s.value.toLowerCase()); actions.push({ kind: "Remove tag", detail: s.value }); }
     if (s.kind === "ask_contact") actions.push({ kind: "Ask email / phone DM", detail: s.text });
     if (s.kind === "send_payment") actions.push({ kind: "Payment link DM", detail: (s.text || "Pay here") + " [Pay now]" });
+    if (s.kind === "send_offer") actions.push({ kind: "Offer page DM", detail: (s.text || "See your offer") + " [View offer]" });
     if (s.kind === "lead_form") {
       actions.push({ kind: "Lead form", detail: s.fields.map((f, j) => `${j + 1}. ${f.label}${f.type === "choice" ? ` [${f.options.join(" / ")}]` : ""}`).join("  ") });
       continue; // live: waits for each answer, then continues
