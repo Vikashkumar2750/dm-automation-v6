@@ -4460,6 +4460,10 @@ GRANT ALL ON TABLE public.webhook_events TO service_role;
 -- ---------------- Storage bucket for post media (private) ----------------
 insert into storage.buckets (id, name, public) values ('post-media','post-media', false)
 on conflict (id) do nothing;
+-- Delivery-page images (private, served only via active pages)
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('delivery-page-images','delivery-page-images', false, 8388608, array['image/png','image/jpeg','image/webp','image/gif'])
+on conflict (id) do nothing;
 create policy "post media members read" on storage.objects for select to authenticated
   using (bucket_id = 'post-media' and app_private.is_org_member(((storage.foldername(name))[1])::uuid, auth.uid()));
 create policy "post media writers upload" on storage.objects for insert to authenticated

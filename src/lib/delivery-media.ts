@@ -16,7 +16,12 @@ export async function uploadDeliveryImage(organizationId: string, file: File) {
     contentType: file.type,
     upsert: false,
   });
-  if (error) throw new Error(error.message);
+  if (error) {
+    if (/bucket not found/i.test(error.message)) {
+      throw new Error("Image storage isn't set up yet on this site. Please redeploy, then try again.");
+    }
+    throw new Error(error.message);
+  }
   return path;
 }
 
