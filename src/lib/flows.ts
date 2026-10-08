@@ -6,7 +6,17 @@
 export type FlowTrigger = "new_comment" | "new_dm" | "story_reply" | "story_mention";
 
 /** Every step can be switched off (`disabled: true`); switched-off steps are skipped, never run. */
-type StepBase = { id: string; disabled?: boolean };
+export type CanvasPos = { x: number; y: number };
+/** `pos` is only where the card sits on the canvas; it never changes how the flow runs. */
+type StepBase = { id: string; disabled?: boolean; pos?: CanvasPos };
+export function sanitizePos(v: unknown): CanvasPos | undefined {
+  const p = v as { x?: unknown; y?: unknown } | null;
+  if (!p || typeof p !== "object") return undefined;
+  const x = Number(p.x), y = Number(p.y);
+  if (!Number.isFinite(x) || !Number.isFinite(y)) return undefined;
+  const c = (n: number) => Math.round(Math.min(20000, Math.max(-5000, n)));
+  return { x: c(x), y: c(y) };
+}
 export type ContactCheck = "email" | "phone" | "any" | "none";
 export type FlowStep = StepBase & (
   | { kind: "condition"; check: "contains"; value: string }
@@ -71,6 +81,8 @@ export type Flow = {
   trigger: FlowTrigger;
   steps: FlowStep[];
   updatedAt: string;
+  triggerPos?: CanvasPos | undefined;
+  addPos?: CanvasPos | undefined;
 };
 
 export const MAX_FLOWS = 20;
@@ -95,7 +107,13 @@ export function sanitizeFlows(raw: unknown): Flow[] {
     const trigger = triggers.includes(String(r.trigger)) ? (r.trigger as FlowTrigger) : "new_comment";
     const platform = r.platform === "instagram" || r.platform === "facebook" ? r.platform : "both";
     const steps = (Array.isArray(r.steps) ? r.steps : []).slice(0, MAX_STEPS).flatMap((s): FlowStep[] =>
-      sanitizeStep(s).map((st) => ((s as { disabled?: unknown })?.disabled === true ? { ...st, disabled: true } : st)));
+      sanitizeStep(s).map((st) => {
+        const raw = s as { disabled?: unknown; pos?: unknown };
+        const pos = sanitizePos(raw?.pos);
+        return { ...st, ...(raw?.disabled === true ? { disabled: true } : {}), ...(pos ? { pos } : {}) };
+      }));
+    const triggerPos = sanitizePos(r.triggerPos);
+    const addPos = sanitizePos(r.addPos);
     return [{
       id: typeof r.id === "string" ? r.id.slice(0, 20) : id(),
       name: r.name.trim().slice(0, 80) || "Untitled flow",
@@ -104,6 +122,8 @@ export function sanitizeFlows(raw: unknown): Flow[] {
       trigger,
       steps,
       updatedAt: typeof r.updatedAt === "string" ? r.updatedAt : new Date().toISOString(),
+      ...(triggerPos ? { triggerPos } : {}),
+      ...(addPos ? { addPos } : {}),
     }];
   });
 }

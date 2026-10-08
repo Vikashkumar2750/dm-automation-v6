@@ -50,7 +50,7 @@ const STEP_TEMPLATES: { group: "Conditions" | "Actions" | "Sales" | "Contacts"; 
   { group: "Conditions", label: "If email / phone known", make: () => ({ id: newStepId(), kind: "condition", check: "has_contact", value: "any" }) },
   { group: "Actions", label: "Send DM", make: () => ({ id: newStepId(), kind: "send_dm", text: "" }) },
   { group: "Actions", label: "Public reply", make: () => ({ id: newStepId(), kind: "public_reply", text: "" }) },
-  { group: "Actions", label: "Follow gate (Visit profile)", make: () => ({ id: newStepId(), kind: "follow_gate", text: "Please follow us first, then comment again 🙏", buttonTitle: "Visit profile", profileUrl: "" }) },
+  { group: "Actions", label: "Follow gate (Visit profile)", make: () => ({ id: newStepId(), kind: "follow_gate", text: "Please follow us first, then tap \"I followed\" 🙏", buttonTitle: "Visit profile", profileUrl: "" }) },
   { group: "Actions", label: "Wait", make: () => ({ id: newStepId(), kind: "wait", minutes: 5 }) },
   { group: "Contacts", label: "Add tag", make: () => ({ id: newStepId(), kind: "tag", value: "" }) },
   { group: "Contacts", label: "Remove tag", make: () => ({ id: newStepId(), kind: "remove_tag", value: "" }) },
@@ -178,9 +178,7 @@ function FlowsPage() {
   };
   const [flows, setFlows] = useState<Flow[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
-  const [dragFrom, setDragFrom] = useState<number | null>(null);
-  const [dragOver, setDragOver] = useState<number | null>(null);
-  const [zoom, setZoom] = useState(1);
+  const [zoom, setZoom] = useState(0.8);
   const [category, setCategory] = useState<string>("all");
   const zoomBy = (d: number) => setZoom((z) => Math.min(1.5, Math.max(0.4, Math.round((z + d) * 10) / 10)));
   useEffect(() => {
@@ -259,7 +257,7 @@ function FlowsPage() {
           ? "Live: active flows send real messages. Keyword rules run first; a flow only acts when no rule replied. Safety limits and quiet hours apply."
           : "Test mode: flows are designed and tested here only. They do not send real messages until Super Admin turns on live sending."}
       </div>
-      <div className="mt-4 grid gap-4 lg:grid-cols-[260px_1fr_320px]">
+      <div className="mt-4 grid gap-4 lg:grid-cols-[240px_minmax(0,1fr)] 2xl:grid-cols-[240px_minmax(0,1fr)_320px]">
         <Panel title="Flows" action={<Button size="sm" variant="outline" onClick={addFlow} disabled={flows.length >= MAX_FLOWS}><Plus className="size-4" /></Button>}>
           {flows.length === 0 ? (
             <p className="text-sm text-muted-foreground">No flows yet. Click + to start.</p>
@@ -323,49 +321,25 @@ function FlowsPage() {
               </div>
             </Panel>
 
-            <div className="relative rounded-xl border border-border">
-              <div className="absolute right-2 top-2 z-10 flex items-center gap-1 rounded-md border border-border bg-card p-1 shadow-sm">
-                <Button size="icon" variant="ghost" className="size-7" aria-label="Zoom out" onClick={() => zoomBy(-0.1)}><ZoomOut className="size-4" /></Button>
-                <span className="w-10 text-center text-xs tabular-nums">{Math.round(zoom * 100)}%</span>
-                <Button size="icon" variant="ghost" className="size-7" aria-label="Zoom in" onClick={() => zoomBy(0.1)}><ZoomIn className="size-4" /></Button>
-                <Button size="icon" variant="ghost" className="size-7" aria-label="Reset zoom" onClick={() => setZoom(1)}><Maximize2 className="size-4" /></Button>
-              </div>
-              <div
-                className="h-[70vh] overflow-auto rounded-xl bg-muted/30"
-                style={{ backgroundImage: "radial-gradient(var(--border) 1px, transparent 1px)", backgroundSize: `${20 * zoom}px ${20 * zoom}px` }}
-                onWheel={(e) => { if (e.ctrlKey || e.metaKey) { e.preventDefault(); zoomBy(e.deltaY < 0 ? 0.1 : -0.1); } }}
-              >
-              <div className="mx-auto w-full max-w-xl origin-top px-4 pb-10 pt-12" style={{ transform: `scale(${zoom})` }}>
-            <div className="rounded-xl border-2 border-primary/40 bg-card p-4">
-              <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-primary"><Zap className="size-3.5" /> Trigger</p>
-              <div className="mt-2 flex flex-wrap gap-2">
-                <select className={sel} value={flow.trigger} onChange={(e) => update({ trigger: e.target.value as FlowTrigger })}>
-                  {Object.entries(TRIGGER_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-                </select>
-                <select className={sel} value={flow.platform} onChange={(e) => update({ platform: e.target.value as Flow["platform"] })}>
-                  <option value="both">Both platforms (FB+IG only)</option>
-                  <option value="instagram">Instagram</option>
-                  <option value="facebook">Facebook</option>
-                </select>
-              </div>
-            </div>
-
-            {flow.steps.map((s, i) => (
-              <div
-                key={s.id}
-                draggable
-                onDragStart={(e) => { setDragFrom(i); e.dataTransfer.effectAllowed = "move"; }}
-                onDragOver={(e) => { e.preventDefault(); setDragOver(i); }}
-                onDragLeave={() => setDragOver((d) => (d === i ? null : d))}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  if (dragFrom !== null) setSteps(moveStep(flow.steps, dragFrom, i));
-                  setDragFrom(null); setDragOver(null);
-                }}
-                onDragEnd={() => { setDragFrom(null); setDragOver(null); }}
-                className={`${dragFrom === i ? "opacity-50" : ""} ${dragOver === i && dragFrom !== i ? "rounded-xl ring-2 ring-primary" : ""}`}
-              >
-                <div className="mx-auto h-4 w-px bg-border" />
+            <FlowCanvas
+              flow={flow}
+              zoom={zoom}
+              setZoom={setZoom}
+              zoomBy={zoomBy}
+              onFlow={(patch) => update(patch)}
+              trigger={
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <select className={sel} value={flow.trigger} onChange={(e) => update({ trigger: e.target.value as FlowTrigger })}>
+                    {Object.entries(TRIGGER_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                  </select>
+                  <select className={sel} value={flow.platform} onChange={(e) => update({ platform: e.target.value as Flow["platform"] })}>
+                    <option value="both">Both platforms (FB+IG only)</option>
+                    <option value="instagram">Instagram</option>
+                    <option value="facebook">Facebook</option>
+                  </select>
+                </div>
+              }
+              renderStep={(s, i) => (
                 <StepCard
                   step={s}
                   index={i}
@@ -379,28 +353,25 @@ function FlowsPage() {
                     setSteps(arr);
                   }}
                 />
-              </div>
-            ))}
-
-            <div className="mx-auto h-4 w-px bg-border" />
-            <div className="space-y-2 rounded-xl border border-dashed border-border bg-card p-3">
-              {(["Conditions", "Actions", "Contacts", "Sales"] as const).map((g) => (
-                <div key={g}>
-                  <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{g}</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {STEP_TEMPLATES.filter((t) => t.group === g).map((t) => (
-                      <Button key={t.label} size="sm" variant="outline" disabled={flow.steps.length >= MAX_STEPS} onClick={() => setSteps([...flow.steps, t.make()])}>
-                        <Plus className="size-3.5" /> {t.label}
-                      </Button>
-                    ))}
-                  </div>
+              )}
+              addBar={
+                <div className="space-y-2">
+                  {(["Conditions", "Actions", "Contacts", "Sales"] as const).map((g) => (
+                    <div key={g}>
+                      <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{g}</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {STEP_TEMPLATES.filter((t) => t.group === g).map((t) => (
+                          <Button key={t.label} size="sm" variant="outline" disabled={flow.steps.length >= MAX_STEPS} onClick={() => setSteps([...flow.steps, t.make()])}>
+                            <Plus className="size-3.5" /> {t.label}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-              </div>
-              </div>
-            </div>
-            <p className="text-xs text-muted-foreground">Tip: Ctrl + mouse wheel zooms the canvas. Switch a step off with its toggle to skip it without deleting.</p>
+              }
+            />
+            <p className="text-xs text-muted-foreground">Tip: drag a card by its title to place it anywhere, drag empty space to move around, Ctrl + mouse wheel zooms. Lines show the order steps run in (change it with the arrows). Switch a step off with its toggle to skip it.</p>
             {issues.length > 0 && (
               <ul className="list-disc space-y-1 pl-5 text-sm text-destructive">
                 {issues.map((x) => <li key={x}>{x}</li>)}
@@ -412,7 +383,7 @@ function FlowsPage() {
         )}
 
         {flow ? (
-          <div className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-2 lg:col-span-2 2xl:col-span-1 2xl:grid-cols-1 2xl:content-start">
             <TestPanel flow={flow} />
             <AiSuggestPanel orgId={orgId} current={flow} onAdd={addAiFlow} />
           </div>
@@ -434,8 +405,8 @@ function StepCard({ step, index, onChange, onRemove, onMove }: {
     <div className={`rounded-xl border bg-card p-4 shadow-sm ${isCond ? "border-warning/50" : "border-border"} ${step.disabled ? "opacity-50" : ""}`}>
       <div className="flex items-center justify-between">
         <div className="flex min-w-0 items-center gap-1">
-          <p className="flex min-w-0 items-center gap-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            <GripVertical className="size-4 cursor-grab" aria-label="Drag to reorder" />
+          <p data-drag-handle className="flex min-w-0 cursor-move items-center gap-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            <GripVertical className="size-4 cursor-grab" aria-label="Drag to place" />
             {index + 1}. {stepLabel(step)}{step.disabled ? " · off" : ""}
           </p>
           <Popover>
@@ -762,5 +733,111 @@ function TestPanel({ flow }: { flow: Flow }) {
         <p className="pt-2 text-xs text-muted-foreground">Preview only — this box never sends anything.</p>
       </div>
     </Panel>
+  );
+}
+
+/* ---------------- n8n-style free canvas ---------------- */
+
+const NODE_W = 360;
+const GAP_X = 420;
+const defaultPos = (i: number) => ({ x: 40 + ((i + 1) % 3) * GAP_X, y: 60 + Math.floor((i + 1) / 3) * 460 });
+type Pos = { x: number; y: number };
+
+function FlowCanvas({ flow, zoom, setZoom, zoomBy, onFlow, trigger, renderStep, addBar }: {
+  flow: Flow; zoom: number; setZoom: (z: number) => void; zoomBy: (d: number) => void;
+  onFlow: (patch: Partial<Flow>) => void; trigger: React.ReactNode;
+  renderStep: (s: FlowStep, i: number) => React.ReactNode; addBar: React.ReactNode;
+}) {
+  const [pan, setPan] = useState<Pos>({ x: 0, y: 0 });
+  const [live, setLive] = useState<Record<string, Pos>>({});
+  const tPos = live["__trigger"] ?? flow.triggerPos ?? { x: 40, y: 60 };
+  const posOf = (s: FlowStep, i: number) => live[s.id] ?? s.pos ?? defaultPos(i);
+  const addPos = live["__add"] ?? flow.addPos ?? defaultPos(flow.steps.length);
+  const nodes: Pos[] = [tPos, ...flow.steps.map(posOf), addPos];
+
+  const startPan = (e: React.PointerEvent) => {
+    if ((e.target as HTMLElement).closest("[data-node]")) return;
+    const sx = e.clientX, sy = e.clientY, o = pan;
+    const move = (ev: PointerEvent) => setPan({ x: o.x + ev.clientX - sx, y: o.y + ev.clientY - sy });
+    const up = () => { window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", up); };
+    window.addEventListener("pointermove", move); window.addEventListener("pointerup", up);
+  };
+  const startDrag = (key: string, from: Pos) => (e: React.PointerEvent) => {
+    if (!(e.target as HTMLElement).closest("[data-drag-handle]")) return;
+    e.preventDefault();
+    const sx = e.clientX, sy = e.clientY;
+    let last = from;
+    const move = (ev: PointerEvent) => {
+      last = { x: Math.round(from.x + (ev.clientX - sx) / zoom), y: Math.round(from.y + (ev.clientY - sy) / zoom) };
+      setLive((l) => ({ ...l, [key]: last }));
+    };
+    const up = () => {
+      window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", up);
+      setLive((l) => { const { [key]: _x, ...rest } = l; return rest; });
+      if (key === "__trigger") onFlow({ triggerPos: last });
+      else if (key === "__add") onFlow({ addPos: last });
+      else onFlow({ steps: flow.steps.map((s) => (s.id === key ? { ...s, pos: last } : s)) });
+    };
+    window.addEventListener("pointermove", move); window.addEventListener("pointerup", up);
+  };
+  const arrange = () => { onFlow({ triggerPos: undefined, addPos: undefined, steps: flow.steps.map(({ pos: _p, ...s }) => s as FlowStep) }); setPan({ x: 0, y: 0 }); setZoom(1); };
+  const PORT = 30;
+  const maxX = Math.max(...nodes.map((n) => n.x)) + NODE_W + 200;
+  const maxY = Math.max(...nodes.map((n) => n.y)) + 900;
+
+  return (
+    <div className="relative overflow-hidden rounded-xl border border-border">
+      <div className="absolute right-2 top-2 z-10 flex items-center gap-1 rounded-md border border-border bg-card p-1 shadow-sm">
+        <Button size="icon" variant="ghost" className="size-7" aria-label="Zoom out" onClick={() => zoomBy(-0.1)}><ZoomOut className="size-4" /></Button>
+        <span className="w-10 text-center text-xs tabular-nums">{Math.round(zoom * 100)}%</span>
+        <Button size="icon" variant="ghost" className="size-7" aria-label="Zoom in" onClick={() => zoomBy(0.1)}><ZoomIn className="size-4" /></Button>
+        <Button size="icon" variant="ghost" className="size-7" aria-label="Reset view" onClick={() => { setPan({ x: 0, y: 0 }); setZoom(1); }}><Maximize2 className="size-4" /></Button>
+        <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={arrange}>Auto-arrange</Button>
+      </div>
+      <div
+        className="h-[75vh] cursor-grab touch-none select-none bg-muted/30 active:cursor-grabbing"
+        style={{ backgroundImage: "radial-gradient(var(--border) 1px, transparent 1px)", backgroundSize: `${20 * zoom}px ${20 * zoom}px`, backgroundPosition: `${pan.x}px ${pan.y}px` }}
+        onPointerDown={startPan}
+        onWheel={(e) => { if (e.ctrlKey || e.metaKey) { e.preventDefault(); zoomBy(e.deltaY < 0 ? 0.1 : -0.1); } else setPan((p) => ({ x: p.x - e.deltaX, y: p.y - e.deltaY })); }}
+      >
+        <div className="relative origin-top-left" style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`, width: maxX, height: maxY }}>
+          <svg className="pointer-events-none absolute inset-0 overflow-visible" width={maxX} height={maxY}>
+            {nodes.slice(0, -1).map((a, i) => {
+              const b = nodes[i + 1]!;
+              const x1 = a.x + NODE_W, y1 = a.y + PORT, x2 = b.x, y2 = b.y + PORT;
+              const dx = Math.max(60, Math.abs(x2 - x1) / 2);
+              const off = flow.steps[i]?.disabled;
+              return (
+                <g key={i}>
+                  <path d={`M${x1},${y1} C${x1 + dx},${y1} ${x2 - dx},${y2} ${x2},${y2}`} fill="none" stroke="var(--primary)" strokeOpacity={off ? 0.3 : 0.7} strokeWidth={2} strokeDasharray={i === nodes.length - 2 ? "6 5" : undefined} />
+                  <circle cx={x1} cy={y1} r={5} fill="var(--card)" stroke="var(--primary)" strokeWidth={2} />
+                  <circle cx={x2} cy={y2} r={5} fill="var(--primary)" />
+                </g>
+              );
+            })}
+          </svg>
+          <div data-node className="absolute" style={{ left: tPos.x, top: tPos.y, width: NODE_W }} onPointerDown={startDrag("__trigger", tPos)}>
+            <div className="cursor-auto rounded-xl border-2 border-primary/40 bg-card p-4 shadow-md">
+              <p data-drag-handle className="flex cursor-move items-center gap-2 text-xs font-semibold uppercase tracking-wide text-primary"><GripVertical className="size-4" /><Zap className="size-3.5" /> Trigger</p>
+              {trigger}
+            </div>
+          </div>
+          {flow.steps.map((s, i) => {
+            const p = posOf(s, i);
+            return (
+              <div key={s.id} data-node className="absolute cursor-auto shadow-md" style={{ left: p.x, top: p.y, width: NODE_W }} onPointerDown={startDrag(s.id, p)}>
+                {renderStep(s, i)}
+              </div>
+            );
+          })}
+          <div data-node className="absolute" style={{ left: addPos.x, top: addPos.y, width: NODE_W }} onPointerDown={startDrag("__add", addPos)}>
+            <div className="cursor-auto rounded-xl border border-dashed border-border bg-card p-3 shadow-md">
+              <p data-drag-handle className="mb-2 flex cursor-move items-center gap-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground"><GripVertical className="size-4" /> Add next step</p>
+              {addBar}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }

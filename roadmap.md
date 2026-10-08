@@ -75,5 +75,5 @@ Real Meta + YouTube credentials are available when we reach OAuth phases.
 - [x] Delivery page landing templates + formatted rendering + live preview
 - [x] Flow builder: create product / coupon in place
 - [x] Flow builder: lead form step (custom + multiple-choice fields)
-- [ ] Flow builder: free-placement node canvas with connectors
-- [ ] Flow builder follow gate: "I followed" tap
+- [x] Flow builder: free-placement node canvas with connectors
+- [x] Flow builder follow gate: "I followed" tap (live tap check needs a real Instagram account after deploy)
