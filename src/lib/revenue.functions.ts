@@ -187,3 +187,19 @@ export const getPublicPage = createServerFn({ method: "GET" })
       countdownAt: p.countdown_at as string | null, expiryAction: p.expiry_action as "disable_cta" | "hide_cta", expiryMessage: p.expiry_message as string | null,
       formConfig: p.form_config as { mode: "none" | "optional" | "required"; consent?: string; fields?: unknown[] } };
   });
+
+/** Public buyer-bound offer. The token identifies only one stored payment link. */
+export const getOfferPage = createServerFn({ method: "GET" })
+  .inputValidator((d: unknown) => z.object({ token: z.string().uuid() }).parse(d))
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: link } = await supabaseAdmin.from("payment_links")
+      .select("id, organization_id, delivery_pages!inner(id, title, body, button_label, active, image_path, show_image, image_alt, countdown_at, expiry_action, expiry_message)")
+      .eq("offer_token", data.token).maybeSingle();
+    const p = Array.isArray(link?.delivery_pages) ? link?.delivery_pages[0] : link?.delivery_pages;
+    if (!link || !p?.active) return null;
+    await supabaseAdmin.from("revenue_events").insert({ organization_id: link.organization_id, kind: "page_view", ref_id: link.id });
+    return { title: p.title as string, body: (p.body as string | null) ?? "", buttonLabel: (p.button_label as string | null) || "Pay now",
+      imageUrl: p.show_image && p.image_path ? `/api/public/delivery-image/${encodeURIComponent(p.image_path as string)}` : null, imageAlt: p.image_alt as string | null,
+      countdownAt: p.countdown_at as string | null, expiryAction: p.expiry_action as "disable_cta" | "hide_cta", expiryMessage: p.expiry_message as string | null };
+  });

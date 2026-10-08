@@ -43,6 +43,7 @@ import { Route as AuthenticatedTrustSafetyRouteImport } from './routes/_authenti
 import { Route as AuthenticatedUsageRouteImport } from './routes/_authenticated/usage'
 import { Route as BlogIndexRouteImport } from './routes/blog.index'
 import { Route as BlogSlugRouteImport } from './routes/blog.$slug'
+import { Route as OTokenRouteImport } from './routes/o.$token'
 import { Route as PSlugRouteImport } from './routes/p.$slug'
 import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated/admin.index'
 import { Route as AuthenticatedAdminAccountsRouteImport } from './routes/_authenticated/admin.accounts'
@@ -76,6 +77,8 @@ import { Route as ApiPublicCronRevenueRouteImport } from './routes/api/public/cr
 import { Route as ApiPublicCronTeamWebhooksRouteImport } from './routes/api/public/cron.team-webhooks'
 import { Route as ApiPublicCronTrustGuardRouteImport } from './routes/api/public/cron.trust-guard'
 import { Route as ApiPublicCronYoutubeCommentsRouteImport } from './routes/api/public/cron.youtube-comments'
+import { Route as ApiPublicDeliveryImageSplatRouteImport } from './routes/api/public/delivery-image.$'
+import { Route as ApiPublicOfferTokenRouteImport } from './routes/api/public/offer.$token'
 import { Route as ApiPublicPgSlugRouteImport } from './routes/api/public/pg.$slug'
 import { Route as ApiPublicTTokenRouteImport } from './routes/api/public/t.$token'
 import { Route as ApiPublicV1ResourceRouteImport } from './routes/api/public/v1.$resource'
@@ -255,6 +258,11 @@ const BlogIndexRoute = BlogIndexRouteImport.update({
 const BlogSlugRoute = BlogSlugRouteImport.update({
   id: '/blog/$slug',
   path: '/blog/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OTokenRoute = OTokenRouteImport.update({
+  id: '/o/$token',
+  path: '/o/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PSlugRoute = PSlugRouteImport.update({
@@ -442,6 +450,17 @@ const ApiPublicCronYoutubeCommentsRoute =
     path: '/api/public/cron/youtube-comments',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicDeliveryImageSplatRoute =
+  ApiPublicDeliveryImageSplatRouteImport.update({
+    id: '/api/public/delivery-image/$',
+    path: '/api/public/delivery-image/$',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicOfferTokenRoute = ApiPublicOfferTokenRouteImport.update({
+  id: '/api/public/offer/$token',
+  path: '/api/public/offer/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicPgSlugRoute = ApiPublicPgSlugRouteImport.update({
   id: '/api/public/pg/$slug',
   path: '/api/public/pg/$slug',
@@ -508,6 +527,7 @@ export interface FileRoutesByFullPath {
   '/trust-safety': typeof AuthenticatedTrustSafetyRoute
   '/usage': typeof AuthenticatedUsageRoute
   '/blog/$slug': typeof BlogSlugRoute
+  '/o/$token': typeof OTokenRoute
   '/p/$slug': typeof PSlugRoute
   '/blog/': typeof BlogIndexRoute
   '/admin/accounts': typeof AuthenticatedAdminAccountsRoute
@@ -542,6 +562,8 @@ export interface FileRoutesByFullPath {
   '/api/public/cron/team-webhooks': typeof ApiPublicCronTeamWebhooksRoute
   '/api/public/cron/trust-guard': typeof ApiPublicCronTrustGuardRoute
   '/api/public/cron/youtube-comments': typeof ApiPublicCronYoutubeCommentsRoute
+  '/api/public/delivery-image/$': typeof ApiPublicDeliveryImageSplatRoute
+  '/api/public/offer/$token': typeof ApiPublicOfferTokenRoute
   '/api/public/pg/$slug': typeof ApiPublicPgSlugRoute
   '/api/public/t/$token': typeof ApiPublicTTokenRoute
   '/api/public/v1/$resource': typeof ApiPublicV1ResourceRoute
@@ -581,6 +603,7 @@ export interface FileRoutesByTo {
   '/trust-safety': typeof AuthenticatedTrustSafetyRoute
   '/usage': typeof AuthenticatedUsageRoute
   '/blog/$slug': typeof BlogSlugRoute
+  '/o/$token': typeof OTokenRoute
   '/p/$slug': typeof PSlugRoute
   '/blog': typeof BlogIndexRoute
   '/admin/accounts': typeof AuthenticatedAdminAccountsRoute
@@ -615,6 +638,8 @@ export interface FileRoutesByTo {
   '/api/public/cron/team-webhooks': typeof ApiPublicCronTeamWebhooksRoute
   '/api/public/cron/trust-guard': typeof ApiPublicCronTrustGuardRoute
   '/api/public/cron/youtube-comments': typeof ApiPublicCronYoutubeCommentsRoute
+  '/api/public/delivery-image/$': typeof ApiPublicDeliveryImageSplatRoute
+  '/api/public/offer/$token': typeof ApiPublicOfferTokenRoute
   '/api/public/pg/$slug': typeof ApiPublicPgSlugRoute
   '/api/public/t/$token': typeof ApiPublicTTokenRoute
   '/api/public/v1/$resource': typeof ApiPublicV1ResourceRoute
@@ -657,6 +682,7 @@ export interface FileRoutesById {
   '/_authenticated/trust-safety': typeof AuthenticatedTrustSafetyRoute
   '/_authenticated/usage': typeof AuthenticatedUsageRoute
   '/blog/$slug': typeof BlogSlugRoute
+  '/o/$token': typeof OTokenRoute
   '/p/$slug': typeof PSlugRoute
   '/blog/': typeof BlogIndexRoute
   '/_authenticated/admin/accounts': typeof AuthenticatedAdminAccountsRoute
@@ -691,6 +717,8 @@ export interface FileRoutesById {
   '/api/public/cron/team-webhooks': typeof ApiPublicCronTeamWebhooksRoute
   '/api/public/cron/trust-guard': typeof ApiPublicCronTrustGuardRoute
   '/api/public/cron/youtube-comments': typeof ApiPublicCronYoutubeCommentsRoute
+  '/api/public/delivery-image/$': typeof ApiPublicDeliveryImageSplatRoute
+  '/api/public/offer/$token': typeof ApiPublicOfferTokenRoute
   '/api/public/pg/$slug': typeof ApiPublicPgSlugRoute
   '/api/public/t/$token': typeof ApiPublicTTokenRoute
   '/api/public/v1/$resource': typeof ApiPublicV1ResourceRoute
@@ -733,6 +761,7 @@ export interface FileRouteTypes {
     | '/trust-safety'
     | '/usage'
     | '/blog/$slug'
+    | '/o/$token'
     | '/p/$slug'
     | '/blog/'
     | '/admin/accounts'
@@ -767,6 +796,8 @@ export interface FileRouteTypes {
     | '/api/public/cron/team-webhooks'
     | '/api/public/cron/trust-guard'
     | '/api/public/cron/youtube-comments'
+    | '/api/public/delivery-image/$'
+    | '/api/public/offer/$token'
     | '/api/public/pg/$slug'
     | '/api/public/t/$token'
     | '/api/public/v1/$resource'
@@ -806,6 +837,7 @@ export interface FileRouteTypes {
     | '/trust-safety'
     | '/usage'
     | '/blog/$slug'
+    | '/o/$token'
     | '/p/$slug'
     | '/blog'
     | '/admin/accounts'
@@ -840,6 +872,8 @@ export interface FileRouteTypes {
     | '/api/public/cron/team-webhooks'
     | '/api/public/cron/trust-guard'
     | '/api/public/cron/youtube-comments'
+    | '/api/public/delivery-image/$'
+    | '/api/public/offer/$token'
     | '/api/public/pg/$slug'
     | '/api/public/t/$token'
     | '/api/public/v1/$resource'
@@ -881,6 +915,7 @@ export interface FileRouteTypes {
     | '/_authenticated/trust-safety'
     | '/_authenticated/usage'
     | '/blog/$slug'
+    | '/o/$token'
     | '/p/$slug'
     | '/blog/'
     | '/_authenticated/admin/accounts'
@@ -915,6 +950,8 @@ export interface FileRouteTypes {
     | '/api/public/cron/team-webhooks'
     | '/api/public/cron/trust-guard'
     | '/api/public/cron/youtube-comments'
+    | '/api/public/delivery-image/$'
+    | '/api/public/offer/$token'
     | '/api/public/pg/$slug'
     | '/api/public/t/$token'
     | '/api/public/v1/$resource'
@@ -937,6 +974,7 @@ export interface RootRouteChildren {
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   TermsRoute: typeof TermsRoute
   BlogSlugRoute: typeof BlogSlugRoute
+  OTokenRoute: typeof OTokenRoute
   PSlugRoute: typeof PSlugRoute
   BlogIndexRoute: typeof BlogIndexRoute
   ApiPublicCronEncryptTokensRoute: typeof ApiPublicCronEncryptTokensRoute
@@ -948,6 +986,8 @@ export interface RootRouteChildren {
   ApiPublicCronTeamWebhooksRoute: typeof ApiPublicCronTeamWebhooksRoute
   ApiPublicCronTrustGuardRoute: typeof ApiPublicCronTrustGuardRoute
   ApiPublicCronYoutubeCommentsRoute: typeof ApiPublicCronYoutubeCommentsRoute
+  ApiPublicDeliveryImageSplatRoute: typeof ApiPublicDeliveryImageSplatRoute
+  ApiPublicOfferTokenRoute: typeof ApiPublicOfferTokenRoute
   ApiPublicPgSlugRoute: typeof ApiPublicPgSlugRoute
   ApiPublicTTokenRoute: typeof ApiPublicTTokenRoute
   ApiPublicV1ResourceRoute: typeof ApiPublicV1ResourceRoute
@@ -1196,6 +1236,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BlogSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/o/$token': {
+      id: '/o/$token'
+      path: '/o/$token'
+      fullPath: '/o/$token'
+      preLoaderRoute: typeof OTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/p/$slug': {
       id: '/p/$slug'
       path: '/p/$slug'
@@ -1427,6 +1474,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicCronYoutubeCommentsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/delivery-image/$': {
+      id: '/api/public/delivery-image/$'
+      path: '/api/public/delivery-image/$'
+      fullPath: '/api/public/delivery-image/$'
+      preLoaderRoute: typeof ApiPublicDeliveryImageSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/offer/$token': {
+      id: '/api/public/offer/$token'
+      path: '/api/public/offer/$token'
+      fullPath: '/api/public/offer/$token'
+      preLoaderRoute: typeof ApiPublicOfferTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/pg/$slug': {
       id: '/api/public/pg/$slug'
       path: '/api/public/pg/$slug'
@@ -1592,6 +1653,7 @@ const rootRouteChildren: RootRouteChildren = {
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   TermsRoute: TermsRoute,
   BlogSlugRoute: BlogSlugRoute,
+  OTokenRoute: OTokenRoute,
   PSlugRoute: PSlugRoute,
   BlogIndexRoute: BlogIndexRoute,
   ApiPublicCronEncryptTokensRoute: ApiPublicCronEncryptTokensRoute,
@@ -1603,6 +1665,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicCronTeamWebhooksRoute: ApiPublicCronTeamWebhooksRoute,
   ApiPublicCronTrustGuardRoute: ApiPublicCronTrustGuardRoute,
   ApiPublicCronYoutubeCommentsRoute: ApiPublicCronYoutubeCommentsRoute,
+  ApiPublicDeliveryImageSplatRoute: ApiPublicDeliveryImageSplatRoute,
+  ApiPublicOfferTokenRoute: ApiPublicOfferTokenRoute,
   ApiPublicPgSlugRoute: ApiPublicPgSlugRoute,
   ApiPublicTTokenRoute: ApiPublicTTokenRoute,
   ApiPublicV1ResourceRoute: ApiPublicV1ResourceRoute,

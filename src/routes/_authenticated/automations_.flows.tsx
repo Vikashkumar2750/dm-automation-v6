@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { createContext, useContext, useEffect, useRef, useState } from "react";
-import { getRevenue, saveCampaign, saveProduct } from "@/lib/revenue.functions";
+import { getRevenue, saveCampaign, savePage, saveProduct } from "@/lib/revenue.functions";
 import { rupeesToPaise } from "@/lib/revenue";
 import { toast } from "sonner";
 import { ArrowDown, ArrowUp, GitBranch, GripVertical, Info, Lock, Maximize2, Plus, Sparkles, Trash2, Zap, ZoomIn, ZoomOut } from "lucide-react";
@@ -38,7 +38,7 @@ export const Route = createFileRoute("/_authenticated/automations_/flows")({
 
 import { zoomAt, wheelPixels } from "@/lib/canvas-view";
 
-const RevenueOptions = createContext<{ orgId?: string | undefined; products: { id: string; name: string }[]; campaigns: { id: string; name: string }[] }>({ products: [], campaigns: [] });
+const RevenueOptions = createContext<{ orgId?: string | undefined; products: { id: string; name: string }[]; campaigns: { id: string; name: string }[]; pages: { id: string; title: string }[] }>({ products: [], campaigns: [], pages: [] });
 
 const sel = "h-9 rounded-md border border-input bg-background px-2 text-sm";
 
@@ -64,6 +64,7 @@ const STEP_TEMPLATES: { group: "Conditions" | "Actions" | "Sales" | "Contacts"; 
     { key: "interest", label: "What are you interested in?", type: "choice", options: ["Product", "Service", "Just browsing"] },
   ] }) },
   { group: "Sales", label: "Send payment link", make: () => ({ id: newStepId(), kind: "send_payment", productId: "", text: "" }) },
+  { group: "Sales", label: "Offer / delivery page", make: () => ({ id: newStepId(), kind: "send_offer", productId: "", pageId: "", text: "Your personalised offer is ready 👇" }) },
   { group: "Sales", label: "Send coupon", make: () => ({ id: newStepId(), kind: "send_coupon", campaignId: "", text: "Here is your code: {code}" }) },
 ];
 
@@ -71,7 +72,7 @@ function stepLabel(s: FlowStep): string {
   if (s.kind === "condition") {
     return { contains: "If contains", not_contains: "If does not contain", is_follower: s.value === "no" ? "If non-follower" : "If follower", has_tag: "If has tag", no_tag: "If missing tag", has_contact: "If email / phone" }[s.check];
   }
-  return { opening_dm: "Opening DM", send_dm: "Send DM", public_reply: "Public reply", wait: "Wait", tag: "Add tag", remove_tag: "Remove tag", ask_contact: "Ask email / phone", follow_gate: "Follow gate", send_payment: "Payment link", send_coupon: "Coupon", lead_form: "Lead form" }[s.kind];
+  return { opening_dm: "Opening DM", send_dm: "Send DM", public_reply: "Public reply", wait: "Wait", tag: "Add tag", remove_tag: "Remove tag", ask_contact: "Ask email / phone", follow_gate: "Follow gate", send_offer: "Offer page", send_payment: "Payment link", send_coupon: "Coupon", lead_form: "Lead form" }[s.kind];
 }
 
 const STEP_HELP = {
@@ -110,6 +111,11 @@ const STEP_HELP = {
     title: "Send payment link",
     how: "Creates a unique payment link for the selected product and sends it privately to this person.",
     why: "Use it to take payment inside a sales conversation and track whether that person paid.",
+  },
+  send_offer: {
+    title: "Offer / delivery page",
+    how: "Creates this buyer’s secure payment link and sends a private offer-page button. The page explains the product before its Pay now button opens only that buyer’s link.",
+    why: "Use it before direct checkout when buyers need benefits, proof, FAQs or an honest deadline before paying.",
   },
   send_coupon: {
     title: "Send coupon",
@@ -179,6 +185,7 @@ function FlowsPage() {
     orgId: orgId ?? undefined,
     products: (revQ.data?.products ?? []).map((p: any) => ({ id: p.id as string, name: p.name as string })),
     campaigns: (revQ.data?.campaigns ?? []).map((c: any) => ({ id: c.id as string, name: c.name as string })),
+    pages: (revQ.data?.pages ?? []).map((p: any) => ({ id: p.id as string, title: p.title as string })),
   };
   const [flows, setFlows] = useState<Flow[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
@@ -480,9 +487,15 @@ function StepCard({ step, index, onChange, onRemove, onMove }: {
         )}
         {step.kind === "opening_dm" && <Input aria-label="Opening button title" maxLength={20} value={step.buttonTitle} onChange={(e) => onChange({ ...step, buttonTitle: e.target.value })} />}
         {step.kind === "follow_gate" && (
-          <div className="grid gap-2 sm:grid-cols-2">
-            <Input placeholder="Button title" maxLength={20} value={step.buttonTitle} onChange={(e) => onChange({ ...step, buttonTitle: e.target.value })} />
-            <Input placeholder="https://instagram.com/yourprofile" value={step.profileUrl} onChange={(e) => onChange({ ...step, profileUrl: e.target.value })} />
+          <div className="space-y-2">
+            <div className="grid gap-2 sm:grid-cols-2">
+              <Input placeholder="Button title" maxLength={20} value={step.buttonTitle} onChange={(e) => onChange({ ...step, buttonTitle: e.target.value })} />
+              <Input placeholder="https://instagram.com/yourprofile" value={step.profileUrl} onChange={(e) => onChange({ ...step, profileUrl: e.target.value })} />
+            </div>
+            <div className="flex items-center justify-between rounded-md border border-border bg-muted px-3 py-2 text-sm">
+              <span className="font-medium">I followed ✅</span><span className="text-xs text-muted-foreground">Automatic confirmation button</span>
+            </div>
+            <p className="text-xs text-muted-foreground">This fixed button checks follow status again. Verified followers continue; it is not a link field.</p>
           </div>
         )}
         {step.kind === "condition" && step.check === "contains" && (
@@ -521,6 +534,18 @@ function StepCard({ step, index, onChange, onRemove, onMove }: {
             </select>
             <Input placeholder="Message (optional, default: product name + price)" maxLength={600} value={step.text} onChange={(e) => onChange({ ...step, text: e.target.value })} />
             <QuickCreate kind="product" onCreated={(id) => onChange({ ...step, productId: id })} />
+          </>
+        )}
+        {step.kind === "send_offer" && (
+          <>
+            <select className={sel} value={step.productId} onChange={(e) => onChange({ ...step, productId: e.target.value })}>
+              <option value="">Choose a product…</option>{rev.products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+            <select className={sel} value={step.pageId} onChange={(e) => onChange({ ...step, pageId: e.target.value })}>
+              <option value="">Choose a delivery page…</option>{rev.pages.map((p) => <option key={p.id} value={p.id}>{p.title}</option>)}
+            </select>
+            <Input placeholder="Offer message" maxLength={600} value={step.text} onChange={(e) => onChange({ ...step, text: e.target.value })} />
+            <div className="flex flex-wrap gap-2"><QuickCreate kind="product" onCreated={(id) => onChange({ ...step, productId: id })} /><QuickCreate kind="page" onCreated={(id) => onChange({ ...step, pageId: id })} /></div>
           </>
         )}
         {step.kind === "send_coupon" && (
@@ -576,11 +601,12 @@ function LeadFormEditor({ step, onChange }: { step: Extract<FlowStep, { kind: "l
 }
 
 /** Create a product or coupon campaign right inside the step, then auto-select it. */
-function QuickCreate({ kind, onCreated }: { kind: "product" | "coupon"; onCreated: (id: string) => void }) {
+function QuickCreate({ kind, onCreated }: { kind: "product" | "coupon" | "page"; onCreated: (id: string) => void }) {
   const rev = useContext(RevenueOptions);
   const qc = useQueryClient();
   const saveP = useServerFn(saveProduct);
   const saveC = useServerFn(saveCampaign);
+  const savePg = useServerFn(savePage);
   const [open, setOpen] = useState(false);
   const [f, setF] = useState({ name: "", price: "", url: "", desc: "", prefix: "", label: "", max: "500" });
   const m = useMutation({
@@ -591,12 +617,19 @@ function QuickCreate({ kind, onCreated }: { kind: "product" | "coupon"; onCreate
         if (!pricePaise) throw new Error("Price must be at least ₹1");
         return saveP({ data: { organizationId: rev.orgId, name: f.name, description: f.desc || null, pricePaise, manualUrl: f.url || null, active: true } });
       }
+      if (kind === "page") {
+        const slug = `${f.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 44)}-${crypto.randomUUID().slice(0, 6)}`;
+        const r = await savePg({ data: { organizationId: rev.orgId, title: f.name, slug, body: `# ${f.name}\nA clear offer designed to help your buyer decide with confidence.\n\n## What you get\n- The complete product or service\n- Clear next steps\n- Support when you need it\n\n## Why choose this\n> A focused solution with secure payment and straightforward delivery.\n\n## Frequently asked questions\n? What happens after payment? | You will receive the next steps immediately.\n? Need help before buying? | Reply to our DM and we will help.`, buttonLabel: "Pay securely now", buttonUrl: "https://autodm.techaasvik.com", active: true, imagePath: null, showImage: false, imageAlt: null, countdownAt: null, expiryAction: "disable_cta", expiryMessage: null, formConfig: { mode: "none", consent: "", fields: [] } } });
+        const pages = (await qc.fetchQuery({ queryKey: ["revenue", rev.orgId], queryFn: () => Promise.resolve(null) }).catch(() => null));
+        void pages;
+        return { id: "refresh-page" in r ? String((r as any)["refresh-page"]) : "" };
+      }
       return saveC({ data: { organizationId: rev.orgId, name: f.name, prefix: f.prefix, discountLabel: f.label, maxCodes: Number(f.max) || 500, expiresAt: null, active: true } });
     },
     onSuccess: async (r) => {
       await qc.invalidateQueries({ queryKey: ["revenue", rev.orgId] });
-      onCreated(r.id);
-      toast.success(kind === "product" ? "Product created and selected" : "Coupon created and selected");
+      if (r.id) onCreated(r.id);
+      toast.success(kind === "product" ? "Product created and selected" : kind === "page" ? "Delivery page created — select it after refresh" : "Coupon created and selected");
       setOpen(false);
       setF({ name: "", price: "", url: "", desc: "", prefix: "", label: "", max: "500" });
     },
@@ -605,24 +638,24 @@ function QuickCreate({ kind, onCreated }: { kind: "product" | "coupon"; onCreate
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button type="button" size="sm" variant="outline" className="w-fit"><Plus className="mr-1 size-3.5" />{kind === "product" ? "Create new product" : "Create new coupon"}</Button>
+        <Button type="button" size="sm" variant="outline" className="w-fit"><Plus className="mr-1 size-3.5" />{kind === "product" ? "Create new product" : kind === "page" ? "Create delivery page" : "Create new coupon"}</Button>
       </PopoverTrigger>
       <PopoverContent className="w-80 space-y-2">
-        <p className="text-sm font-medium">{kind === "product" ? "New product" : "New coupon campaign"}</p>
-        <Input placeholder={kind === "product" ? "Product name (e.g. Instagram Growth Ebook)" : "Campaign name (e.g. Diwali sale)"} value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />
+        <p className="text-sm font-medium">{kind === "product" ? "New product" : kind === "page" ? "New delivery page" : "New coupon campaign"}</p>
+        <Input placeholder={kind === "product" ? "Product name (e.g. Instagram Growth Ebook)" : kind === "page" ? "Page name (e.g. Growth Course Offer)" : "Campaign name (e.g. Diwali sale)"} value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />
         {kind === "product" ? (
           <>
             <Input type="number" min={1} placeholder="Price in ₹ (e.g. 499)" value={f.price} onChange={(e) => setF({ ...f, price: e.target.value })} />
             <Input placeholder="Short description (optional)" value={f.desc} onChange={(e) => setF({ ...f, desc: e.target.value })} />
             <Input placeholder="https:// payment link (only if Razorpay is not set up)" value={f.url} onChange={(e) => setF({ ...f, url: e.target.value })} />
           </>
-        ) : (
+        ) : kind === "coupon" ? (
           <>
             <Input placeholder="Code start (e.g. DIWALI) — letters/numbers" value={f.prefix} onChange={(e) => setF({ ...f, prefix: e.target.value.toUpperCase() })} />
             <Input placeholder="Discount (e.g. 20% off)" value={f.label} onChange={(e) => setF({ ...f, label: e.target.value })} />
             <Input type="number" min={1} placeholder="How many codes" value={f.max} onChange={(e) => setF({ ...f, max: e.target.value })} />
           </>
-        )}
+        ) : <p className="text-xs text-muted-foreground">Creates a professionally formatted starter page. Add its image, deadline and final copy in Revenue.</p>}
         <Button size="sm" className="w-full" disabled={m.isPending || !f.name} onClick={() => m.mutate()}>{m.isPending ? "Saving…" : "Create & select"}</Button>
       </PopoverContent>
     </Popover>
