@@ -259,7 +259,7 @@ export function runFlowDry(flow: Flow, input: FlowInput): { matched: boolean; ac
     if (s.kind === "send_payment") actions.push({ kind: "Payment link DM", detail: (s.text || "Pay here") + " [Pay now]" });
     if (s.kind === "lead_form") {
       actions.push({ kind: "Lead form", detail: s.fields.map((f, j) => `${j + 1}. ${f.label}${f.type === "choice" ? ` [${f.options.join(" / ")}]` : ""}`).join("  ") });
-      return { matched: true, actions, stoppedAt: i }; // live: continues after the last answer
+      continue; // live: waits for each answer, then continues
     }
     if (s.kind === "send_coupon") actions.push({ kind: "Coupon DM", detail: s.text.replace("{code}", "ABC-1234") });
   }

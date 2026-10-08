@@ -6,7 +6,7 @@
  * Every failure is caught and logged; it can never throw into the webhook.
  * All org safety settings (pause, quiet hours, caps, opt-out) apply.
  */
-import { sanitizeFlows, flowTriggerFor, conditionPasses, type Flow, type FlowStep } from "@/lib/flows";
+import { sanitizeFlows, flowTriggerFor, conditionPasses, leadAnswer, type Flow, type FlowStep, type LeadField } from "@/lib/flows";
 import { extractContactInfo } from "@/lib/crm";
 
 type AdminClient = import("@supabase/supabase-js").SupabaseClient;
@@ -25,7 +25,9 @@ export type FlowEvent = {
   trigger?: string;
 };
 
-type RunState = FlowEvent & { usedCommentReply?: boolean };
+type FormProgress = { step: number; field: number; answers: Record<string, string> };
+type RunState = FlowEvent & { usedCommentReply?: boolean; form?: FormProgress };
+const FORM_TIMEOUT_MS = 24 * 3600_000;
 
 function listed(flags: Record<string, unknown>, key: string, orgId: string) {
   const orgs = Array.isArray(flags[key]) ? (flags[key] as string[]) : [];
@@ -164,6 +166,18 @@ async function executeSteps(admin: AdminClient, flow: Flow, st: RunState, from: 
       await log(admin, st, "matched", `${flow.name}:waiting_${s.minutes}m`);
       return true;
     }
+    if (s.kind === "lead_form") {
+      if (s.fields.length === 0) continue;
+      const sent = await sendFormQuestion(admin, flow, st, s.fields[0]!, s.intro);
+      if (sent) {
+        await admin.from("flow_runs").insert({
+          organization_id: st.organizationId, conversation_id: st.conversationId, flow_id: flow.id, flow_name: flow.name,
+          state: { ...st, form: { step: i, field: 0, answers: {} } } as never, next_step: i, status: "awaiting_reply",
+          resume_at: new Date(Date.now() + FORM_TIMEOUT_MS).toISOString(),
+        });
+      }
+      return true;
+    }
     if (s.kind === "tag") {
       if (s.value) {
         await admin.from("contact_tags").upsert(
@@ -247,6 +261,79 @@ async function executeSteps(admin: AdminClient, flow: Flow, st: RunState, from: 
   return acted;
 }
 
+/** Send one lead-form question (choices as quick-reply taps) through the normal safety gate. */
+async function sendFormQuestion(admin: AdminClient, flow: Flow, st: RunState, f: LeadField, prefix: string): Promise<boolean> {
+  const block = await safetyBlock(admin, st);
+  if (block) { await log(admin, st, "skipped", `${flow.name}:${block}`); return false; }
+  const c = await credentials(admin, st);
+  if (!c) { await log(admin, st, "failed", `${flow.name}:no_token`); return false; }
+  const a = await import("@/lib/automation.server");
+  const text = [prefix, f.label].filter(Boolean).join("\n\n").slice(0, 1000);
+  const viaComment = st.channel === "comment" && st.externalId && !st.usedCommentReply;
+  const recipient = viaComment ? { comment_id: st.externalId } : { id: st.externalUserId };
+  const message = f.type === "choice" && f.options.length
+    ? { text, quick_replies: f.options.map((o) => ({ content_type: "text", title: o, payload: `LEADFORM_${o}`.slice(0, 1000) })) }
+    : { text };
+  const r = await a.flowCallMessaging(st.platform, c.accountId, { recipient, message, access_token: c.token });
+  if (r.error) { await log(admin, st, "failed", `${flow.name}:${r.error}`); return false; }
+  if (viaComment) st.usedCommentReply = true;
+  await recordOutbound(admin, st, flow, (viaComment ? "[private reply] " : "") + text, r.id ?? null);
+  await log(admin, st, "sent", `${flow.name}:lead_form`);
+  return true;
+}
+
+/** A DM answering an open lead form: save it, ask the next question or continue the flow. Returns true when handled. */
+async function continueLeadForm(admin: AdminClient, ev: FlowEvent, flags: Record<string, unknown>): Promise<boolean> {
+  if (ev.channel === "comment") return false;
+  const { data: run } = await admin.from("flow_runs").select("id, flow_id, state, next_step")
+    .eq("conversation_id", ev.conversationId).eq("status", "awaiting_reply").gt("resume_at", new Date().toISOString())
+    .order("created_at", { ascending: false }).limit(1).maybeSingle();
+  if (!run) return false;
+  const { data: claimed } = await admin.from("flow_runs").update({ status: "running", updated_at: new Date().toISOString() })
+    .eq("id", run.id).eq("status", "awaiting_reply").select("id");
+  if (!claimed?.length) return true;
+  const finish = (status: string, detail: string | null = null, state?: RunState) =>
+    admin.from("flow_runs").update({ status, detail, ...(state ? { state: state as never } : {}), updated_at: new Date().toISOString() }).eq("id", run.id);
+  const flow = sanitizeFlows(flags[`flows_cfg_${ev.organizationId}`]).find((f) => f.id === run.flow_id && f.active);
+  const prev = run.state as RunState;
+  const step = flow?.steps[run.next_step];
+  if (!flow || !prev.form || step?.kind !== "lead_form") { await finish("cancelled", "flow_off_or_changed"); return false; }
+  const st: RunState = { ...prev, body: ev.body, channel: ev.channel, externalId: ev.externalId };
+  const form = { ...prev.form, answers: { ...prev.form.answers } };
+  const field = step.fields[form.field];
+  if (!field) { await finish("cancelled", "form_changed"); return false; }
+  const ans = leadAnswer(field, ev.body ?? "");
+  if (!ans.ok) {
+    await sendFormQuestion(admin, flow, st, field, ans.hint);
+    await finish("awaiting_reply", null, { ...st, form });
+    return true;
+  }
+  form.answers[field.key] = ans.value;
+  // Save into Contacts (custom fields; email/phone also into their own columns, never overwriting).
+  const key = { organization_id: ev.organizationId, platform: ev.platform, external_user_id: ev.externalUserId };
+  const { data: cur } = await admin.from("contact_profiles").select("email, phone, custom_fields")
+    .eq("organization_id", key.organization_id).eq("platform", key.platform).eq("external_user_id", key.external_user_id).maybeSingle();
+  const custom = { ...((cur?.custom_fields as Record<string, unknown> | null) ?? {}), [field.key]: ans.value };
+  await admin.from("contact_profiles").upsert({
+    ...key, custom_fields: custom as never,
+    email: cur?.email || (field.type === "email" ? ans.value : null),
+    phone: cur?.phone || (field.type === "phone" ? ans.value : null),
+    updated_at: new Date().toISOString(),
+  }, { onConflict: "organization_id,platform,external_user_id" });
+  const next = step.fields[form.field + 1];
+  if (next) {
+    form.field += 1;
+    await sendFormQuestion(admin, flow, st, next, "");
+    await finish("awaiting_reply", null, { ...st, form });
+    return true;
+  }
+  await finish("done", "form_completed");
+  await log(admin, st, "matched", `${flow.name}:form_completed`);
+  const { form: _done, ...rest } = st;
+  await executeSteps(admin, flow, rest, run.next_step + 1);
+  return true;
+}
+
 /** Phase D: save an email/phone found in an incoming DM to the CRM (never overwrites, never sends). */
 async function captureContactInfo(admin: AdminClient, ev: FlowEvent) {
   try {
@@ -274,6 +361,9 @@ export async function runLiveFlows(admin: AdminClient, ev: FlowEvent, startedAt:
     const { data } = await admin.from("platform_settings").select("feature_flags").eq("id", true).maybeSingle();
     const flags = (data?.feature_flags as Record<string, unknown> | null) ?? {};
     if (!liveFlowsActive(flags, ev.organizationId)) return;
+    const { count: ruleSent } = await admin.from("automation_runs").select("id", { count: "exact", head: true })
+      .eq("conversation_id", ev.conversationId).eq("status", "sent").not("rule_id", "is", null).gte("created_at", startedAt);
+    if ((ruleSent ?? 0) === 0 && (await continueLeadForm(admin, ev, flags))) return;
     const trigger = flowTriggerFor(ev.channel, ev.trigger);
     const flows = sanitizeFlows(flags[`flows_cfg_${ev.organizationId}`]).filter(
       (f) => f.active && f.trigger === trigger && (f.platform === "both" || f.platform === ev.platform),
