@@ -5,41 +5,67 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { submitOfferForm, submitPageForm } from "@/lib/revenue.functions";
-import type { LeadField } from "@/lib/delivery-page";
+import { validateLeadValue, type LeadField } from "@/lib/delivery-page";
 
-type Config = { mode: "none" | "optional" | "required"; consent?: string; fields?: LeadField[] };
+export type LeadFormConfig = { mode: "none" | "optional" | "required"; consent?: string; fields?: LeadField[] };
+export type LeadFormSource = { token?: string; slug?: string; preview?: boolean; config: LeadFormConfig };
 
-/** Lead form on a delivery page. Pass `token` (buyer offer link), `slug` (public page) or `preview`. */
-export function DeliveryLeadForm({ token, slug, preview, config }: { token?: string; slug?: string; preview?: boolean; config: Config }) {
+/**
+ * Lead form state. `run()` validates and saves; returns false only when the visitor must fix a field.
+ * Network/save failures never block the visitor from continuing.
+ */
+export function useLeadForm(src: LeadFormSource | null | undefined) {
   const submitOffer = useServerFn(submitOfferForm);
   const submitPage = useServerFn(submitPageForm);
   const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [state, setState] = useState<"idle" | "saving" | "done">("idle");
-  const [error, setError] = useState("");
-  const fields = config.fields ?? [];
-  if (config.mode === "none" || fields.length === 0) return null;
-  if (state === "done") return <div className="rounded-lg border border-border bg-card p-5 text-center"><CheckCircle2 className="mx-auto size-7 text-success" /><p className="mt-2 font-medium">Details saved</p><p className="text-sm text-muted-foreground">You can continue with the offer.</p></div>;
-  const onSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (preview) { setError("Preview only — the real page saves the details."); return; }
-    setState("saving"); setError("");
+  const [note, setNote] = useState("");
+  const fields = src && src.config.mode !== "none" ? src.config.fields ?? [] : [];
+  const active = fields.length > 0;
+
+  const run = async (): Promise<boolean> => {
+    if (!active || !src || state === "done") return true;
+    const errs: Record<string, string> = {};
+    for (const f of fields) {
+      const v = (answers[f.key] ?? "").trim();
+      const p = validateLeadValue(f, v);
+      if (p) errs[f.key] = p;
+    }
+    setErrors(errs);
+    if (Object.keys(errs).length) { document.getElementById(`lead-${Object.keys(errs)[0]}`)?.focus(); return false; }
+    const filled = Object.values(answers).some((v) => v.trim());
+    if (!filled) return true;
+    if (src.preview) { setNote("Preview only — the real page saves the details."); return false; }
+    setState("saving");
     try {
-      if (token) await submitOffer({ data: { token, answers } });
-      else if (slug) await submitPage({ data: { slug, answers } });
+      if (src.token) await submitOffer({ data: { token: src.token, answers } });
+      else if (src.slug) await submitPage({ data: { slug: src.slug, answers } });
       setState("done");
-    } catch (err) { setState("idle"); setError(err instanceof Error ? err.message : "Could not save details"); }
+    } catch { setState("idle"); }
+    return true;
   };
-  return <form className="space-y-4 rounded-lg border border-border bg-card p-5 text-card-foreground" onSubmit={onSubmit}>
-    <div><h2 className="text-xl font-semibold">{fields.length === 1 ? "Where should we send it?" : "Fill in your details"}</h2><p className="mt-1 text-sm text-muted-foreground">Takes less than a minute.</p></div>
+
+  return { active, answers, setAnswers, errors, state, note, run, fields, consent: src?.config.consent };
+}
+
+/** Form fields only — the page's main button submits. With `standalone`, shows its own Submit button. */
+export function LeadFields({ form, standalone }: { form: ReturnType<typeof useLeadForm>; standalone?: boolean }) {
+  if (!form.active) return null;
+  if (form.state === "done" && standalone) return <div className="rounded-lg border border-border bg-card p-5 text-center"><CheckCircle2 className="mx-auto size-7 text-success" /><p className="mt-2 font-medium">Details saved</p></div>;
+  const { fields, answers, setAnswers, errors } = form;
+  return <div id="lead-form" className="mx-auto mt-6 max-w-md space-y-4 rounded-2xl border border-border bg-card p-5 text-left text-card-foreground shadow-sm">
+    <div><h2 className="text-lg font-semibold">{fields.length === 1 ? "Where should we send it?" : "Fill in your details"}</h2><p className="mt-1 text-sm text-muted-foreground">Takes less than a minute.</p></div>
     {fields.map((field) => <div key={field.key} className="space-y-1.5">
       <Label htmlFor={`lead-${field.key}`}>{field.label}{field.required ? " *" : ""}</Label>
       {field.type === "choice"
-        ? <select id={`lead-${field.key}`} required={field.required} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={answers[field.key] ?? ""} onChange={(e) => setAnswers({ ...answers, [field.key]: e.target.value })}><option value="">Choose…</option>{field.options.map((o) => <option key={o}>{o}</option>)}</select>
+        ? <select id={`lead-${field.key}`} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={answers[field.key] ?? ""} onChange={(e) => setAnswers({ ...answers, [field.key]: e.target.value })}><option value="">Choose…</option>{field.options.map((o) => <option key={o}>{o}</option>)}</select>
         : <Input id={`lead-${field.key}`} type={field.type === "phone" ? "tel" : field.type === "email" ? "email" : "text"} inputMode={field.type === "pincode" || field.type === "phone" ? "numeric" : undefined}
-            maxLength={field.type === "pincode" ? 6 : 200} required={field.required} value={answers[field.key] ?? ""} onChange={(e) => setAnswers({ ...answers, [field.key]: e.target.value })} />}
+            maxLength={field.type === "pincode" ? 6 : 200} value={answers[field.key] ?? ""} onChange={(e) => setAnswers({ ...answers, [field.key]: e.target.value })} />}
+      {errors[field.key] && <p className="text-xs text-destructive">{errors[field.key]}</p>}
     </div>)}
-    {config.consent && <p className="text-xs text-muted-foreground">{config.consent}</p>}
-    {error && <p className="text-sm text-destructive">{error}</p>}
-    <Button type="submit" className="w-full sm:w-auto" disabled={state === "saving"}>{state === "saving" ? "Saving…" : config.mode === "required" ? "Save and continue" : "Save details"}</Button>
-  </form>;
+    {form.consent && <p className="text-xs text-muted-foreground">{form.consent}</p>}
+    {form.note && <p className="text-sm text-muted-foreground">{form.note}</p>}
+    {standalone && <Button type="button" className="w-full" disabled={form.state === "saving"} onClick={() => void form.run()}>{form.state === "saving" ? "Saving…" : "Submit"}</Button>}
+  </div>;
 }
