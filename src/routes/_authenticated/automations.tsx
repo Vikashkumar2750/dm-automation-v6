@@ -30,7 +30,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useTenant } from "@/hooks/useTenant";
-import { explainReason, stepLabel } from "@/lib/activity-explain";
+import { activityName, explainReason, stepLabel } from "@/lib/activity-explain";
 import {
   createAutomationRule,
   deleteAutomationRule,
@@ -341,10 +341,14 @@ function AutomationsPage() {
   });
 
   const runsQuery = useQuery({
-    queryKey: ["automation-runs", orgId],
+    queryKey: ["automation-runs", orgId, "rules"],
     enabled: Boolean(orgId),
     refetchInterval: 20000,
-    queryFn: () => fetchRuns({ data: { organizationId: orgId! } }),
+    queryFn: () => fetchRuns({ data: { organizationId: orgId!, source: "rules" } }),
+  });
+  const flowRunsQuery = useQuery({
+    queryKey: ["automation-runs", orgId, "flows"], enabled: Boolean(orgId), refetchInterval: 20000,
+    queryFn: () => fetchRuns({ data: { organizationId: orgId ?? "", source: "flows" } }),
   });
   const fetchFlowsInfo = useServerFn(getFlows);
   const flowsQuery = useQuery({
@@ -444,7 +448,6 @@ function AutomationsPage() {
   const activeCount = rules.filter((r) => r.is_active).length;
   const ruleLimitHit = maxRules !== null && activeCount >= maxRules;
   const runs = runsQuery.data ?? [];
-  const visibleRuns = runs.slice(0, 5);
   const ruleName = (id: string | null) => {
     if (!id) return "Safety settings";
     return rules.find((r) => r.id === id)?.name ?? "Deleted rule";
@@ -611,58 +614,24 @@ function AutomationsPage() {
           )}
         </Panel>
 
-        <Panel title="Recent activity" bodyClassName="p-0">
-          {runs.length === 0 ? (
-            <div className="p-5">
-              <EmptyState
-                icon={Zap}
-                title="No automation activity yet"
-                description="Every time a rule fires, skips or fails you will see it here."
-              />
-            </div>
-          ) : (
-            <>
-              <ul className="divide-y">
-              {visibleRuns.map((run) => {
-                const sent = run.status === "sent" || run.status === "matched";
-                const explained = sent ? null : explainReason(run.detail);
-                return (
-                  <li key={run.id}>
-                    <Link
-                      to="/automations/activity/$runId"
-                      params={{ runId: run.id }}
-                      className="flex items-start gap-3 px-5 py-3 hover:bg-muted/50"
-                    >
+        <div className="grid gap-4 lg:grid-cols-2">
+          {([{ source: "flows" as const, title: "FLOW", entries: flowRunsQuery.data ?? [] }, { source: "rules" as const, title: "Rule", entries: runs }] ).map(({ source, title, entries }) => (
+            <Panel key={source} title={`${title} recent activity`} bodyClassName="p-0">
+              {entries.length === 0 ? <div className="p-5"><EmptyState icon={Zap} title={`No ${title} activity yet`} description="Sent, skipped and failed steps appear here." /></div> : <ul className="divide-y">
+                {entries.slice(0, 5).map((run) => {
+                  const sent = run.status === "sent" || run.status === "matched";
+                  const ex = sent ? null : explainReason(run.detail);
+                  return <li key={run.id}><Link to="/automations/activity/$runId" params={{ runId: run.id }} search={{ source, filter: "all" }} className="flex items-start gap-3 px-5 py-3 hover:bg-muted/50">
                     <StatusBadge tone={runTone[run.status]}>{run.status}</StatusBadge>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium">
-                        {sent ? `${ruleName(run.rule_id)}: ${stepLabel(run.detail)}` : `${explained!.title} — ${ruleName(run.rule_id)}`}
-                      </p>
-                      {explained?.hint && (
-                        <p className="truncate text-xs text-muted-foreground">{explained.hint}</p>
-                      )}
-                      <p className="truncate text-xs text-muted-foreground">
-                        {run.detail ?? "—"} · {new Date(run.created_at).toLocaleString()}
-                      </p>
-                    </div>
-                    </Link>
-                  </li>
-                );
-              })}
-              </ul>
-              {runs.length > 5 && (
-                <div className="border-t p-3 text-center">
-                  <Button asChild variant="ghost" size="sm">
-                    <Link to="/automations/activity">
-                      <ChevronDown className="size-4" />
-                      View all activity
-                    </Link>
-                  </Button>
-                </div>
-              )}
-            </>
-          )}
-        </Panel>
+                    <div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{activityName(run, ruleName)}: {sent ? stepLabel(run.detail) : ex?.title}</p>
+                    {ex?.hint && <p className="truncate text-xs text-muted-foreground">{ex.hint}</p>}<p className="text-xs text-muted-foreground">{new Date(run.created_at).toLocaleString()}</p></div>
+                  </Link></li>;
+                })}
+              </ul>}
+              <div className="border-t p-3 text-center"><Button asChild variant="ghost" size="sm"><Link to="/automations/activity" search={{ source, filter: "all" }}>View all {title} activity</Link></Button></div>
+            </Panel>
+          ))}
+        </div>
       </div>
 
       <SafetyPanel orgId={orgId} />

@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { getRevenue, saveCampaign, saveProduct } from "@/lib/revenue.functions";
 import { rupeesToPaise } from "@/lib/revenue";
 import { toast } from "sonner";
@@ -36,6 +36,8 @@ export const Route = createFileRoute("/_authenticated/automations_/flows")({
   component: FlowsPage,
 });
 
+import { zoomAt, wheelPixels } from "@/lib/canvas-view";
+
 const RevenueOptions = createContext<{ orgId?: string | undefined; products: { id: string; name: string }[]; campaigns: { id: string; name: string }[] }>({ products: [], campaigns: [] });
 
 const sel = "h-9 rounded-md border border-input bg-background px-2 text-sm";
@@ -48,6 +50,7 @@ const STEP_TEMPLATES: { group: "Conditions" | "Actions" | "Sales" | "Contacts"; 
   { group: "Conditions", label: "If has tag", make: () => ({ id: newStepId(), kind: "condition", check: "has_tag", value: "" }) },
   { group: "Conditions", label: "If missing tag", make: () => ({ id: newStepId(), kind: "condition", check: "no_tag", value: "" }) },
   { group: "Conditions", label: "If email / phone known", make: () => ({ id: newStepId(), kind: "condition", check: "has_contact", value: "any" }) },
+  { group: "Actions", label: "Opening DM / Send me the link", make: () => ({ id: newStepId(), kind: "opening_dm", text: "Tap below and I’ll send you the details 👇", buttonTitle: "Send me the link" }) },
   { group: "Actions", label: "Send DM", make: () => ({ id: newStepId(), kind: "send_dm", text: "" }) },
   { group: "Actions", label: "Public reply", make: () => ({ id: newStepId(), kind: "public_reply", text: "" }) },
   { group: "Actions", label: "Follow gate (Visit profile)", make: () => ({ id: newStepId(), kind: "follow_gate", text: "Please follow us first, then tap \"I followed\" 🙏", buttonTitle: "Visit profile", profileUrl: "" }) },
@@ -68,10 +71,11 @@ function stepLabel(s: FlowStep): string {
   if (s.kind === "condition") {
     return { contains: "If contains", not_contains: "If does not contain", is_follower: s.value === "no" ? "If non-follower" : "If follower", has_tag: "If has tag", no_tag: "If missing tag", has_contact: "If email / phone" }[s.check];
   }
-  return { send_dm: "Send DM", public_reply: "Public reply", wait: "Wait", tag: "Add tag", remove_tag: "Remove tag", ask_contact: "Ask email / phone", follow_gate: "Follow gate", send_payment: "Payment link", send_coupon: "Coupon", lead_form: "Lead form" }[s.kind];
+  return { opening_dm: "Opening DM", send_dm: "Send DM", public_reply: "Public reply", wait: "Wait", tag: "Add tag", remove_tag: "Remove tag", ask_contact: "Ask email / phone", follow_gate: "Follow gate", send_payment: "Payment link", send_coupon: "Coupon", lead_form: "Lead form" }[s.kind];
 }
 
 const STEP_HELP = {
+  opening_dm: { title: "Opening DM / Send me the link", how: "Sends the initial private reply with a tap button to every matching commenter. The flow waits for the button tap before any follower check or final link.", why: "Put this before follower checks and private messages for the same opt-in sequence as comment rules." },
   contains: {
     title: "If comment/DM contains",
     how: "Checks whether the person's comment or DM contains any keyword entered here. Separate multiple keywords with commas.",
@@ -139,7 +143,7 @@ const STEP_HELP = {
   },
   follow_gate: {
     title: "Follow gate (Visit profile)",
-    how: "Followers pass straight through to the next step. Non-followers get this DM with a Visit profile button and the flow stops — when they follow and comment again, the flow continues for them.",
+    how: "Followers pass straight through to the next step. Non-followers get Visit profile and I followed buttons. The confirmation tap checks follow status again; verified followers continue from this step.",
     why: "Use it to give links or freebies only to followers and grow your audience.",
   },
   lead_form: {
@@ -289,7 +293,7 @@ function FlowsPage() {
                 </button>
               ))}
             </div>
-            <ul className="space-y-1">
+            <ul aria-label="Flow templates" className="max-h-[min(52vh,480px)] space-y-1 overflow-y-auto overscroll-contain pr-1">
               {FLOW_TEMPLATES.filter((t) => category === "all" || t.category === category).map((t) => (
                 <li key={t.key}>
                   <button
@@ -464,7 +468,7 @@ function StepCard({ step, index, onChange, onRemove, onMove }: {
             <option value="none">Nothing saved yet</option>
           </select>
         )}
-        {(step.kind === "ask_contact" || step.kind === "follow_gate") && (
+        {(step.kind === "ask_contact" || step.kind === "follow_gate" || step.kind === "opening_dm") && (
           <textarea
             rows={3}
             className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
@@ -474,6 +478,7 @@ function StepCard({ step, index, onChange, onRemove, onMove }: {
             onChange={(e) => onChange({ ...step, text: e.target.value })}
           />
         )}
+        {step.kind === "opening_dm" && <Input aria-label="Opening button title" maxLength={20} value={step.buttonTitle} onChange={(e) => onChange({ ...step, buttonTitle: e.target.value })} />}
         {step.kind === "follow_gate" && (
           <div className="grid gap-2 sm:grid-cols-2">
             <Input placeholder="Button title" maxLength={20} value={step.buttonTitle} onChange={(e) => onChange({ ...step, buttonTitle: e.target.value })} />
@@ -693,10 +698,11 @@ function TestPanel({ flow }: { flow: Flow }) {
   const [text, setText] = useState("What is the price?");
   const [platform, setPlatform] = useState<"instagram" | "facebook">("instagram");
   const [follower, setFollower] = useState<"yes" | "no">("yes");
+  const [openerTapped, setOpenerTapped] = useState(false);
   const [tags, setTags] = useState("");
   const [contact, setContact] = useState<"none" | "email" | "phone">("none");
   const r = runFlowDry(flow, {
-    text, platform, isFollower: follower === "yes", trigger: flow.trigger,
+    text, platform, isFollower: follower === "yes", trigger: flow.trigger, openerTapped,
     tags: tags.split(",").map((t) => t.trim()).filter(Boolean), hasEmail: contact === "email", hasPhone: contact === "phone",
   });
   return (
@@ -720,7 +726,8 @@ function TestPanel({ flow }: { flow: Flow }) {
           <option value="phone">Phone saved</option>
         </select>
       </div>
-      <div className="mt-4 space-y-2 text-sm">
+      {flow.steps.some((s) => s.kind === "opening_dm" && !s.disabled) && <Button size="sm" variant={openerTapped ? "default" : "outline"} className="mt-3" onClick={() => setOpenerTapped((v) => !v)}>{openerTapped ? "Reset opening tap" : "Simulate Send me the link tap"}</Button>}
+      <div aria-label="Try it results" className="mt-4 max-h-[min(48vh,420px)] space-y-2 overflow-y-auto overscroll-contain pr-1 text-sm">
         {!r.matched && <p className="text-muted-foreground">This flow would not start for this platform.</p>}
         {r.matched && r.actions.length === 0 && r.stoppedAt === null && <p className="text-muted-foreground">No actions yet.</p>}
         {r.actions.map((a, i) => (
@@ -729,7 +736,7 @@ function TestPanel({ flow }: { flow: Flow }) {
             <p className="whitespace-pre-wrap">{a.detail || "(empty)"}</p>
           </div>
         ))}
-        {r.stoppedAt !== null && <p className="text-muted-foreground">Stopped at step {r.stoppedAt + 1} ({flow.steps[r.stoppedAt]?.kind === "follow_gate" ? "waiting for them to follow" : "condition not met"}).</p>}
+        {r.stoppedAt !== null && <p className="text-muted-foreground">Stopped at step {r.stoppedAt + 1} ({flow.steps[r.stoppedAt]?.kind === "opening_dm" ? "waiting for Send me the link tap" : flow.steps[r.stoppedAt]?.kind === "follow_gate" ? "waiting for verified I followed tap" : "condition not met"}).</p>}
         <p className="pt-2 text-xs text-muted-foreground">Preview only — this box never sends anything.</p>
       </div>
     </Panel>
@@ -750,6 +757,47 @@ function FlowCanvas({ flow, zoom, setZoom, zoomBy, onFlow, trigger, renderStep, 
 }) {
   const [pan, setPan] = useState<Pos>({ x: 0, y: 0 });
   const [live, setLive] = useState<Record<string, Pos>>({});
+  const viewport = useRef<HTMLDivElement>(null);
+  const inside = useRef(false);
+  const view = useRef({ pan, zoom });
+  view.current = { pan, zoom };
+  const setZoomRef = useRef(setZoom);
+  setZoomRef.current = setZoom;
+  const applyZoom = (next: number, anchor?: Pos) => {
+    const el = viewport.current;
+    if (!el) return;
+    const v = view.current;
+    const result = zoomAt(v.pan, v.zoom, next, anchor ?? { x: el.clientWidth / 2, y: el.clientHeight / 2 });
+    view.current = result;
+    setPan(result.pan); setZoomRef.current(result.zoom);
+  };
+  const applyZoomRef = useRef(applyZoom);
+  applyZoomRef.current = applyZoom;
+  useEffect(() => {
+    const el = viewport.current;
+    if (!el) return;
+    const wheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const dy = wheelPixels(e.deltaY, e.deltaMode, el.clientHeight);
+      if (e.ctrlKey || e.metaKey) {
+        const rect = el.getBoundingClientRect();
+        applyZoomRef.current(view.current.zoom * Math.exp(-Math.max(-200, Math.min(200, dy)) * 0.003), { x: e.clientX - rect.left, y: e.clientY - rect.top });
+      } else {
+        const next = { x: view.current.pan.x - wheelPixels(e.deltaX, e.deltaMode, el.clientHeight), y: view.current.pan.y - dy };
+        view.current = { ...view.current, pan: next }; setPan(next);
+      }
+    };
+    const key = (e: KeyboardEvent) => {
+      const target = e.target instanceof HTMLElement ? e.target : null;
+      if (!(e.ctrlKey || e.metaKey) || (!inside.current && document.activeElement !== el) || target?.closest("input,textarea,select,[contenteditable=true]")) return;
+      const direction = ["+", "="].includes(e.key) ? 1 : ["-", "_"].includes(e.key) ? -1 : 0;
+      if (!direction) return;
+      e.preventDefault(); applyZoomRef.current(view.current.zoom + direction * 0.1);
+    };
+    el.addEventListener("wheel", wheel, { passive: false });
+    window.addEventListener("keydown", key);
+    return () => { el.removeEventListener("wheel", wheel); window.removeEventListener("keydown", key); };
+  }, []);
   const tPos = live["__trigger"] ?? flow.triggerPos ?? { x: 40, y: 60 };
   const posOf = (s: FlowStep, i: number) => live[s.id] ?? s.pos ?? defaultPos(i);
   const addPos = live["__add"] ?? flow.addPos ?? defaultPos(flow.steps.length);
@@ -788,17 +836,21 @@ function FlowCanvas({ flow, zoom, setZoom, zoomBy, onFlow, trigger, renderStep, 
   return (
     <div className="relative overflow-hidden rounded-xl border border-border">
       <div className="absolute right-2 top-2 z-10 flex items-center gap-1 rounded-md border border-border bg-card p-1 shadow-sm">
-        <Button size="icon" variant="ghost" className="size-7" aria-label="Zoom out" onClick={() => zoomBy(-0.1)}><ZoomOut className="size-4" /></Button>
+        <Button size="icon" variant="ghost" className="size-7" aria-label="Zoom out" onClick={() => applyZoom(zoom - 0.1)}><ZoomOut className="size-4" /></Button>
         <span className="w-10 text-center text-xs tabular-nums">{Math.round(zoom * 100)}%</span>
-        <Button size="icon" variant="ghost" className="size-7" aria-label="Zoom in" onClick={() => zoomBy(0.1)}><ZoomIn className="size-4" /></Button>
+        <Button size="icon" variant="ghost" className="size-7" aria-label="Zoom in" onClick={() => applyZoom(zoom + 0.1)}><ZoomIn className="size-4" /></Button>
         <Button size="icon" variant="ghost" className="size-7" aria-label="Reset view" onClick={() => { setPan({ x: 0, y: 0 }); setZoom(1); }}><Maximize2 className="size-4" /></Button>
         <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={arrange}>Auto-arrange</Button>
       </div>
       <div
+        ref={viewport}
+        tabIndex={0}
+        aria-label="Flow canvas"
+        onPointerEnter={() => { inside.current = true; }}
+        onPointerLeave={() => { inside.current = false; }}
         className="h-[75vh] cursor-grab touch-none select-none bg-muted/30 active:cursor-grabbing"
         style={{ backgroundImage: "radial-gradient(var(--border) 1px, transparent 1px)", backgroundSize: `${20 * zoom}px ${20 * zoom}px`, backgroundPosition: `${pan.x}px ${pan.y}px` }}
         onPointerDown={startPan}
-        onWheel={(e) => { if (e.ctrlKey || e.metaKey) { e.preventDefault(); zoomBy(e.deltaY < 0 ? 0.1 : -0.1); } else setPan((p) => ({ x: p.x - e.deltaX, y: p.y - e.deltaY })); }}
       >
         <div className="relative origin-top-left" style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`, width: maxX, height: maxY }}>
           <svg className="pointer-events-none absolute inset-0 overflow-visible" width={maxX} height={maxY}>

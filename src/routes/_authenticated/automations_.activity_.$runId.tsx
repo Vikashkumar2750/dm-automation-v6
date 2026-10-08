@@ -7,7 +7,7 @@ import { AppShell } from "@/components/app/AppShell";
 import { PageHeader, Panel, StatusBadge } from "@/components/app/primitives";
 import { Button } from "@/components/ui/button";
 import { useTenant } from "@/hooks/useTenant";
-import { explainReason, stepLabel } from "@/lib/activity-explain";
+import { flowActivity, explainReason, stepLabel } from "@/lib/activity-explain";
 import { getAutomationRunDetail } from "@/lib/automations.functions";
 
 export const Route = createFileRoute("/_authenticated/automations_/activity_/$runId")({
@@ -21,6 +21,7 @@ export const Route = createFileRoute("/_authenticated/automations_/activity_/$ru
       { name: "twitter:card", content: "summary" },
     ],
   }),
+  validateSearch: (s: Record<string, unknown>) => ({ source: s["source"] === "flows" || s["source"] === "system" ? s["source"] : "rules", filter: s["filter"] === "sent" || s["filter"] === "skipped" || s["filter"] === "failed" ? s["filter"] : "all" }),
   component: RunDetailPage,
 });
 
@@ -46,6 +47,7 @@ function Row({ k, v }: { k: string; v: React.ReactNode }) {
 
 function RunDetailPage() {
   const { runId } = Route.useParams();
+  const search = Route.useSearch();
   const { activeOrg } = useTenant();
   const orgId = activeOrg?.id;
   const fetchDetail = useServerFn(getAutomationRunDetail);
@@ -63,7 +65,7 @@ function RunDetailPage() {
     <AppShell>
       <div className="space-y-6">
         <Button asChild variant="ghost" size="sm">
-          <Link to="/automations/activity"><ArrowLeft className="size-4" /> All activity</Link>
+          <Link to="/automations/activity" search={search}><ArrowLeft className="size-4" /> All activity</Link>
         </Button>
         {q.isLoading || !orgId ? (
           <p className="text-sm text-muted-foreground">Loading…</p>
@@ -94,8 +96,8 @@ function RunDetailPage() {
                   <p className="text-sm text-muted-foreground">No contact linked to this step.</p>
                 )}
               </Panel>
-              <Panel title="Rule">
-                {d.rule ? (
+              <Panel title={flowActivity(d.run.detail) ? "FLOW" : "Rule"}>
+                {flowActivity(d.run.detail) ? <Row k="Name" v={flowActivity(d.run.detail)?.name ?? "Flow"} /> : d.rule ? (
                   <>
                     <Row k="Name" v={d.rule.name} />
                     <Row k="Trigger" v={d.rule.trigger === "comment_received" ? "New comment" : "New DM"} />

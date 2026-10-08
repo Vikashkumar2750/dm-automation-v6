@@ -338,6 +338,14 @@ async function ingestIntoInbox(
       "@/lib/automation.server"
     );
 
+    // Reserved flow callbacks cannot be consumed by a pending keyword-rule gate.
+    if (followPayload?.startsWith("FLOW_TAP:")) {
+      const { runLiveFlows } = await import("@/lib/flows-runner.server");
+      await runLiveFlows(admin, { organizationId, conversationId: conversation.id, socialAccountId, platform,
+        channel, body, externalUserId, externalId, payload: followPayload }, new Date().toISOString());
+      return null;
+    }
+
     // Record that the button reached us independently of whether follow status
     // can be checked or the next message can be delivered.
     if (followPayload?.startsWith("AUTOMATION_FOLLOW_CHECK:")) {
@@ -541,9 +549,14 @@ export const Route = createFileRoute("/api/public/webhooks/meta")({
             const gateAccount = gateId
               ? await findGateAccount(supabaseAdmin, gateId, externalId)
               : null;
-            const itemOrganizationId = gateAccount?.organization_id ?? organizationId;
-            const itemSocialAccountId = gateAccount?.id ?? socialAccountId;
-            const itemPlatform = gateAccount?.platform ?? platform;
+            const flowPayload = normalized ? messagingContent(normalized).payload : null;
+            const flowAccount = flowPayload?.startsWith("FLOW_TAP:")
+              ? await (await import("@/lib/flows-runner.server")).resolveFlowTapAccount(supabaseAdmin, flowPayload, externalId, normalized?.sender?.id ?? null)
+              : null;
+            if (flowPayload?.startsWith("FLOW_TAP:") && !flowAccount) continue;
+            const itemOrganizationId = flowAccount?.organization_id ?? gateAccount?.organization_id ?? organizationId;
+            const itemSocialAccountId = flowAccount?.id ?? gateAccount?.id ?? socialAccountId;
+            const itemPlatform = flowAccount?.platform ?? gateAccount?.platform ?? platform;
             const identity = eventIdentity(item, `${entry.time ?? 0}:${index}`);
             const dedupeKey = `meta:${externalId ?? "unknown"}:${item.type}:${identity}`;
             const { data: webhookEvent, error } = await supabaseAdmin

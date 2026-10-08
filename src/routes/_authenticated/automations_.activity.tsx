@@ -1,14 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useState } from "react";
 import { ArrowLeft, ChevronRight, Zap } from "lucide-react";
 
 import { AppShell } from "@/components/app/AppShell";
 import { EmptyState, PageHeader, Panel, StatusBadge } from "@/components/app/primitives";
 import { Button } from "@/components/ui/button";
 import { useTenant } from "@/hooks/useTenant";
-import { explainReason, stepLabel } from "@/lib/activity-explain";
+import { activityName, explainReason, stepLabel } from "@/lib/activity-explain";
 import { listAutomationRules, listAutomationRuns } from "@/lib/automations.functions";
 
 export const Route = createFileRoute("/_authenticated/automations_/activity")({
@@ -22,6 +21,7 @@ export const Route = createFileRoute("/_authenticated/automations_/activity")({
       { name: "twitter:card", content: "summary" },
     ],
   }),
+  validateSearch: (s: Record<string, unknown>) => ({ source: s["source"] === "flows" || s["source"] === "rules" || s["source"] === "system" ? s["source"] : "rules", filter: s["filter"] === "sent" || s["filter"] === "skipped" || s["filter"] === "failed" ? s["filter"] : "all" }),
   component: ActivityPage,
 });
 
@@ -33,12 +33,13 @@ function ActivityPage() {
   const orgId = activeOrg?.id;
   const fetchRuns = useServerFn(listAutomationRuns);
   const fetchRules = useServerFn(listAutomationRules);
-  const [filter, setFilter] = useState<(typeof FILTERS)[number]>("all");
+  const { source, filter } = Route.useSearch();
+  const navigate = Route.useNavigate();
 
   const runsQuery = useQuery({
-    queryKey: ["automation-runs-all", orgId],
+    queryKey: ["automation-runs-all", orgId, source],
     enabled: Boolean(orgId),
-    queryFn: () => fetchRuns({ data: { organizationId: orgId!, limit: 300 } }),
+    queryFn: () => fetchRuns({ data: { organizationId: orgId!, limit: 300, source } }),
     refetchInterval: 15_000,
   });
   const rulesQuery = useQuery({
@@ -61,13 +62,14 @@ function ActivityPage() {
           title="Automation activity"
           description="Every step your automations took. Tap any entry to see full details."
         />
+        <div className="flex gap-2">{(["flows", "rules", "system"] as const).map((s) => <Button key={s} variant={source === s ? "default" : "outline"} onClick={() => navigate({ search: { source: s, filter } })}>{s === "flows" ? "FLOW" : s === "rules" ? "Rule" : "System / safety"}</Button>)}</div>
         <Panel
           title={`${runs.length} entries`}
           bodyClassName="p-0"
           action={
             <div className="flex gap-1">
               {FILTERS.map((f) => (
-                <Button key={f} size="sm" variant={filter === f ? "default" : "outline"} className="capitalize" onClick={() => setFilter(f)}>
+                <Button key={f} size="sm" variant={filter === f ? "default" : "outline"} className="capitalize" onClick={() => navigate({ search: { source, filter: f } })}>
                   {f}
                 </Button>
               ))}
@@ -90,12 +92,13 @@ function ActivityPage() {
                     <Link
                       to="/automations/activity/$runId"
                       params={{ runId: run.id }}
+                      search={{ source, filter }}
                       className="flex items-center gap-3 px-5 py-3 hover:bg-muted/50"
                     >
                       <StatusBadge tone={tone[run.status]}>{run.status}</StatusBadge>
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-medium">
-                          {ok ? `${ruleName(run.rule_id)}: ${stepLabel(run.detail)}` : `${ex!.title} — ${ruleName(run.rule_id)}`}
+                          {ok ? `${activityName(run, ruleName)}: ${stepLabel(run.detail)}` : `${ex?.title} — ${activityName(run, ruleName)}`}
                         </p>
                         {ex?.hint && <p className="truncate text-xs text-muted-foreground">{ex.hint}</p>}
                         <p className="text-xs text-muted-foreground">{new Date(run.created_at).toLocaleString()}</p>

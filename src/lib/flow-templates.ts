@@ -26,7 +26,7 @@ export const FLOW_TEMPLATES: Tpl[] = [
       { kind: "condition", check: "contains", value: "price, link, buy, details, info" },
       { kind: "condition", check: "no_tag", value: "do-not-contact" },
       { kind: "public_reply", text: "Sent you everything in DM 📩" },
-      { kind: "follow_gate", text: "Please follow us first to unlock the details 🙏 Then comment again!", buttonTitle: "Visit profile", profileUrl: PROFILE },
+      { kind: "follow_gate", text: "Please follow us first to unlock the details 🙏 Then tap “I followed ✅”.", buttonTitle: "Visit profile", profileUrl: PROFILE },
       { kind: "tag", value: "follower" },
       { kind: "send_dm", text: "Thanks for following! Here are the details 👇", buttonTitle: "See details", buttonUrl: "https://example.com" },
       { kind: "tag", value: "hot-lead" },
@@ -73,11 +73,11 @@ export const FLOW_TEMPLATES: Tpl[] = [
     key: "follow_unlock",
     category: "followers",
     name: "Non-follower → Visit profile, follower → link",
-    description: "Non-followers get a Visit profile button; followers get the link straight away.",
+    description: "Tap Send me the link first; followers receive the link, others get Visit profile and I followed.",
     trigger: "new_comment",
     steps: [
       { kind: "condition", check: "contains", value: "link, free, guide" },
-      { kind: "follow_gate", text: "Follow us to unlock the link 🔓 then comment again!", buttonTitle: "Visit profile", profileUrl: PROFILE },
+      { kind: "follow_gate", text: "Follow us to unlock the link 🔓 then tap “I followed ✅”!", buttonTitle: "Visit profile", profileUrl: PROFILE },
       { kind: "send_dm", text: "Here's your link 🔗", buttonTitle: "Open link", buttonUrl: "https://example.com" },
       { kind: "tag", value: "follower-exclusive" },
     ],
@@ -91,7 +91,7 @@ export const FLOW_TEMPLATES: Tpl[] = [
     steps: [
       { kind: "condition", check: "contains", value: "giveaway, enter, win" },
       { kind: "condition", check: "no_tag", value: "giveaway-entry" },
-      { kind: "follow_gate", text: "You must follow us to enter 🙌 then comment again.", buttonTitle: "Visit profile", profileUrl: PROFILE },
+      { kind: "follow_gate", text: "You must follow us to enter 🙌 then tap “I followed ✅”.", buttonTitle: "Visit profile", profileUrl: PROFILE },
       { kind: "public_reply", text: "You're in! Good luck 🍀" },
       { kind: "send_dm", text: "Your giveaway entry is confirmed ✅ Winners announced soon!" },
       { kind: "tag", value: "giveaway-entry" },
@@ -223,6 +223,15 @@ export const FLOW_TEMPLATES: Tpl[] = [
   },
 ];
 
+/** New comment templates explicitly include opt-in before any follower check/private action. Saved flows are not rewritten. */
+function templateSteps(t: Tpl): StepNoId[] {
+  if (t.trigger !== "new_comment" || t.steps.some((s) => s.kind === "opening_dm")) return t.steps;
+  const at = t.steps.findIndex((s) => !s.disabled && (["send_dm", "follow_gate", "send_payment", "send_coupon", "lead_form", "ask_contact"].includes(s.kind) || (s.kind === "condition" && s.check === "is_follower")));
+  if (at < 0) return t.steps;
+  return [...t.steps.slice(0, at), { kind: "opening_dm", text: "Tap below and I'll send you the details 👇", buttonTitle: "Send me the link" }, ...t.steps.slice(at)];
+}
+for (const t of FLOW_TEMPLATES) t.steps = templateSteps(t);
+
 export function flowFromTemplate(key: string): Flow | null {
   const t = FLOW_TEMPLATES.find((x) => x.key === key);
   if (!t) return null;
@@ -232,7 +241,7 @@ export function flowFromTemplate(key: string): Flow | null {
     active: false,
     platform: "both",
     trigger: t.trigger,
-    steps: t.steps.map((s) => ({ ...s, id: newStepId() }) as FlowStep),
+    steps: templateSteps(t).map((s) => ({ ...s, id: newStepId() }) as FlowStep),
     updatedAt: new Date().toISOString(),
   };
 }
