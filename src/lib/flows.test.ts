@@ -56,3 +56,52 @@ describe("phase B live helpers", () => {
     expect(liveFlowsActive({ flows_enabled: true, flows_live_enabled: true, flows_live_orgs: ["x"] }, org)).toBe(false);
   });
 });
+
+import { FLOW_TEMPLATES, flowFromTemplate } from "./flow-templates";
+describe("advanced flow steps", () => {
+  const mk = (steps: Flow["steps"]): Flow => ({ ...base, steps });
+  it("skips switched-off steps", () => {
+    const f = mk([
+      { id: "a", kind: "condition", check: "contains", value: "zzz", disabled: true },
+      { id: "b", kind: "send_dm", text: "hi" },
+      { id: "c", kind: "send_dm", text: "off", disabled: true },
+    ]);
+    const r = runFlowDry(f, { text: "hello", isFollower: null, platform: "instagram", trigger: "new_comment" });
+    expect(r.actions.map((a) => a.detail)).toEqual(["hi"]);
+    expect(sanitizeFlows([f])[0]!.steps[0]!.disabled).toBe(true);
+  });
+  it("follow gate stops non-followers and passes followers", () => {
+    const f = mk([
+      { id: "g", kind: "follow_gate", text: "Follow first", buttonTitle: "Visit profile", profileUrl: "https://instagram.com/x" },
+      { id: "d", kind: "send_dm", text: "link" },
+    ]);
+    const no = runFlowDry(f, { text: "x", isFollower: false, platform: "instagram", trigger: "new_comment" });
+    expect(no.stoppedAt).toBe(0);
+    expect(no.actions[0]!.kind).toBe("Follow request DM");
+    const yes = runFlowDry(f, { text: "x", isFollower: true, platform: "instagram", trigger: "new_comment" });
+    expect(yes.actions.map((a) => a.detail)).toEqual(["link"]);
+  });
+  it("tag and contact conditions", () => {
+    const f = mk([
+      { id: "a", kind: "condition", check: "no_tag", value: "discount-claimed" },
+      { id: "b", kind: "condition", check: "has_contact", value: "none" },
+      { id: "c", kind: "ask_contact", text: "email?" },
+    ]);
+    const input = { text: "x", isFollower: null, platform: "instagram" as const, trigger: "new_comment" as const };
+    expect(runFlowDry(f, input).actions).toHaveLength(1);
+    expect(runFlowDry(f, { ...input, tags: ["discount-claimed"] }).stoppedAt).toBe(0);
+    expect(runFlowDry(f, { ...input, hasEmail: true }).stoppedAt).toBe(1);
+  });
+  it("follow gate needs an https profile link", () => {
+    const f = mk([{ id: "g", kind: "follow_gate", text: "Follow", buttonTitle: "Visit", profileUrl: "http://x" }]);
+    expect(validateFlow(sanitizeFlows([f])[0]!).length).toBeGreaterThan(0);
+  });
+  it("every template has a category and survives sanitizing", () => {
+    for (const t of FLOW_TEMPLATES) {
+      expect(t.category).toBeTruthy();
+      const f = flowFromTemplate(t.key)!;
+      expect(sanitizeFlows([f])[0]!.steps).toHaveLength(t.steps.length);
+    }
+    expect(flowFromTemplate("all_in_one")!.steps.some((s) => s.disabled)).toBe(true);
+  });
+});

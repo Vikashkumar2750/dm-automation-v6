@@ -5,15 +5,34 @@
  */
 export type FlowTrigger = "new_comment" | "new_dm" | "story_reply" | "story_mention";
 
-export type FlowStep =
-  | { id: string; kind: "condition"; check: "contains"; value: string }
-  | { id: string; kind: "condition"; check: "is_follower"; value: "yes" | "no" }
-  | { id: string; kind: "send_dm"; text: string; buttonTitle?: string; buttonUrl?: string }
-  | { id: string; kind: "public_reply"; text: string }
-  | { id: string; kind: "wait"; minutes: number }
-  | { id: string; kind: "tag"; value: string }
-  | { id: string; kind: "send_payment"; productId: string; text: string }
-  | { id: string; kind: "send_coupon"; campaignId: string; text: string };
+/** Every step can be switched off (`disabled: true`); switched-off steps are skipped, never run. */
+type StepBase = { id: string; disabled?: boolean };
+export type ContactCheck = "email" | "phone" | "any" | "none";
+export type FlowStep = StepBase & (
+  | { kind: "condition"; check: "contains"; value: string }
+  | { kind: "condition"; check: "not_contains"; value: string }
+  | { kind: "condition"; check: "is_follower"; value: "yes" | "no" }
+  | { kind: "condition"; check: "has_tag"; value: string }
+  | { kind: "condition"; check: "no_tag"; value: string }
+  | { kind: "condition"; check: "has_contact"; value: ContactCheck }
+  | { kind: "send_dm"; text: string; buttonTitle?: string; buttonUrl?: string }
+  | { kind: "public_reply"; text: string }
+  | { kind: "wait"; minutes: number }
+  | { kind: "tag"; value: string }
+  | { kind: "remove_tag"; value: string }
+  | { kind: "ask_contact"; text: string }
+  | { kind: "follow_gate"; text: string; buttonTitle: string; profileUrl: string }
+  | { kind: "send_payment"; productId: string; text: string }
+  | { kind: "send_coupon"; campaignId: string; text: string }
+);
+
+/** Popular tags offered as one-click presets (custom tags always allowed). */
+export const TAG_PRESETS = [
+  "hot-lead", "lead", "pricing-enquiry", "interested-buyer", "paid-customer", "vip-client", "cart-abandoned",
+  "support-needed", "follower", "non-follower", "follower-exclusive", "discount-claimed", "giveaway-entry",
+  "webinar-attendee", "story-engaged", "mentioned-us", "email-captured", "phone-captured", "lead-followup",
+  "collab-enquiry", "repeat-customer", "do-not-contact",
+];
 
 export type Flow = {
   id: string;
@@ -26,7 +45,7 @@ export type Flow = {
 };
 
 export const MAX_FLOWS = 20;
-export const MAX_STEPS = 15;
+export const MAX_STEPS = 25;
 
 export const TRIGGER_LABELS: Record<FlowTrigger, string> = {
   new_comment: "New comment",
@@ -46,13 +65,34 @@ export function sanitizeFlows(raw: unknown): Flow[] {
     if (!r || typeof r.name !== "string") return [];
     const trigger = triggers.includes(String(r.trigger)) ? (r.trigger as FlowTrigger) : "new_comment";
     const platform = r.platform === "instagram" || r.platform === "facebook" ? r.platform : "both";
-    const steps = (Array.isArray(r.steps) ? r.steps : []).slice(0, MAX_STEPS).flatMap((s): FlowStep[] => {
+    const steps = (Array.isArray(r.steps) ? r.steps : []).slice(0, MAX_STEPS).flatMap((s): FlowStep[] =>
+      sanitizeStep(s).map((st) => ((s as { disabled?: unknown })?.disabled === true ? { ...st, disabled: true } : st)));
+    return [{
+      id: typeof r.id === "string" ? r.id.slice(0, 20) : id(),
+      name: r.name.trim().slice(0, 80) || "Untitled flow",
+      active: r.active === true,
+      platform,
+      trigger,
+      steps,
+      updatedAt: typeof r.updatedAt === "string" ? r.updatedAt : new Date().toISOString(),
+    }];
+  });
+}
+
+function sanitizeStep(s: unknown): FlowStep[] {
       const x = s as { id?: unknown; kind?: unknown; check?: unknown; value?: unknown; text?: unknown; buttonTitle?: unknown; buttonUrl?: unknown; minutes?: unknown };
       const sid = typeof x.id === "string" ? x.id.slice(0, 20) : id();
       const text = (v: unknown, n: number) => String(v ?? "").trim().slice(0, n);
+      if (!x || typeof x !== "object") return [];
       switch (x.kind) {
         case "condition":
           if (x.check === "is_follower") return [{ id: sid, kind: "condition", check: "is_follower", value: x.value === "no" ? "no" : "yes" }];
+          if (x.check === "has_tag" || x.check === "no_tag") return [{ id: sid, kind: "condition", check: x.check, value: text(x.value, 40) }];
+          if (x.check === "has_contact") {
+            const v = ["email", "phone", "any", "none"].includes(String(x.value)) ? (x.value as ContactCheck) : "any";
+            return [{ id: sid, kind: "condition", check: "has_contact", value: v }];
+          }
+          if (x.check === "not_contains") return [{ id: sid, kind: "condition", check: "not_contains", value: text(x.value, 200) }];
           return [{ id: sid, kind: "condition", check: "contains", value: text(x.value, 200) }];
         case "send_dm": {
           const url = text(x.buttonUrl, 500);
@@ -67,6 +107,15 @@ export function sanitizeFlows(raw: unknown): Flow[] {
           return [{ id: sid, kind: "wait", minutes: Math.min(1440, Math.max(1, Math.round(Number(x.minutes) || 1))) }];
         case "tag":
           return [{ id: sid, kind: "tag", value: text(x.value, 40) }];
+        case "remove_tag":
+          return [{ id: sid, kind: "remove_tag", value: text(x.value, 40) }];
+        case "ask_contact":
+          return [{ id: sid, kind: "ask_contact", text: text(x.text, 1000) }];
+        case "follow_gate": {
+          const y = s as { profileUrl?: unknown };
+          const url = text(y.profileUrl, 300);
+          return [{ id: sid, kind: "follow_gate", text: text(x.text, 1000), buttonTitle: text(x.buttonTitle, 20) || "Visit profile", profileUrl: /^https:\/\//i.test(url) ? url : "" }];
+        }
         case "send_payment": {
           const y = s as { productId?: unknown };
           return [{ id: sid, kind: "send_payment", productId: text(y.productId, 40), text: text(x.text, 600) }];
@@ -78,26 +127,21 @@ export function sanitizeFlows(raw: unknown): Flow[] {
         default:
           return [];
       }
-    });
-    return [{
-      id: typeof r.id === "string" ? r.id.slice(0, 20) : id(),
-      name: r.name.trim().slice(0, 80) || "Untitled flow",
-      active: r.active === true,
-      platform,
-      trigger,
-      steps,
-      updatedAt: typeof r.updatedAt === "string" ? r.updatedAt : new Date().toISOString(),
-    }];
-  });
 }
 
 /** Problems that block activating a flow. Empty array = ready. */
 export function validateFlow(flow: Flow): string[] {
   const issues: string[] = [];
-  if (!flow.steps.some((s) => s.kind === "send_dm" || s.kind === "public_reply" || s.kind === "send_payment" || s.kind === "send_coupon")) {
+  const on = flow.steps.filter((s) => !s.disabled);
+  if (!on.some((s) => MESSAGE_KINDS.includes(s.kind))) {
     issues.push("Add at least one message step.");
   }
   flow.steps.forEach((s, i) => {
+    if (s.disabled) return;
+    if ((s.kind === "ask_contact" || s.kind === "follow_gate") && !s.text) issues.push(`Step ${i + 1}: message is empty.`);
+    if (s.kind === "follow_gate" && !s.profileUrl) issues.push(`Step ${i + 1}: add your profile link (https://…).`);
+    if (s.kind === "condition" && (s.check === "not_contains" || s.check === "has_tag" || s.check === "no_tag") && !s.value) issues.push(`Step ${i + 1}: value is empty.`);
+    if ((s.kind === "tag" || s.kind === "remove_tag") && !s.value) issues.push(`Step ${i + 1}: tag is empty.`);
     if ((s.kind === "send_dm" || s.kind === "public_reply") && !s.text) issues.push(`Step ${i + 1}: message is empty.`);
     if (s.kind === "condition" && s.check === "contains" && !s.value) issues.push(`Step ${i + 1}: keyword is empty.`);
     if (s.kind === "send_payment" && !s.productId) issues.push(`Step ${i + 1}: choose a product.`);
@@ -108,7 +152,35 @@ export function validateFlow(flow: Flow): string[] {
   return issues;
 }
 
-export type FlowInput = { text: string; isFollower: boolean | null; platform: "instagram" | "facebook"; trigger: FlowTrigger };
+const MESSAGE_KINDS: FlowStep["kind"][] = ["send_dm", "public_reply", "send_payment", "send_coupon", "ask_contact", "follow_gate"];
+
+export type FlowInput = {
+  text: string; isFollower: boolean | null; platform: "instagram" | "facebook"; trigger: FlowTrigger;
+  tags?: string[]; hasEmail?: boolean; hasPhone?: boolean;
+};
+
+const keywords = (v: string) => v.toLowerCase().split(",").map((k) => k.trim()).filter(Boolean);
+
+/** Pure condition check shared by the dry run and the live runner. */
+export function conditionPasses(
+  s: Extract<FlowStep, { kind: "condition" }>,
+  ctx: { text: string; isFollower: boolean | null; tags: string[]; hasEmail: boolean; hasPhone: boolean },
+): boolean {
+  const text = ctx.text.toLowerCase();
+  const tag = s.value.toLowerCase();
+  switch (s.check) {
+    case "contains": return keywords(s.value).some((k) => text.includes(k));
+    case "not_contains": return !keywords(s.value).some((k) => text.includes(k));
+    case "is_follower": return ctx.isFollower === (s.value === "yes");
+    case "has_tag": return ctx.tags.includes(tag);
+    case "no_tag": return !ctx.tags.includes(tag);
+    case "has_contact":
+      if (s.value === "email") return ctx.hasEmail;
+      if (s.value === "phone") return ctx.hasPhone;
+      if (s.value === "none") return !ctx.hasEmail && !ctx.hasPhone;
+      return ctx.hasEmail || ctx.hasPhone;
+  }
+}
 export type FlowOutcome = { kind: string; detail: string };
 
 /** Dry-run a flow. Conditions that fail stop the flow; nothing is sent. */
@@ -116,21 +188,26 @@ export function runFlowDry(flow: Flow, input: FlowInput): { matched: boolean; ac
   if (flow.trigger !== input.trigger) return { matched: false, actions: [], stoppedAt: null };
   if (flow.platform !== "both" && flow.platform !== input.platform) return { matched: false, actions: [], stoppedAt: null };
   const actions: FlowOutcome[] = [];
-  const text = input.text.toLowerCase();
+  const tags = new Set((input.tags ?? []).map((t) => t.toLowerCase()));
   for (let i = 0; i < flow.steps.length; i++) {
     const s = flow.steps[i]!;
+    if (s.disabled) continue;
     if (s.kind === "condition") {
-      const ok =
-        s.check === "contains"
-          ? s.value.toLowerCase().split(",").map((k) => k.trim()).filter(Boolean).some((k) => text.includes(k))
-          : input.isFollower === (s.value === "yes");
+      const ok = conditionPasses(s, { text: input.text, isFollower: input.isFollower, tags: [...tags], hasEmail: !!input.hasEmail, hasPhone: !!input.hasPhone });
       if (!ok) return { matched: true, actions, stoppedAt: i };
       continue;
+    }
+    if (s.kind === "follow_gate") {
+      if (input.isFollower === true) continue;
+      actions.push({ kind: "Follow request DM", detail: `${s.text} [${s.buttonTitle}]` });
+      return { matched: true, actions, stoppedAt: i };
     }
     if (s.kind === "send_dm") actions.push({ kind: "DM", detail: s.text + (s.buttonTitle ? ` [${s.buttonTitle}]` : "") });
     if (s.kind === "public_reply") actions.push({ kind: "Public reply", detail: s.text });
     if (s.kind === "wait") actions.push({ kind: "Wait", detail: `${s.minutes} min` });
-    if (s.kind === "tag") actions.push({ kind: "Tag", detail: s.value });
+    if (s.kind === "tag") { tags.add(s.value.toLowerCase()); actions.push({ kind: "Tag", detail: s.value }); }
+    if (s.kind === "remove_tag") { tags.delete(s.value.toLowerCase()); actions.push({ kind: "Remove tag", detail: s.value }); }
+    if (s.kind === "ask_contact") actions.push({ kind: "Ask email / phone DM", detail: s.text });
     if (s.kind === "send_payment") actions.push({ kind: "Payment link DM", detail: (s.text || "Pay here") + " [Pay now]" });
     if (s.kind === "send_coupon") actions.push({ kind: "Coupon DM", detail: s.text.replace("{code}", "ABC-1234") });
   }

@@ -29,7 +29,8 @@ describe("flow templates", () => {
     for (const t of FLOW_TEMPLATES) {
       const f = flowFromTemplate(t.key)!;
       expect(f.active).toBe(false);
-      expect(validateFlow(f)).toEqual([]);
+      // Payment / coupon templates only wait for the user to pick their own product or campaign.
+      expect(validateFlow(f).filter((x) => !/choose a (product|coupon campaign)/.test(x))).toEqual([]);
     }
   });
 });

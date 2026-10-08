@@ -20,12 +20,17 @@ Safety limits, quiet hours, cooldowns and the daily cap apply to all of them. No
 6. Switch the rule **on** and save.
 
 ### 2. Flow builder
+**How it works:** a flow runs top to bottom on a zoomable canvas. A condition that fails stops the flow. A step switched **off** is skipped (not deleted). A *Follow gate* lets followers through and sends non-followers a **Visit profile** button — when they follow and comment again, the flow continues.
+
+**How to use:**
 1. Click **Flow builder**.
-2. Start from a **ready-made template** or press **+** for an empty flow.
-3. Set the trigger, then add steps: *If contains*, *If follower*, *Send DM*, *Public reply*, *Wait*, *Add tag*.
-4. Drag the steps (or use the arrows) to reorder. Flows run top to bottom; a condition that fails stops the flow.
-5. Test in **Try it** — it never sends anything.
-6. Replace example links (`example.com`) with yours, switch the flow **Active**, and press **Save all**.
+2. Pick a template category (All-in-one, Sales, Lead capture, Followers, Engagement, Support) and click a template — or press **+** for an empty flow.
+3. The **All-in-one** template has every step ready (keyword → follow gate → DM → payment → coupon → ask email/phone). Use each step's toggle to switch off what you don't need.
+4. Add steps by group: **Conditions** (contains, does not contain, follower, non-follower, has/missing tag, email/phone known), **Actions** (DM, public reply, follow gate, wait), **Contacts** (add/remove tag, ask email/phone), **Sales** (payment link, coupon). Tags have one-click presets.
+5. Zoom with the **+ / −** buttons or Ctrl + mouse wheel. Drag steps or use the arrows to reorder.
+6. Test in **Try it** (set follower, existing tags, saved email/phone) — it never sends anything.
+7. Agency plan: **AI suggest flow** builds or improves a flow (1 per day). It is added as a draft.
+8. Replace example links (`example.com`, `instagram.com/yourprofile`) with yours, switch the flow **Active**, and press **Save all**.
 
 ### 3. Ice breakers & menu
 In **Social Accounts → Ice breakers & menu**, pick a ready-made set or type your own questions, press **Save**, then **Sync to Meta**. To answer a question, create a *New DM* rule with the question as its keyword.

@@ -4,7 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { createContext, useContext, useEffect, useState } from "react";
 import { getRevenue } from "@/lib/revenue.functions";
 import { toast } from "sonner";
-import { ArrowDown, ArrowUp, GitBranch, GripVertical, Info, Plus, Trash2, Zap } from "lucide-react";
+import { ArrowDown, ArrowUp, GitBranch, GripVertical, Info, Lock, Maximize2, Plus, Sparkles, Trash2, Zap, ZoomIn, ZoomOut } from "lucide-react";
 
 import { AppShell } from "@/components/app/AppShell";
 import { EmptyState, PageHeader, Panel, StatusBadge } from "@/components/app/primitives";
@@ -13,11 +13,11 @@ import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Switch } from "@/components/ui/switch";
 import { useTenant } from "@/hooks/useTenant";
-import { getFlows, saveFlows } from "@/lib/flows.functions";
-import { FLOW_TEMPLATES, flowFromTemplate } from "@/lib/flow-templates";
+import { getFlowAiStatus, getFlows, saveFlows, suggestFlowWithAi } from "@/lib/flows.functions";
+import { FLOW_TEMPLATES, TEMPLATE_CATEGORIES, flowFromTemplate } from "@/lib/flow-templates";
 import { GuideButton } from "@/components/app/GuideButton";
 import {
-  MAX_FLOWS, MAX_STEPS, TRIGGER_LABELS, moveStep, newStepId, runFlowDry, validateFlow,
+  MAX_FLOWS, MAX_STEPS, TAG_PRESETS, TRIGGER_LABELS, moveStep, newStepId, runFlowDry, validateFlow,
   type Flow, type FlowStep, type FlowTrigger,
 } from "@/lib/flows";
 
@@ -39,16 +39,31 @@ const RevenueOptions = createContext<{ products: { id: string; name: string }[];
 
 const sel = "h-9 rounded-md border border-input bg-background px-2 text-sm";
 
-const STEP_TEMPLATES: { label: string; make: () => FlowStep }[] = [
-  { label: "If comment/DM contains", make: () => ({ id: newStepId(), kind: "condition", check: "contains", value: "" }) },
-  { label: "If follower", make: () => ({ id: newStepId(), kind: "condition", check: "is_follower", value: "yes" }) },
-  { label: "Send DM", make: () => ({ id: newStepId(), kind: "send_dm", text: "" }) },
-  { label: "Public reply", make: () => ({ id: newStepId(), kind: "public_reply", text: "" }) },
-  { label: "Wait", make: () => ({ id: newStepId(), kind: "wait", minutes: 5 }) },
-  { label: "Add tag", make: () => ({ id: newStepId(), kind: "tag", value: "" }) },
-  { label: "Send payment link", make: () => ({ id: newStepId(), kind: "send_payment", productId: "", text: "" }) },
-  { label: "Send coupon", make: () => ({ id: newStepId(), kind: "send_coupon", campaignId: "", text: "Here is your code: {code}" }) },
+const STEP_TEMPLATES: { group: "Conditions" | "Actions" | "Sales" | "Contacts"; label: string; make: () => FlowStep }[] = [
+  { group: "Conditions", label: "If contains", make: () => ({ id: newStepId(), kind: "condition", check: "contains", value: "" }) },
+  { group: "Conditions", label: "If does not contain", make: () => ({ id: newStepId(), kind: "condition", check: "not_contains", value: "" }) },
+  { group: "Conditions", label: "If follower", make: () => ({ id: newStepId(), kind: "condition", check: "is_follower", value: "yes" }) },
+  { group: "Conditions", label: "If non-follower", make: () => ({ id: newStepId(), kind: "condition", check: "is_follower", value: "no" }) },
+  { group: "Conditions", label: "If has tag", make: () => ({ id: newStepId(), kind: "condition", check: "has_tag", value: "" }) },
+  { group: "Conditions", label: "If missing tag", make: () => ({ id: newStepId(), kind: "condition", check: "no_tag", value: "" }) },
+  { group: "Conditions", label: "If email / phone known", make: () => ({ id: newStepId(), kind: "condition", check: "has_contact", value: "any" }) },
+  { group: "Actions", label: "Send DM", make: () => ({ id: newStepId(), kind: "send_dm", text: "" }) },
+  { group: "Actions", label: "Public reply", make: () => ({ id: newStepId(), kind: "public_reply", text: "" }) },
+  { group: "Actions", label: "Follow gate (Visit profile)", make: () => ({ id: newStepId(), kind: "follow_gate", text: "Please follow us first, then comment again 🙏", buttonTitle: "Visit profile", profileUrl: "" }) },
+  { group: "Actions", label: "Wait", make: () => ({ id: newStepId(), kind: "wait", minutes: 5 }) },
+  { group: "Contacts", label: "Add tag", make: () => ({ id: newStepId(), kind: "tag", value: "" }) },
+  { group: "Contacts", label: "Remove tag", make: () => ({ id: newStepId(), kind: "remove_tag", value: "" }) },
+  { group: "Contacts", label: "Ask email / phone", make: () => ({ id: newStepId(), kind: "ask_contact", text: "Reply with your email or WhatsApp number and we'll send you the details 😊" }) },
+  { group: "Sales", label: "Send payment link", make: () => ({ id: newStepId(), kind: "send_payment", productId: "", text: "" }) },
+  { group: "Sales", label: "Send coupon", make: () => ({ id: newStepId(), kind: "send_coupon", campaignId: "", text: "Here is your code: {code}" }) },
 ];
+
+function stepLabel(s: FlowStep): string {
+  if (s.kind === "condition") {
+    return { contains: "If contains", not_contains: "If does not contain", is_follower: s.value === "no" ? "If non-follower" : "If follower", has_tag: "If has tag", no_tag: "If missing tag", has_contact: "If email / phone" }[s.check];
+  }
+  return { send_dm: "Send DM", public_reply: "Public reply", wait: "Wait", tag: "Add tag", remove_tag: "Remove tag", ask_contact: "Ask email / phone", follow_gate: "Follow gate", send_payment: "Payment link", send_coupon: "Coupon" }[s.kind];
+}
 
 const STEP_HELP = {
   contains: {
@@ -91,10 +106,44 @@ const STEP_HELP = {
     how: "Creates a unique code from the selected campaign and replaces {code} in your message before sending.",
     why: "Use it for personal offers without giving every contact the same reusable code.",
   },
+  not_contains: {
+    title: "If does not contain",
+    how: "Continues only when the message has none of these keywords.",
+    why: "Use it to skip spam or people who already said 'stop', 'no' or 'done'.",
+  },
+  has_tag: {
+    title: "If has tag / If missing tag",
+    how: "Checks the person's tags in Contacts. 'Has tag' continues only if the tag is there; 'missing tag' only if it is not.",
+    why: "Use it to avoid sending the same offer twice (e.g. missing tag discount-claimed) or to treat paid customers differently.",
+  },
+  has_contact: {
+    title: "If email / phone known",
+    how: "Checks whether this person's email or phone is already saved in Contacts.",
+    why: "Use 'not saved yet' before an Ask email / phone step so you never ask twice.",
+  },
+  remove_tag: {
+    title: "Remove tag",
+    how: "Removes a label from the person in Contacts. It does not send a message.",
+    why: "Use it to move people between stages, e.g. remove cart-abandoned after they pay.",
+  },
+  ask_contact: {
+    title: "Ask email / phone",
+    how: "Sends a DM asking for email or WhatsApp number. When they reply, it is saved to Contacts automatically.",
+    why: "Use it to build your lead list for follow-ups outside Instagram/Facebook.",
+  },
+  follow_gate: {
+    title: "Follow gate (Visit profile)",
+    how: "Followers pass straight through to the next step. Non-followers get this DM with a Visit profile button and the flow stops — when they follow and comment again, the flow continues for them.",
+    why: "Use it to give links or freebies only to followers and grow your audience.",
+  },
 } as const;
 
 function helpForStep(step: FlowStep) {
-  if (step.kind === "condition") return step.check === "contains" ? STEP_HELP.contains : STEP_HELP.follower;
+  if (step.kind === "condition") {
+    if (step.check === "is_follower") return STEP_HELP.follower;
+    if (step.check === "no_tag") return STEP_HELP.has_tag;
+    return STEP_HELP[step.check];
+  }
   return STEP_HELP[step.kind];
 }
 
@@ -119,6 +168,9 @@ function FlowsPage() {
   const [selected, setSelected] = useState<string | null>(null);
   const [dragFrom, setDragFrom] = useState<number | null>(null);
   const [dragOver, setDragOver] = useState<number | null>(null);
+  const [zoom, setZoom] = useState(1);
+  const [category, setCategory] = useState<string>("all");
+  const zoomBy = (d: number) => setZoom((z) => Math.min(1.5, Math.max(0.4, Math.round((z + d) * 10) / 10)));
   useEffect(() => {
     if (q.data) {
       setFlows(q.data.flows);
@@ -146,6 +198,12 @@ function FlowsPage() {
       id: newStepId(), name: "New flow", active: false, platform: "both", trigger: "new_comment",
       steps: [], updatedAt: new Date().toISOString(),
     };
+    setFlows((all) => [...all, f]);
+    setSelected(f.id);
+  }
+
+  function addAiFlow(f: Flow) {
+    if (flows.length >= MAX_FLOWS) return;
     setFlows((all) => [...all, f]);
     setSelected(f.id);
   }
@@ -210,8 +268,19 @@ function FlowsPage() {
           )}
           <div className="mt-4 border-t border-border pt-3">
             <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Ready-made templates</p>
+            <div className="mb-2 flex flex-wrap gap-1">
+              {TEMPLATE_CATEGORIES.map((c) => (
+                <button
+                  key={c.key}
+                  onClick={() => setCategory(c.key)}
+                  className={`rounded-full border px-2 py-0.5 text-xs ${category === c.key ? "border-primary bg-primary text-primary-foreground" : "border-border hover:bg-muted"}`}
+                >
+                  {c.label}
+                </button>
+              ))}
+            </div>
             <ul className="space-y-1">
-              {FLOW_TEMPLATES.map((t) => (
+              {FLOW_TEMPLATES.filter((t) => category === "all" || t.category === category).map((t) => (
                 <li key={t.key}>
                   <button
                     onClick={() => addTemplate(t.key)}
@@ -242,6 +311,19 @@ function FlowsPage() {
               </div>
             </Panel>
 
+            <div className="relative rounded-xl border border-border">
+              <div className="absolute right-2 top-2 z-10 flex items-center gap-1 rounded-md border border-border bg-card p-1 shadow-sm">
+                <Button size="icon" variant="ghost" className="size-7" aria-label="Zoom out" onClick={() => zoomBy(-0.1)}><ZoomOut className="size-4" /></Button>
+                <span className="w-10 text-center text-xs tabular-nums">{Math.round(zoom * 100)}%</span>
+                <Button size="icon" variant="ghost" className="size-7" aria-label="Zoom in" onClick={() => zoomBy(0.1)}><ZoomIn className="size-4" /></Button>
+                <Button size="icon" variant="ghost" className="size-7" aria-label="Reset zoom" onClick={() => setZoom(1)}><Maximize2 className="size-4" /></Button>
+              </div>
+              <div
+                className="h-[70vh] overflow-auto rounded-xl bg-muted/30"
+                style={{ backgroundImage: "radial-gradient(var(--border) 1px, transparent 1px)", backgroundSize: `${20 * zoom}px ${20 * zoom}px` }}
+                onWheel={(e) => { if (e.ctrlKey || e.metaKey) { e.preventDefault(); zoomBy(e.deltaY < 0 ? 0.1 : -0.1); } }}
+              >
+              <div className="mx-auto w-full max-w-xl origin-top px-4 pb-10 pt-12" style={{ transform: `scale(${zoom})` }}>
             <div className="rounded-xl border-2 border-primary/40 bg-card p-4">
               <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-primary"><Zap className="size-3.5" /> Trigger</p>
               <div className="mt-2 flex flex-wrap gap-2">
@@ -289,13 +371,24 @@ function FlowsPage() {
             ))}
 
             <div className="mx-auto h-4 w-px bg-border" />
-            <div className="flex flex-wrap justify-center gap-2 rounded-xl border border-dashed border-border p-3">
-              {STEP_TEMPLATES.map((t) => (
-                <Button key={t.label} size="sm" variant="outline" disabled={flow.steps.length >= MAX_STEPS} onClick={() => setSteps([...flow.steps, t.make()])}>
-                  <Plus className="size-3.5" /> {t.label}
-                </Button>
+            <div className="space-y-2 rounded-xl border border-dashed border-border bg-card p-3">
+              {(["Conditions", "Actions", "Contacts", "Sales"] as const).map((g) => (
+                <div key={g}>
+                  <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{g}</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {STEP_TEMPLATES.filter((t) => t.group === g).map((t) => (
+                      <Button key={t.label} size="sm" variant="outline" disabled={flow.steps.length >= MAX_STEPS} onClick={() => setSteps([...flow.steps, t.make()])}>
+                        <Plus className="size-3.5" /> {t.label}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
               ))}
             </div>
+              </div>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">Tip: Ctrl + mouse wheel zooms the canvas. Switch a step off with its toggle to skip it without deleting.</p>
             {issues.length > 0 && (
               <ul className="list-disc space-y-1 pl-5 text-sm text-destructive">
                 {issues.map((x) => <li key={x}>{x}</li>)}
@@ -306,7 +399,14 @@ function FlowsPage() {
           <Panel><EmptyState icon={GitBranch} title="Pick or create a flow" description="Flows run top to bottom. A condition that is not met stops the flow." /></Panel>
         )}
 
-        {flow && <TestPanel flow={flow} />}
+        {flow ? (
+          <div className="space-y-4">
+            <TestPanel flow={flow} />
+            <AiSuggestPanel orgId={orgId} current={flow} onAdd={addAiFlow} />
+          </div>
+        ) : (
+          <AiSuggestPanel orgId={orgId} current={null} onAdd={addAiFlow} />
+        )}
       </div>
     </AppShell></RevenueOptions.Provider>
   );
@@ -319,12 +419,12 @@ function StepCard({ step, index, onChange, onRemove, onMove }: {
   const rev = useContext(RevenueOptions);
   const help = helpForStep(step);
   return (
-    <div className={`rounded-xl border bg-card p-4 ${isCond ? "border-warning/50" : "border-border"}`}>
+    <div className={`rounded-xl border bg-card p-4 shadow-sm ${isCond ? "border-warning/50" : "border-border"} ${step.disabled ? "opacity-50" : ""}`}>
       <div className="flex items-center justify-between">
         <div className="flex min-w-0 items-center gap-1">
           <p className="flex min-w-0 items-center gap-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             <GripVertical className="size-4 cursor-grab" aria-label="Drag to reorder" />
-            {index + 1}. {isCond ? "Condition" : step.kind === "send_dm" ? "Send DM" : step.kind === "public_reply" ? "Public reply" : step.kind === "wait" ? "Wait" : step.kind === "send_payment" ? "Payment link" : step.kind === "send_coupon" ? "Coupon" : "Tag"}
+            {index + 1}. {stepLabel(step)}{step.disabled ? " · off" : ""}
           </p>
           <Popover>
             <PopoverTrigger asChild>
@@ -353,13 +453,50 @@ function StepCard({ step, index, onChange, onRemove, onMove }: {
             </PopoverContent>
           </Popover>
         </div>
-        <div className="flex">
+        <div className="flex items-center">
+          <Switch checked={!step.disabled} onCheckedChange={(v) => onChange({ ...step, disabled: !v })} aria-label="Step on or off" className="mr-1" />
           <Button size="icon" variant="ghost" aria-label="Move up" onClick={() => onMove(-1)}><ArrowUp className="size-4" /></Button>
           <Button size="icon" variant="ghost" aria-label="Move down" onClick={() => onMove(1)}><ArrowDown className="size-4" /></Button>
           <Button size="icon" variant="ghost" aria-label="Remove step" onClick={onRemove}><Trash2 className="size-4" /></Button>
         </div>
       </div>
       <div className="mt-2 space-y-2">
+        {step.kind === "condition" && step.check === "not_contains" && (
+          <Input placeholder="Keywords, comma separated (e.g. stop, no)" value={step.value} onChange={(e) => onChange({ ...step, value: e.target.value })} />
+        )}
+        {step.kind === "condition" && (step.check === "has_tag" || step.check === "no_tag") && (
+          <div className="flex gap-2">
+            <select className={sel} value={step.check} onChange={(e) => onChange({ ...step, check: e.target.value as "has_tag" | "no_tag" })}>
+              <option value="has_tag">Has tag</option>
+              <option value="no_tag">Does not have tag</option>
+            </select>
+            <TagInput value={step.value} onChange={(v) => onChange({ ...step, value: v })} />
+          </div>
+        )}
+        {step.kind === "condition" && step.check === "has_contact" && (
+          <select className={sel} value={step.value} onChange={(e) => onChange({ ...step, value: e.target.value as typeof step.value })}>
+            <option value="any">Email or phone is saved</option>
+            <option value="email">Email is saved</option>
+            <option value="phone">Phone is saved</option>
+            <option value="none">Nothing saved yet</option>
+          </select>
+        )}
+        {(step.kind === "ask_contact" || step.kind === "follow_gate") && (
+          <textarea
+            rows={3}
+            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            placeholder="Message text"
+            value={step.text}
+            maxLength={1000}
+            onChange={(e) => onChange({ ...step, text: e.target.value })}
+          />
+        )}
+        {step.kind === "follow_gate" && (
+          <div className="grid gap-2 sm:grid-cols-2">
+            <Input placeholder="Button title" maxLength={20} value={step.buttonTitle} onChange={(e) => onChange({ ...step, buttonTitle: e.target.value })} />
+            <Input placeholder="https://instagram.com/yourprofile" value={step.profileUrl} onChange={(e) => onChange({ ...step, profileUrl: e.target.value })} />
+          </div>
+        )}
         {step.kind === "condition" && step.check === "contains" && (
           <Input placeholder="Keywords, comma separated (e.g. price, link)" value={step.value} onChange={(e) => onChange({ ...step, value: e.target.value })} />
         )}
@@ -407,11 +544,76 @@ function StepCard({ step, index, onChange, onRemove, onMove }: {
             <Input placeholder="Message with {code}" maxLength={600} value={step.text} onChange={(e) => onChange({ ...step, text: e.target.value })} />
           </>
         )}
-        {step.kind === "tag" && (
-          <Input placeholder="Tag name (e.g. hot-lead)" maxLength={40} value={step.value} onChange={(e) => onChange({ ...step, value: e.target.value })} />
+        {(step.kind === "tag" || step.kind === "remove_tag") && (
+          <TagInput value={step.value} onChange={(v) => onChange({ ...step, value: v })} />
         )}
       </div>
     </div>
+  );
+}
+
+function TagInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  return (
+    <div className="w-full space-y-1.5">
+      <Input placeholder="Tag name (e.g. hot-lead)" maxLength={40} value={value} onChange={(e) => onChange(e.target.value.toLowerCase().replace(/\s+/g, "-"))} />
+      <div className="flex flex-wrap gap-1">
+        {TAG_PRESETS.map((t) => (
+          <button
+            key={t}
+            type="button"
+            onClick={() => onChange(t)}
+            className={`rounded-full border px-2 py-0.5 text-xs ${value === t ? "border-primary bg-primary text-primary-foreground" : "border-border text-muted-foreground hover:bg-muted"}`}
+          >
+            {t}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function AiSuggestPanel({ orgId, current, onAdd }: { orgId: string | undefined; current: Flow | null; onAdd: (f: Flow) => void }) {
+  const fetchStatus = useServerFn(getFlowAiStatus);
+  const suggest = useServerFn(suggestFlowWithAi);
+  const qc = useQueryClient();
+  const st = useQuery({ queryKey: ["flow-ai", orgId], enabled: !!orgId, queryFn: () => fetchStatus({ data: { organizationId: orgId! } }) });
+  const [goal, setGoal] = useState("");
+  const [note, setNote] = useState("");
+  const m = useMutation({
+    mutationFn: () => suggest({ data: { organizationId: orgId!, goal, current: current ?? undefined } }),
+    onSuccess: (r) => {
+      qc.invalidateQueries({ queryKey: ["flow-ai", orgId] });
+      if ("flow" in r && r.flow) {
+        onAdd(r.flow);
+        setNote(r.explanation);
+        toast.success("AI flow added as a draft — review it, then Save all.");
+      } else if ("error" in r) {
+        toast.error(r.error === "daily_limit" ? "You already used today's AI flow." : r.error === "agency_only" ? "AI flows are on the Agency plan." : "AI could not build a flow right now. Try again later.");
+      }
+    },
+    onError: () => toast.error("AI could not build a flow right now."),
+  });
+  const allowed = st.data?.allowed;
+  const nextAt = st.data?.nextAt;
+  return (
+    <Panel title="AI flow suggestion">
+      {!allowed ? (
+        <div className="space-y-2 text-sm">
+          <p className="flex items-center gap-2 font-medium"><Lock className="size-4" /> Agency plan only</p>
+          <p className="text-muted-foreground">On the Agency plan, AI looks at your flow and builds an improved version — one AI flow per day.</p>
+          <Button asChild size="sm" variant="outline"><Link to="/billing">Upgrade</Link></Button>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          <p className="text-sm text-muted-foreground">{current ? "AI will suggest what to add next to this flow." : "Describe your goal and AI will build a flow."} 1 per day.</p>
+          <Input placeholder="Goal (optional), e.g. sell my course and collect emails" maxLength={400} value={goal} onChange={(e) => setGoal(e.target.value)} />
+          <Button size="sm" className="w-full" onClick={() => m.mutate()} disabled={!!nextAt || m.isPending}>
+            <Sparkles className="size-4" /> {m.isPending ? "Thinking…" : nextAt ? `Next on ${new Date(nextAt).toLocaleString()}` : "AI suggest flow"}
+          </Button>
+          {note && <p className="whitespace-pre-wrap rounded-md border border-border p-2 text-xs text-muted-foreground">{note}</p>}
+        </div>
+      )}
+    </Panel>
   );
 }
 
@@ -419,7 +621,12 @@ function TestPanel({ flow }: { flow: Flow }) {
   const [text, setText] = useState("What is the price?");
   const [platform, setPlatform] = useState<"instagram" | "facebook">("instagram");
   const [follower, setFollower] = useState<"yes" | "no">("yes");
-  const r = runFlowDry(flow, { text, platform, isFollower: follower === "yes", trigger: flow.trigger });
+  const [tags, setTags] = useState("");
+  const [contact, setContact] = useState<"none" | "email" | "phone">("none");
+  const r = runFlowDry(flow, {
+    text, platform, isFollower: follower === "yes", trigger: flow.trigger,
+    tags: tags.split(",").map((t) => t.trim()).filter(Boolean), hasEmail: contact === "email", hasPhone: contact === "phone",
+  });
   return (
     <Panel title="Try it">
       <div className="space-y-2">
@@ -434,6 +641,12 @@ function TestPanel({ flow }: { flow: Flow }) {
             <option value="no">Not follower</option>
           </select>
         </div>
+        <Input value={tags} onChange={(e) => setTags(e.target.value)} placeholder="Existing tags (optional), e.g. paid-customer" aria-label="Sample tags" />
+        <select className={sel} value={contact} onChange={(e) => setContact(e.target.value as "none" | "email" | "phone")}>
+          <option value="none">No email/phone saved</option>
+          <option value="email">Email saved</option>
+          <option value="phone">Phone saved</option>
+        </select>
       </div>
       <div className="mt-4 space-y-2 text-sm">
         {!r.matched && <p className="text-muted-foreground">This flow would not start for this platform.</p>}
@@ -444,7 +657,7 @@ function TestPanel({ flow }: { flow: Flow }) {
             <p className="whitespace-pre-wrap">{a.detail || "(empty)"}</p>
           </div>
         ))}
-        {r.stoppedAt !== null && <p className="text-muted-foreground">Stopped at step {r.stoppedAt + 1} (condition not met).</p>}
+        {r.stoppedAt !== null && <p className="text-muted-foreground">Stopped at step {r.stoppedAt + 1} ({flow.steps[r.stoppedAt]?.kind === "follow_gate" ? "waiting for them to follow" : "condition not met"}).</p>}
         <p className="pt-2 text-xs text-muted-foreground">Preview only — this box never sends anything.</p>
       </div>
     </Panel>
