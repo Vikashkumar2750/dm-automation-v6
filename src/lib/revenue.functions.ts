@@ -66,9 +66,14 @@ export const saveProduct = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const row = { organization_id: data.organizationId, name: data.name, description: data.description, price_paise: data.pricePaise, manual_url: data.manualUrl, active: data.active };
     const q = (context as Ctx).supabase.from("revenue_products");
-    const { error } = data.id ? await q.update(row).eq("id", data.id).eq("organization_id", data.organizationId) : await q.insert(row);
+    if (data.id) {
+      const { error } = await q.update(row).eq("id", data.id).eq("organization_id", data.organizationId);
+      if (error) throw new Error(error.message);
+      return { ok: true, id: data.id };
+    }
+    const { data: created, error } = await q.insert(row).select("id").single();
     if (error) throw new Error(error.message);
-    return { ok: true };
+    return { ok: true, id: (created as { id: string }).id };
   });
 
 export const savePage = createServerFn({ method: "POST" })
@@ -96,9 +101,14 @@ export const saveCampaign = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const row = { organization_id: data.organizationId, name: data.name, prefix: data.prefix, discount_label: data.discountLabel, max_codes: data.maxCodes, expires_at: data.expiresAt, active: data.active };
     const q = (context as Ctx).supabase.from("coupon_campaigns");
-    const { error } = data.id ? await q.update(row).eq("id", data.id).eq("organization_id", data.organizationId) : await q.insert(row);
+    if (data.id) {
+      const { error } = await q.update(row).eq("id", data.id).eq("organization_id", data.organizationId);
+      if (error) throw new Error(error.message);
+      return { ok: true, id: data.id };
+    }
+    const { data: created, error } = await q.insert(row).select("id").single();
     if (error) throw new Error(error.message);
-    return { ok: true };
+    return { ok: true, id: (created as { id: string }).id };
   });
 
 export const deleteRevenueItem = createServerFn({ method: "POST" })
