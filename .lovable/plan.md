@@ -43,6 +43,10 @@ High-intent comment keywords
 - Keep product, delivery-page, payment and coupon steps switched off until the user selects or creates the required real item.
 - Allow the relevant step to create a product or delivery page without leaving Flow Builder, then select it automatically. Reuse the existing in-place product pattern instead of duplicating a second catalog.
 - Provide a delivery-page starter specifically for this funnel, with product name, outcome-led H1, benefits, what is included, proof/assurance, FAQ and a clear payment CTA. The user can edit all copy.
+- Add an optional product visual section. The user can upload/select a product image, choose **Show product image** on or off per delivery page, and preview the exact result before publishing. Keep useful alt text and a stable image area so loading never shifts the page.
+- Add an optional countdown section with an on/off toggle, real end date/time and editable expiry message. When time expires, hide or disable the offer CTA according to the selected expiry action; never use a fake countdown that resets for each visit.
+- Make the default page a formatted, engaging sales page rather than a plain text document: strong product-first opening, clear visual hierarchy, scannable benefits, offer contents, reassurance/proof, FAQ, urgency when enabled and repeated payment CTA. On the first screen, show the actual product image when enabled and keep a hint of the next section visible.
+- Keep image, timer, proof, FAQ, form and repeated CTA as optional page sections. The editor should use section controls and a live phone/desktop preview rather than asking users to format raw content blindly.
 - Keep the buyer-specific payment URL separate from the public page’s static content. The flow creates the customer’s payment link first and uses a narrowly scoped, unguessable offer URL so that the page CTA opens that exact payment link; never put customer identity or payment credentials in the URL.
 - Keep qualification and follow-up steps individually switchable, like every existing flow step.
 - Stay within the current linear execution model: do not imply unsupported branching. Order checks so a failed condition stops only the intended later follow-up section.
@@ -69,6 +73,8 @@ Use a **hybrid funnel**, not one large form in the middle of the DM automation.
 - Update the Follow Gate card and dry-run presentation in the Flow Builder route.
 - Improve the `all_in_one` definition and add the product/delivery-page setup controls used by its offer sequence.
 - Reuse existing products, delivery pages, CRM custom fields and payment-link creation. Add only the narrow association/token storage needed for a buyer-specific delivery-page payment CTA; verify the existing schema and authorization before choosing the migration shape.
+- Extend delivery-page data with optional product-image reference, image visibility, countdown deadline/time zone and expiry action. Store uploaded images in protected project storage with workspace-scoped write access and public read access only for active public-page assets.
+- Render the page from structured, reorderable sections while preserving safe support for existing formatted page bodies. Existing delivery pages keep their current appearance until edited; no silent content rewrite.
 - Validate delivery-page submissions and payment resolution on the server, bind short-lived/unguessable offer tokens to the workspace and generated payment link, and never expose payment credentials.
 - If needed, add a presentation-only outcome for the confirmation button; keep callback generation and live sending logic unchanged.
 - Add focused tests asserting both follow buttons are represented; the new All-in-One order and disabled sales steps are correct; form requirements are enforced; and an offer token cannot access another workspace/customer payment link.
@@ -78,6 +84,9 @@ Use a **hybrid funnel**, not one large form in the middle of the DM automation.
 - Confirm Try it shows the non-follower wait, confirmation tap and verified continuation accurately.
 - Confirm a new All-in-One copy has the advanced sequence, product and delivery-page setup, while an existing saved flow stays unchanged.
 - Confirm the delivery page presents the product professionally, saves allowed form fields, and opens only the buyer’s bound payment link.
+- Confirm product-image on/off, upload/replace/remove, useful alt text, mobile cropping and stable loading layout.
+- Confirm countdown time-zone accuracy, expiry behavior, refresh persistence and that expired offers cannot be reopened through a stale CTA.
+- Check the structured page on phone and desktop with every optional section both enabled and disabled; no blank gaps, overlaps or unformatted output.
 - Confirm both fast-purchase (form skipped) and high-ticket (required fields) configurations work without a dead end.
 - Run flow, callback and automation regression tests and verify the Flow Builder in-browser.
 - Real Instagram/Facebook delivery remains pending a deployed fresh-comment test; no reconnect or replacement of Meta flows will be performed.
