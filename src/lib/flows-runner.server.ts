@@ -6,7 +6,7 @@
  * Every failure is caught and logged; it can never throw into the webhook.
  * All org safety settings (pause, quiet hours, caps, opt-out) apply.
  */
-import { sanitizeFlows, flowTriggerFor, type Flow, type FlowStep } from "@/lib/flows";
+import { sanitizeFlows, flowTriggerFor, conditionPasses, type Flow, type FlowStep } from "@/lib/flows";
 import { extractContactInfo } from "@/lib/crm";
 
 type AdminClient = import("@supabase/supabase-js").SupabaseClient;
@@ -111,25 +111,51 @@ async function executeSteps(admin: AdminClient, flow: Flow, st: RunState, from: 
   let acted = false;
   let creds: Awaited<ReturnType<typeof credentials>> | undefined;
   const getCreds = async () => (creds === undefined ? (creds = await credentials(admin, st)) : creds);
-  const text = st.body.toLowerCase();
+  let profile: { tags: string[]; hasEmail: boolean; hasPhone: boolean } | undefined;
+  const contactKey = () => ({ organization_id: st.organizationId, platform: st.platform, external_user_id: st.externalUserId });
+  const getProfile = async () => {
+    if (profile) return profile;
+    const k = contactKey();
+    const [{ data: tags }, { data: cp }] = await Promise.all([
+      admin.from("contact_tags").select("tag").eq("organization_id", k.organization_id).eq("platform", k.platform).eq("external_user_id", k.external_user_id),
+      admin.from("contact_profiles").select("email, phone").eq("organization_id", k.organization_id).eq("platform", k.platform).eq("external_user_id", k.external_user_id).maybeSingle(),
+    ]);
+    profile = { tags: (tags ?? []).map((t: { tag: string }) => String(t.tag).toLowerCase()), hasEmail: !!cp?.email, hasPhone: !!cp?.phone };
+    return profile;
+  };
+  let followsCache: boolean | null | undefined;
+  const getFollows = async () => {
+    if (followsCache !== undefined) return followsCache;
+    const c = await getCreds();
+    followsCache = c ? await a.flowCheckFollows(st.platform, st.externalUserId, c.token) : null;
+    return followsCache;
+  };
 
   for (let i = from; i < flow.steps.length; i++) {
     const s = flow.steps[i] as FlowStep;
+    if (s.disabled) continue; // switched off in the builder: skipped, flow continues
     if (s.kind === "condition") {
-      let ok: boolean;
-      if (s.check === "contains") {
-        ok = s.value.toLowerCase().split(",").map((k) => k.trim()).filter(Boolean).some((k) => text.includes(k));
-      } else {
-        const c = await getCreds();
-        const follows = c ? await a.flowCheckFollows(st.platform, st.externalUserId, c.token) : null;
-        ok = follows === (s.value === "yes");
-      }
+      const needsProfile = s.check === "has_tag" || s.check === "no_tag" || s.check === "has_contact";
+      const p = needsProfile ? await getProfile() : { tags: [], hasEmail: false, hasPhone: false };
+      const isFollower = s.check === "is_follower" ? await getFollows() : null;
+      const ok = conditionPasses(s, { text: st.body ?? "", isFollower, ...p });
       if (!ok) {
         if (acted) await log(admin, st, "skipped", `${flow.name}:stopped_at_${i + 1}`);
         return acted;
       }
       continue;
     }
+    if (s.kind === "remove_tag") {
+      if (s.value) {
+        const k = contactKey();
+        await admin.from("contact_tags").delete().eq("organization_id", k.organization_id).eq("platform", k.platform)
+          .eq("external_user_id", k.external_user_id).eq("tag", s.value);
+        if (profile) profile.tags = profile.tags.filter((t) => t !== s.value.toLowerCase());
+      }
+      acted = true;
+      continue;
+    }
+    if (s.kind === "follow_gate" && (await getFollows()) === true) continue; // followers pass straight through
     if (s.kind === "wait") {
       await admin.from("flow_runs").insert({
         organization_id: st.organizationId, conversation_id: st.conversationId, flow_id: flow.id, flow_name: flow.name,
@@ -145,6 +171,7 @@ async function executeSteps(admin: AdminClient, flow: Flow, st: RunState, from: 
           { onConflict: "organization_id,platform,external_user_id,tag", ignoreDuplicates: true },
         );
       }
+      if (profile && s.value && !profile.tags.includes(s.value.toLowerCase())) profile.tags.push(s.value.toLowerCase());
       acted = true;
       continue;
     }
@@ -170,9 +197,16 @@ async function executeSteps(admin: AdminClient, flow: Flow, st: RunState, from: 
     // Phase E: payment link / coupon steps become a normal DM (same safety + sending path).
     let msgText = "";
     let btn: { title: string; url: string } | null = null;
+    let stopAfterSend = false;
     if (s.kind === "send_dm") {
       msgText = s.text;
       if (s.buttonTitle && s.buttonUrl) btn = { title: s.buttonTitle, url: s.buttonUrl };
+    } else if (s.kind === "ask_contact") {
+      msgText = s.text; // the reply is saved to Contacts by captureContactInfo on the next DM
+    } else if (s.kind === "follow_gate") {
+      msgText = s.text;
+      if (s.profileUrl) btn = { title: s.buttonTitle || "Visit profile", url: s.profileUrl };
+      stopAfterSend = true; // non-followers get the follow request; the rest of the flow waits for their next message
     } else if (s.kind === "send_payment" || s.kind === "send_coupon") {
       const r = await import("@/lib/revenue.server");
       const target = { organizationId: st.organizationId, platform: st.platform, externalUserId: st.externalUserId, conversationId: st.conversationId, socialAccountId: st.socialAccountId };
@@ -208,6 +242,7 @@ async function executeSteps(admin: AdminClient, flow: Flow, st: RunState, from: 
     await recordOutbound(admin, st, flow, (viaComment ? "[private reply] " : "") + msgText + (btn ? `\n[${btn.title}] ${btn.url}` : ""), sentId ?? null);
     await log(admin, st, "sent", `${flow.name}:${s.kind}`);
     acted = true;
+    if (stopAfterSend) return true;
   }
   return acted;
 }

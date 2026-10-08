@@ -1,12 +1,144 @@
 import { newStepId, type Flow, type FlowStep } from "@/lib/flows";
 
 /** Ready-to-use flows. Each is created as a Draft so nothing sends until the user switches it on. */
-type Tpl = { key: string; name: string; description: string; trigger: Flow["trigger"]; steps: StepNoId[] };
+export type TemplateCategory = "all_in_one" | "sales" | "leads" | "followers" | "engagement" | "support";
+export const TEMPLATE_CATEGORIES: { key: TemplateCategory | "all"; label: string }[] = [
+  { key: "all", label: "All" },
+  { key: "all_in_one", label: "All-in-one" },
+  { key: "sales", label: "Sales & payments" },
+  { key: "leads", label: "Lead capture" },
+  { key: "followers", label: "Followers" },
+  { key: "engagement", label: "Engagement" },
+  { key: "support", label: "Support" },
+];
+type Tpl = { key: string; category: TemplateCategory; name: string; description: string; trigger: Flow["trigger"]; steps: StepNoId[] };
 type StepNoId = FlowStep extends infer S ? (S extends FlowStep ? Omit<S, "id"> : never) : never;
+const PROFILE = "https://instagram.com/yourprofile";
 
 export const FLOW_TEMPLATES: Tpl[] = [
   {
+    key: "all_in_one",
+    category: "all_in_one",
+    name: "All-in-one: comment → follow → sell → capture lead",
+    description: "Every step ready. Switch any step off with its toggle — e.g. turn off the follow check or the payment link.",
+    trigger: "new_comment",
+    steps: [
+      { kind: "condition", check: "contains", value: "price, link, buy, details, info" },
+      { kind: "condition", check: "no_tag", value: "do-not-contact" },
+      { kind: "public_reply", text: "Sent you everything in DM 📩" },
+      { kind: "follow_gate", text: "Please follow us first to unlock the details 🙏 Then comment again!", buttonTitle: "Visit profile", profileUrl: PROFILE },
+      { kind: "tag", value: "follower" },
+      { kind: "send_dm", text: "Thanks for following! Here are the details 👇", buttonTitle: "See details", buttonUrl: "https://example.com" },
+      { kind: "tag", value: "hot-lead" },
+      { kind: "send_payment", productId: "", text: "Want it now? Pay securely here 👇", disabled: true },
+      { kind: "send_coupon", campaignId: "", text: "Special for you: use code {code} for a discount 🎁", disabled: true },
+      { kind: "wait", minutes: 60 },
+      { kind: "condition", check: "has_contact", value: "none" },
+      { kind: "ask_contact", text: "Can I send you offers on WhatsApp or email? Just reply with your number or email 😊" },
+      { kind: "tag", value: "lead-followup" },
+    ],
+  },
+  {
+    key: "sell_pay",
+    category: "sales",
+    name: "Comment BUY → payment link",
+    description: "Public reply, DM with a payment link, then a reminder if they haven't paid.",
+    trigger: "new_comment",
+    steps: [
+      { kind: "condition", check: "contains", value: "buy, order, want" },
+      { kind: "public_reply", text: "Payment link sent in DM 🛒" },
+      { kind: "send_payment", productId: "", text: "Here is your secure payment link 👇" },
+      { kind: "tag", value: "interested-buyer" },
+      { kind: "wait", minutes: 120 },
+      { kind: "condition", check: "no_tag", value: "paid-customer" },
+      { kind: "send_dm", text: "Still thinking? Your link is above — reply if you have any questions 🙂" },
+      { kind: "tag", value: "cart-abandoned" },
+    ],
+  },
+  {
+    key: "coupon",
+    category: "sales",
+    name: "Comment OFFER → personal coupon",
+    description: "Gives each person a unique discount code and tags them.",
+    trigger: "new_comment",
+    steps: [
+      { kind: "condition", check: "contains", value: "offer, discount, coupon, code" },
+      { kind: "condition", check: "no_tag", value: "discount-claimed" },
+      { kind: "public_reply", text: "Your code is in DM 🎁" },
+      { kind: "send_coupon", campaignId: "", text: "Here's your personal code: {code} 🎉" },
+      { kind: "tag", value: "discount-claimed" },
+    ],
+  },
+  {
+    key: "follow_unlock",
+    category: "followers",
+    name: "Non-follower → Visit profile, follower → link",
+    description: "Non-followers get a Visit profile button; followers get the link straight away.",
+    trigger: "new_comment",
+    steps: [
+      { kind: "condition", check: "contains", value: "link, free, guide" },
+      { kind: "follow_gate", text: "Follow us to unlock the link 🔓 then comment again!", buttonTitle: "Visit profile", profileUrl: PROFILE },
+      { kind: "send_dm", text: "Here's your link 🔗", buttonTitle: "Open link", buttonUrl: "https://example.com" },
+      { kind: "tag", value: "follower-exclusive" },
+    ],
+  },
+  {
+    key: "giveaway",
+    category: "engagement",
+    name: "Giveaway entry",
+    description: "Comment-to-enter giveaway for followers, with an entry tag.",
+    trigger: "new_comment",
+    steps: [
+      { kind: "condition", check: "contains", value: "giveaway, enter, win" },
+      { kind: "condition", check: "no_tag", value: "giveaway-entry" },
+      { kind: "follow_gate", text: "You must follow us to enter 🙌 then comment again.", buttonTitle: "Visit profile", profileUrl: PROFILE },
+      { kind: "public_reply", text: "You're in! Good luck 🍀" },
+      { kind: "send_dm", text: "Your giveaway entry is confirmed ✅ Winners announced soon!" },
+      { kind: "tag", value: "giveaway-entry" },
+    ],
+  },
+  {
+    key: "webinar",
+    category: "leads",
+    name: "Webinar / event signup",
+    description: "Sends the registration link and asks for email for reminders.",
+    trigger: "new_comment",
+    steps: [
+      { kind: "condition", check: "contains", value: "webinar, live, register, event" },
+      { kind: "public_reply", text: "Registration link sent in DM 🎥" },
+      { kind: "send_dm", text: "Here's the registration link 👇", buttonTitle: "Register", buttonUrl: "https://example.com/webinar" },
+      { kind: "condition", check: "has_contact", value: "none" },
+      { kind: "ask_contact", text: "Reply with your email and we'll send you a reminder before we go live ⏰" },
+      { kind: "tag", value: "webinar-attendee" },
+    ],
+  },
+  {
+    key: "support",
+    category: "support",
+    name: "Support / complaint DM",
+    description: "Acknowledges support messages and tags them for the team.",
+    trigger: "new_dm",
+    steps: [
+      { kind: "condition", check: "contains", value: "help, problem, issue, refund, complaint, not working" },
+      { kind: "send_dm", text: "Sorry about that 🙏 Our team has your message and will reply shortly." },
+      { kind: "tag", value: "support-needed" },
+    ],
+  },
+  {
+    key: "repeat_customer",
+    category: "sales",
+    name: "Thank paid customers",
+    description: "When a paid customer DMs, thank them and offer a repeat discount.",
+    trigger: "new_dm",
+    steps: [
+      { kind: "condition", check: "has_tag", value: "paid-customer" },
+      { kind: "send_dm", text: "Great to hear from you again 💛 As a customer you get 10% off your next order!" },
+      { kind: "tag", value: "repeat-customer" },
+    ],
+  },
+  {
     key: "price",
+    category: "sales",
     name: "Price enquiry → DM",
     description: "Comment says price/cost: reply publicly and DM the price link.",
     trigger: "new_comment",
@@ -19,6 +151,7 @@ export const FLOW_TEMPLATES: Tpl[] = [
   },
   {
     key: "link",
+    category: "engagement",
     name: "Comment LINK → send link",
     description: "Classic comment-to-DM: anyone commenting LINK gets the link in DM.",
     trigger: "new_comment",
@@ -30,6 +163,7 @@ export const FLOW_TEMPLATES: Tpl[] = [
   },
   {
     key: "follower",
+    category: "followers",
     name: "Followers-only freebie",
     description: "Send the freebie to followers; ask non-followers to follow first.",
     trigger: "new_comment",
@@ -42,6 +176,7 @@ export const FLOW_TEMPLATES: Tpl[] = [
   },
   {
     key: "welcome",
+    category: "engagement",
     name: "DM welcome + follow-up",
     description: "Greets a new DM, waits 30 minutes, then sends a gentle follow-up.",
     trigger: "new_dm",
@@ -54,6 +189,7 @@ export const FLOW_TEMPLATES: Tpl[] = [
   },
   {
     key: "story_reply",
+    category: "engagement",
     name: "Story reply thank-you",
     description: "Thanks people who reply to your story and tags them as engaged.",
     trigger: "story_reply",
@@ -64,6 +200,7 @@ export const FLOW_TEMPLATES: Tpl[] = [
   },
   {
     key: "story_mention",
+    category: "engagement",
     name: "Story mention shout-out",
     description: "Thanks people who mention you in their story.",
     trigger: "story_mention",
@@ -74,6 +211,7 @@ export const FLOW_TEMPLATES: Tpl[] = [
   },
   {
     key: "capture",
+    category: "leads",
     name: "Collect email / phone",
     description: "Asks for an email or WhatsApp number on keyword DETAILS; the reply is saved to the contact automatically.",
     trigger: "new_dm",

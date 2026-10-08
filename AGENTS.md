@@ -29,3 +29,5 @@
 
 - Pages stay hidden behind a loading placeholder until their first data arrives (PageReadyGate in AppShell and AdminShell), and the signed-in session is one shared store - why: no page ever shows placeholder values that switch a moment later.
 - The signed-in page guard reads the session locally and reuses a background-refreshed super-admin answer; links preload on hover and already-shown pages open without the loading gate - why: switching pages never waits on a network check or re-hides cached pages.
+
+- Flow steps carry an optional `disabled` flag and all conditions go through the pure `conditionPasses` in flows.ts (shared by dry run and live runner); the AI flow suggestion is Agency-only, once per 24h via feature_flags `flow_ai_last_<orgId>` — why: one rule set for test and live, no schema change, locked rule engine untouched.

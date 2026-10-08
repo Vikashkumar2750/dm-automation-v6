@@ -99,3 +99,71 @@ export const saveFlows = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true, flows };
   });
+
+const AI_KEY = (orgId: string) => `flow_ai_last_${orgId}`;
+const AI_WINDOW_MS = 24 * 3600_000;
+
+/** AI flow suggestion: active Agency plan only, one generated flow per workspace per 24 hours. */
+async function aiFlowStatus(admin: any, flags: Record<string, unknown>, orgId: string) {
+  const { data: org } = await admin.from("organizations").select("plan, plan_expires_at").eq("id", orgId).maybeSingle();
+  const expired = org?.plan_expires_at && new Date(org.plan_expires_at as string) < new Date();
+  const allowed = org?.plan === "agency" && !expired;
+  const last = typeof flags[AI_KEY(orgId)] === "string" ? Date.parse(flags[AI_KEY(orgId)] as string) : NaN;
+  const nextAt = Number.isFinite(last) && Date.now() - last < AI_WINDOW_MS ? new Date(last + AI_WINDOW_MS).toISOString() : null;
+  return { allowed, nextAt };
+}
+
+export const getFlowAiStatus = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => orgInput.parse(d))
+  .handler(async ({ data, context }) => {
+    await assertOrgRole(context as Ctx, data.organizationId, ["owner", "admin", "manager", "agent", "viewer"]);
+    const { supabaseAdmin, flags } = await readFlags();
+    return aiFlowStatus(supabaseAdmin, flags, data.organizationId);
+  });
+
+export const suggestFlowWithAi = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => orgInput.extend({
+    goal: z.string().max(400).default(""),
+    current: z.unknown().optional(),
+  }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertOrgRole(context as Ctx, data.organizationId, ["owner", "admin", "manager"]);
+    const { supabaseAdmin, flags } = await readFlags();
+    const status = await aiFlowStatus(supabaseAdmin, flags, data.organizationId);
+    if (!status.allowed) return { error: "agency_only" as const };
+    if (status.nextAt) return { error: "daily_limit" as const, nextAt: status.nextAt };
+    const { readAiProviders, generateWithFailover, sanitisePromptInput } = await import("@/lib/ai-providers.server");
+    const { sanitizeFlows, TAG_PRESETS } = await import("@/lib/flows");
+    const current = sanitizeFlows(data.current ? [data.current] : [])[0];
+    const system = `You design Instagram/Facebook comment & DM automation flows. Reply with ONLY one JSON object:
+{"name":string,"trigger":"new_comment"|"new_dm"|"story_reply"|"story_mention","explanation":string,"steps":[...]}
+Allowed steps (max 14):
+{"kind":"condition","check":"contains"|"not_contains","value":"comma keywords"}
+{"kind":"condition","check":"is_follower","value":"yes"|"no"}
+{"kind":"condition","check":"has_tag"|"no_tag","value":"tag"}
+{"kind":"condition","check":"has_contact","value":"email"|"phone"|"any"|"none"}
+{"kind":"send_dm","text":string,"buttonTitle"?:string,"buttonUrl"?:"https://..."}
+{"kind":"public_reply","text":string} (only for new_comment)
+{"kind":"wait","minutes":number}
+{"kind":"tag"|"remove_tag","value":string}
+{"kind":"ask_contact","text":string}
+{"kind":"follow_gate","text":string,"buttonTitle":"Visit profile","profileUrl":"https://instagram.com/yourprofile"}
+{"kind":"send_payment","productId":"","text":string}
+{"kind":"send_coupon","campaignId":"","text":"... {code} ..."}
+Prefer tags from: ${TAG_PRESETS.join(", ")}. Use example.com for links. Keep messages short and friendly.`;
+    const prompt = `Goal: ${sanitisePromptInput(data.goal || "Improve conversions and capture leads", 400)}
+${current ? `Current flow to improve (suggest what to add next, return the full improved flow): ${JSON.stringify({ trigger: current.trigger, steps: current.steps.map(({ id: _i, ...s }) => s) }).slice(0, 2500)}` : "Create a new flow."}`;
+    const config = await readAiProviders(supabaseAdmin);
+    const res = await generateWithFailover({ config, system, prompt, scope: `flow-ai:${data.organizationId}`, long: true });
+    if (!res.text) return { error: "ai_unavailable" as const };
+    const m = res.text.match(/\{[\s\S]*\}/);
+    let parsed: any = null;
+    try { parsed = m ? JSON.parse(m[0]) : null; } catch { parsed = null; }
+    const flow = sanitizeFlows(parsed ? [{ ...parsed, active: false }] : [])[0];
+    if (!flow || flow.steps.length === 0) return { error: "ai_bad_answer" as const };
+    flags[AI_KEY(data.organizationId)] = new Date().toISOString();
+    await supabaseAdmin.from("platform_settings").upsert({ id: true, feature_flags: flags as never });
+    return { flow: { ...flow, name: flow.name || "AI suggested flow" }, explanation: String(parsed?.explanation ?? "").slice(0, 600) };
+  });
