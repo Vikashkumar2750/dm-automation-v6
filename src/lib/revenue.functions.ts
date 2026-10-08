@@ -6,6 +6,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 type Ctx = { supabase: any; userId: string };
 const org = z.string().uuid();
 const httpsUrl = z.string().trim().max(500).regex(/^https:\/\//i, "Link must start with https://");
+const formField = z.object({ key: z.string().regex(/^[a-z0-9_]{1,30}$/), label: z.string().trim().min(1).max(80), type: z.enum(["text", "email", "phone", "choice"]), required: z.boolean(), options: z.array(z.string().trim().min(1).max(30)).max(10) });
 
 async function assertMember(ctx: Ctx, organizationId: string) {
   const { data } = await ctx.supabase.from("organizations").select("id").eq("id", organizationId).maybeSingle();
@@ -82,9 +83,14 @@ export const savePage = createServerFn({ method: "POST" })
     organizationId: org, id: z.string().uuid().optional(), slug: z.string().regex(/^[a-z0-9-]{3,60}$/),
     title: z.string().trim().min(1).max(120), body: z.string().max(8000).nullable(),
     buttonLabel: z.string().max(40).nullable(), buttonUrl: httpsUrl.nullable(), active: z.boolean(),
+    imagePath: z.string().regex(/^[0-9a-f-]{36}\/[A-Za-z0-9._-]+$/).nullable(), showImage: z.boolean(), imageAlt: z.string().trim().max(160).nullable(),
+    countdownAt: z.string().datetime().nullable(), expiryAction: z.enum(["disable_cta", "hide_cta"]), expiryMessage: z.string().trim().max(160).nullable(),
+    formConfig: z.object({ mode: z.enum(["none", "optional", "required"]), consent: z.string().trim().max(300), fields: z.array(formField).max(8) }),
   }).parse(d))
   .handler(async ({ data, context }) => {
-    const row = { organization_id: data.organizationId, slug: data.slug, title: data.title, body: data.body, button_label: data.buttonLabel, button_url: data.buttonUrl, active: data.active };
+    const row = { organization_id: data.organizationId, slug: data.slug, title: data.title, body: data.body, button_label: data.buttonLabel, button_url: data.buttonUrl, active: data.active,
+      image_path: data.imagePath, show_image: data.showImage, image_alt: data.imageAlt, countdown_at: data.countdownAt, expiry_action: data.expiryAction, expiry_message: data.expiryMessage,
+      form_config: data.formConfig };
     const q = (context as Ctx).supabase.from("delivery_pages");
     const { error } = data.id ? await q.update(row).eq("id", data.id).eq("organization_id", data.organizationId) : await q.insert(row);
     if (error) throw new Error(error.code === "23505" ? "This page address is already taken" : error.message);
@@ -171,10 +177,13 @@ export const getPublicPage = createServerFn({ method: "GET" })
   .inputValidator((d: unknown) => z.object({ slug: z.string().regex(/^[a-z0-9-]{3,60}$/) }).parse(d))
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: p } = await supabaseAdmin.from("delivery_pages").select("id, organization_id, title, body, button_label, button_url, views")
+    const { data: p } = await supabaseAdmin.from("delivery_pages").select("id, organization_id, title, body, button_label, button_url, views, image_path, show_image, image_alt, countdown_at, expiry_action, expiry_message, form_config")
       .eq("slug", data.slug).eq("active", true).maybeSingle();
     if (!p) return null;
     await supabaseAdmin.from("delivery_pages").update({ views: (p.views ?? 0) + 1 }).eq("id", p.id);
     await supabaseAdmin.from("revenue_events").insert({ organization_id: p.organization_id, kind: "page_view", ref_id: p.id });
-    return { title: p.title as string, body: (p.body as string | null) ?? "", buttonLabel: p.button_label as string | null, hasButton: !!p.button_url };
+    return { title: p.title as string, body: (p.body as string | null) ?? "", buttonLabel: p.button_label as string | null, hasButton: !!p.button_url,
+      imageUrl: p.show_image && p.image_path ? `/api/public/delivery-image/${encodeURIComponent(p.image_path as string)}` : null, imageAlt: p.image_alt as string | null,
+      countdownAt: p.countdown_at as string | null, expiryAction: p.expiry_action as "disable_cta" | "hide_cta", expiryMessage: p.expiry_message as string | null,
+      formConfig: p.form_config as { mode: "none" | "optional" | "required"; consent?: string; fields?: unknown[] } };
   });
