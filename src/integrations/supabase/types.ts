@@ -1092,10 +1092,17 @@ export type Database = {
           body: string | null
           button_label: string | null
           button_url: string | null
+          countdown_at: string | null
           created_at: string
+          expiry_action: string
+          expiry_message: string | null
+          form_config: Json
           id: string
+          image_alt: string | null
+          image_path: string | null
           organization_id: string
           product_id: string | null
+          show_image: boolean
           slug: string
           title: string
           views: number
@@ -1105,10 +1112,17 @@ export type Database = {
           body?: string | null
           button_label?: string | null
           button_url?: string | null
+          countdown_at?: string | null
           created_at?: string
+          expiry_action?: string
+          expiry_message?: string | null
+          form_config?: Json
           id?: string
+          image_alt?: string | null
+          image_path?: string | null
           organization_id: string
           product_id?: string | null
+          show_image?: boolean
           slug: string
           title: string
           views?: number
@@ -1118,10 +1132,17 @@ export type Database = {
           body?: string | null
           button_label?: string | null
           button_url?: string | null
+          countdown_at?: string | null
           created_at?: string
+          expiry_action?: string
+          expiry_message?: string | null
+          form_config?: Json
           id?: string
+          image_alt?: string | null
+          image_path?: string | null
           organization_id?: string
           product_id?: string | null
+          show_image?: boolean
           slug?: string
           title?: string
           views?: number
@@ -1636,9 +1657,11 @@ export type Database = {
           amount_paise: number
           conversation_id: string | null
           created_at: string
+          delivery_page_id: string | null
           external_user_id: string
           id: string
           nudged_at: string | null
+          offer_token: string | null
           organization_id: string
           paid_at: string | null
           platform: string
@@ -1653,9 +1676,11 @@ export type Database = {
           amount_paise: number
           conversation_id?: string | null
           created_at?: string
+          delivery_page_id?: string | null
           external_user_id: string
           id?: string
           nudged_at?: string | null
+          offer_token?: string | null
           organization_id: string
           paid_at?: string | null
           platform: string
@@ -1670,9 +1695,11 @@ export type Database = {
           amount_paise?: number
           conversation_id?: string | null
           created_at?: string
+          delivery_page_id?: string | null
           external_user_id?: string
           id?: string
           nudged_at?: string | null
+          offer_token?: string | null
           organization_id?: string
           paid_at?: string | null
           platform?: string
@@ -1684,6 +1711,13 @@ export type Database = {
           url?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "payment_links_delivery_page_id_fkey"
+            columns: ["delivery_page_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_pages"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "payment_links_organization_id_fkey"
             columns: ["organization_id"]

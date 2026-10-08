@@ -1,5 +1,13 @@
 {
   "version": "7",
   "dialect": "postgresql",
-  "entries": []
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1791482093881,
+      "tag": "0000_enhance_delivery_pages_for_flow_offers",
+      "breakpoints": true
+    }
+  ]
 }
