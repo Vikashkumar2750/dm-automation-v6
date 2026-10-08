@@ -465,7 +465,7 @@ function StepCard({ step, index, onChange, onRemove, onMove }: {
           <Input placeholder="Keywords, comma separated (e.g. stop, no)" value={step.value} onChange={(e) => onChange({ ...step, value: e.target.value })} />
         )}
         {step.kind === "condition" && (step.check === "has_tag" || step.check === "no_tag") && (
-          <div className="flex gap-2">
+          <div className="space-y-2">
             <select className={sel} value={step.check} onChange={(e) => onChange({ ...step, check: e.target.value as "has_tag" | "no_tag" })}>
               <option value="has_tag">Has tag</option>
               <option value="no_tag">Does not have tag</option>
