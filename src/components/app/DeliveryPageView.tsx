@@ -2,6 +2,7 @@ import { CheckCircle2, Clock3, Copy, ShieldCheck, Tag } from "lucide-react";
 import { Fragment, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { LeadFields, useLeadForm, type LeadFormSource } from "@/components/app/DeliveryLeadForm";
 import { inlineParts, parseBody, priceDisplay, type Block } from "@/lib/delivery-page";
 
 export type PagePrice = { originalPaise: number | null; offerPaise: number | null; label?: string | null; couponCode?: string | null; couponNote?: string | null };
@@ -34,10 +35,11 @@ function Inline({ text }: { text: string }) {
 }
 
 /** Landing-page style rendering of a delivery page (used publicly and as a live preview). */
-export function DeliveryPageView({ title, body, buttonLabel, buttonHref, imageUrl, imageAlt, countdownAt, expiryAction = "disable_cta", expiryMessage, price }: {
+export function DeliveryPageView({ title, body, buttonLabel, buttonHref, imageUrl, imageAlt, countdownAt, expiryAction = "disable_cta", expiryMessage, price, leadForm }: {
   title: string; body: string; buttonLabel?: string | null; buttonHref?: string | null; imageUrl?: string | null; imageAlt?: string | null;
-  countdownAt?: string | null; expiryAction?: "disable_cta" | "hide_cta"; expiryMessage?: string | null; price?: PagePrice | null;
+  countdownAt?: string | null; expiryAction?: "disable_cta" | "hide_cta"; expiryMessage?: string | null; price?: PagePrice | null; leadForm?: LeadFormSource | null;
 }) {
+  const form = useLeadForm(leadForm);
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     if (!countdownAt) return;
@@ -54,9 +56,15 @@ export function DeliveryPageView({ title, body, buttonLabel, buttonHref, imageUr
   const intro = rest[0]?.t === "p" ? (rest[0] as { text: string }).text : null;
   const content = intro ? rest.slice(1) : rest;
   const faqs = content.filter((b): b is Extract<Block, { t: "faq" }> => b.t === "faq");
+  const onCta = async (e: React.MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault();
+    if (expired || !buttonHref) return;
+    if (form.active && !(await form.run())) { document.getElementById("lead-form")?.scrollIntoView({ behavior: "smooth", block: "center" }); return; }
+    if (buttonHref !== "#") window.location.href = buttonHref;
+  };
   const cta = buttonHref && !(expired && expiryAction === "hide_cta") ? (
     <Button asChild size="lg" className="h-12 w-full rounded-xl text-base shadow-lg sm:w-auto sm:px-10">
-      <a href={expired ? undefined : buttonHref} aria-disabled={expired} onClick={expired ? (e) => e.preventDefault() : undefined} rel="nofollow">{expired ? (expiryMessage || "Offer ended") : (buttonLabel || "Open")}</a>
+      <a href={expired ? undefined : buttonHref} aria-disabled={expired || form.state === "saving"} onClick={onCta} rel="nofollow">{expired ? (expiryMessage || "Offer ended") : form.state === "saving" ? "Please wait…" : (buttonLabel || "Open")}</a>
     </Button>
   ) : null;
 
@@ -72,6 +80,7 @@ export function DeliveryPageView({ title, body, buttonLabel, buttonHref, imageUr
         {countdownAt && !expired && <div className="mx-auto mt-6 max-w-md rounded-lg border border-border bg-card p-3 text-card-foreground"><p className="mb-2 flex items-center justify-center gap-2 text-sm font-medium"><Clock3 className="size-4 text-primary" /> Offer ends in</p><div className="grid grid-cols-4 gap-2">{countdown.map((n, i) => <div key={i} className="rounded-md bg-muted px-2 py-2"><strong className="block text-lg">{String(n).padStart(2, "0")}</strong><span className="text-[10px] text-muted-foreground">{["Days", "Hours", "Mins", "Secs"][i]}</span></div>)}</div></div>}
         {expired && <p className="mx-auto mt-6 max-w-md rounded-lg border border-border bg-muted p-3 text-sm text-muted-foreground">{expiryMessage || "This offer has ended."}</p>}
         {price && <PriceBox price={price} />}
+        <LeadFields form={form} standalone={!cta} />
         {cta && <div className="mt-8">{cta}</div>}
       </section>
 
@@ -109,7 +118,7 @@ export function DeliveryPageView({ title, body, buttonLabel, buttonHref, imageUr
           <div className="mt-6 rounded-2xl border border-border bg-card p-8 text-center shadow-sm">
             <p className="mb-4 text-lg font-semibold text-foreground">{heading}</p>
             {price && (() => { const d = priceDisplay(price.originalPaise, price.offerPaise, price.label); return d.offer ? <p className="mb-4 flex items-baseline justify-center gap-2"><span className="text-2xl font-bold text-foreground">{d.offer}</span>{d.original && <span className="text-sm text-muted-foreground line-through">{d.original}</span>}{d.badge && <span className="text-xs font-semibold text-primary">{d.badge}</span>}</p> : null; })()}
-            {cta}
+            {form.active && form.state !== "done" ? <Button size="lg" className="h-12 rounded-xl px-10" onClick={() => document.getElementById("lead-form")?.scrollIntoView({ behavior: "smooth", block: "center" })}>Fill your details above</Button> : cta}
           </div>
         )}
         <p className="flex items-center justify-center gap-1.5 pt-6 text-xs text-muted-foreground"><ShieldCheck className="size-3.5" /> Secure delivery</p>

@@ -1,7 +1,6 @@
 import { createFileRoute, notFound } from "@tanstack/react-router";
 
 import { DeliveryPageView } from "@/components/app/DeliveryPageView";
-import { DeliveryLeadForm } from "@/components/app/DeliveryLeadForm";
 import { getPublicPage } from "@/lib/revenue.functions";
 
 const plain = (s: string) => s.replace(/[#>*?|•-]/g, " ").replace(/\s+/g, " ").trim().slice(0, 150);
@@ -33,8 +32,7 @@ function DeliveryPage() {
   return (
     <main className="min-h-screen">
       <DeliveryPageView title={page.title} body={page.body} buttonLabel={page.buttonLabel} buttonHref={page.hasButton ? `/api/public/pg/${slug}` : null}
-        imageUrl={page.imageUrl} imageAlt={page.imageAlt} countdownAt={page.countdownAt} expiryAction={page.expiryAction} expiryMessage={page.expiryMessage} price={page.price} />
-      {page.formConfig?.mode && page.formConfig.mode !== "none" && <div className="mx-auto -mt-6 max-w-2xl px-6 pb-16"><DeliveryLeadForm slug={slug} config={page.formConfig} /></div>}
+        imageUrl={page.imageUrl} imageAlt={page.imageAlt} countdownAt={page.countdownAt} expiryAction={page.expiryAction} expiryMessage={page.expiryMessage} price={page.price} leadForm={{ slug, config: page.formConfig }} />
     </main>
   );
 }
