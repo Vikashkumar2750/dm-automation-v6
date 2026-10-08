@@ -54,6 +54,14 @@ try {
     on conflict (id) do nothing
   `.catch((e) => console.warn("[migrate] could not ensure post-media bucket:", e.message));
 
+  // Private bucket for delivery-page images (max 8 MB, images only). Idempotent.
+  await sql`
+    insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+    values ('delivery-page-images', 'delivery-page-images', false, 8388608,
+            array['image/png','image/jpeg','image/webp','image/gif'])
+    on conflict (id) do nothing
+  `.catch((e) => console.warn("[migrate] could not ensure delivery-page-images bucket:", e.message));
+
   // Inbox core (conversations + messages) was created outside the .sql files.
   // 0004 depends on it, so bootstrap it just before that migration runs.
   const INBOX_BOOTSTRAP = `
