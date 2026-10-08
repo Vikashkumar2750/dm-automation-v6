@@ -71,3 +71,9 @@ Real Meta + YouTube credentials are available when we reach OAuth phases.
 
 - [x] P2: human takeover, YouTube quota backoff, scheduler heartbeat, P2 reports
 - [ ] Owner: TOKEN_ENCRYPTION_KEY, live IG/FB checklist, App Review, async webhook
+
+- [x] Delivery page landing templates + formatted rendering + live preview
+- [x] Flow builder: create product / coupon in place
+- [ ] Flow builder: lead form step (custom + multiple-choice fields)
+- [ ] Flow builder: free-placement node canvas with connectors
+- [ ] Flow builder follow gate: "I followed" tap

@@ -66,16 +66,21 @@ export const saveProduct = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const row = { organization_id: data.organizationId, name: data.name, description: data.description, price_paise: data.pricePaise, manual_url: data.manualUrl, active: data.active };
     const q = (context as Ctx).supabase.from("revenue_products");
-    const { error } = data.id ? await q.update(row).eq("id", data.id).eq("organization_id", data.organizationId) : await q.insert(row);
+    if (data.id) {
+      const { error } = await q.update(row).eq("id", data.id).eq("organization_id", data.organizationId);
+      if (error) throw new Error(error.message);
+      return { ok: true, id: data.id };
+    }
+    const { data: created, error } = await q.insert(row).select("id").single();
     if (error) throw new Error(error.message);
-    return { ok: true };
+    return { ok: true, id: (created as { id: string }).id };
   });
 
 export const savePage = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({
     organizationId: org, id: z.string().uuid().optional(), slug: z.string().regex(/^[a-z0-9-]{3,60}$/),
-    title: z.string().trim().min(1).max(120), body: z.string().max(3000).nullable(),
+    title: z.string().trim().min(1).max(120), body: z.string().max(8000).nullable(),
     buttonLabel: z.string().max(40).nullable(), buttonUrl: httpsUrl.nullable(), active: z.boolean(),
   }).parse(d))
   .handler(async ({ data, context }) => {
@@ -96,9 +101,14 @@ export const saveCampaign = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const row = { organization_id: data.organizationId, name: data.name, prefix: data.prefix, discount_label: data.discountLabel, max_codes: data.maxCodes, expires_at: data.expiresAt, active: data.active };
     const q = (context as Ctx).supabase.from("coupon_campaigns");
-    const { error } = data.id ? await q.update(row).eq("id", data.id).eq("organization_id", data.organizationId) : await q.insert(row);
+    if (data.id) {
+      const { error } = await q.update(row).eq("id", data.id).eq("organization_id", data.organizationId);
+      if (error) throw new Error(error.message);
+      return { ok: true, id: data.id };
+    }
+    const { data: created, error } = await q.insert(row).select("id").single();
     if (error) throw new Error(error.message);
-    return { ok: true };
+    return { ok: true, id: (created as { id: string }).id };
   });
 
 export const deleteRevenueItem = createServerFn({ method: "POST" })
