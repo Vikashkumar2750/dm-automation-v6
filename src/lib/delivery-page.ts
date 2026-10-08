@@ -142,3 +142,40 @@ Because you commented, you unlocked a **special price** — just for you.
 > Offer ends soon. Use your code at checkout.`,
   },
 ];
+
+/** Price box values for a delivery page (display only; charging uses the product price). */
+export function priceDisplay(originalPaise: number | null | undefined, offerPaise: number | null | undefined, label?: string | null) {
+  const fmt = (p: number) => `₹${(p / 100).toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
+  const offer = offerPaise && offerPaise > 0 ? offerPaise : null;
+  const original = originalPaise && originalPaise > 0 ? originalPaise : null;
+  const hasCut = !!(offer && original && offer < original);
+  const percent = hasCut ? Math.round(((original! - offer!) / original!) * 100) : 0;
+  return {
+    offer: offer ? fmt(offer) : original ? fmt(original) : null,
+    original: hasCut ? fmt(original!) : null,
+    percent,
+    badge: label?.trim() || (hasCut ? `${percent}% OFF` : null),
+  };
+}
+
+export type LeadFieldType = "text" | "email" | "phone" | "pincode" | "choice";
+export type LeadField = { key: string; label: string; type: LeadFieldType; required: boolean; options: string[] };
+
+export const STANDARD_LEAD_FIELDS: LeadField[] = [
+  { key: "name", label: "Full name", type: "text", required: true, options: [] },
+  { key: "phone", label: "Phone number", type: "phone", required: true, options: [] },
+  { key: "email", label: "Email address", type: "email", required: true, options: [] },
+  { key: "pincode", label: "Pincode", type: "pincode", required: false, options: [] },
+];
+export const EMAIL_ONLY_FIELDS: LeadField[] = [{ key: "email", label: "Email address", type: "email", required: true, options: [] }];
+
+/** Returns an error message, or null when the value is fine. */
+export function validateLeadValue(field: Pick<LeadField, "type" | "required" | "options">, raw: string): string | null {
+  const value = raw.trim();
+  if (!value) return field.required ? "Please complete all required fields" : null;
+  if (field.type === "email" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return "Enter a valid email address";
+  if (field.type === "phone") { const n = value.replace(/\D/g, "").length; if (n < 10 || n > 15) return "Enter a valid phone number"; }
+  if (field.type === "pincode" && !/^\d{6}$/.test(value)) return "Pincode must be 6 digits";
+  if (field.type === "choice" && !field.options.includes(value)) return "Choose one of the available options";
+  return null;
+}

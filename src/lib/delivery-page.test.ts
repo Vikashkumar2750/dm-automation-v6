@@ -22,3 +22,33 @@ describe("delivery page formatting", () => {
     }
   });
 });
+
+import { priceDisplay, validateLeadValue } from "./delivery-page";
+
+describe("delivery page price box", () => {
+  it("shows 50% off when 1999 is cut to 999", () => {
+    const p = priceDisplay(199900, 99900);
+    expect(p.original).toBe("₹1,999");
+    expect(p.offer).toBe("₹999");
+    expect(p.badge).toBe("50% OFF");
+  });
+  it("hides the cut price and badge when offer is not lower", () => {
+    const p = priceDisplay(99900, 99900);
+    expect(p.original).toBeNull();
+    expect(p.badge).toBeNull();
+  });
+  it("uses a custom discount label", () => {
+    expect(priceDisplay(200000, 100000, "Diwali deal").badge).toBe("Diwali deal");
+  });
+});
+
+describe("lead form checks", () => {
+  it("accepts a 6-digit pincode and rejects 5 digits", () => {
+    expect(validateLeadValue({ type: "pincode", required: true, options: [] }, "110001")).toBeNull();
+    expect(validateLeadValue({ type: "pincode", required: true, options: [] }, "11001")).not.toBeNull();
+  });
+  it("requires 10 to 15 phone digits", () => {
+    expect(validateLeadValue({ type: "phone", required: true, options: [] }, "98765 43210")).toBeNull();
+    expect(validateLeadValue({ type: "phone", required: true, options: [] }, "12345")).not.toBeNull();
+  });
+});
