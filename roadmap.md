@@ -82,5 +82,5 @@ Real Meta + YouTube credentials are available when we reach OAuth phases.
 - [ ] Flow-owned Opening DM and run-bound follow confirmation callbacks
 - [ ] Separate FLOW / Rule / System activity with source-filtered reads
 - [ ] Bounded template and Try it result scrolling
-- [ ] Canvas-local anchored wheel and keyboard zoom
+- [x] Canvas-local anchored wheel and keyboard zoom
 - [ ] Regression tests, browser checks and guide updates
