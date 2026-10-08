@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { explainReason, webhookEventLabel } from "@/lib/activity-explain";
+import { activityName, stepLabel, explainReason, webhookEventLabel } from "@/lib/activity-explain";
 import { checkPolicy } from "@/lib/trust-safety";
 
 /** Phase H: refuse rule text that clearly breaks Meta messaging policy (warnings are shown in the UI only). */
@@ -240,16 +240,19 @@ export const listAutomationRuns = createServerFn({ method: "GET" })
       .object({
         organizationId: z.string().uuid(),
         limit: z.number().int().min(1).max(500).optional(),
+        source: z.enum(["flows", "rules", "system"]).optional(),
       })
       .parse(data),
   )
   .handler(async ({ data, context }) => {
-    const { data: rows, error } = await context.supabase
+    let query = context.supabase
       .from("automation_runs")
       .select("id, rule_id, conversation_id, status, detail, created_at")
-      .eq("organization_id", data.organizationId)
-      .order("created_at", { ascending: false })
-      .limit(data.limit ?? 40);
+      .eq("organization_id", data.organizationId);
+    if (data.source === "flows") query = query.like("detail", "flow:%");
+    if (data.source === "rules") query = query.not("rule_id", "is", null).or("detail.is.null,detail.not.like.flow:%");
+    if (data.source === "system") query = query.is("rule_id", null).or("detail.is.null,detail.not.like.flow:%");
+    const { data: rows, error } = await query.order("created_at", { ascending: false }).limit(data.limit ?? 40);
     if (error) throw new Error(error.message);
     return (rows ?? []) as AutomationRun[];
   });
@@ -303,14 +306,14 @@ export const listOrgActivityFeed = createServerFn({ method: "GET" })
 
     for (const r of runs.data ?? []) {
       const { title, hint } = explainReason(r.detail);
-      const rule = r.rule_id ? (ruleName.get(r.rule_id) ?? "Automation") : null;
+      const rule = activityName(r, (id) => id ? ruleName.get(id) ?? "Deleted rule" : "System / safety");
       const sent = r.status === "sent" || r.status === "matched";
       items.push({
         id: `run-${r.id}`,
         kind: "run",
         tone: r.status === "failed" ? "danger" : r.status === "skipped" ? "warning" : "success",
         title: sent
-          ? `${rule ?? "Automation"}: reply sent`
+          ? `${rule}: ${stepLabel(r.detail)}`
           : rule
             ? `${title} — ${rule}`
             : title,
