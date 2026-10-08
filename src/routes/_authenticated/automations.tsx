@@ -61,8 +61,6 @@ export const Route = createFileRoute("/_authenticated/automations")({
         name: "description",
         content: "Keyword rules that auto-reply to DMs and comments with safety limits.",
       },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
       { property: "og:title", content: "Automations — AutoDM by Techaasvik" },
       {
         property: "og:description",

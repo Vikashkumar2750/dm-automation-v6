@@ -338,6 +338,14 @@ async function ingestIntoInbox(
       "@/lib/automation.server"
     );
 
+    // Reserved flow callbacks cannot be consumed by a pending keyword-rule gate.
+    if (followPayload?.startsWith("FLOW_TAP:")) {
+      const { runLiveFlows } = await import("@/lib/flows-runner.server");
+      await runLiveFlows(admin, { organizationId, conversationId: conversation.id, socialAccountId, platform,
+        channel, body, externalUserId, externalId, payload: followPayload }, new Date().toISOString());
+      return null;
+    }
+
     // Record that the button reached us independently of whether follow status
     // can be checked or the next message can be delivered.
     if (followPayload?.startsWith("AUTOMATION_FOLLOW_CHECK:")) {
@@ -368,14 +376,6 @@ async function ingestIntoInbox(
         trace("follow_gate", "handled", followPayload ? "payload_tap" : "text_tap");
         return null;
       }
-    }
-
-    // Flow-owned callbacks are dispatched only after the unchanged rule gate branch.
-    if (followPayload?.startsWith("FLOW_TAP:")) {
-      const { runLiveFlows } = await import("@/lib/flows-runner.server");
-      await runLiveFlows(admin, { organizationId, conversationId: conversation.id, socialAccountId, platform,
-        channel, body, externalUserId, externalId, payload: followPayload }, new Date().toISOString());
-      return null;
     }
 
     const flowsStartedAt = new Date(Date.now() - 1000).toISOString();

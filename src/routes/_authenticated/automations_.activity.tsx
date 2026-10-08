@@ -21,7 +21,7 @@ export const Route = createFileRoute("/_authenticated/automations_/activity")({
       { name: "twitter:card", content: "summary" },
     ],
   }),
-  validateSearch: (s: Record<string, unknown>) => ({ source: s.source === "flows" || s.source === "rules" || s.source === "system" ? s.source : "rules", filter: s.filter === "sent" || s.filter === "skipped" || s.filter === "failed" ? s.filter : "all" }),
+  validateSearch: (s: Record<string, unknown>) => ({ source: s["source"] === "flows" || s["source"] === "rules" || s["source"] === "system" ? s["source"] : "rules", filter: s["filter"] === "sent" || s["filter"] === "skipped" || s["filter"] === "failed" ? s["filter"] : "all" }),
   component: ActivityPage,
 });
 
