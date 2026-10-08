@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Copy, IndianRupee, Info, Loader2, Trash2, Upload } from "lucide-react";
+import { Copy, IndianRupee, Info, Loader2, Pencil, Plus, Trash2, Upload, Users } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -17,7 +17,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useTenant } from "@/hooks/useTenant";
 import { buildFunnel, formatInr, rupeesToPaise, slugify } from "@/lib/revenue";
 import { DeliveryPageView } from "@/components/app/DeliveryPageView";
-import { DELIVERY_TEMPLATES } from "@/lib/delivery-page";
+import { DELIVERY_TEMPLATES, EMAIL_ONLY_FIELDS, STANDARD_LEAD_FIELDS, priceDisplay, type LeadField } from "@/lib/delivery-page";
+import { DeliveryLeadForm } from "@/components/app/DeliveryLeadForm";
 import { previewDeliveryImage, uploadDeliveryImage } from "@/lib/delivery-media";
 import {
   deleteRevenueItem, getRevenue, removeRazorpayKeys, saveCampaign, savePage, saveProduct, saveRazorpayKeys, saveRevenueSettings,
@@ -62,7 +63,7 @@ function RevenuePage() {
           <TabsContent value="report"><Report d={d} /></TabsContent>
           <TabsContent value="products"><Products orgId={orgId!} items={d.products} /></TabsContent>
           <TabsContent value="coupons"><Coupons orgId={orgId!} items={d.campaigns} /></TabsContent>
-          <TabsContent value="pages"><Pages orgId={orgId!} items={d.pages} /></TabsContent>
+          <TabsContent value="pages"><Pages orgId={orgId!} items={d.pages} leads={d.leads} /></TabsContent>
           <TabsContent value="payments"><Payments orgId={orgId!} d={d} /></TabsContent>
         </Tabs>
       )}
@@ -192,30 +193,118 @@ function Coupons({ orgId, items }: { orgId: string; items: any[] }) {
   );
 }
 
-function Pages({ orgId, items }: { orgId: string; items: any[] }) {
+type PageForm = {
+  id: string | null; title: string; slug: string; originalSlug: string; body: string; buttonLabel: string; buttonUrl: string; imagePath: string; imageAlt: string; showImage: boolean;
+  countdown: string; expiryAction: "disable_cta" | "hide_cta"; expiryMessage: string;
+  formType: "none" | "email" | "full"; formMode: "optional" | "required"; fields: LeadField[];
+  showPrice: boolean; priceOriginal: string; priceOffer: string; discountLabel: string; couponCode: string; couponNote: string;
+};
+const EMPTY_PAGE: PageForm = {
+  id: null, title: "", slug: "", originalSlug: "", body: "", buttonLabel: "", buttonUrl: "", imagePath: "", imageAlt: "", showImage: false, countdown: "", expiryAction: "disable_cta",
+  expiryMessage: "This offer has ended.", formType: "none", formMode: "optional", fields: STANDARD_LEAD_FIELDS,
+  showPrice: false, priceOriginal: "", priceOffer: "", discountLabel: "", couponCode: "", couponNote: "",
+};
+const CONSENT = "I agree that my details may be used to fulfil this request and follow up about this offer.";
+const toLocalInput = (iso: string | null) => { if (!iso) return ""; const d = new Date(iso); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16); };
+const paiseToRupees = (p: number | null) => (p ? String(p / 100) : "");
+
+function pageToForm(p: any): PageForm {
+  const cfg = (p.form_config ?? { mode: "none", fields: [] }) as { mode: string; fields?: LeadField[] };
+  const fields = cfg.fields ?? [];
+  const emailOnly = fields.length === 1 && fields[0]?.type === "email";
+  return {
+    ...EMPTY_PAGE, id: p.id, title: p.title ?? "", slug: p.slug ?? "", originalSlug: p.slug ?? "", body: p.body ?? "", buttonLabel: p.button_label ?? "", buttonUrl: p.button_url ?? "",
+    imagePath: p.image_path ?? "", imageAlt: p.image_alt ?? "", showImage: !!p.show_image, countdown: toLocalInput(p.countdown_at), expiryAction: p.expiry_action ?? "disable_cta",
+    expiryMessage: p.expiry_message ?? "This offer has ended.",
+    formType: cfg.mode === "none" || fields.length === 0 ? "none" : emailOnly ? "email" : "full", formMode: cfg.mode === "required" ? "required" : "optional",
+    fields: emailOnly || fields.length === 0 ? STANDARD_LEAD_FIELDS : fields,
+    showPrice: !!p.show_price, priceOriginal: paiseToRupees(p.price_original_paise), priceOffer: paiseToRupees(p.price_offer_paise),
+    discountLabel: p.discount_label ?? "", couponCode: p.coupon_code ?? "", couponNote: p.coupon_note ?? "",
+  };
+}
+
+function formFields(f: PageForm): LeadField[] { return f.formType === "none" ? [] : f.formType === "email" ? EMAIL_ONLY_FIELDS : f.fields; }
+
+function LeadFieldsEditor({ fields, onChange }: { fields: LeadField[]; onChange: (f: LeadField[]) => void }) {
+  const standardKeys = STANDARD_LEAD_FIELDS.map((s) => s.key);
+  const set = (i: number, patch: Partial<LeadField>) => onChange(fields.map((x, j) => (j === i ? { ...x, ...patch } : x)));
+  const toggleStandard = (key: string, on: boolean) => {
+    if (on) { const s = STANDARD_LEAD_FIELDS.find((x) => x.key === key)!; onChange([...fields, s]); }
+    else onChange(fields.filter((x) => x.key !== key));
+  };
+  const custom = fields.map((x, i) => ({ x, i })).filter(({ x }) => !standardKeys.includes(x.key));
+  return (
+    <div className="space-y-2">
+      <div className="grid grid-cols-2 gap-2">
+        {STANDARD_LEAD_FIELDS.map((s) => { const i = fields.findIndex((x) => x.key === s.key); const on = i >= 0; return (
+          <div key={s.key} className="flex items-center justify-between gap-2 rounded-md border border-border px-2 py-1.5 text-xs">
+            <label className="flex items-center gap-2"><Switch checked={on} onCheckedChange={(v) => toggleStandard(s.key, v)} /> {s.label}</label>
+            {on && <label className="flex items-center gap-1 text-muted-foreground"><input type="checkbox" checked={fields[i]!.required} onChange={(e) => set(i, { required: e.target.checked })} /> Required</label>}
+          </div>); })}
+      </div>
+      {custom.map(({ x, i }) => (
+        <div key={i} className="space-y-1.5 rounded-md border border-border p-2">
+          <div className="flex gap-2">
+            <Input className="h-8 text-xs" placeholder="Question (e.g. Your city)" value={x.label} onChange={(e) => set(i, { label: e.target.value })} />
+            <select className="h-8 rounded-md border border-input bg-background px-2 text-xs" value={x.type} onChange={(e) => set(i, { type: e.target.value as LeadField["type"], options: e.target.value === "choice" ? x.options : [] })}>
+              <option value="text">Text</option><option value="choice">Dropdown</option>
+            </select>
+            <Button type="button" size="icon" variant="ghost" className="size-8" aria-label="Remove field" onClick={() => onChange(fields.filter((_, j) => j !== i))}><Trash2 className="size-4" /></Button>
+          </div>
+          {x.type === "choice" && <Input className="h-8 text-xs" placeholder="Options, comma separated (e.g. Beginner, Intermediate, Expert)" defaultValue={x.options.join(", ")}
+            onBlur={(e) => set(i, { options: e.target.value.split(",").map((o) => o.trim()).filter(Boolean).slice(0, 10).map((o) => o.slice(0, 30)) })} />}
+          <label className="flex items-center gap-1 text-xs text-muted-foreground"><input type="checkbox" checked={x.required} onChange={(e) => set(i, { required: e.target.checked })} /> Required</label>
+        </div>
+      ))}
+      <Button type="button" size="sm" variant="outline" disabled={fields.length >= 8}
+        onClick={() => onChange([...fields, { key: `custom_${Date.now().toString(36).slice(-6)}`, label: "", type: "text", required: false, options: [] }])}>
+        <Plus className="size-4" /> Add custom field
+      </Button>
+      <p className="text-xs text-muted-foreground">Up to 8 fields. Pincode must be 6 digits, phone 10–15 digits.</p>
+    </div>
+  );
+}
+
+function Pages({ orgId, items, leads }: { orgId: string; items: any[]; leads: Array<{ id: string; delivery_page_id: string; answers: Record<string, string>; created_at: string }> }) {
   const save = useSave(useServerFn(savePage), "Page saved");
   const del = useSave(useServerFn(deleteRevenueItem), "Deleted");
-  const [f, setF] = useState({ title: "", slug: "", body: "", buttonLabel: "", buttonUrl: "", imagePath: "", imageAlt: "", showImage: false, countdown: "", expiryAction: "disable_cta" as "disable_cta" | "hide_cta", expiryMessage: "This offer has ended.", formMode: "none" as "none" | "optional" | "required" });
+  const [f, setF] = useState<PageForm>(EMPTY_PAGE);
   const [imagePreview, setImagePreview] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [leadsFor, setLeadsFor] = useState<string | null>(null);
   const imageInput = useRef<HTMLInputElement>(null);
+  const formTop = useRef<HTMLDivElement>(null);
   const origin = typeof window !== "undefined" ? window.location.origin : "";
+  const reset = () => { setF(EMPTY_PAGE); setImagePreview(""); };
+  const startEdit = async (p: any) => {
+    setF(pageToForm(p)); setImagePreview("");
+    formTop.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    if (p.image_path) { try { setImagePreview(await previewDeliveryImage(p.image_path)); } catch { /* preview only */ } }
+  };
+  const fields = formFields(f);
+  const formConfig = { mode: f.formType === "none" ? "none" as const : f.formMode, consent: f.formType === "none" ? "" : CONSENT, fields };
+  const price = f.showPrice ? { originalPaise: f.priceOriginal ? rupeesToPaise(f.priceOriginal) : null, offerPaise: f.priceOffer ? rupeesToPaise(f.priceOffer) : null, label: f.discountLabel || null, couponCode: f.couponCode.trim().toUpperCase() || null, couponNote: f.couponNote || null } : null;
+  const badLead = f.formType === "full" && (fields.length === 0 || fields.some((x) => !x.label.trim() || (x.type === "choice" && x.options.length === 0)));
   const submit = () => save.mutate({
-    organizationId: orgId, title: f.title, slug: f.slug || slugify(f.title), body: f.body || null,
+    organizationId: orgId, id: f.id ?? undefined, title: f.title, slug: f.slug || slugify(f.title), body: f.body || null,
     buttonLabel: f.buttonLabel || null, buttonUrl: f.buttonUrl || null, active: true, imagePath: f.imagePath || null, showImage: f.showImage,
     imageAlt: f.imageAlt || null, countdownAt: f.countdown ? new Date(f.countdown).toISOString() : null, expiryAction: f.expiryAction, expiryMessage: f.expiryMessage || null,
-    formConfig: { mode: f.formMode, consent: f.formMode === "none" ? "" : "I agree that my details may be used to fulfil this request and follow up about this offer.", fields: f.formMode === "none" ? [] : [{ key: "email", label: "Email address", type: "email" as const, required: true, options: [] }] },
-  }, { onSuccess: () => { setF({ title: "", slug: "", body: "", buttonLabel: "", buttonUrl: "", imagePath: "", imageAlt: "", showImage: false, countdown: "", expiryAction: "disable_cta", expiryMessage: "This offer has ended.", formMode: "none" }); setImagePreview(""); } });
+    formConfig: { ...formConfig, fields: fields.map((x) => ({ ...x, label: x.label.trim() })) },
+    showPrice: f.showPrice, priceOriginalPaise: price?.originalPaise ?? null, priceOfferPaise: price?.offerPaise ?? null,
+    discountLabel: f.discountLabel || null, couponCode: f.couponCode.trim() || null, couponNote: f.couponNote || null,
+  }, { onSuccess: reset });
   const uploadImage = async (file: File | undefined) => {
     if (!file) return;
     setUploading(true);
     try { const path = await uploadDeliveryImage(orgId, file); setF((v) => ({ ...v, imagePath: path, showImage: true, imageAlt: v.imageAlt || v.title })); setImagePreview(await previewDeliveryImage(path)); toast.success("Product image uploaded"); }
     catch (e) { toast.error(e instanceof Error ? e.message : "Upload failed"); } finally { setUploading(false); if (imageInput.current) imageInput.current.value = ""; }
   };
+  const pageLeads = leadsFor ? leads.filter((l) => l.delivery_page_id === leadsFor) : [];
   return (
     <div className="space-y-4">
     <div className="grid gap-4 lg:grid-cols-2">
-      <Panel title="New delivery page">
+      <div ref={formTop}>
+      <Panel title={f.id ? `Edit page: ${f.title || "Untitled"}` : "New delivery page"}>
         <div className="space-y-2">
           <div>
             <Label className="text-xs">Start from a ready-made design</Label>
@@ -230,6 +319,7 @@ function Pages({ orgId, items }: { orgId: string; items: any[] }) {
           </div>
           <Input placeholder="Title (e.g. Your free guide)" value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} />
           <Input placeholder="Address (e.g. free-guide)" value={f.slug} onChange={(e) => setF({ ...f, slug: slugify(e.target.value) })} />
+          {f.id && f.slug !== f.originalSlug && <p className="text-xs text-destructive">Changing the address breaks links you already sent in DMs ({origin}/p/{f.originalSlug}).</p>}
           <textarea rows={12} className={`${area} font-mono text-xs`} placeholder={"# Big headline\nShort intro line\n\n## Section title\n- Point one\n- Point two\n> Highlighted note\n? Question | Answer"} value={f.body} onChange={(e) => setF({ ...f, body: e.target.value })} />
           <p className="text-xs text-muted-foreground">
             Formatting: <code># Headline</code> · <code>## Section</code> · <code>- point</code> · <code>&gt; note</code> · <code>? Question | Answer</code> · <code>**bold**</code>. Plain text also looks good.
@@ -241,14 +331,39 @@ function Pages({ orgId, items }: { orgId: string; items: any[] }) {
             {f.imagePath && <Input placeholder="Image description for accessibility" value={f.imageAlt} onChange={(e) => setF({ ...f, imageAlt: e.target.value })} />}
           </div>
           <div className="space-y-2 rounded-lg border border-border p-3">
+            <div className="flex items-center justify-between"><Label>Price &amp; offer</Label><Switch checked={f.showPrice} onCheckedChange={(v) => setF({ ...f, showPrice: v })} /></div>
+            {f.showPrice && <>
+              <div className="grid grid-cols-2 gap-2">
+                <div><Label className="text-xs">Original price ₹ (crossed out)</Label><Input inputMode="decimal" placeholder="1999" value={f.priceOriginal} onChange={(e) => setF({ ...f, priceOriginal: e.target.value.replace(/[^\d.]/g, "") })} /></div>
+                <div><Label className="text-xs">Offer price ₹</Label><Input inputMode="decimal" placeholder="999" value={f.priceOffer} onChange={(e) => setF({ ...f, priceOffer: e.target.value.replace(/[^\d.]/g, "") })} /></div>
+              </div>
+              {(() => { const d = priceDisplay(price?.originalPaise, price?.offerPaise); return d.original ? <p className="text-xs text-muted-foreground">Shows: <strong>{d.offer}</strong> <s>{d.original}</s> · {d.percent}% OFF</p> : f.priceOriginal && f.priceOffer ? <p className="text-xs text-destructive">Offer price must be lower than the original price to show a discount.</p> : null; })()}
+              <Input placeholder="Discount label (optional, e.g. Diwali deal) — blank shows % OFF" value={f.discountLabel} onChange={(e) => setF({ ...f, discountLabel: e.target.value.slice(0, 40) })} />
+              <div className="grid grid-cols-2 gap-2">
+                <Input placeholder="Coupon code (e.g. SAVE50)" value={f.couponCode} onChange={(e) => setF({ ...f, couponCode: e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, "").slice(0, 30) })} />
+                <Input placeholder="Coupon note (e.g. Use at checkout)" value={f.couponNote} onChange={(e) => setF({ ...f, couponNote: e.target.value.slice(0, 120) })} />
+              </div>
+              <p className="text-xs text-muted-foreground">Display only. The amount charged is your product price in the payment link — keep them the same.</p>
+            </>}
+          </div>
+          <div className="space-y-2 rounded-lg border border-border p-3">
             <Label>Honest offer countdown (optional)</Label>
             <Input type="datetime-local" value={f.countdown} onChange={(e) => setF({ ...f, countdown: e.target.value })} />
             {f.countdown && <><select className={area} value={f.expiryAction} onChange={(e) => setF({ ...f, expiryAction: e.target.value as typeof f.expiryAction })}><option value="disable_cta">Disable button when ended</option><option value="hide_cta">Hide button when ended</option></select><Input placeholder="Message after expiry" value={f.expiryMessage} onChange={(e) => setF({ ...f, expiryMessage: e.target.value })} /></>}
             <p className="text-xs text-muted-foreground">Uses one fixed deadline. It never restarts for each visitor.</p>
           </div>
           <div className="space-y-2 rounded-lg border border-border p-3">
-            <Label>Lead form placement</Label>
-            <select className={area} value={f.formMode} onChange={(e) => setF({ ...f, formMode: e.target.value as typeof f.formMode })}><option value="none">No page form — fastest purchase</option><option value="optional">Optional email form</option><option value="required">Require email before next step</option></select>
+            <Label>Lead form</Label>
+            <div className="grid grid-cols-2 gap-2">
+              <select className={area} value={f.formType} onChange={(e) => setF({ ...f, formType: e.target.value as PageForm["formType"] })}>
+                <option value="none">No form — fastest purchase</option><option value="email">Email only</option><option value="full">Full lead form</option>
+              </select>
+              {f.formType !== "none" && <select className={area} value={f.formMode} onChange={(e) => setF({ ...f, formMode: e.target.value as PageForm["formMode"] })}>
+                <option value="optional">Optional to fill</option><option value="required">Must fill to continue</option>
+              </select>}
+            </div>
+            {f.formType === "full" && <LeadFieldsEditor fields={f.fields} onChange={(fields) => setF({ ...f, fields })} />}
+            {badLead && <p className="text-xs text-destructive">Give every field a question, and every dropdown at least one option.</p>}
             <p className="text-xs text-muted-foreground">Best default: two quick questions in DM, then an optional detailed form after the offer.</p>
           </div>
           <div className="grid grid-cols-2 gap-2">
@@ -271,26 +386,36 @@ function Pages({ orgId, items }: { orgId: string; items: any[] }) {
               />
             </div>
           </div>
-          <Button onClick={submit} disabled={save.isPending}>Save page</Button>
+          <div className="flex gap-2">
+            <Button onClick={submit} disabled={save.isPending || badLead}>{f.id ? "Update page" : "Save page"}</Button>
+            {f.id && <Button variant="outline" onClick={reset}>Cancel</Button>}
+          </div>
           <p className="text-xs text-muted-foreground">Put the page link in any DM button. Views and button clicks show in the Sales report.</p>
         </div>
       </Panel>
+      </div>
       <Panel title="Your pages">
-        {items.length === 0 ? <p className="text-sm text-muted-foreground">No pages yet.</p> : items.map((p) => (
-          <div key={p.id} className="mb-2 flex items-center justify-between gap-2 rounded-lg border border-border p-3 text-sm">
-            <div className="min-w-0"><p className="font-medium">{p.title}</p><p className="truncate text-muted-foreground">{origin}/p/{p.slug} · {p.views} views</p></div>
+        {items.length === 0 ? <p className="text-sm text-muted-foreground">No pages yet.</p> : items.map((p) => { const n = leads.filter((l) => l.delivery_page_id === p.id).length; return (
+          <div key={p.id} className={`mb-2 flex items-center justify-between gap-2 rounded-lg border p-3 text-sm ${f.id === p.id ? "border-primary" : "border-border"}`}>
+            <div className="min-w-0"><p className="font-medium">{p.title}</p><p className="truncate text-muted-foreground">{origin}/p/{p.slug} · {p.views} views{n ? ` · ${n} leads` : ""}</p></div>
             <div className="flex">
+              {n > 0 && <Button size="icon" variant="ghost" aria-label="View leads" onClick={() => setLeadsFor(leadsFor === p.id ? null : p.id)}><Users className="size-4" /></Button>}
+              <Button size="icon" variant="ghost" aria-label="Edit page" onClick={() => void startEdit(p)}><Pencil className="size-4" /></Button>
               <Button size="icon" variant="ghost" aria-label="Copy link" onClick={() => { navigator.clipboard.writeText(`${origin}/p/${p.slug}`); toast.success("Link copied"); }}><Copy className="size-4" /></Button>
-              <Button size="icon" variant="ghost" aria-label="Delete" onClick={() => del.mutate({ organizationId: orgId, id: p.id, table: "delivery_pages" })}><Trash2 className="size-4" /></Button>
+              <Button size="icon" variant="ghost" aria-label="Delete" onClick={() => { if (f.id === p.id) reset(); del.mutate({ organizationId: orgId, id: p.id, table: "delivery_pages" }); }}><Trash2 className="size-4" /></Button>
             </div>
-          </div>
-        ))}
+          </div>); })}
+        {leadsFor && <div className="mt-3 max-h-72 space-y-2 overflow-auto rounded-lg border border-border p-3">
+          <p className="text-sm font-medium">Leads ({pageLeads.length})</p>
+          {pageLeads.map((l) => <div key={l.id} className="rounded-md bg-muted p-2 text-xs"><p className="text-muted-foreground">{new Date(l.created_at).toLocaleString()}</p>{Object.entries(l.answers).map(([k, v]) => <p key={k}><span className="text-muted-foreground">{k}:</span> {v}</p>)}</div>)}
+        </div>}
       </Panel>
     </div>
       <Panel title="Live preview">
         <div className="max-h-[640px] overflow-auto rounded-xl border border-border">
           <DeliveryPageView title={f.title || "Your page title"} body={f.body} buttonLabel={f.buttonLabel} buttonHref={f.buttonUrl ? "#" : null}
-            imageUrl={f.showImage ? imagePreview : null} imageAlt={f.imageAlt} countdownAt={f.countdown ? new Date(f.countdown).toISOString() : null} expiryAction={f.expiryAction} expiryMessage={f.expiryMessage} />
+            imageUrl={f.showImage ? imagePreview : null} imageAlt={f.imageAlt} countdownAt={f.countdown ? new Date(f.countdown).toISOString() : null} expiryAction={f.expiryAction} expiryMessage={f.expiryMessage} price={price} />
+          {formConfig.mode !== "none" && fields.length > 0 && <div className="mx-auto max-w-2xl px-6 pb-10"><DeliveryLeadForm key={JSON.stringify(fields)} preview config={formConfig} /></div>}
         </div>
       </Panel>
     </div>
