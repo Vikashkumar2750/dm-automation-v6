@@ -16,6 +16,8 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useTenant } from "@/hooks/useTenant";
 import { buildFunnel, formatInr, rupeesToPaise, slugify } from "@/lib/revenue";
+import { DeliveryPageView } from "@/components/app/DeliveryPageView";
+import { DELIVERY_TEMPLATES } from "@/lib/delivery-page";
 import {
   deleteRevenueItem, getRevenue, removeRazorpayKeys, saveCampaign, savePage, saveProduct, saveRazorpayKeys, saveRevenueSettings,
 } from "@/lib/revenue.functions";
@@ -254,6 +256,12 @@ function Pages({ orgId, items }: { orgId: string; items: any[] }) {
             </div>
           </div>
         ))}
+      </Panel>
+    </div>
+      <Panel title="Live preview">
+        <div className="max-h-[640px] overflow-auto rounded-xl border border-border">
+          <DeliveryPageView title={f.title || "Your page title"} body={f.body} buttonLabel={f.buttonLabel} buttonHref={f.buttonUrl ? "#" : null} />
+        </div>
       </Panel>
     </div>
   );
