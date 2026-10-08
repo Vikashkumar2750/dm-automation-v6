@@ -41,6 +41,7 @@ describe("comment opt-in sequence", () => {
       const r = runFlowDry(flow, { ...input, openerTapped: true, isFollower });
       expect(r.stoppedAt).toBe(1);
       expect(r.actions.some((a) => a.detail === "Your link")).toBe(false);
+      expect(r.actions.at(-1)?.detail).toContain("[Visit profile] [I followed ✅]");
     }
   });
   it("validates opener ordering and comment-only use", () => {
@@ -63,6 +64,18 @@ describe("comment opt-in sequence", () => {
       expect(f.steps.filter((s) => s.kind === "opening_dm")).toHaveLength(1);
       expect(f.steps.slice(0, opening).some((s) => s.kind === "follow_gate" || s.kind === "condition" && s.check === "is_follower")).toBe(false);
     }
+  });
+  it("builds the all-in-one as a safe qualification-to-sale funnel", () => {
+    const all = flowFromTemplate("all_in_one");
+    expect(all).not.toBeNull();
+    if (!all) throw new Error("Missing all-in-one template");
+    expect(all.steps.filter((s) => s.kind === "opening_dm")).toHaveLength(1);
+    expect(all.steps.findIndex((s) => s.kind === "lead_form")).toBeGreaterThan(all.steps.findIndex((s) => s.kind === "follow_gate"));
+    const offer = all.steps.find((s) => s.kind === "send_offer");
+    expect(offer?.disabled).toBe(true);
+    expect(all.steps.find((s) => s.kind === "send_payment")?.disabled).toBe(true);
+    expect(all.steps.find((s) => s.kind === "send_coupon")?.disabled).toBe(true);
+    expect(all.steps.some((s) => s.kind === "condition" && s.check === "no_tag" && s.value === "paid-customer")).toBe(true);
   });
 });
 

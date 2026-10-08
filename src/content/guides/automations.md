@@ -25,7 +25,7 @@ Safety limits, quiet hours, cooldowns and the daily cap apply to all of them. No
 **How to use:**
 1. Click **Flow builder**.
 2. Pick a template category (All-in-one, Sales, Lead capture, Followers, Engagement, Support) and click a template — or press **+** for an empty flow.
-3. The **All-in-one** template has every step ready (keyword → opening DM → follow gate → DM → payment → coupon → ask email/phone). Use each step's toggle to switch off what you don't need.
+3. The **All-in-one** template is a complete comment-to-sale journey: keyword → opening DM → follow gate → two quick qualification questions → value message → offer page → optional direct payment/coupon → unpaid follow-up. Product, page, payment and coupon steps start off until you choose real items. Use each toggle to switch off what you don't need.
 4. Add steps by group: **Conditions** (contains, does not contain, follower, non-follower, has/missing tag, email/phone known), **Actions** (DM, public reply, follow gate, wait), **Contacts** (add/remove tag, ask email/phone), **Sales** (payment link, coupon). Tags have one-click presets.
 5. Zoom with the **+ / −** buttons or Ctrl + mouse wheel. Drag cards to position them; use the arrows to change execution order.
 6. Test in **Try it** (set follower, existing tags, saved email/phone) — it never sends anything.
@@ -50,7 +50,8 @@ In **Social Accounts → Ice breakers & menu**, pick a ready-made set or type yo
 - Existing saved flows are not rewritten. Add Opening DM before follower checks and private-message steps to use this sequence; save the flow to generate the new run-bound confirmation buttons.
 - Only the original recipient’s valid button tap resumes a waiting stage. Typed messages do not bypass the gate; stale, duplicate or cross-account taps cannot continue it. If follow status cannot be verified, the link stays withheld.
 - Every step is a card on a free canvas. Lines connect the cards in the order they run. Where you place a card only changes the look, never the order.
-- A follow gate now sends two buttons: "Visit profile" and "I followed ✅". When the person taps "I followed" (using the flow-owned confirmation button), the follower check runs again. Followers continue the flow; others get the request again (up to 2 more times).
+- A follow gate sends two buttons: **Visit profile** and **I followed ✅**. Both are now visible in the builder and Try it. “I followed” is automatic and read-only because it safely binds the recheck to that person’s waiting flow. Followers continue; others get the request again (up to 2 more times).
+- For forms, the best default is hybrid: ask at most two low-friction questions in DM, then put detailed contact fields on the offer page after the value is clear.
 
 ### How to use
 - Drag a card by its title to move it. Drag empty space to move around. Ctrl + mouse wheel or the +/− buttons zoom. "Auto-arrange" puts every card back in neat rows.
