@@ -30,7 +30,7 @@ export const getRevenue = createServerFn({ method: "GET" })
     const sb = ctx.supabase;
     const o = data.organizationId;
     const since = new Date(Date.now() - 30 * 86400_000).toISOString();
-    const [products, pages, campaigns, settings, links, events, dms] = await Promise.all([
+    const [products, pages, campaigns, settings, links, events, dms, leads] = await Promise.all([
       sb.from("revenue_products").select("*").eq("organization_id", o).order("created_at"),
       sb.from("delivery_pages").select("*").eq("organization_id", o).order("created_at"),
       sb.from("coupon_campaigns").select("*").eq("organization_id", o).order("created_at"),
@@ -39,6 +39,7 @@ export const getRevenue = createServerFn({ method: "GET" })
         .eq("organization_id", o).order("created_at", { ascending: false }).limit(100),
       sb.from("revenue_events").select("kind, amount_paise, ref_id").eq("organization_id", o).gte("created_at", since).limit(10000),
       sb.from("automation_runs").select("id", { count: "exact", head: true }).eq("organization_id", o).eq("status", "sent").gte("created_at", since),
+      sb.from("delivery_page_leads").select("id, delivery_page_id, answers, created_at").eq("organization_id", o).order("created_at", { ascending: false }).limit(200),
     ]);
     await assertMember(ctx, o);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -48,6 +49,7 @@ export const getRevenue = createServerFn({ method: "GET" })
     return {
       products: products.data ?? [],
       pages: pages.data ?? [],
+      leads: (leads.data ?? []) as Array<{ id: string; delivery_page_id: string; answers: Record<string, string>; created_at: string }>,
       campaigns: campaigns.data ?? [],
       settings: settings.data ?? { nudge_enabled: false, nudge_delay_minutes: 120, nudge_text: "Hi! Your payment link is still waiting. Need any help completing it?" },
       links: links.data ?? [],
