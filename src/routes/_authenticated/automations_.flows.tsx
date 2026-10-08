@@ -2,7 +2,8 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { createContext, useContext, useEffect, useState } from "react";
-import { getRevenue } from "@/lib/revenue.functions";
+import { getRevenue, saveCampaign, saveProduct } from "@/lib/revenue.functions";
+import { rupeesToPaise } from "@/lib/revenue";
 import { toast } from "sonner";
 import { ArrowDown, ArrowUp, GitBranch, GripVertical, Info, Lock, Maximize2, Plus, Sparkles, Trash2, Zap, ZoomIn, ZoomOut } from "lucide-react";
 
@@ -35,7 +36,7 @@ export const Route = createFileRoute("/_authenticated/automations_/flows")({
   component: FlowsPage,
 });
 
-const RevenueOptions = createContext<{ products: { id: string; name: string }[]; campaigns: { id: string; name: string }[] }>({ products: [], campaigns: [] });
+const RevenueOptions = createContext<{ orgId?: string; products: { id: string; name: string }[]; campaigns: { id: string; name: string }[] }>({ products: [], campaigns: [] });
 
 const sel = "h-9 rounded-md border border-input bg-background px-2 text-sm";
 
@@ -161,6 +162,7 @@ function FlowsPage() {
   const fetchRev = useServerFn(getRevenue);
   const revQ = useQuery({ queryKey: ["revenue", orgId], enabled: !!orgId, queryFn: () => fetchRev({ data: { organizationId: orgId! } }) });
   const revOpts = {
+    orgId: orgId ?? undefined,
     products: (revQ.data?.products ?? []).map((p: any) => ({ id: p.id as string, name: p.name as string })),
     campaigns: (revQ.data?.campaigns ?? []).map((c: any) => ({ id: c.id as string, name: c.name as string })),
   };
@@ -532,7 +534,7 @@ function StepCard({ step, index, onChange, onRemove, onMove }: {
               {rev.products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
             <Input placeholder="Message (optional, default: product name + price)" maxLength={600} value={step.text} onChange={(e) => onChange({ ...step, text: e.target.value })} />
-            {rev.products.length === 0 && <p className="text-xs text-muted-foreground">Add products on the Revenue page first.</p>}
+            <QuickCreate kind="product" onCreated={(id) => onChange({ ...step, productId: id })} />
           </>
         )}
         {step.kind === "send_coupon" && (
@@ -542,6 +544,7 @@ function StepCard({ step, index, onChange, onRemove, onMove }: {
               {rev.campaigns.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
             <Input placeholder="Message with {code}" maxLength={600} value={step.text} onChange={(e) => onChange({ ...step, text: e.target.value })} />
+            <QuickCreate kind="coupon" onCreated={(id) => onChange({ ...step, campaignId: id })} />
           </>
         )}
         {(step.kind === "tag" || step.kind === "remove_tag") && (
@@ -549,6 +552,60 @@ function StepCard({ step, index, onChange, onRemove, onMove }: {
         )}
       </div>
     </div>
+  );
+}
+
+/** Create a product or coupon campaign right inside the step, then auto-select it. */
+function QuickCreate({ kind, onCreated }: { kind: "product" | "coupon"; onCreated: (id: string) => void }) {
+  const rev = useContext(RevenueOptions);
+  const qc = useQueryClient();
+  const saveP = useServerFn(saveProduct);
+  const saveC = useServerFn(saveCampaign);
+  const [open, setOpen] = useState(false);
+  const [f, setF] = useState({ name: "", price: "", url: "", desc: "", prefix: "", label: "", max: "500" });
+  const m = useMutation({
+    mutationFn: async () => {
+      if (!rev.orgId) throw new Error("No workspace selected");
+      if (kind === "product") {
+        const pricePaise = rupeesToPaise(f.price);
+        if (!pricePaise) throw new Error("Price must be at least ₹1");
+        return saveP({ data: { organizationId: rev.orgId, name: f.name, description: f.desc || null, pricePaise, manualUrl: f.url || null, active: true } });
+      }
+      return saveC({ data: { organizationId: rev.orgId, name: f.name, prefix: f.prefix, discountLabel: f.label, maxCodes: Number(f.max) || 500, expiresAt: null, active: true } });
+    },
+    onSuccess: async (r) => {
+      await qc.invalidateQueries({ queryKey: ["revenue", rev.orgId] });
+      onCreated(r.id);
+      toast.success(kind === "product" ? "Product created and selected" : "Coupon created and selected");
+      setOpen(false);
+      setF({ name: "", price: "", url: "", desc: "", prefix: "", label: "", max: "500" });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button type="button" size="sm" variant="outline" className="w-fit"><Plus className="mr-1 size-3.5" />{kind === "product" ? "Create new product" : "Create new coupon"}</Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-80 space-y-2">
+        <p className="text-sm font-medium">{kind === "product" ? "New product" : "New coupon campaign"}</p>
+        <Input placeholder={kind === "product" ? "Product name (e.g. Instagram Growth Ebook)" : "Campaign name (e.g. Diwali sale)"} value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />
+        {kind === "product" ? (
+          <>
+            <Input type="number" min={1} placeholder="Price in ₹ (e.g. 499)" value={f.price} onChange={(e) => setF({ ...f, price: e.target.value })} />
+            <Input placeholder="Short description (optional)" value={f.desc} onChange={(e) => setF({ ...f, desc: e.target.value })} />
+            <Input placeholder="https:// payment link (only if Razorpay is not set up)" value={f.url} onChange={(e) => setF({ ...f, url: e.target.value })} />
+          </>
+        ) : (
+          <>
+            <Input placeholder="Code start (e.g. DIWALI) — letters/numbers" value={f.prefix} onChange={(e) => setF({ ...f, prefix: e.target.value.toUpperCase() })} />
+            <Input placeholder="Discount (e.g. 20% off)" value={f.label} onChange={(e) => setF({ ...f, label: e.target.value })} />
+            <Input type="number" min={1} placeholder="How many codes" value={f.max} onChange={(e) => setF({ ...f, max: e.target.value })} />
+          </>
+        )}
+        <Button size="sm" className="w-full" disabled={m.isPending || !f.name} onClick={() => m.mutate()}>{m.isPending ? "Saving…" : "Create & select"}</Button>
+      </PopoverContent>
+    </Popover>
   );
 }
 
