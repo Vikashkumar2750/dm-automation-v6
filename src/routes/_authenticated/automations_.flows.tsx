@@ -199,15 +199,33 @@ function FlowsPage() {
     }
   }, [q.data]);
 
+  const [savedJson, setSavedJson] = useState<string | null>(null);
+  useEffect(() => { if (q.data && savedJson === null) setSavedJson(JSON.stringify(q.data.flows)); }, [q.data, savedJson]);
   const m = useMutation({
-    mutationFn: (next: Flow[]) => persist({ data: { organizationId: orgId!, flows: next } }),
-    onSuccess: (r) => {
-      setFlows(r.flows);
-      toast.success("Flows saved");
-      qc.invalidateQueries({ queryKey: ["flows", orgId] });
+    mutationFn: (v: { next: Flow[]; auto: boolean }) => persist({ data: { organizationId: orgId!, flows: v.next } }),
+    onSuccess: (r, v) => {
+      const sent = JSON.stringify(v.next), got = JSON.stringify(r.flows);
+      setSavedJson(got);
+      // Server may switch off flows with problems; apply only if nothing changed since.
+      if (sent !== got) setFlows((cur) => (JSON.stringify(cur) === sent ? r.flows : cur));
+      if (!v.auto) toast.success("Flows saved");
+      else if (sent !== got) toast.warning("Saved — a flow with problems was kept as a draft (inactive).");
+      qc.setQueryData(["flows", orgId], (old: any) => (old ? { ...old, flows: r.flows } : old));
     },
-    onError: () => toast.error("Could not save flows"),
+    onError: (_e, v) => toast.error(v.auto ? "Auto-save failed — click Save all" : "Could not save flows"),
   });
+  const dirty = savedJson !== null && JSON.stringify(flows) !== savedJson;
+  useEffect(() => {
+    if (!dirty || !orgId || m.isPending) return;
+    const t = setTimeout(() => m.mutate({ next: flows, auto: true }), 1500);
+    return () => clearTimeout(t);
+  }, [flows, dirty, orgId, m.isPending]);
+  useEffect(() => {
+    if (!dirty) return;
+    const h = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = ""; };
+    window.addEventListener("beforeunload", h);
+    return () => window.removeEventListener("beforeunload", h);
+  }, [dirty]);
 
   const flow = flows.find((f) => f.id === selected) ?? null;
   const update = (patch: Partial<Flow>) =>
@@ -234,7 +252,7 @@ function FlowsPage() {
     if (!f || flows.length >= MAX_FLOWS) return;
     setFlows((all) => [...all, f]);
     setSelected(f.id);
-    toast.success("Template added as a draft — edit the texts and links, then Save all.");
+    toast.success("Template added as a draft — edit the texts and links. Changes save automatically.");
   }
 
   if (q.data && !q.data.enabled) {
@@ -259,7 +277,10 @@ function FlowsPage() {
           <div className="flex gap-2">
             <GuideButton guide="automations" />
             <Button asChild variant="outline"><Link to="/automations">Back to rules</Link></Button>
-            <Button onClick={() => m.mutate(flows)} disabled={m.isPending || !orgId}>Save all</Button>
+            <span className="self-center text-xs text-muted-foreground" aria-live="polite">
+              {m.isPending ? "Saving…" : dirty ? "Unsaved changes" : savedJson !== null ? "All changes saved ✓" : ""}
+            </span>
+            <Button onClick={() => m.mutate({ next: flows, auto: false })} disabled={m.isPending || !orgId}>Save all</Button>
           </div>
         }
       />
