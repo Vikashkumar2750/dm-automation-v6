@@ -365,24 +365,8 @@ function FlowsPage() {
                   }}
                 />
               )}
-              addBar={
-                <div className="space-y-2">
-                  {(["Conditions", "Actions", "Contacts", "Sales"] as const).map((g) => (
-                    <div key={g}>
-                      <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{g}</p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {STEP_TEMPLATES.filter((t) => t.group === g).map((t) => (
-                          <Button key={t.label} size="sm" variant="outline" disabled={flow.steps.length >= MAX_STEPS} onClick={() => setSteps([...flow.steps, t.make()])}>
-                            <Plus className="size-3.5" /> {t.label}
-                          </Button>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              }
             />
-            <p className="text-xs text-muted-foreground">Tip: drag a card by its title to place it anywhere, drag empty space to move around, Ctrl + mouse wheel zooms. Lines show the order steps run in (change it with the arrows). Switch a step off with its toggle to skip it.</p>
+            <p className="text-xs text-muted-foreground">Tip: drag a card by its title to place it anywhere, drag empty space to move around, Ctrl + mouse wheel zooms. Lines show the order steps run in (change it with the arrows). Add new steps from the side panel and pick the step number they go to.</p>
             {issues.length > 0 && (
               <ul className="list-disc space-y-1 pl-5 text-sm text-destructive">
                 {issues.map((x) => <li key={x}>{x}</li>)}
@@ -395,7 +379,7 @@ function FlowsPage() {
 
         {flow ? (
           <div className="grid gap-4 md:grid-cols-2 lg:col-span-2 2xl:col-span-1 2xl:grid-cols-1 2xl:content-start">
-            <TestPanel flow={flow} />
+            <SidePanel flow={flow} onSteps={setSteps} />
             <AiSuggestPanel orgId={orgId} current={flow} onAdd={addAiFlow} />
           </div>
         ) : (
@@ -724,6 +708,56 @@ function AiSuggestPanel({ orgId, current, onAdd }: { orgId: string | undefined; 
   );
 }
 
+/** Insert a step so it becomes step number `position` (1-based); out-of-range numbers clamp to start/end. */
+export function insertStepAt(steps: FlowStep[], step: FlowStep, position: number): FlowStep[] {
+  const idx = Math.min(Math.max(Math.floor(position) - 1, 0), steps.length);
+  return [...steps.slice(0, idx), step, ...steps.slice(idx)];
+}
+
+function SidePanel({ flow, onSteps }: { flow: Flow; onSteps: (s: FlowStep[]) => void }) {
+  const [tab, setTab] = useState<"add" | "test">("add");
+  const [pos, setPos] = useState<string>("");
+  const max = flow.steps.length + 1;
+  const position = pos === "" ? max : Math.min(Math.max(Number(pos) || 1, 1), max);
+  return (
+    <div className="space-y-3">
+      <div role="tablist" className="grid grid-cols-2 gap-1 rounded-lg border border-border bg-muted/40 p-1">
+        {([["add", "Add step"], ["test", "Try it"]] as const).map(([k, l]) => (
+          <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)}
+            className={`rounded-md px-3 py-1.5 text-sm font-medium ${tab === k ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
+            {k === "add" ? <Plus className="mr-1 inline size-3.5" /> : null}{l}
+          </button>
+        ))}
+      </div>
+      {tab === "test" ? <TestPanel flow={flow} /> : (
+        <Panel title="Add step">
+          <label className="mb-3 flex items-center gap-2 text-sm">
+            <span className="text-muted-foreground">Insert at step #</span>
+            <Input type="number" min={1} max={max} className="h-8 w-20" placeholder={String(max)} value={pos}
+              onChange={(e) => setPos(e.target.value)} aria-label="Insert position" />
+            <span className="text-xs text-muted-foreground">(1–{max}, blank = end)</span>
+          </label>
+          <div className="max-h-[min(60vh,560px)] space-y-2 overflow-y-auto overscroll-contain pr-1">
+            {(["Conditions", "Actions", "Contacts", "Sales"] as const).map((g) => (
+              <div key={g}>
+                <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{g}</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {STEP_TEMPLATES.filter((t) => t.group === g).map((t) => (
+                    <Button key={t.label} size="sm" variant="outline" disabled={flow.steps.length >= MAX_STEPS}
+                      onClick={() => { onSteps(insertStepAt(flow.steps, t.make(), position)); if (pos !== "") setPos(String(position + 1)); toast.success(`Added as step ${position}`); }}>
+                      <Plus className="size-3.5" /> {t.label}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </Panel>
+      )}
+    </div>
+  );
+}
+
 function TestPanel({ flow }: { flow: Flow }) {
   const [text, setText] = useState("What is the price?");
   const [platform, setPlatform] = useState<"instagram" | "facebook">("instagram");
@@ -780,10 +814,10 @@ const GAP_X = 420;
 const defaultPos = (i: number) => ({ x: 40 + ((i + 1) % 3) * GAP_X, y: 60 + Math.floor((i + 1) / 3) * 460 });
 type Pos = { x: number; y: number };
 
-function FlowCanvas({ flow, zoom, setZoom, zoomBy, onFlow, trigger, renderStep, addBar }: {
-  flow: Flow; zoom: number; setZoom: (z: number) => void; zoomBy: (d: number) => void;
+function FlowCanvas({ flow, zoom, setZoom, onFlow, trigger, renderStep }: {
+  flow: Flow; zoom: number; setZoom: (z: number) => void; zoomBy?: (d: number) => void;
   onFlow: (patch: Partial<Flow>) => void; trigger: React.ReactNode;
-  renderStep: (s: FlowStep, i: number) => React.ReactNode; addBar: React.ReactNode;
+  renderStep: (s: FlowStep, i: number) => React.ReactNode;
 }) {
   const [pan, setPan] = useState<Pos>({ x: 0, y: 0 });
   const [live, setLive] = useState<Record<string, Pos>>({});
@@ -830,8 +864,7 @@ function FlowCanvas({ flow, zoom, setZoom, zoomBy, onFlow, trigger, renderStep, 
   }, []);
   const tPos = live["__trigger"] ?? flow.triggerPos ?? { x: 40, y: 60 };
   const posOf = (s: FlowStep, i: number) => live[s.id] ?? s.pos ?? defaultPos(i);
-  const addPos = live["__add"] ?? flow.addPos ?? defaultPos(flow.steps.length);
-  const nodes: Pos[] = [tPos, ...flow.steps.map(posOf), addPos];
+  const nodes: Pos[] = [tPos, ...flow.steps.map(posOf)];
 
   const startPan = (e: React.PointerEvent) => {
     if ((e.target as HTMLElement).closest("[data-node]")) return;
@@ -891,7 +924,7 @@ function FlowCanvas({ flow, zoom, setZoom, zoomBy, onFlow, trigger, renderStep, 
               const off = flow.steps[i]?.disabled;
               return (
                 <g key={i}>
-                  <path d={`M${x1},${y1} C${x1 + dx},${y1} ${x2 - dx},${y2} ${x2},${y2}`} fill="none" stroke="var(--primary)" strokeOpacity={off ? 0.3 : 0.7} strokeWidth={2} strokeDasharray={i === nodes.length - 2 ? "6 5" : undefined} />
+                  <path d={`M${x1},${y1} C${x1 + dx},${y1} ${x2 - dx},${y2} ${x2},${y2}`} fill="none" stroke="var(--primary)" strokeOpacity={off ? 0.3 : 0.7} strokeWidth={2} />
                   <circle cx={x1} cy={y1} r={5} fill="var(--card)" stroke="var(--primary)" strokeWidth={2} />
                   <circle cx={x2} cy={y2} r={5} fill="var(--primary)" />
                 </g>
@@ -912,12 +945,6 @@ function FlowCanvas({ flow, zoom, setZoom, zoomBy, onFlow, trigger, renderStep, 
               </div>
             );
           })}
-          <div data-node className="absolute" style={{ left: addPos.x, top: addPos.y, width: NODE_W }} onPointerDown={startDrag("__add", addPos)}>
-            <div className="cursor-auto rounded-xl border border-dashed border-border bg-card p-3 shadow-md">
-              <p data-drag-handle className="mb-2 flex cursor-move items-center gap-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground"><GripVertical className="size-4" /> Add next step</p>
-              {addBar}
-            </div>
-          </div>
         </div>
       </div>
     </div>
