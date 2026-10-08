@@ -1,6 +1,5 @@
 import { createFileRoute, notFound } from "@tanstack/react-router";
 import { DeliveryPageView } from "@/components/app/DeliveryPageView";
-import { DeliveryLeadForm } from "@/components/app/DeliveryLeadForm";
 
 export const Route = createFileRoute("/o/$token")({
   loader: async ({ params }) => {
@@ -22,5 +21,5 @@ export const Route = createFileRoute("/o/$token")({
 function OfferPage() {
   const page = Route.useLoaderData();
   const { token } = Route.useParams();
-  return <main className="min-h-screen"><DeliveryPageView {...page} buttonHref={`/api/public/offer/${token}`} />{page.formConfig?.mode !== "none" && <div className="mx-auto -mt-6 max-w-2xl px-6 pb-16"><DeliveryLeadForm token={token} config={page.formConfig} /></div>}</main>;
+  return <main className="min-h-screen"><DeliveryPageView {...page} buttonHref={`/api/public/offer/${token}`} leadForm={{ token, config: page.formConfig }} /></main>;
 }

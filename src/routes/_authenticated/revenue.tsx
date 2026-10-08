@@ -18,7 +18,6 @@ import { useTenant } from "@/hooks/useTenant";
 import { buildFunnel, formatInr, rupeesToPaise, slugify } from "@/lib/revenue";
 import { DeliveryPageView } from "@/components/app/DeliveryPageView";
 import { DELIVERY_TEMPLATES, EMAIL_ONLY_FIELDS, STANDARD_LEAD_FIELDS, priceDisplay, type LeadField } from "@/lib/delivery-page";
-import { DeliveryLeadForm } from "@/components/app/DeliveryLeadForm";
 import { previewDeliveryImage, uploadDeliveryImage } from "@/lib/delivery-media";
 import {
   deleteRevenueItem, getRevenue, removeRazorpayKeys, saveCampaign, savePage, saveProduct, saveRazorpayKeys, saveRevenueSettings,
@@ -414,8 +413,7 @@ function Pages({ orgId, items, leads }: { orgId: string; items: any[]; leads: Ar
       <Panel title="Live preview">
         <div className="max-h-[640px] overflow-auto rounded-xl border border-border">
           <DeliveryPageView title={f.title || "Your page title"} body={f.body} buttonLabel={f.buttonLabel} buttonHref={f.buttonUrl ? "#" : null}
-            imageUrl={f.showImage ? imagePreview : null} imageAlt={f.imageAlt} countdownAt={f.countdown ? new Date(f.countdown).toISOString() : null} expiryAction={f.expiryAction} expiryMessage={f.expiryMessage} price={price} />
-          {formConfig.mode !== "none" && fields.length > 0 && <div className="mx-auto max-w-2xl px-6 pb-10"><DeliveryLeadForm key={JSON.stringify(fields)} preview config={formConfig} /></div>}
+            imageUrl={f.showImage ? imagePreview : null} imageAlt={f.imageAlt} countdownAt={f.countdown ? new Date(f.countdown).toISOString() : null} expiryAction={f.expiryAction} expiryMessage={f.expiryMessage} price={price} key={JSON.stringify(fields)} leadForm={{ preview: true, config: formConfig }} />
         </div>
       </Panel>
     </div>
