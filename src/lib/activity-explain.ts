@@ -87,6 +87,11 @@ export function webhookEventLabel(eventType: string, platform: string | null): s
 
 /** Friendly label for a successful step code like "tap_prompt". */
 export function stepLabel(detail: string | null): string {
+  const flow = flowActivity(detail);
+  if (flow) {
+    const labels: Record<string, string> = { opening_dm: "Send me the link button sent", opener_tap_received: "Opening button tap received", follow_tap_received: "Follow confirmation tap received", follow_gate: "Visit profile + I followed sent", send_dm: "DM delivered", public_reply: "Public reply posted", send_payment: "Payment link delivered", send_coupon: "Coupon delivered", lead_form: "Lead question sent", form_completed: "Lead form completed", ask_contact: "Email / phone requested", gate_gave_up: "Follow not verified — link withheld" };
+    return labels[flow.code] ?? (flow.code.startsWith("waiting_") ? "Waiting before next step" : flow.code);
+  }
   const code = (detail ?? "").toLowerCase();
   const map: Record<string, string> = {
     comment_reply: "Public reply posted under the comment",
@@ -104,4 +109,19 @@ export function stepLabel(detail: string | null): string {
   };
   for (const [k, v] of Object.entries(map)) if (code.startsWith(k)) return v;
   return code ? `Step completed: ${code}` : "Reply sent";
+}
+
+export type ActivitySource = "flows" | "rules" | "system";
+export function activitySource(run: { rule_id: string | null; detail: string | null }): ActivitySource {
+  if (run.detail?.startsWith("flow:")) return "flows";
+  return run.rule_id ? "rules" : "system";
+}
+export function flowActivity(detail: string | null): { name: string; code: string } | null {
+  if (!detail?.startsWith("flow:")) return null;
+  const rest = detail.slice(5);
+  const at = rest.lastIndexOf(":");
+  return at < 0 ? { name: "Flow", code: rest } : { name: rest.slice(0, at), code: rest.slice(at + 1) };
+}
+export function activityName(run: { rule_id: string | null; detail: string | null }, ruleName: (id: string | null) => string) {
+  return flowActivity(run.detail)?.name ?? (run.rule_id ? ruleName(run.rule_id) : "System / safety");
 }
