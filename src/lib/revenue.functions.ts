@@ -188,7 +188,7 @@ export const getPublicPage = createServerFn({ method: "GET" })
     await supabaseAdmin.from("delivery_pages").update({ views: (p.views ?? 0) + 1 }).eq("id", p.id);
     await supabaseAdmin.from("revenue_events").insert({ organization_id: p.organization_id, kind: "page_view", ref_id: p.id });
     return { title: p.title as string, body: (p.body as string | null) ?? "", buttonLabel: p.button_label as string | null, hasButton: !!p.button_url,
-      imageUrl: p.show_image && p.image_path ? `/api/public/delivery-image/${encodeURIComponent(p.image_path as string)}` : null, imageAlt: p.image_alt as string | null,
+      imageUrl: p.show_image && p.image_path ? `/api/public/delivery-image/${p.image_path as string}` : null, imageAlt: p.image_alt as string | null,
       countdownAt: p.countdown_at as string | null, expiryAction: p.expiry_action as "disable_cta" | "hide_cta", expiryMessage: p.expiry_message as string | null,
       formConfig: p.form_config as { mode: "none" | "optional" | "required"; consent?: string; fields?: unknown[] } };
   });
@@ -205,6 +205,38 @@ export const getOfferPage = createServerFn({ method: "GET" })
     if (!link || !p?.active) return null;
     await supabaseAdmin.from("revenue_events").insert({ organization_id: link.organization_id, kind: "page_view", ref_id: link.id });
     return { title: p.title as string, body: (p.body as string | null) ?? "", buttonLabel: (p.button_label as string | null) || "Pay now",
-      imageUrl: p.show_image && p.image_path ? `/api/public/delivery-image/${encodeURIComponent(p.image_path as string)}` : null, imageAlt: p.image_alt as string | null,
-      countdownAt: p.countdown_at as string | null, expiryAction: p.expiry_action as "disable_cta" | "hide_cta", expiryMessage: p.expiry_message as string | null };
+      imageUrl: p.show_image && p.image_path ? `/api/public/delivery-image/${p.image_path as string}` : null, imageAlt: p.image_alt as string | null,
+      countdownAt: p.countdown_at as string | null, expiryAction: p.expiry_action as "disable_cta" | "hide_cta", expiryMessage: p.expiry_message as string | null,
+      formConfig: p.form_config as { mode: "none" | "optional" | "required"; consent?: string; fields?: Array<{ key: string; label: string; type: "text" | "email" | "phone" | "choice"; required: boolean; options: string[] }> } };
+  });
+
+export const submitOfferForm = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => z.object({ token: z.string().uuid(), answers: z.record(z.string(), z.string().trim().max(500)) }).parse(d))
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: link } = await supabaseAdmin.from("payment_links")
+      .select("id, organization_id, platform, external_user_id, delivery_pages!inner(active, form_config)").eq("offer_token", data.token).maybeSingle();
+    const page = Array.isArray(link?.delivery_pages) ? link?.delivery_pages[0] : link?.delivery_pages;
+    const config = page?.form_config as { mode?: string; consent?: string; fields?: Array<{ key: string; type: string; required: boolean; options: string[] }> } | null;
+    if (!link || !page?.active || !config || config.mode === "none") throw new Error("Form is not available");
+    const fields = config.fields ?? [];
+    const clean: Record<string, string> = {};
+    for (const field of fields) {
+      const value = String(data.answers[field.key] ?? "").trim();
+      if (field.required && !value) throw new Error("Please complete all required fields");
+      if (!value) continue;
+      if (field.type === "email" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) throw new Error("Enter a valid email address");
+      if (field.type === "phone" && value.replace(/\D/g, "").length < 10) throw new Error("Enter a valid phone number");
+      if (field.type === "choice" && !field.options.includes(value)) throw new Error("Choose one of the available options");
+      clean[field.key] = value;
+    }
+    const key = { organization_id: link.organization_id, platform: link.platform, external_user_id: link.external_user_id };
+    const { data: current } = await supabaseAdmin.from("contact_profiles").select("email, phone, custom_fields").match(key).maybeSingle();
+    await supabaseAdmin.from("contact_profiles").upsert({ ...key,
+      email: current?.email || (clean.email ?? null), phone: current?.phone || (clean.phone ?? null),
+      custom_fields: { ...((current?.custom_fields as Record<string, unknown> | null) ?? {}), ...clean, delivery_form_consent: config.consent || "accepted" },
+      updated_at: new Date().toISOString(),
+    }, { onConflict: "organization_id,platform,external_user_id" });
+    await supabaseAdmin.from("revenue_events").insert({ organization_id: link.organization_id, platform: link.platform, external_user_id: link.external_user_id, kind: "form_complete", ref_id: link.id });
+    return { ok: true };
   });
