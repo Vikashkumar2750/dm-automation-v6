@@ -77,3 +77,10 @@ Real Meta + YouTube credentials are available when we reach OAuth phases.
 - [x] Flow builder: lead form step (custom + multiple-choice fields)
 - [x] Flow builder: free-placement node canvas with connectors
 - [x] Flow builder follow gate: "I followed" tap (live tap check needs a real Instagram account after deploy)
+
+## Current: Flow Builder parity and scrolling
+- [ ] Flow-owned Opening DM and run-bound follow confirmation callbacks
+- [ ] Separate FLOW / Rule / System activity with source-filtered reads
+- [ ] Bounded template and Try it result scrolling
+- [ ] Canvas-local anchored wheel and keyboard zoom
+- [ ] Regression tests, browser checks and guide updates
