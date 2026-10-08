@@ -398,7 +398,7 @@ export async function continueFlowTap(admin: AdminClient, ev: FlowEvent, flags: 
   const step = flow?.steps[run.next_step];
   if (!prev.tap || !step || !callbackMatches(callback, prev.tap, prev, ev, step.id)) return true;
   if (step.disabled || (callback.stage === "opener" ? step.kind !== "opening_dm" : step.kind !== "follow_gate")) return true;
-  const block = await safetyBlock(admin, ev);
+  const block = await safetyBlock(admin, ev) ?? (prev.conversationId !== ev.conversationId ? await safetyBlock(admin, prev) : null);
   if (block) { await log(admin, ev, "skipped", `${flow?.name}:${block}`); return true; }
   const { data: claimed } = await admin.from("flow_runs").update({ status: "running", updated_at: new Date().toISOString() })
     .eq("id", run.id).eq("status", "awaiting_reply").select("id");

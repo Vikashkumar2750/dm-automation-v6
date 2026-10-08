@@ -5,7 +5,7 @@ const pattern = new RegExp(`^FLOW_TAP:(${UUID}):(opener|follow):(${UUID})$`, "i"
 export function parseFlowCallback(payload: string | null | undefined): FlowCallback | null {
   const m = payload?.match(pattern);
   if (!m?.[1] || !m[3]) return null;
-  return { runId: m[1], stage: m[2] === "opener" ? "opener" : "follow", nonce: m[3] };
+  return { runId: m[1], stage: m[2]?.toLowerCase() === "opener" ? "opener" : "follow", nonce: m[3] };
 }
 export function flowCallbackPayload(c: FlowCallback): string {
   return `FLOW_TAP:${c.runId}:${c.stage}:${c.nonce}`;
