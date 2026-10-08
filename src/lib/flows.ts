@@ -31,6 +31,7 @@ export type FlowStep = StepBase & (
   | { kind: "tag"; value: string }
   | { kind: "remove_tag"; value: string }
   | { kind: "ask_contact"; text: string }
+  | { kind: "opening_dm"; text: string; buttonTitle: string }
   | { kind: "follow_gate"; text: string; buttonTitle: string; profileUrl: string }
   | { kind: "send_payment"; productId: string; text: string }
   | { kind: "send_coupon"; campaignId: string; text: string }
@@ -160,6 +161,8 @@ function sanitizeStep(s: unknown): FlowStep[] {
           return [{ id: sid, kind: "remove_tag", value: text(x.value, 40) }];
         case "ask_contact":
           return [{ id: sid, kind: "ask_contact", text: text(x.text, 1000) }];
+        case "opening_dm":
+          return [{ id: sid, kind: "opening_dm", text: text(x.text, 640), buttonTitle: text(x.buttonTitle, 20) || "Send me the link" }];
         case "follow_gate": {
           const y = s as { profileUrl?: unknown };
           const url = text(y.profileUrl, 300);
@@ -199,7 +202,12 @@ export function validateFlow(flow: Flow): string[] {
   }
   flow.steps.forEach((s, i) => {
     if (s.disabled) return;
-    if ((s.kind === "ask_contact" || s.kind === "follow_gate") && !s.text) issues.push(`Step ${i + 1}: message is empty.`);
+    if ((s.kind === "ask_contact" || s.kind === "follow_gate" || s.kind === "opening_dm") && !s.text) issues.push(`Step ${i + 1}: message is empty.`);
+    if (s.kind === "opening_dm") {
+      if (flow.trigger !== "new_comment") issues.push(`Step ${i + 1}: opening DM requires a comment trigger.`);
+      if (!s.buttonTitle) issues.push(`Step ${i + 1}: button title is empty.`);
+      if (flow.steps.slice(0, i).some((p) => !p.disabled && (["opening_dm", "send_dm", "follow_gate", "ask_contact", "lead_form", "send_payment", "send_coupon"].includes(p.kind) || (p.kind === "condition" && p.check === "is_follower")))) issues.push(`Step ${i + 1}: place opening DM before private messages and follower checks.`);
+    }
     if (s.kind === "follow_gate" && !s.profileUrl) issues.push(`Step ${i + 1}: add your profile link (https://…).`);
     if (s.kind === "condition" && (s.check === "not_contains" || s.check === "has_tag" || s.check === "no_tag") && !s.value) issues.push(`Step ${i + 1}: value is empty.`);
     if ((s.kind === "tag" || s.kind === "remove_tag") && !s.value) issues.push(`Step ${i + 1}: tag is empty.`);
@@ -220,11 +228,11 @@ export function validateFlow(flow: Flow): string[] {
   return issues;
 }
 
-const MESSAGE_KINDS: FlowStep["kind"][] = ["send_dm", "public_reply", "send_payment", "send_coupon", "ask_contact", "follow_gate", "lead_form"];
+const MESSAGE_KINDS: FlowStep["kind"][] = ["send_dm", "public_reply", "send_payment", "send_coupon", "ask_contact", "follow_gate", "lead_form", "opening_dm"];
 
 export type FlowInput = {
   text: string; isFollower: boolean | null; platform: "instagram" | "facebook"; trigger: FlowTrigger;
-  tags?: string[]; hasEmail?: boolean; hasPhone?: boolean;
+  tags?: string[]; hasEmail?: boolean; hasPhone?: boolean; openerTapped?: boolean;
 };
 
 const keywords = (v: string) => v.toLowerCase().split(",").map((k) => k.trim()).filter(Boolean);
@@ -264,6 +272,11 @@ export function runFlowDry(flow: Flow, input: FlowInput): { matched: boolean; ac
       const ok = conditionPasses(s, { text: input.text, isFollower: input.isFollower, tags: [...tags], hasEmail: !!input.hasEmail, hasPhone: !!input.hasPhone });
       if (!ok) return { matched: true, actions, stoppedAt: i };
       continue;
+    }
+    if (s.kind === "opening_dm") {
+      actions.push({ kind: "Opening DM", detail: `${s.text} [${s.buttonTitle}]` });
+      if (!input.openerTapped) return { matched: true, actions, stoppedAt: i };
+      actions.push({ kind: "Button tap received", detail: "Continue from the original comment after the tap." });
     }
     if (s.kind === "follow_gate") {
       if (input.isFollower === true) continue;
