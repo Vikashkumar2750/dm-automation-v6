@@ -75,7 +75,7 @@ export const savePage = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({
     organizationId: org, id: z.string().uuid().optional(), slug: z.string().regex(/^[a-z0-9-]{3,60}$/),
-    title: z.string().trim().min(1).max(120), body: z.string().max(3000).nullable(),
+    title: z.string().trim().min(1).max(120), body: z.string().max(8000).nullable(),
     buttonLabel: z.string().max(40).nullable(), buttonUrl: httpsUrl.nullable(), active: z.boolean(),
   }).parse(d))
   .handler(async ({ data, context }) => {
