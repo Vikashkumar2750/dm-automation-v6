@@ -92,9 +92,14 @@ export const savePage = createServerFn({ method: "POST" })
       image_path: data.imagePath, show_image: data.showImage, image_alt: data.imageAlt, countdown_at: data.countdownAt, expiry_action: data.expiryAction, expiry_message: data.expiryMessage,
       form_config: data.formConfig };
     const q = (context as Ctx).supabase.from("delivery_pages");
-    const { error } = data.id ? await q.update(row).eq("id", data.id).eq("organization_id", data.organizationId) : await q.insert(row);
+    if (data.id) {
+      const { error } = await q.update(row).eq("id", data.id).eq("organization_id", data.organizationId);
+      if (error) throw new Error(error.code === "23505" ? "This page address is already taken" : error.message);
+      return { ok: true, id: data.id };
+    }
+    const { data: created, error } = await q.insert(row).select("id").single();
     if (error) throw new Error(error.code === "23505" ? "This page address is already taken" : error.message);
-    return { ok: true };
+    return { ok: true, id: (created as { id: string }).id };
   });
 
 export const saveCampaign = createServerFn({ method: "POST" })

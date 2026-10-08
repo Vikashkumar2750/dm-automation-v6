@@ -619,17 +619,14 @@ function QuickCreate({ kind, onCreated }: { kind: "product" | "coupon" | "page";
       }
       if (kind === "page") {
         const slug = `${f.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 44)}-${crypto.randomUUID().slice(0, 6)}`;
-        const r = await savePg({ data: { organizationId: rev.orgId, title: f.name, slug, body: `# ${f.name}\nA clear offer designed to help your buyer decide with confidence.\n\n## What you get\n- The complete product or service\n- Clear next steps\n- Support when you need it\n\n## Why choose this\n> A focused solution with secure payment and straightforward delivery.\n\n## Frequently asked questions\n? What happens after payment? | You will receive the next steps immediately.\n? Need help before buying? | Reply to our DM and we will help.`, buttonLabel: "Pay securely now", buttonUrl: "https://autodm.techaasvik.com", active: true, imagePath: null, showImage: false, imageAlt: null, countdownAt: null, expiryAction: "disable_cta", expiryMessage: null, formConfig: { mode: "none", consent: "", fields: [] } } });
-        const pages = (await qc.fetchQuery({ queryKey: ["revenue", rev.orgId], queryFn: () => Promise.resolve(null) }).catch(() => null));
-        void pages;
-        return { id: "refresh-page" in r ? String((r as any)["refresh-page"]) : "" };
+        return savePg({ data: { organizationId: rev.orgId, title: f.name, slug, body: `# ${f.name}\nA clear offer designed to help your buyer decide with confidence.\n\n## What you get\n- The complete product or service\n- Clear next steps\n- Support when you need it\n\n## Why choose this\n> A focused solution with secure payment and straightforward delivery.\n\n## Frequently asked questions\n? What happens after payment? | You will receive the next steps immediately.\n? Need help before buying? | Reply to our DM and we will help.`, buttonLabel: "Pay securely now", buttonUrl: "https://autodm.techaasvik.com", active: true, imagePath: null, showImage: false, imageAlt: null, countdownAt: null, expiryAction: "disable_cta", expiryMessage: null, formConfig: { mode: "none", consent: "", fields: [] } } });
       }
       return saveC({ data: { organizationId: rev.orgId, name: f.name, prefix: f.prefix, discountLabel: f.label, maxCodes: Number(f.max) || 500, expiresAt: null, active: true } });
     },
     onSuccess: async (r) => {
       await qc.invalidateQueries({ queryKey: ["revenue", rev.orgId] });
       if (r.id) onCreated(r.id);
-      toast.success(kind === "product" ? "Product created and selected" : kind === "page" ? "Delivery page created — select it after refresh" : "Coupon created and selected");
+      toast.success(kind === "product" ? "Product created and selected" : kind === "page" ? "Delivery page created and selected" : "Coupon created and selected");
       setOpen(false);
       setF({ name: "", price: "", url: "", desc: "", prefix: "", label: "", max: "500" });
     },

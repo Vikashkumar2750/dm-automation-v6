@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Copy, IndianRupee, Info, Trash2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Copy, Image as ImageIcon, IndianRupee, Info, Loader2, Trash2, Upload } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { AppShell } from "@/components/app/AppShell";
@@ -18,6 +18,7 @@ import { useTenant } from "@/hooks/useTenant";
 import { buildFunnel, formatInr, rupeesToPaise, slugify } from "@/lib/revenue";
 import { DeliveryPageView } from "@/components/app/DeliveryPageView";
 import { DELIVERY_TEMPLATES } from "@/lib/delivery-page";
+import { previewDeliveryImage, uploadDeliveryImage } from "@/lib/delivery-media";
 import {
   deleteRevenueItem, getRevenue, removeRazorpayKeys, saveCampaign, savePage, saveProduct, saveRazorpayKeys, saveRevenueSettings,
 } from "@/lib/revenue.functions";
@@ -194,12 +195,23 @@ function Coupons({ orgId, items }: { orgId: string; items: any[] }) {
 function Pages({ orgId, items }: { orgId: string; items: any[] }) {
   const save = useSave(useServerFn(savePage), "Page saved");
   const del = useSave(useServerFn(deleteRevenueItem), "Deleted");
-  const [f, setF] = useState({ title: "", slug: "", body: "", buttonLabel: "", buttonUrl: "" });
+  const [f, setF] = useState({ title: "", slug: "", body: "", buttonLabel: "", buttonUrl: "", imagePath: "", imageAlt: "", showImage: false, countdown: "", expiryAction: "disable_cta" as "disable_cta" | "hide_cta", expiryMessage: "This offer has ended.", formMode: "none" as "none" | "optional" | "required" });
+  const [imagePreview, setImagePreview] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const imageInput = useRef<HTMLInputElement>(null);
   const origin = typeof window !== "undefined" ? window.location.origin : "";
   const submit = () => save.mutate({
     organizationId: orgId, title: f.title, slug: f.slug || slugify(f.title), body: f.body || null,
-    buttonLabel: f.buttonLabel || null, buttonUrl: f.buttonUrl || null, active: true,
-  }, { onSuccess: () => setF({ title: "", slug: "", body: "", buttonLabel: "", buttonUrl: "" }) });
+    buttonLabel: f.buttonLabel || null, buttonUrl: f.buttonUrl || null, active: true, imagePath: f.imagePath || null, showImage: f.showImage,
+    imageAlt: f.imageAlt || null, countdownAt: f.countdown ? new Date(f.countdown).toISOString() : null, expiryAction: f.expiryAction, expiryMessage: f.expiryMessage || null,
+    formConfig: { mode: f.formMode, consent: f.formMode === "none" ? "" : "I agree that my details may be used to fulfil this request and follow up about this offer.", fields: f.formMode === "none" ? [] : [{ key: "email", label: "Email address", type: "email" as const, required: true, options: [] }] },
+  }, { onSuccess: () => { setF({ title: "", slug: "", body: "", buttonLabel: "", buttonUrl: "", imagePath: "", imageAlt: "", showImage: false, countdown: "", expiryAction: "disable_cta", expiryMessage: "This offer has ended.", formMode: "none" }); setImagePreview(""); } });
+  const uploadImage = async (file: File | undefined) => {
+    if (!file) return;
+    setUploading(true);
+    try { const path = await uploadDeliveryImage(orgId, file); setF((v) => ({ ...v, imagePath: path, showImage: true, imageAlt: v.imageAlt || v.title })); setImagePreview(await previewDeliveryImage(path)); toast.success("Product image uploaded"); }
+    catch (e) { toast.error(e instanceof Error ? e.message : "Upload failed"); } finally { setUploading(false); if (imageInput.current) imageInput.current.value = ""; }
+  };
   return (
     <div className="space-y-4">
     <div className="grid gap-4 lg:grid-cols-2">
@@ -222,6 +234,23 @@ function Pages({ orgId, items }: { orgId: string; items: any[] }) {
           <p className="text-xs text-muted-foreground">
             Formatting: <code># Headline</code> · <code>## Section</code> · <code>- point</code> · <code>&gt; note</code> · <code>? Question | Answer</code> · <code>**bold**</code>. Plain text also looks good.
           </p>
+          <div className="space-y-2 rounded-lg border border-border p-3">
+            <div className="flex items-center justify-between"><Label>Product image</Label><Switch checked={f.showImage} disabled={!f.imagePath} onCheckedChange={(v) => setF({ ...f, showImage: v })} /></div>
+            <input ref={imageInput} type="file" accept="image/*" className="hidden" onChange={(e) => void uploadImage(e.target.files?.[0])} />
+            <div className="flex flex-wrap gap-2"><Button type="button" size="sm" variant="outline" disabled={uploading} onClick={() => imageInput.current?.click()}>{uploading ? <Loader2 className="size-4 animate-spin" /> : <Upload className="size-4" />} {f.imagePath ? "Replace image" : "Upload image"}</Button>{f.imagePath && <Button type="button" size="sm" variant="ghost" onClick={() => { setF({ ...f, imagePath: "", showImage: false, imageAlt: "" }); setImagePreview(""); }}>Remove</Button>}</div>
+            {f.imagePath && <Input placeholder="Image description for accessibility" value={f.imageAlt} onChange={(e) => setF({ ...f, imageAlt: e.target.value })} />}
+          </div>
+          <div className="space-y-2 rounded-lg border border-border p-3">
+            <Label>Honest offer countdown (optional)</Label>
+            <Input type="datetime-local" value={f.countdown} onChange={(e) => setF({ ...f, countdown: e.target.value })} />
+            {f.countdown && <><select className={area} value={f.expiryAction} onChange={(e) => setF({ ...f, expiryAction: e.target.value as typeof f.expiryAction })}><option value="disable_cta">Disable button when ended</option><option value="hide_cta">Hide button when ended</option></select><Input placeholder="Message after expiry" value={f.expiryMessage} onChange={(e) => setF({ ...f, expiryMessage: e.target.value })} /></>}
+            <p className="text-xs text-muted-foreground">Uses one fixed deadline. It never restarts for each visitor.</p>
+          </div>
+          <div className="space-y-2 rounded-lg border border-border p-3">
+            <Label>Lead form placement</Label>
+            <select className={area} value={f.formMode} onChange={(e) => setF({ ...f, formMode: e.target.value as typeof f.formMode })}><option value="none">No page form — fastest purchase</option><option value="optional">Optional email form</option><option value="required">Require email before next step</option></select>
+            <p className="text-xs text-muted-foreground">Best default: two quick questions in DM, then an optional detailed form after the offer.</p>
+          </div>
           <div className="grid grid-cols-2 gap-2">
             <div className="flex items-center gap-1">
               <Input placeholder="Button text" value={f.buttonLabel} onChange={(e) => setF({ ...f, buttonLabel: e.target.value })} />
@@ -260,7 +289,8 @@ function Pages({ orgId, items }: { orgId: string; items: any[] }) {
     </div>
       <Panel title="Live preview">
         <div className="max-h-[640px] overflow-auto rounded-xl border border-border">
-          <DeliveryPageView title={f.title || "Your page title"} body={f.body} buttonLabel={f.buttonLabel} buttonHref={f.buttonUrl ? "#" : null} />
+          <DeliveryPageView title={f.title || "Your page title"} body={f.body} buttonLabel={f.buttonLabel} buttonHref={f.buttonUrl ? "#" : null}
+            imageUrl={f.showImage ? imagePreview : null} imageAlt={f.imageAlt} countdownAt={f.countdown ? new Date(f.countdown).toISOString() : null} expiryAction={f.expiryAction} expiryMessage={f.expiryMessage} />
         </div>
       </Panel>
     </div>
