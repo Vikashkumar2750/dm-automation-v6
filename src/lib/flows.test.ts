@@ -121,3 +121,13 @@ describe("lead form", () => {
     expect(validateFlow(sanitizeFlows([f])[0]!).some((x) => x.includes("2+ choices"))).toBe(true);
   });
 });
+
+import { sanitizeFlows as _sf } from "./flows";
+describe("canvas positions", () => {
+  it("keeps card positions and clamps bad values", () => {
+    const [f] = _sf([{ name: "x", triggerPos: { x: 10, y: 20 }, steps: [{ id: "a", kind: "wait", minutes: 5, pos: { x: 99999, y: "nope" } }, { id: "b", kind: "wait", minutes: 5, pos: { x: 300, y: 40 } }] }]);
+    expect(f!.triggerPos).toEqual({ x: 10, y: 20 });
+    expect(f!.steps[0]!.pos).toBeUndefined();
+    expect(f!.steps[1]!.pos).toEqual({ x: 300, y: 40 });
+  });
+});

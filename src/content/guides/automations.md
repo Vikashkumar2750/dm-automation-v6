@@ -42,3 +42,13 @@ In **Social Accounts → Ice breakers & menu**, pick a ready-made set or type yo
 - Keep keywords short and specific.
 - Use Wait steps for follow-ups instead of sending many messages at once.
 - If nothing sends, check Activity for "skipped" reasons (cooldown, quiet hours, daily cap).
+
+## Canvas and "I followed" button
+
+### How it works
+- Every step is a card on a free canvas. Lines connect the cards in the order they run. Where you place a card only changes the look, never the order.
+- A follow gate now sends two buttons: "Visit profile" and "I followed ✅". When the person taps "I followed" (or replies), the follower check runs again. Followers continue the flow; others get the request again (up to 2 more times).
+
+### How to use
+- Drag a card by its title to move it. Drag empty space to move around. Ctrl + mouse wheel or the +/− buttons zoom. "Auto-arrange" puts every card back in neat rows.
+- Use the up/down arrows on a card to change the run order.

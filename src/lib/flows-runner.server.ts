@@ -26,8 +26,13 @@ export type FlowEvent = {
 };
 
 type FormProgress = { step: number; field: number; answers: Record<string, string> };
-type RunState = FlowEvent & { usedCommentReply?: boolean; form?: FormProgress };
+type GateProgress = { step: number; tries: number };
+type RunState = FlowEvent & { usedCommentReply?: boolean; form?: FormProgress; gate?: GateProgress };
 const FORM_TIMEOUT_MS = 24 * 3600_000;
+export const FLOW_FOLLOWED_PAYLOAD = "FLOW_FOLLOWED";
+const FOLLOWED_TITLE = "I followed ✅";
+/** Max re-sends of the follow request when someone taps but still doesn't follow. */
+export const MAX_GATE_TRIES = 2;
 
 function listed(flags: Record<string, unknown>, key: string, orgId: string) {
   const orgs = Array.isArray(flags[key]) ? (flags[key] as string[]) : [];
@@ -241,9 +246,9 @@ async function executeSteps(admin: AdminClient, flow: Flow, st: RunState, from: 
     // send_dm — first DM after a comment is a private reply to that comment.
     const viaComment = st.channel === "comment" && st.externalId && !st.usedCommentReply;
     const recipient = viaComment ? { comment_id: st.externalId } : { id: st.externalUserId };
-    const shapes = btn
-      ? a.flowButtonMessages(msgText, [{ type: "web_url", url: btn.url, title: btn.title }])
-      : [{ text: msgText }];
+    const buttons: Parameters<typeof a.flowButtonMessages>[1] = btn ? [{ type: "web_url", url: btn.url, title: btn.title }] : [];
+    if (s.kind === "follow_gate") buttons.push({ type: "postback", title: FOLLOWED_TITLE, payload: FLOW_FOLLOWED_PAYLOAD });
+    const shapes = buttons.length ? a.flowButtonMessages(msgText, buttons) : [{ text: msgText }];
     let sentId: string | undefined;
     let err = "";
     for (const message of shapes) {
@@ -256,6 +261,15 @@ async function executeSteps(admin: AdminClient, flow: Flow, st: RunState, from: 
     await recordOutbound(admin, st, flow, (viaComment ? "[private reply] " : "") + msgText + (btn ? `\n[${btn.title}] ${btn.url}` : ""), sentId ?? null);
     await log(admin, st, "sent", `${flow.name}:${s.kind}`);
     acted = true;
+    if (s.kind === "follow_gate") {
+      // Wait for the "I followed" tap (or any next DM), then re-check follow status.
+      const { form: _f, ...rest } = st;
+      await admin.from("flow_runs").insert({
+        organization_id: st.organizationId, conversation_id: st.conversationId, flow_id: flow.id, flow_name: flow.name,
+        state: { ...rest, gate: { step: i, tries: (st.gate?.tries ?? 0) } } as never, next_step: i, status: "awaiting_reply",
+        resume_at: new Date(Date.now() + FORM_TIMEOUT_MS).toISOString(),
+      });
+    }
     if (stopAfterSend) return true;
   }
   return acted;
@@ -297,6 +311,14 @@ async function continueLeadForm(admin: AdminClient, ev: FlowEvent, flags: Record
   const flow = sanitizeFlows(flags[`flows_cfg_${ev.organizationId}`]).find((f) => f.id === run.flow_id && f.active);
   const prev = run.state as RunState;
   const step = flow?.steps[run.next_step];
+  if (flow && prev.gate && step?.kind === "follow_gate") {
+    // "I followed" tap (or any reply): the follow_gate step re-checks follow status itself.
+    await finish("done", "gate_reply");
+    if (prev.gate.tries >= MAX_GATE_TRIES) { await log(admin, prev, "skipped", `${flow.name}:gate_gave_up`); return true; }
+    const st: RunState = { ...prev, body: ev.body, channel: ev.channel, externalId: ev.externalId, gate: { step: run.next_step, tries: prev.gate.tries + 1 } };
+    await executeSteps(admin, flow, st, run.next_step);
+    return true;
+  }
   if (!flow || !prev.form || step?.kind !== "lead_form") { await finish("cancelled", "flow_off_or_changed"); return false; }
   const st: RunState = { ...prev, body: ev.body, channel: ev.channel, externalId: ev.externalId };
   const form = { ...prev.form, answers: { ...prev.form.answers } };
