@@ -17,7 +17,7 @@ describe("delivery page formatting", () => {
   });
   it("every template starts with an H1 and fits the size limit", () => {
     for (const t of DELIVERY_TEMPLATES) {
-      expect(parseBody(t.body)[0].t).toBe("h1");
+      expect(parseBody(t.body)[0]?.t).toBe("h1");
       expect(t.body.length).toBeLessThanOrEqual(8000);
     }
   });
