@@ -232,7 +232,7 @@ export const submitOfferForm = createServerFn({ method: "POST" })
     const key = { organization_id: link.organization_id, platform: link.platform, external_user_id: link.external_user_id };
     const { data: current } = await supabaseAdmin.from("contact_profiles").select("email, phone, custom_fields").match(key).maybeSingle();
     await supabaseAdmin.from("contact_profiles").upsert({ ...key,
-      email: current?.email || (clean.email ?? null), phone: current?.phone || (clean.phone ?? null),
+      email: current?.email || (clean["email"] ?? null), phone: current?.phone || (clean["phone"] ?? null),
       custom_fields: { ...((current?.custom_fields as Record<string, unknown> | null) ?? {}), ...clean, delivery_form_consent: config.consent || "accepted" },
       updated_at: new Date().toISOString(),
     }, { onConflict: "organization_id,platform,external_user_id" });
