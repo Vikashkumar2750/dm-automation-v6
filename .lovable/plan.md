@@ -33,3 +33,11 @@ Today the form supports custom fields, but it only shows on buyer-specific offer
 - Live preview shows the form.
 
 Technical: add `pincode` field type to `formConfig` zod + `DeliveryLeadForm`; preset builder in `delivery-page.ts` with tests (pincode 110001 valid, 11001 invalid); new `submitPageForm` server function for `/p/$slug` with rate limiting and a new `delivery_page_leads` table (GRANT to service_role only, RLS read for workspace members).
+
+## Addition: edit existing delivery pages
+- Each saved page in the list gets an **Edit** button. It loads everything back into the form (text, image, timer, price, form, button) and "Save page" becomes "Update page", with a Cancel option.
+- The page link (slug) stays the same by default so links already sent in DMs keep working; changing it shows a warning.
+- Technical: new `updateDeliveryPage` server function (workspace members only, same validation as create).
+
+## Fix: form not showing in the preview
+Cause: the Live preview and the normal public page (/p/...) don't show the lead form at all. It only shows on buyer-specific offer links. Fix: show the form in the Live preview (looks real, doesn't submit) and on /p/... pages, using the "Email only" / "Full lead form" setup above.
