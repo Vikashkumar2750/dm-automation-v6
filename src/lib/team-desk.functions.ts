@@ -52,7 +52,7 @@ export const getTeamDesk = createServerFn({ method: "GET" })
       role,
       me: context.userId,
       requireApproval: !!settings.data?.require_approval,
-      conversations: convs.data ?? [],
+      conversations: (await import("@/lib/contact-name")).fillSiblingNames(convs.data ?? []),
       assignment,
       approvals: approvals.data ?? [],
     };

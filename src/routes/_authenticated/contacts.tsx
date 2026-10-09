@@ -1,3 +1,4 @@
+import { contactLabel } from "@/lib/contact-name";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -64,7 +65,7 @@ function ContactsPage() {
         if (c.last_message_at > e.lastAt) { e.lastAt = c.last_message_at; e.lastPreview = c.last_message_preview; }
       } else {
         map.set(key, {
-          key, externalUserId: c.external_user_id, name: c.external_user_name || c.external_user_id, platform: c.platform,
+          key, externalUserId: c.external_user_id, name: contactLabel(c), platform: c.platform,
           threads: 1, unread: c.unread_count, lastAt: c.last_message_at, lastPreview: c.last_message_preview,
           channels: new Set([c.channel]), tags: [], email: null, phone: null,
         });

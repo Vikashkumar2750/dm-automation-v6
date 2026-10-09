@@ -15,6 +15,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { useTenant } from "@/hooks/useTenant";
 import { listConversations } from "@/lib/inbox.functions";
+import { contactLabel } from "@/lib/contact-name";
 
 export const Route = createFileRoute("/_authenticated/comments")({
   head: () => ({
@@ -111,7 +112,7 @@ function CommentsPage() {
                 <PlatformBadge platform={c.platform} size="sm" />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium">
-                    {c.external_user_name || c.external_user_id}
+                    {contactLabel(c)}
                   </p>
                   <p className="truncate text-xs text-muted-foreground">
                     {c.last_message_preview ?? "No preview"}

@@ -1,4 +1,5 @@
 import { csvCell } from "@/lib/csv-safe";
+import { contactLabel } from "@/lib/contact-name";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -130,7 +131,7 @@ function SharedInbox({ orgId, desk, names, members }: { orgId: string; desk: Des
                 <div className="flex flex-wrap items-center gap-3">
                   <PlatformBadge platform={c.platform as SocialPlatform} size="sm" />
                   <button className="min-w-0 flex-1 text-left" onClick={() => setOpenId(openId === c.id ? null : c.id)}>
-                    <div className="truncate text-sm font-medium">{c.external_user_name || c.external_user_id} <span className="text-xs text-muted-foreground">· {c.channel}</span></div>
+                    <div className="truncate text-sm font-medium">{contactLabel(c)} <span className="text-xs text-muted-foreground">· {c.channel}</span></div>
                     <div className="truncate text-xs text-muted-foreground">{c.last_message_preview}</div>
                   </button>
                   <select
@@ -186,7 +187,7 @@ function Approvals({ orgId, desk, names, reviewer }: { orgId: string; desk: Desk
           <li key={a.id} className="space-y-2 p-3">
             <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
               <span className="font-medium text-foreground">{names[a.requested_by] ?? "Teammate"}</span>
-              → {conv[a.conversation_id]?.external_user_name ?? "contact"} · {new Date(a.created_at).toLocaleString()}
+              → {conv[a.conversation_id] ? contactLabel(conv[a.conversation_id]!) : "contact"} · {new Date(a.created_at).toLocaleString()}
               <span className="rounded bg-muted px-1.5 py-0.5 capitalize">{a.status}</span>
               {a.note && <span>· “{a.note}”</span>}
             </div>

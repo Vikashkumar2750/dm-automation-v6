@@ -67,7 +67,18 @@ export const listConversations = createServerFn({ method: "GET" })
     }
     const { data: rows, error } = await query;
     if (error) throw new Error(error.message);
-    return (rows ?? []) as ConversationRow[];
+    const list = (rows ?? []) as ConversationRow[];
+    const { fillSiblingNames } = await import("@/lib/contact-name");
+    const missing = [...new Set(list.filter((r) => !r.external_user_name).map((r) => r.external_user_id))];
+    if (!missing.length) return list;
+    const { data: known } = await context.supabase
+      .from("conversations")
+      .select("platform, external_user_id, external_user_name")
+      .eq("organization_id", data.organizationId)
+      .in("external_user_id", missing.slice(0, 100))
+      .not("external_user_name", "is", null)
+      .limit(300);
+    return fillSiblingNames(list, (known ?? []) as never);
   });
 
 export const listMessages = createServerFn({ method: "GET" })
