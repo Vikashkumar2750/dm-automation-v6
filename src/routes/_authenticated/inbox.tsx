@@ -1,3 +1,4 @@
+import { contactLabel } from "@/lib/contact-name";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -357,7 +358,7 @@ function InboxPage() {
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center justify-between gap-2">
                         <p className="truncate text-sm font-medium">
-                          {c.external_user_name ?? `User ${c.external_user_id.slice(-6)}`}
+                          {contactLabel(c)}
                         </p>
                         <span className="shrink-0 text-[11px] text-muted-foreground">
                           {timeAgo(c.last_message_at)}
@@ -399,8 +400,7 @@ function InboxPage() {
                   <PlatformBadge platform={selected.platform} />
                   <div>
                     <p className="text-sm font-semibold">
-                      {selected.external_user_name ??
-                        `User ${selected.external_user_id.slice(-6)}`}
+                      {contactLabel(selected)}
                     </p>
                     <p className="text-xs text-muted-foreground">
                       {selected.channel === "comment" ? "Comment thread" : "Direct message"}
