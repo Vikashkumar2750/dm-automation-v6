@@ -1,4 +1,5 @@
-import { Instagram, Facebook, Youtube, type LucideIcon } from "lucide-react";
+import { Instagram, Facebook, Youtube, Info, type LucideIcon } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type { ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
@@ -112,12 +113,15 @@ export function StatCard({
   value,
   delta,
   sub,
+  info,
 }: {
   icon: LucideIcon;
   label: string;
   value: string;
   delta?: string;
   sub?: string;
+  /** Plain explanation of what this card counts, shown behind an "i" button. */
+  info?: string;
 }) {
   return (
     <div className="panel p-4">
@@ -125,8 +129,20 @@ export function StatCard({
         <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-surface-secondary text-primary">
           <Icon className="size-4.5" />
         </span>
-        <div className="min-w-0">
-          <p className="truncate text-sm text-muted-foreground">{label}</p>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center justify-between gap-2">
+            <p className="truncate text-sm text-muted-foreground">{label}</p>
+            {info && (
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button type="button" aria-label={`What is ${label}?`} className="shrink-0 rounded-full text-subtle-foreground hover:text-foreground">
+                    <Info className="size-4" />
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-64 text-sm">{info}</PopoverContent>
+              </Popover>
+            )}
+          </div>
           <div className="mt-1 flex items-baseline gap-2">
             <span className="num text-2xl font-semibold">{value}</span>
             {delta && (

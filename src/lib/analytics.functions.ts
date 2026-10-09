@@ -32,6 +32,9 @@ export type AnalyticsSummary = {
     postsFailed: number;
     postsScheduled: number;
     automationBlocked: number;
+    automationRuns: number;
+    activeRules: number;
+    activeFlows: number;
   };
   responseRate: number;
   automationShare: number;
@@ -70,12 +73,12 @@ export const getAnalytics = createServerFn({ method: "GET" })
         .eq("organization_id", data.organizationId),
       supabase
         .from("automation_runs")
-        .select("id, rule_id, status, message_id, created_at")
+        .select("id, rule_id, status, message_id, created_at, run_key")
         .eq("organization_id", data.organizationId)
         .gte("created_at", sinceIso),
       supabase
         .from("automation_rules")
-        .select("id, name")
+        .select("id, name, is_active")
         .eq("organization_id", data.organizationId),
     ]);
 
@@ -209,6 +212,21 @@ export const getAnalytics = createServerFn({ method: "GET" })
       }
     }
 
+    // One run = one count, however many steps it sent.
+    const runKeys = new Set(runs.filter((r) => r.status === "sent").map((r) => r.run_key || r.id));
+    const activeRules = (ruleRes.data ?? []).filter((r) => r.is_active).length;
+    let activeFlows = 0;
+    // Membership already proven: the RLS-scoped rules/conversations reads above succeeded for this org.
+    const { data: member } = await supabase.from("organizations").select("id").eq("id", data.organizationId).maybeSingle();
+    if (member) {
+      try {
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        const { data: ps } = await supabaseAdmin.from("platform_settings").select("feature_flags").eq("id", true).maybeSingle();
+        const cfg = (ps?.feature_flags as Record<string, unknown> | null)?.[`flows_cfg_${data.organizationId}`];
+        if (Array.isArray(cfg)) activeFlows = cfg.filter((f) => (f as { active?: boolean })?.active).length;
+      } catch { /* flows count is optional */ }
+    }
+
     const posts = postRes.data ?? [];
 
     return {
@@ -226,6 +244,9 @@ export const getAnalytics = createServerFn({ method: "GET" })
         postsFailed: posts.filter((p) => p.status === "failed").length,
         postsScheduled: posts.filter((p) => p.status === "scheduled").length,
         automationBlocked,
+        automationRuns: runKeys.size,
+        activeRules,
+        activeFlows,
       },
       responseRate,
       automationShare: outbound > 0 ? Math.round((automated / outbound) * 100) : 0,
