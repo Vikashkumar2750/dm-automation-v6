@@ -147,14 +147,11 @@ export const getAutomationReport = createServerFn({ method: "GET" })
 
       if (run.status === "sent") {
         a.sent.add(detail);
-        if (PUBLIC.includes(detail)) {
+        if ((PUBLIC.includes(detail) || detail.endsWith(":public_reply")) && !a.publicReply) {
           a.publicReply = true;
           publicReplies++;
         }
-        if (PUBLIC.includes(detail) || detail.endsWith(":public_reply")) {
-          if (!a.publicReply && detail.endsWith(":public_reply")) { a.publicReply = true; publicReplies++; }
-        }
-        if (FINAL.includes(detail) || isFlowDm(detail)) {
+        if ((FINAL.includes(detail) || isFlowDm(detail)) && !a.finalDm) {
           a.finalDm = true;
           a.sentAt = run.created_at;
           a.outcome = "delivered";
