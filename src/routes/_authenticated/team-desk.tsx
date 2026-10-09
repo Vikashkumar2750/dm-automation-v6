@@ -187,7 +187,7 @@ function Approvals({ orgId, desk, names, reviewer }: { orgId: string; desk: Desk
           <li key={a.id} className="space-y-2 p-3">
             <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
               <span className="font-medium text-foreground">{names[a.requested_by] ?? "Teammate"}</span>
-              → {conv[a.conversation_id] ? contactLabel(conv[a.conversation_id]) : "contact"} · {new Date(a.created_at).toLocaleString()}
+              → {conv[a.conversation_id] ? contactLabel(conv[a.conversation_id]!) : "contact"} · {new Date(a.created_at).toLocaleString()}
               <span className="rounded bg-muted px-1.5 py-0.5 capitalize">{a.status}</span>
               {a.note && <span>· “{a.note}”</span>}
             </div>
