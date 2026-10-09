@@ -11,7 +11,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { Bot, MessageSquare, Send, Timer, CheckCircle2 } from "lucide-react";
+import { Bot, MessageSquare, Send, Timer, CheckCircle2, Zap, Workflow } from "lucide-react";
 
 import { AppShell } from "@/components/app/AppShell";
 import {
@@ -88,24 +88,28 @@ function AnalyticsPage() {
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
+          info="All chat threads (DMs and comments) in this workspace, with how many are open or resolved."
           label="Conversations"
           value={String(t?.conversations ?? 0)}
           icon={MessageSquare}
           sub={`${t?.openThreads ?? 0} open · ${t?.resolved ?? 0} resolved`}
         />
         <StatCard
+          info="Messages and comments people sent you in the selected period."
           label="Messages received"
           value={String(t?.inbound ?? 0)}
           icon={MessageSquare}
           sub={`${t?.unread ?? 0} unread right now`}
         />
         <StatCard
+          info="All replies sent in the period — typed by your team (manual) or sent by automations."
           label="Replies sent"
           value={String(t?.outbound ?? 0)}
           icon={Send}
           sub={`${t?.manual ?? 0} manual · ${t?.automated ?? 0} automated`}
         />
         <StatCard
+          info="Out of all replies sent, the percentage sent automatically."
           label="Automation share"
           value={`${data?.automationShare ?? 0}%`}
           icon={Bot}
@@ -115,12 +119,14 @@ function AnalyticsPage() {
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
+          info="Percentage of people who wrote to you and got at least one reply."
           label="Answered conversations"
           value={`${data?.responseRate ?? 0}%`}
           icon={CheckCircle2}
           sub="Threads that got at least one reply"
         />
         <StatCard
+          info="Typical time between a person's first message and your first reply."
           label="Median first reply"
           value={
             data?.medianFirstResponseMinutes === null || data?.medianFirstResponseMinutes === undefined
@@ -131,15 +137,34 @@ function AnalyticsPage() {
           sub="Time from first message to first reply"
         />
         <StatCard
+          info="Posts published from this tool, plus how many are scheduled or failed."
           label="Posts published"
           value={String(t?.postsPublished ?? 0)}
           icon={CheckCircle2}
           sub={`${t?.postsScheduled ?? 0} scheduled · ${t?.postsFailed ?? 0} failed`}
         />
         <StatCard
+          info="Messages sent automatically by rules, flows or the AI agent in the period."
           label="Automated replies"
           value={String(t?.automated ?? 0)}
           icon={Bot}
+          sub={`Last ${rangeDays} days`}
+        />
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <StatCard
+          info="Total automations switched on right now: keyword rules plus Flow Builder flows."
+          label="Active automations"
+          value={String((t?.activeRules ?? 0) + (t?.activeFlows ?? 0))}
+          icon={Workflow}
+          sub={`${t?.activeRules ?? 0} rules · ${t?.activeFlows ?? 0} flows`}
+        />
+        <StatCard
+          info="How many automations ran and sent something. One run counts once, however many steps it sent."
+          label="Automation runs"
+          value={String(t?.automationRuns ?? 0)}
+          icon={Zap}
           sub={`Last ${rangeDays} days`}
         />
       </div>

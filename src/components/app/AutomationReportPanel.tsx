@@ -104,12 +104,12 @@ export function AutomationReportPanel({ orgId }: { orgId: string }) {
       ) : (
         <div className="space-y-5">
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <StatCard icon={Zap} label="Automation attempts" value={String(r.totals.attempts)} sub={`${r.totals.skipped} skipped steps`} />
-            <StatCard icon={MessageCircle} label="Public replies" value={String(r.totals.publicReplies)} sub="Replies under comments" />
-            <StatCard icon={Send} label="Final DMs sent" value={String(r.totals.dmsSent)} sub={r.totals.attempts ? `${Math.round((r.totals.dmsSent / r.totals.attempts) * 100)}% of attempts` : "—"} />
-            <StatCard icon={AlertTriangle} label="Failed" value={String(r.totals.failed)} sub="Failed steps" />
-            <StatCard icon={Link2} label="Link opened" value={String(r.totals.linkClicks)} sub={r.totals.dmsSent ? `${Math.round((r.totals.linkClicks / r.totals.dmsSent) * 100)}% of DMs` : "—"} />
-            <StatCard icon={Paperclip} label="Attachment opened" value={String(r.totals.attachmentClicks)} sub="When sent as a link" />
+            <StatCard icon={Zap} info="How many times an automation started for a person in this period. One comment or DM that triggers a rule or flow = 1 attempt, however many steps it has." label="Automation attempts" value={String(r.totals.attempts)} sub={`${r.totals.skipped} skipped steps`} />
+            <StatCard icon={MessageCircle} info="Replies posted publicly under comments by your automations." label="Public replies" value={String(r.totals.publicReplies)} sub="Replies under comments" />
+            <StatCard icon={Send} info="Attempts where the main private message (link, offer or flow message) reached the person's inbox." label="Final DMs sent" value={String(r.totals.dmsSent)} sub={r.totals.attempts ? `${Math.round((r.totals.dmsSent / r.totals.attempts) * 100)}% of attempts` : "—"} />
+            <StatCard icon={AlertTriangle} info="Steps that Meta or the system rejected. See the Reason column for what went wrong." label="Failed" value={String(r.totals.failed)} sub="Failed steps" />
+            <StatCard icon={Link2} info="How many times people opened the link button inside your automated DMs." label="Link opened" value={String(r.totals.linkClicks)} sub={r.totals.dmsSent ? `${Math.round((r.totals.linkClicks / r.totals.dmsSent) * 100)}% of DMs` : "—"} />
+            <StatCard icon={Paperclip} info="How many times people opened an attachment that was sent as a link." label="Attachment opened" value={String(r.totals.attachmentClicks)} sub="When sent as a link" />
           </div>
 
           <div className="grid gap-3 lg:grid-cols-[2fr_1fr]">
