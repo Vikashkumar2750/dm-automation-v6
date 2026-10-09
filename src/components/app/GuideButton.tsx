@@ -11,6 +11,7 @@ import revenueMd from "@/content/guides/revenue.md?raw";
 import teamDeskMd from "@/content/guides/team-desk.md?raw";
 import trustSafetyMd from "@/content/guides/trust-safety.md?raw";
 import growthMd from "@/content/guides/growth.md?raw";
+import entryPointsMd from "@/content/guides/entry-points.md?raw";
 
 const GUIDES = {
   automations: { title: "Automations guide", file: "automations-guide.md", md: automationsMd },
@@ -20,6 +21,7 @@ const GUIDES = {
   "team-desk": { title: "Team desk guide", file: "team-desk-guide.md", md: teamDeskMd },
   "trust-safety": { title: "Trust & safety guide", file: "trust-safety-guide.md", md: trustSafetyMd },
   growth: { title: "Growth insights guide", file: "growth-guide.md", md: growthMd },
+  "entry-points": { title: "Ice breakers & menu guide", file: "ice-breakers-guide.md", md: entryPointsMd },
 } as const;
 
 /** Opens a readable .md guide in a dialog, with a download of the raw file. */

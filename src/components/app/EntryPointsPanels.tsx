@@ -16,6 +16,7 @@ import {
   syncEntryConfig,
 } from "@/lib/entry-points.functions";
 import { ENTRY_PRESETS } from "@/lib/flow-templates";
+import { GuideButton } from "@/components/app/GuideButton";
 
 /** Super Admin switch for Phase A entry points (off by default). */
 export function EntryPointsAdminPanel() {
@@ -108,9 +109,11 @@ export function EntryPointsCard({ organizationId }: { organizationId: string }) 
     },
     onError: () => toast.error("Could not save — menu links must start with https://"),
   });
+  const [lastSync, setLastSync] = useState<{ at: string; results: Array<{ account: string; platform: string; ok: boolean; error?: string }> } | null>(null);
   const push = useMutation({
     mutationFn: () => sync({ data: { organizationId } }),
     onSuccess: (r) => {
+      setLastSync({ at: new Date().toLocaleTimeString(), results: r.results });
       const failed = r.results.filter((x) => !x.ok);
       if (r.results.length === 0) toast.info("No Instagram or Facebook account connected");
       else if (failed.length === 0) toast.success(`Synced to ${r.results.length} account(s)`);
@@ -119,13 +122,35 @@ export function EntryPointsCard({ organizationId }: { organizationId: string }) 
     onError: () => toast.error("Sync failed"),
   });
 
-  if (!q.data?.enabled) return null;
+  if (q.data && !q.data.enabled) {
+    return (
+      <Panel>
+        <h3 className="font-semibold">Ice breakers & menu</h3>
+        <p className="mt-1 text-sm text-muted-foreground">This feature is switched off for your workspace. Contact support to turn it on.</p>
+      </Panel>
+    );
+  }
+  if (!q.data) return null;
   return (
     <Panel>
       <div className="flex items-center justify-between gap-3">
         <h3 className="font-semibold">Ice breakers & menu</h3>
-        <StatusBadge tone="neutral">Beta</StatusBadge>
+        <div className="flex items-center gap-2">
+          <GuideButton guide="entry-points" />
+          <StatusBadge tone="neutral">Beta</StatusBadge>
+        </div>
       </div>
+      {lastSync ? (
+        <div className="mt-3 rounded-md border p-3 text-xs">
+          <p className="font-medium">Last sync at {lastSync.at}</p>
+          {lastSync.results.length === 0 ? <p className="text-muted-foreground">No Instagram or Facebook account connected.</p> : null}
+          {lastSync.results.map((r, i) => (
+            <p key={i} className={r.ok ? "text-foreground" : "text-destructive"}>
+              {r.ok ? "✓" : "✗"} {r.account} ({r.platform}) — {r.ok ? "live on Meta" : r.error === "needs_reconnect" ? "reconnect this account first" : r.error}
+            </p>
+          ))}
+        </div>
+      ) : null}
       <p className="mt-1 text-sm text-muted-foreground">
         Questions people see when they open your DMs for the first time. To answer one, create a “New DM” rule with the question as its keyword.
       </p>
