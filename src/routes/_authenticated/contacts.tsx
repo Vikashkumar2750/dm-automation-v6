@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useTenant } from "@/hooks/useTenant";
-import { contactsToCsv, extractContactInfo, matchesSegment, type CrmContact, type SegmentFilter } from "@/lib/crm";
+import { contactsToCsv, pageLeadsToCsv, extractContactInfo, matchesSegment, type CrmContact, type SegmentFilter } from "@/lib/crm";
 import { addContactTag, deleteBroadcast, deleteSegment, getCrm, getOutreach, removeContactTag, saveContactProfile, saveNudgeSettings, saveSegment, saveSyncSettings, sendBroadcast } from "@/lib/crm.functions";
 import { listConversations } from "@/lib/inbox.functions";
 
@@ -241,6 +241,8 @@ function OutreachPanel({ orgId, allTags }: { orgId: string; allTags: string[] })
 
   return (
     <div className="mt-6 grid gap-4 lg:grid-cols-3">
+      <div className="lg:col-span-3"><PageLeadsPanel orgId={orgId} /></div>
+
       <Panel title="Abandoned-conversation nudge" >
         <p className="mb-3 text-xs text-muted-foreground">
           If someone stops replying mid-conversation, send one gentle follow-up. Only inside Meta's 24-hour window, one nudge per conversation.
@@ -391,6 +393,65 @@ function ContactDetail({ orgId, contact, crm, onSaved }: {
           <Button asChild size="sm" variant="link" className="px-0"><Link to="/inbox">Open conversation in inbox</Link></Button>
         </div>
       </div>
+    </>
+  );
+}
+
+function PageLeadsPanel({ orgId }: { orgId: string | null }) {
+  const fetchCrm = useServerFn(getCrm);
+  const crm = useQuery({ queryKey: ["crm", orgId], enabled: !!orgId, queryFn: () => fetchCrm({ data: { organizationId: orgId! } }) });
+  const pageLeads = crm.data?.pageLeads ?? [];
+  const [leadPage, setLeadPage] = useState("all");
+  const leadPages = [...new Set(pageLeads.map((l) => l.pageTitle))].sort();
+  const shownLeads = pageLeads.filter((l) => leadPage === "all" || l.pageTitle === leadPage);
+  function exportLeads() {
+    const url = URL.createObjectURL(new Blob([pageLeadsToCsv(shownLeads)], { type: "text/csv" }));
+    const a = document.createElement("a");
+    a.href = url; a.download = "delivery-page-leads.csv"; a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  return (
+    <>
+      <Panel
+        title={`Delivery page leads (${shownLeads.length})`}
+        action={
+          <div className="flex gap-2">
+            <select className={sel} value={leadPage} onChange={(e) => setLeadPage(e.target.value)} aria-label="Filter leads by page">
+              <option value="all">All pages</option>
+              {leadPages.map((t) => <option key={t} value={t}>{t}</option>)}
+            </select>
+            <Button size="sm" variant="outline" onClick={exportLeads} disabled={shownLeads.length === 0}><Download className="size-4" /> Export leads</Button>
+          </div>
+        }
+      >
+        {shownLeads.length === 0 ? (
+          <p className="text-sm text-muted-foreground">People who fill the form on your delivery pages (Sales &amp; Revenue → Pages) show up here.</p>
+        ) : (
+          <div className="max-h-96 overflow-auto">
+            <table className="w-full text-sm">
+              <thead className="text-left text-xs text-muted-foreground"><tr><th className="py-2 pr-3">Name</th><th className="pr-3">Email</th><th className="pr-3">Phone</th><th className="pr-3">Pincode</th><th className="pr-3">Other answers</th><th className="pr-3">Page</th><th>When</th></tr></thead>
+              <tbody className="divide-y">
+                {shownLeads.map((l) => {
+                  const other = Object.entries(l.answers).filter(([k]) => !["name", "email", "phone", "pincode"].includes(k));
+                  return (
+                    <tr key={l.id}>
+                      <td className="py-2 pr-3">{l.answers["name"] || "—"}</td>
+                      <td className="pr-3">{l.answers["email"] || "—"}</td>
+                      <td className="pr-3">{l.answers["phone"] || "—"}</td>
+                      <td className="pr-3">{l.answers["pincode"] || "—"}</td>
+                      <td className="pr-3 text-xs text-muted-foreground">{other.map(([k, v]) => `${k}: ${v}`).join(" · ") || "—"}</td>
+                      <td className="pr-3">{l.pageTitle}</td>
+                      <td className="text-xs text-muted-foreground">{new Date(l.createdAt).toLocaleString()}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Panel>
+
     </>
   );
 }

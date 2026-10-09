@@ -26,9 +26,9 @@ import {
 export const Route = createFileRoute("/_authenticated/revenue")({
   head: () => ({
     meta: [
-      { title: "Revenue — AutoDM by Techaasvik" },
+      { title: "Sales & Revenue — AutoDM by Techaasvik" },
       { name: "description", content: "Sell inside DMs: Razorpay payment links, coupons, delivery pages and a comment-to-sale report." },
-      { property: "og:title", content: "Revenue — AutoDM by Techaasvik" },
+      { property: "og:title", content: "Sales & Revenue — AutoDM by Techaasvik" },
       { property: "og:description", content: "Payment links, coupons and sales attribution for Instagram and Facebook DMs." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
@@ -47,7 +47,7 @@ function RevenuePage() {
   const d = q.data;
   return (
     <AppShell>
-      <PageHeader title="Revenue" description="Sell inside DMs with payment links, coupons and delivery pages." actions={<GuideButton guide="revenue" />} />
+      <PageHeader title="Sales & Revenue" description="Sell inside DMs with payment links, coupons and delivery pages." actions={<GuideButton guide="revenue" />} />
       {!d ? (
         <p className="text-sm text-muted-foreground">Loading…</p>
       ) : (

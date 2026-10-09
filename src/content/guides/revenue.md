@@ -1,4 +1,4 @@
-# Revenue guide
+# Sales & Revenue guide
 
 Sell inside Instagram / Facebook DMs, the way ManyChat does it.
 

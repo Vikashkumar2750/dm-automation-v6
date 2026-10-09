@@ -56,7 +56,7 @@ const primaryNav: NavItem[] = [
   { label: "Comments", to: "/comments", icon: MessageSquare },
   { label: "Automations", to: "/automations", icon: Workflow },
   { label: "Contacts", to: "/contacts", icon: Users },
-  { label: "Revenue", to: "/revenue", icon: IndianRupee },
+  { label: "Sales & Revenue", to: "/revenue", icon: IndianRupee },
   { label: "Team desk", to: "/team-desk", icon: Headset },
   { label: "Analytics", to: "/analytics", icon: BarChart3 },
   { label: "Social Accounts", to: "/social-accounts", icon: Share2 },

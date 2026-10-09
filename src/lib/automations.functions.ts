@@ -53,6 +53,8 @@ export type AutomationRun = {
   status: "matched" | "sent" | "skipped" | "failed";
   detail: string | null;
   created_at: string;
+  run_key?: string | null;
+  contact?: { name: string | null; platform: string; channel: string } | null;
 };
 
 const SELECT =
@@ -247,14 +249,17 @@ export const listAutomationRuns = createServerFn({ method: "GET" })
   .handler(async ({ data, context }) => {
     let query = context.supabase
       .from("automation_runs")
-      .select("id, rule_id, conversation_id, status, detail, created_at")
+      .select("id, rule_id, conversation_id, status, detail, created_at, run_key, conversations(external_user_name, platform, channel)")
       .eq("organization_id", data.organizationId);
     if (data.source === "flows") query = query.like("detail", "flow:%");
     if (data.source === "rules") query = query.not("rule_id", "is", null).or("detail.is.null,detail.not.like.flow:%");
     if (data.source === "system") query = query.is("rule_id", null).or("detail.is.null,detail.not.like.flow:%");
     const { data: rows, error } = await query.order("created_at", { ascending: false }).limit(data.limit ?? 40);
     if (error) throw new Error(error.message);
-    return (rows ?? []) as AutomationRun[];
+    return (rows ?? []).map((r) => {
+      const { conversations: c, ...rest } = r as typeof r & { conversations: { external_user_name: string | null; platform: string; channel: string } | null };
+      return { ...rest, contact: c ? { name: c.external_user_name, platform: c.platform, channel: c.channel } : null } as AutomationRun;
+    });
   });
 
 // ---------------------------------------------------------- activity feed

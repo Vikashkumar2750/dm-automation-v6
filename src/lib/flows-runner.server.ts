@@ -6,7 +6,7 @@
  * Every failure is caught and logged; it can never throw into the webhook.
  * All org safety settings (pause, quiet hours, caps, opt-out) apply.
  */
-import { sanitizeFlows, flowTriggerFor, conditionPasses, leadAnswer, type Flow, type FlowStep, type LeadField } from "@/lib/flows";
+import { sanitizeFlows, flowTriggerFor, flowTargetsPost, conditionPasses, leadAnswer, type Flow, type FlowStep, type LeadField } from "@/lib/flows";
 import { callbackMatches, flowCallbackPayload, parseFlowCallback, type FlowCallback } from "@/lib/flow-callback";
 import { extractContactInfo } from "@/lib/crm";
 
@@ -25,6 +25,10 @@ export type FlowEvent = {
   externalId: string | null;
   trigger?: string;
   payload?: string | null;
+  /** Comment's post/reel id, used by flows limited to selected posts. */
+  postExternalId?: string | null;
+  /** Groups every step of one run (Activity + plan usage: 1 run = 1 count). */
+  runKey?: string;
 };
 
 type FormProgress = { step: number; field: number; answers: Record<string, string> };
@@ -57,6 +61,7 @@ async function log(admin: AdminClient, ev: FlowEvent, status: string, detail: st
     conversation_id: ev.conversationId,
     status,
     detail: `flow:${detail}`.slice(0, 300),
+    run_key: ev.runKey ?? null,
   });
 }
 
@@ -467,7 +472,7 @@ export async function runLiveFlows(admin: AdminClient, ev: FlowEvent, startedAt:
     if ((ruleSent ?? 0) === 0 && (await continueLeadForm(admin, ev, flags))) return;
     const trigger = flowTriggerFor(ev.channel, ev.trigger);
     const flows = sanitizeFlows(flags[`flows_cfg_${ev.organizationId}`]).filter(
-      (f) => f.active && f.trigger === trigger && (f.platform === "both" || f.platform === ev.platform),
+      (f) => f.active && f.trigger === trigger && (f.platform === "both" || f.platform === ev.platform) && flowTargetsPost(f, ev.postExternalId ?? null),
     );
     if (flows.length === 0) return;
     // Keyword rules win: if one already sent for this event, flows stay quiet.
@@ -475,7 +480,7 @@ export async function runLiveFlows(admin: AdminClient, ev: FlowEvent, startedAt:
       .eq("conversation_id", ev.conversationId).eq("status", "sent").not("rule_id", "is", null).gte("created_at", startedAt);
     if ((count ?? 0) > 0) return;
     for (const flow of flows) {
-      if (await executeSteps(admin, flow, { ...ev }, 0)) return;
+      if (await executeSteps(admin, flow, { ...ev, runKey: `flow:${flow.id}:${crypto.randomUUID()}` }, 0)) return;
     }
   } catch (e) {
     console.error("live flow failed", e);

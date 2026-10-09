@@ -120,7 +120,7 @@ function UsagePage() {
               {pu?.monthlyDms == null ? (
                 <p className="text-sm">DMs this month: <span className="num font-medium">{pu?.dmsThisMonth ?? 0}</span> (unlimited)</p>
               ) : (
-                <UsageMeter label="DMs this month" used={pu.dmsThisMonth} limit={pu.monthlyDms || 1} unit="DMs" />
+                <UsageMeter label="Automation runs this month (1 run = 1, however many steps)" used={pu.dmsThisMonth} limit={pu.monthlyDms || 1} unit="runs" />
               )}
               {pu?.maxRules == null ? (
                 <p className="text-sm">Active rules: <span className="num font-medium">{pu?.activeRules ?? 0}</span> (unlimited)</p>

@@ -404,6 +404,7 @@ async function ingestIntoInbox(
       body,
       externalUserId,
       externalId,
+      postExternalId,
       ...(storyTrigger ? { trigger: storyTrigger } : {}),
     }, flowsStartedAt);
     // Phase C AI agent: own flags, off by default, DMs only, never throws.

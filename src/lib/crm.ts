@@ -29,6 +29,18 @@ export function contactsToCsv(rows: CrmContact[]): string {
   return [head.join(","), ...lines].join("\n");
 }
 
+export type PageLead = { id: string; pageTitle: string; pageSlug: string; answers: Record<string, string>; createdAt: string };
+
+/** Delivery-page form leads → CSV. Standard columns first, then every custom answer. */
+export function pageLeadsToCsv(rows: PageLead[]): string {
+  const std = ["name", "email", "phone", "pincode"];
+  const extra = [...new Set(rows.flatMap((r) => Object.keys(r.answers)).filter((k) => !std.includes(k)))].sort();
+  const head = [...std, ...extra, "page", "page_link", "submitted_at"];
+  const lines = rows.map((r) =>
+    [...std.map((k) => r.answers[k] ?? ""), ...extra.map((k) => r.answers[k] ?? ""), r.pageTitle, `/p/${r.pageSlug}`, r.createdAt].map(cell).join(","));
+  return [head.join(","), ...lines].join("\n");
+}
+
 /** Find an email / phone number inside message text (used to suggest values). */
 export function extractContactInfo(text: string): { email: string | null; phone: string | null } {
   const email = text.match(/[\w.+-]+@[\w-]+\.[\w.-]+/)?.[0] ?? null;

@@ -85,7 +85,20 @@ export type Flow = {
   updatedAt: string;
   triggerPos?: CanvasPos | undefined;
   addPos?: CanvasPos | undefined;
+  /** Comment flows only: limit to these posts/reels. Empty or missing = all posts. */
+  targetPostIds?: string[] | undefined;
 };
+
+export const MAX_TARGET_POSTS = 50;
+
+/** A comment flow with no selected posts applies to every post (same rule as keyword rules). */
+export function flowTargetsPost(flow: Pick<Flow, "trigger" | "targetPostIds">, postExternalId: string | null): boolean {
+  if (flow.trigger !== "new_comment") return true;
+  const targets = (flow.targetPostIds ?? []).map((t) => t.trim()).filter(Boolean);
+  if (targets.length === 0) return true;
+  if (!postExternalId) return false;
+  return targets.some((t) => t === postExternalId || postExternalId.endsWith(`_${t}`) || t.endsWith(`_${postExternalId}`));
+}
 
 export const MAX_FLOWS = 20;
 export const MAX_STEPS = 25;
@@ -116,6 +129,9 @@ export function sanitizeFlows(raw: unknown): Flow[] {
       }));
     const triggerPos = sanitizePos(r.triggerPos);
     const addPos = sanitizePos(r.addPos);
+    const targetPostIds = Array.isArray(r.targetPostIds)
+      ? [...new Set(r.targetPostIds.map((t) => String(t ?? "").trim().slice(0, 80)).filter((t) => /^[\w.:-]+$/.test(t)))].slice(0, MAX_TARGET_POSTS)
+      : [];
     return [{
       id: typeof r.id === "string" ? r.id.slice(0, 20) : id(),
       name: r.name.trim().slice(0, 80) || "Untitled flow",
@@ -126,6 +142,7 @@ export function sanitizeFlows(raw: unknown): Flow[] {
       updatedAt: typeof r.updatedAt === "string" ? r.updatedAt : new Date().toISOString(),
       ...(triggerPos ? { triggerPos } : {}),
       ...(addPos ? { addPos } : {}),
+      ...(trigger === "new_comment" && targetPostIds.length ? { targetPostIds } : {}),
     }];
   });
 }
