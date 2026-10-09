@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { explainReason } from "@/lib/activity-explain";
+import { contactLabel, fillSiblingNames } from "@/lib/contact-name";
 
 export type ReportRow = {
   id: string;
@@ -37,6 +38,9 @@ export type AutomationReport = {
 
 const PUBLIC = ["comment_reply", "comment_public_reply"];
 const FINAL = ["reply_dm", "comment_private_reply"];
+/** Flow steps that put a message in the contact's inbox. */
+const isFlowDm = (d: string) => /^flow:.*:(send_dm|opening_dm|send_offer|send_payment|send_coupon|ask_contact|lead_form|follow_gate)/.test(d);
+const flowName = (d: string) => (d.startsWith("flow:") ? d.slice(5).split(":")[0] || "Flow" : null);
 const GAP = 24 * 60 * 60 * 1000;
 
 function stageOf(detail: string, sent: Set<string>, channel: string) {
@@ -81,7 +85,7 @@ export const getAutomationReport = createServerFn({ method: "GET" })
     ]);
     for (const r of [runsRes, convRes, rulesRes]) if (r.error) throw new Error(r.error.message);
 
-    const convs = new Map((convRes.data ?? []).map((c) => [c.id, c]));
+    const convs = new Map(fillSiblingNames(convRes.data ?? []).map((c) => [c.id, c]));
     const rules = new Map((rulesRes.data ?? []).map((r) => [r.id, r.name]));
 
     type Attempt = ReportRow & { last: number; sent: Set<string>; channel: string };
@@ -120,9 +124,9 @@ export const getAutomationReport = createServerFn({ method: "GET" })
       if (!a || t - a.last > GAP) {
         a = {
           id: run.id,
-          handle: conv.external_user_name || conv.external_user_id,
+          handle: contactLabel(conv),
           platform: conv.platform,
-          rule: run.rule_id ? (rules.get(run.rule_id) ?? "Deleted rule") : "Safety settings",
+          rule: run.rule_id ? (rules.get(run.rule_id) ?? "Deleted rule") : flowName(detail) ? `Flow: ${flowName(detail)}` : "Safety check",
           startedAt: run.created_at,
           publicReply: false,
           finalDm: false,
@@ -147,7 +151,10 @@ export const getAutomationReport = createServerFn({ method: "GET" })
           a.publicReply = true;
           publicReplies++;
         }
-        if (FINAL.includes(detail)) {
+        if (PUBLIC.includes(detail) || detail.endsWith(":public_reply")) {
+          if (!a.publicReply && detail.endsWith(":public_reply")) { a.publicReply = true; publicReplies++; }
+        }
+        if (FINAL.includes(detail) || isFlowDm(detail)) {
           a.finalDm = true;
           a.sentAt = run.created_at;
           a.outcome = "delivered";
@@ -162,11 +169,24 @@ export const getAutomationReport = createServerFn({ method: "GET" })
         a.failedReason = explainReason(detail).title;
       } else if (run.status === "skipped") {
         skipped++;
-        if (a.outcome === "in_progress" && a.sent.size === 0) {
+        if (a.outcome === "in_progress" && !a.finalDm) {
           a.outcome = "skipped";
           a.failedStage = "Skipped";
           a.failedReason = explainReason(detail).title;
         }
+      }
+    }
+
+    // Close attempts that are no longer waiting on the contact.
+    const now = Date.now();
+    for (const a of attempts) {
+      if (a.outcome !== "in_progress") continue;
+      const waiting = [...a.sent].some((d) => /follow_prompt|tap_prompt|follow_status_unavailable/.test(d));
+      if (a.sent.size > 0 && !waiting) a.outcome = "delivered"; // public reply / status / hide only
+      else if (now - a.last > GAP) {
+        a.outcome = "skipped";
+        a.failedStage = waiting ? "Waiting for tap" : "No reply";
+        a.failedReason = waiting ? "Contact never tapped the button within 24h" : "Nothing was sent";
       }
     }
 
