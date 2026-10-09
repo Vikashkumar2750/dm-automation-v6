@@ -34,3 +34,13 @@ describe("flow templates", () => {
     }
   });
 });
+
+import { pageLeadsToCsv } from "./crm";
+describe("delivery page lead export", () => {
+  it("puts name, email, phone, pincode first and adds custom answers and page", () => {
+    const csv = pageLeadsToCsv([{ id: "1", pageTitle: "Webinar", pageSlug: "webinar", createdAt: "2026-10-09", answers: { name: "Asha", email: "a@x.in", phone: "9999999999", pincode: "110001", city: "Delhi" } }]);
+    const [head, row] = csv.split("\n");
+    expect(head).toBe("name,email,phone,pincode,city,page,page_link,submitted_at");
+    expect(row).toBe('"Asha","a@x.in","9999999999","110001","Delhi","Webinar","/p/webinar","2026-10-09"');
+  });
+});

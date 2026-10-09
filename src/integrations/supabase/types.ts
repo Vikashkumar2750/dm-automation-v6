@@ -322,6 +322,7 @@ export type Database = {
           message_id: string | null
           organization_id: string
           rule_id: string | null
+          run_key: string | null
           status: Database["public"]["Enums"]["automation_run_status"]
         }
         Insert: {
@@ -332,6 +333,7 @@ export type Database = {
           message_id?: string | null
           organization_id: string
           rule_id?: string | null
+          run_key?: string | null
           status?: Database["public"]["Enums"]["automation_run_status"]
         }
         Update: {
@@ -342,6 +344,7 @@ export type Database = {
           message_id?: string | null
           organization_id?: string
           rule_id?: string | null
+          run_key?: string | null
           status?: Database["public"]["Enums"]["automation_run_status"]
         }
         Relationships: [
@@ -2516,6 +2519,10 @@ export type Database = {
     Functions: {
       consume_ai_request: {
         Args: { _limit: number; _user_id: string }
+        Returns: number
+      }
+      count_org_runs: {
+        Args: { _org_id: string; _since: string }
         Returns: number
       }
       current_user_has_org_role: {

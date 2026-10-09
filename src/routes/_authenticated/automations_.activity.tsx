@@ -8,6 +8,7 @@ import { EmptyState, PageHeader, Panel, StatusBadge } from "@/components/app/pri
 import { Button } from "@/components/ui/button";
 import { useTenant } from "@/hooks/useTenant";
 import { activityName, explainReason, stepLabel } from "@/lib/activity-explain";
+import { groupRuns } from "@/lib/activity-groups";
 import { listAutomationRules, listAutomationRuns } from "@/lib/automations.functions";
 
 export const Route = createFileRoute("/_authenticated/automations_/activity")({
@@ -26,6 +27,8 @@ export const Route = createFileRoute("/_authenticated/automations_/activity")({
 });
 
 const tone = { sent: "success", matched: "info", skipped: "neutral", failed: "danger" } as const;
+const groupTone = { completed: "success", in_progress: "info", skipped: "neutral", failed: "danger" } as const;
+const groupLabel = { completed: "Completed", in_progress: "In progress", skipped: "Skipped", failed: "Failed" } as const;
 const FILTERS = ["all", "sent", "skipped", "failed"] as const;
 
 function ActivityPage() {
@@ -51,6 +54,7 @@ function ActivityPage() {
   const ruleName = (id: string | null) =>
     !id ? "Safety settings" : (rules.find((r) => r.id === id)?.name ?? "Deleted rule");
   const runs = (runsQuery.data ?? []).filter((r) => filter === "all" || r.status === filter);
+  const groups = groupRuns(runs);
 
   return (
     <AppShell>
@@ -60,11 +64,11 @@ function ActivityPage() {
         </Button>
         <PageHeader
           title="Automation activity"
-          description="Every step your automations took. Tap any entry to see full details."
+          description="One entry per automation run. Tap a run to see every step; tap a step for full details."
         />
         <div className="flex gap-2">{(["flows", "rules", "system"] as const).map((s) => <Button key={s} variant={source === s ? "default" : "outline"} onClick={() => navigate({ search: { source: s, filter } })}>{s === "flows" ? "FLOW" : s === "rules" ? "Rule" : "System / safety"}</Button>)}</div>
         <Panel
-          title={`${runs.length} entries`}
+          title={`${groups.length} automation runs · ${runs.length} steps`}
           bodyClassName="p-0"
           action={
             <div className="flex gap-1">
@@ -84,27 +88,45 @@ function ActivityPage() {
             </div>
           ) : (
             <ul className="divide-y">
-              {runs.map((run) => {
-                const ok = run.status === "sent" || run.status === "matched";
-                const ex = ok ? null : explainReason(run.detail);
+              {groups.map((g) => {
+                const first = g.steps[0]!;
+                const name = activityName(first, ruleName);
+                const c = g.steps.find((x) => x.contact)?.contact;
                 return (
-                  <li key={run.id}>
-                    <Link
-                      to="/automations/activity/$runId"
-                      params={{ runId: run.id }}
-                      search={{ source, filter }}
-                      className="flex items-center gap-3 px-5 py-3 hover:bg-muted/50"
-                    >
-                      <StatusBadge tone={tone[run.status]}>{run.status}</StatusBadge>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium">
-                          {ok ? `${activityName(run, ruleName)}: ${stepLabel(run.detail)}` : `${ex?.title} — ${activityName(run, ruleName)}`}
-                        </p>
-                        {ex?.hint && <p className="truncate text-xs text-muted-foreground">{ex.hint}</p>}
-                        <p className="text-xs text-muted-foreground">{new Date(run.created_at).toLocaleString()}</p>
-                      </div>
-                      <ChevronRight className="size-4 text-muted-foreground" />
-                    </Link>
+                  <li key={g.key}>
+                    <details className="group">
+                      <summary className="flex cursor-pointer list-none items-center gap-3 px-5 py-3 hover:bg-muted/50">
+                        <StatusBadge tone={groupTone[g.status]}>{groupLabel[g.status]}</StatusBadge>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-medium">{name}</p>
+                          <p className="truncate text-xs text-muted-foreground">
+                            {c ? `${c.channel === "comment" ? "Comment" : "DM"} · ${c.platform === "facebook" ? "Facebook" : c.platform === "instagram" ? "Instagram" : c.platform}${c.name ? ` · @${c.name}` : ""} · ` : ""}
+                            {g.steps.length} step{g.steps.length > 1 ? "s" : ""}{g.sent ? ` · ${g.sent} sent` : ""} · {new Date(g.startedAt).toLocaleString()}
+                          </p>
+                        </div>
+                        <ChevronRight className="size-4 text-muted-foreground transition-transform group-open:rotate-90" />
+                      </summary>
+                      <ol className="ml-8 border-l pb-2">
+                        {g.steps.map((run) => {
+                          const ok = run.status === "sent" || run.status === "matched";
+                          const ex = ok ? null : explainReason(run.detail);
+                          return (
+                            <li key={run.id}>
+                              <Link to="/automations/activity/$runId" params={{ runId: run.id }} search={{ source, filter }}
+                                className="flex items-center gap-3 px-4 py-2 hover:bg-muted/50">
+                                <StatusBadge tone={tone[run.status]}>{run.status}</StatusBadge>
+                                <div className="min-w-0 flex-1">
+                                  <p className="truncate text-sm">{ok ? stepLabel(run.detail) : ex?.title}</p>
+                                  {ex?.hint && <p className="truncate text-xs text-muted-foreground">{ex.hint}</p>}
+                                  <p className="text-xs text-muted-foreground">{new Date(run.created_at).toLocaleTimeString()}</p>
+                                </div>
+                                <ChevronRight className="size-4 text-muted-foreground" />
+                              </Link>
+                            </li>
+                          );
+                        })}
+                      </ol>
+                    </details>
                   </li>
                 );
               })}

@@ -131,3 +131,23 @@ describe("canvas positions", () => {
     expect(f!.steps[1]!.pos).toEqual({ x: 300, y: 40 });
   });
 });
+
+import { flowTargetsPost } from "./flows";
+describe("flow post targeting", () => {
+  it("no selected posts = every post", () => {
+    expect(flowTargetsPost({ trigger: "new_comment", targetPostIds: [] }, "123")).toBe(true);
+  });
+  it("selected posts only match those posts", () => {
+    const f = { trigger: "new_comment" as const, targetPostIds: ["111", "222"] };
+    expect(flowTargetsPost(f, "222")).toBe(true);
+    expect(flowTargetsPost(f, "pageid_111")).toBe(true);
+    expect(flowTargetsPost(f, "333")).toBe(false);
+  });
+  it("DM flows ignore post selection", () => {
+    expect(flowTargetsPost({ trigger: "new_dm", targetPostIds: ["111"] }, null)).toBe(true);
+  });
+  it("saved selection survives sanitize", () => {
+    const [f] = sanitizeFlows([{ ...base, targetPostIds: ["111", "111", "bad id!"] }]);
+    expect(f!.targetPostIds).toEqual(["111"]);
+  });
+});

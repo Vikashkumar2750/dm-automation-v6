@@ -16,7 +16,7 @@ const GUIDES = {
   automations: { title: "Automations guide", file: "automations-guide.md", md: automationsMd },
   "ai-agent": { title: "AI Agent guide", file: "ai-agent-guide.md", md: aiAgentMd },
   contacts: { title: "Contacts guide", file: "contacts-guide.md", md: contactsMd },
-  revenue: { title: "Revenue guide", file: "revenue-guide.md", md: revenueMd },
+  revenue: { title: "Sales & Revenue guide", file: "revenue-guide.md", md: revenueMd },
   "team-desk": { title: "Team desk guide", file: "team-desk-guide.md", md: teamDeskMd },
   "trust-safety": { title: "Trust & safety guide", file: "trust-safety-guide.md", md: trustSafetyMd },
   growth: { title: "Growth insights guide", file: "growth-guide.md", md: growthMd },

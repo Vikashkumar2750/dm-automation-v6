@@ -192,6 +192,8 @@ async function log(
     conversation_id: ctx.conversationId,
     status,
     detail: detail ?? null,
+    // Groups the steps of one rule run (comment reply + DM) so usage counts it once.
+    run_key: ctx.correlationId && ruleId ? `rule:${ruleId}:${ctx.correlationId}` : null,
   });
 }
 

@@ -1,3 +1,4 @@
+import { PostPicker } from "@/components/app/PostPicker";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -302,7 +303,7 @@ function FlowsPage() {
                     className={`w-full rounded-md px-3 py-2 text-left text-sm ${f.id === selected ? "bg-accent text-accent-foreground" : "hover:bg-muted"}`}
                   >
                     <span className="block truncate font-medium">{f.name}</span>
-                    <span className="text-xs text-muted-foreground">{TRIGGER_LABELS[f.trigger]} · {f.steps.length} steps</span>
+                    <span className="text-xs text-muted-foreground">{TRIGGER_LABELS[f.trigger]}{f.trigger === "new_comment" ? (f.targetPostIds?.length ? ` · ${f.targetPostIds.length} post(s)` : " · all posts") : ""} · {f.steps.length} steps</span>
                   </button>
                 </li>
               ))}
@@ -369,6 +370,17 @@ function FlowsPage() {
                     <option value="instagram">Instagram</option>
                     <option value="facebook">Facebook</option>
                   </select>
+                  {flow.trigger === "new_comment" && (
+                    <div className="w-full max-w-xl" onPointerDown={(e) => e.stopPropagation()} onWheel={(e) => e.stopPropagation()}>
+                      <PostPicker
+                        orgId={orgId}
+                        trigger="comment_received"
+                        platform={flow.platform === "both" ? "all" : flow.platform}
+                        selected={flow.targetPostIds ?? []}
+                        onChange={(ids) => update({ targetPostIds: ids })}
+                      />
+                    </div>
+                  )}
                 </div>
               }
               renderStep={(s, i) => (
@@ -657,7 +669,7 @@ function QuickCreate({ kind, onCreated }: { kind: "product" | "coupon" | "page";
             <Input placeholder="Discount (e.g. 20% off)" value={f.label} onChange={(e) => setF({ ...f, label: e.target.value })} />
             <Input type="number" min={1} placeholder="How many codes" value={f.max} onChange={(e) => setF({ ...f, max: e.target.value })} />
           </>
-        ) : <p className="text-xs text-muted-foreground">Creates a professionally formatted starter page. Add its image, deadline and final copy in Revenue.</p>}
+        ) : <p className="text-xs text-muted-foreground">Creates a professionally formatted starter page. Add its image, deadline and final copy in Sales & Revenue.</p>}
         <Button size="sm" className="w-full" disabled={m.isPending || !f.name} onClick={() => m.mutate()}>{m.isPending ? "Saving…" : "Create & select"}</Button>
       </PopoverContent>
     </Popover>

@@ -88,3 +88,11 @@ Real Meta + YouTube credentials are available when we reach OAuth phases.
 - [x] Flow Builder: visible automatic “I followed” preview and advanced All-in-one qualification-to-sale template
 - [x] Buyer-bound offer page step with in-place product/page setup and personal payment CTA
 - [x] Delivery pages: optional private product image, fixed countdown/expiry state, professional format and hybrid form configuration
+
+## Sales & flows upgrade (Oct 9)
+- [x] Rename Revenue → Sales & Revenue
+- [x] Delivery page leads in Contacts + CSV export
+- [x] 1 run = 1 usage count; Activity grouped per run
+- [x] Flow Builder: choose specific posts/reels
+- [x] Expert-level templates (all categories + All-in-one)
+- [ ] Owner: redeploy Railway and test a real comment on a selected post
