@@ -96,3 +96,9 @@ Real Meta + YouTube credentials are available when we reach OAuth phases.
 - [x] Flow Builder: choose specific posts/reels
 - [x] Expert-level templates (all categories + All-in-one)
 - [ ] Owner: redeploy Railway and test a real comment on a selected post
+
+## Comment review and mobile (Oct 10)
+- [ ] Add supported comment edit/delete controls with authorization and regression tests.
+- [ ] Improve phone layouts across customer/admin pages and verify representative workflows.
+- [ ] Add accurate comment re-submission and screencast instructions to Meta App Review guides.
+- [ ] Owner: verify actual Meta comment changes on the connected test Page/account after deployment.
