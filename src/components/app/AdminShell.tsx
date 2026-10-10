@@ -20,7 +20,7 @@ import {
   Workflow,
   type LucideIcon,
 } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -135,6 +135,15 @@ export function AdminShell({
 }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [mobileOpen, setMobileOpen] = useState(false);
+  useEffect(() => { setMobileOpen(false); }, [pathname]);
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const close = (event: KeyboardEvent) => { if (event.key === "Escape") setMobileOpen(false); };
+    document.addEventListener("keydown", close);
+    return () => { document.body.style.overflow = previous; document.removeEventListener("keydown", close); };
+  }, [mobileOpen]);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -158,13 +167,13 @@ export function AdminShell({
             className="absolute inset-0 bg-foreground/30"
             onClick={() => setMobileOpen(false)}
           />
-          <div className="absolute inset-y-0 left-0 w-64">
+          <div role="dialog" aria-modal="true" aria-label="Navigation" className="absolute inset-y-0 left-0 w-64 max-w-[85vw]">
             <Sidebar pathname={pathname} />
           </div>
         </div>
       )}
 
-      <div className="lg:pl-64">
+      <div className="min-w-0 lg:pl-64">
         <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b bg-surface px-4 lg:px-6">
           <Button
             variant="ghost"
@@ -189,7 +198,7 @@ export function AdminShell({
             {banner}
           </div>
         ) : null}
-        <main className="p-4 lg:p-6">
+        <main className="app-content min-w-0 p-3 sm:p-4 lg:p-6">
           <PageReadyGate>{children}</PageReadyGate>
         </main>
       </div>

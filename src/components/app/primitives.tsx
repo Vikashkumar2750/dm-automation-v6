@@ -21,14 +21,14 @@ export function Panel({
   bodyClassName?: string;
 }) {
   return (
-    <section className={cn("panel flex flex-col", className)}>
+    <section className={cn("panel flex min-w-0 flex-col", className)}>
       {(title || action) && (
-        <header className="flex items-center justify-between gap-3 border-b px-5 py-4">
-          <h2 className="text-base font-semibold">{title}</h2>
-          {action}
+        <header className="grid min-w-0 gap-3 border-b px-4 py-4 sm:flex sm:items-center sm:justify-between sm:px-5">
+          <h2 className="min-w-0 break-words text-base font-semibold">{title}</h2>
+          {action && <div className="flex min-w-0 flex-wrap items-center gap-2">{action}</div>}
         </header>
       )}
-      <div className={cn("p-5", bodyClassName)}>{children}</div>
+      <div className={cn("min-w-0 p-4 sm:p-5", bodyClassName)}>{children}</div>
     </section>
   );
 }
@@ -224,14 +224,14 @@ export function PageHeader({
   actions?: ReactNode;
 }) {
   return (
-    <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
+    <div className="mb-6 grid min-w-0 gap-4 sm:flex sm:flex-wrap sm:items-start sm:justify-between">
+      <div className="min-w-0">
+        <h1 className="break-words text-2xl font-semibold">{title}</h1>
         {description && (
           <p className="mt-1 text-sm text-muted-foreground">{description}</p>
         )}
       </div>
-      {actions && <div className="flex items-center gap-2">{actions}</div>}
+      {actions && <div className="flex min-w-0 flex-wrap items-center gap-2">{actions}</div>}
     </div>
   );
 }
