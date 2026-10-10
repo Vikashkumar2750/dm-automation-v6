@@ -431,11 +431,12 @@ export const setCommentHidden = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { data: conversation, error } = await context.supabase
       .from("conversations")
-      .select("id, organization_id, social_account_id, channel")
+      .select("id, organization_id, social_account_id, channel, platform")
       .eq("id", data.conversationId)
       .single();
     if (error || !conversation) throw new Error("Conversation not found");
     if (conversation.channel !== "comment") throw new Error("not_a_comment");
+    if (conversation.platform === "youtube") throw new Error("youtube_public_only");
 
     const { data: allowed } = await context.supabase.rpc("current_user_has_org_role", {
       _org_id: conversation.organization_id,
@@ -470,7 +471,7 @@ export const setCommentHidden = createServerFn({ method: "POST" })
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          hide: data.hidden,
+          ...(conversation.platform === "facebook" ? { is_hidden: data.hidden } : { hide: data.hidden }),
           access_token: tokenRow.access_token,
         }),
       },
@@ -479,6 +480,61 @@ export const setCommentHidden = createServerFn({ method: "POST" })
     if (!response.ok || result.error) {
       throw new Error(result.error?.message ?? "Meta rejected the request");
     }
+    return { ok: true };
+  });
+
+/** Moderation targets a stored message, never an arbitrary caller-supplied Meta ID. */
+export const moderateComment = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => z.object({
+    conversationId: z.string().uuid(),
+    messageId: z.string().uuid(),
+    action: z.enum(["edit", "delete"]),
+    body: z.string().trim().min(1).max(1000).optional(),
+  }).parse(data))
+  .handler(async ({ data, context }) => {
+    const { data: conversation, error } = await context.supabase.from("conversations")
+      .select("id, organization_id, social_account_id, channel, platform")
+      .eq("id", data.conversationId).single();
+    if (error || !conversation) throw new Error("Conversation not found");
+    if (conversation.channel !== "comment" || conversation.platform === "youtube") throw new Error("unsupported_comment_action");
+    const { data: allowed } = await context.supabase.rpc("current_user_has_org_role", {
+      _org_id: conversation.organization_id, _roles: [...WRITE_ROLES],
+    });
+    if (!allowed) throw new Error("not_allowed");
+    const [{ data: teamSettings }, { data: member }] = await Promise.all([
+      context.supabase.from("team_settings").select("require_approval").eq("organization_id", conversation.organization_id).maybeSingle(),
+      context.supabase.from("organization_members").select("role").eq("organization_id", conversation.organization_id).eq("user_id", context.userId).maybeSingle(),
+    ]);
+    if (teamSettings?.require_approval && member?.role === "agent") throw new Error("approval_required");
+    const { data: message } = await context.supabase.from("messages")
+      .select("id, external_id, direction, body")
+      .eq("id", data.messageId).eq("conversation_id", conversation.id).single();
+    if (!message?.external_id || message.body === "[deleted comment]" ||
+      (message.direction === "outbound" && !message.body.startsWith("[public reply] "))) throw new Error("no_comment_id");
+    const { canEditComment, commentRequest } = await import("@/lib/comment-moderation");
+    if (data.action === "edit" && !canEditComment(conversation.platform, message.direction, message.body, message.external_id)) throw new Error("comment_edit_unsupported");
+    if (!conversation.social_account_id) throw new Error("no_account");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: tokenRow } = await supabaseAdmin.from("social_account_tokens")
+      .select("access_token").eq("social_account_id", conversation.social_account_id).single();
+    const { readToken } = await import("@/lib/token-crypto.server");
+    const token = tokenRow?.access_token ? await readToken(tokenRow.access_token) : null;
+    if (!token) throw new Error("no_token");
+    const request = commentRequest(data.action, message.external_id, token, data.body);
+    const response = await fetch(request.url, request.init);
+    const result = await response.json() as { success?: boolean; error?: { code?: number } } | boolean;
+    if (!response.ok || result === false || (typeof result === "object" && (result.error || result.success === false))) {
+      throw new Error("Meta could not complete this action. Check the comment still exists and the connected account has comment permissions.");
+    }
+    const body = data.action === "delete" ? "[deleted comment]" : `[public reply] ${data.body}`;
+    const { error: saveError } = await supabaseAdmin.from("messages")
+      .update({ body, ...(data.action === "delete" ? { external_id: null } : {}) })
+      .eq("id", message.id).eq("conversation_id", conversation.id);
+    if (saveError) throw new Error("Comment changed on Meta, but the inbox could not refresh. Reload before trying again.");
+    const { data: latest } = await supabaseAdmin.from("messages").select("body")
+      .eq("conversation_id", conversation.id).order("sent_at", { ascending: false }).limit(1).maybeSingle();
+    if (latest) await supabaseAdmin.from("conversations").update({ last_message_preview: latest.body.slice(0, 140) }).eq("id", conversation.id);
     return { ok: true };
   });
 

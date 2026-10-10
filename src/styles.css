@@ -174,7 +174,17 @@
 
 @utility num {
   font-variant-numeric: tabular-nums;
-  letter-spacing: -0.01em;
+  letter-spacing: 0;
+}
+
+/* Shared page containment: wide data stays scrollable inside its own region. */
+.app-content { overflow-wrap: anywhere; }
+.app-content :where(.grid, .panel, [role="tabpanel"], .overflow-x-auto) { min-width: 0; }
+.app-content .overflow-x-auto { max-width: 100%; overscroll-behavior-x: contain; }
+@media (max-width: 639px) {
+  .app-content :where(input:not([type="checkbox"]):not([type="radio"]):not([type="color"]), textarea, select) { min-width: 0; max-width: 100%; font-size: 16px; }
+  .app-content :where(button, [role="tab"], select) { min-height: 40px; }
+  .app-content [role="tablist"] { flex-wrap: nowrap; max-width: 100%; overflow-x: auto; }
 }
 
 .blog-content { line-height: 1.75; }
