@@ -128,14 +128,14 @@ function SharedInbox({ orgId, desk, names, members }: { orgId: string; desk: Des
           <ul className="divide-y divide-border">
             {rows.map((c) => (
               <li key={c.id} className="p-3">
-                <div className="flex flex-wrap items-center gap-3">
+                <div className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-3 sm:flex">
                   <PlatformBadge platform={c.platform as SocialPlatform} size="sm" />
                   <button className="min-w-0 flex-1 text-left" onClick={() => setOpenId(openId === c.id ? null : c.id)}>
                     <div className="truncate text-sm font-medium">{contactLabel(c)} <span className="text-xs text-muted-foreground">· {c.channel}</span></div>
                     <div className="truncate text-xs text-muted-foreground">{c.last_message_preview}</div>
                   </button>
                   <select
-                    className={sel}
+                    className={`${sel} col-span-2 w-full sm:w-auto`}
                     disabled={!canWrite}
                     value={desk.assignment[c.id] ?? ""}
                     onChange={(e) => assignM.mutate({ conversationId: c.id, assignedTo: e.target.value || null })}
@@ -146,7 +146,7 @@ function SharedInbox({ orgId, desk, names, members }: { orgId: string; desk: Des
                   </select>
                 </div>
                 {openId === c.id && canWrite && c.channel === "dm" && (
-                  <div className="mt-3 flex gap-2">
+                  <div className="mt-3 flex flex-col gap-2 sm:flex-row">
                     <Textarea value={text} onChange={(e) => setText(e.target.value)} placeholder="Write a reply…" maxLength={1000} className="min-h-[60px]" />
                     <Button disabled={!text.trim() || replyM.isPending} onClick={() => replyM.mutate(c.id)}>
                       {needApproval ? "Send for approval" : "Send"}

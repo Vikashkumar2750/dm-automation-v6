@@ -12,8 +12,10 @@ import teamDeskMd from "@/content/guides/team-desk.md?raw";
 import trustSafetyMd from "@/content/guides/trust-safety.md?raw";
 import growthMd from "@/content/guides/growth.md?raw";
 import entryPointsMd from "@/content/guides/entry-points.md?raw";
+import metaReviewMd from "@/content/guides/meta-review.md?raw";
 
 const GUIDES = {
+  "meta-review": { title: "Meta App Review — comments", file: "meta-comment-review-guide.md", md: metaReviewMd },
   automations: { title: "Automations guide", file: "automations-guide.md", md: automationsMd },
   "ai-agent": { title: "AI Agent guide", file: "ai-agent-guide.md", md: aiAgentMd },
   contacts: { title: "Contacts guide", file: "contacts-guide.md", md: contactsMd },

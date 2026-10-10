@@ -30,7 +30,7 @@ import {
   Menu,
   type LucideIcon,
 } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -186,16 +186,16 @@ function TopBar({ onMenu }: { onMenu: () => void }) {
   }
 
   return (
-    <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b bg-surface px-4 lg:px-6">
-      <Button variant="ghost" size="icon" className="lg:hidden" onClick={onMenu}>
+    <header className="sticky top-0 z-20 flex h-16 min-w-0 items-center gap-2 border-b bg-surface px-3 sm:gap-3 lg:px-6">
+      <Button variant="ghost" size="icon" className="shrink-0 lg:hidden" onClick={onMenu}>
         <Menu className="size-5" />
         <span className="sr-only">Toggle navigation</span>
       </Button>
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="outline" className="gap-2">
-            <span className="max-w-40 truncate">
+          <Button variant="outline" className="min-w-0 gap-2">
+            <span className="max-w-28 truncate sm:max-w-40">
               {activeOrg?.name ?? "Loading workspace..."}
             </span>
             <ChevronDown className="size-4 text-muted-foreground" />
@@ -229,7 +229,7 @@ function TopBar({ onMenu }: { onMenu: () => void }) {
         />
       </div>
 
-      <div className="ml-auto flex items-center gap-2">
+      <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-2">
         <Button variant="ghost" size="icon" asChild>
           <Link to="/account-health">
             <Bell className="size-5" />
@@ -275,6 +275,15 @@ function TopBar({ onMenu }: { onMenu: () => void }) {
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [mobileOpen, setMobileOpen] = useState(false);
+  useEffect(() => { setMobileOpen(false); }, [pathname]);
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const close = (event: KeyboardEvent) => { if (event.key === "Escape") setMobileOpen(false); };
+    document.addEventListener("keydown", close);
+    return () => { document.body.style.overflow = previous; document.removeEventListener("keydown", close); };
+  }, [mobileOpen]);
   const tenant = useTenant();
   const fetchStatus = useServerFn(getPlatformStatus);
   const fetchRole = useServerFn(getMyPlatformRole);
@@ -315,16 +324,16 @@ export function AppShell({ children }: { children: ReactNode }) {
             className="absolute inset-0 bg-foreground/30"
             onClick={() => setMobileOpen(false)}
           />
-          <div className="absolute inset-y-0 left-0 w-64">
+          <div role="dialog" aria-modal="true" aria-label="Navigation" className="absolute inset-y-0 left-0 w-64 max-w-[85vw]">
             <Sidebar pathname={pathname} />
           </div>
         </div>
       )}
 
-      <div className="lg:pl-64">
+      <div className="min-w-0 lg:pl-64">
         <TopBar onMenu={() => setMobileOpen(true)} />
         <TrialBanner />
-        <main className="p-4 lg:p-6">
+        <main className="app-content min-w-0 p-3 sm:p-4 lg:p-6">
           <PageReadyGate ready={!tenant.loading && role.isFetched && !role.data?.isSuperAdmin}>
             {children}
           </PageReadyGate>
