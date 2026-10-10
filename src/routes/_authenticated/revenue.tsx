@@ -52,7 +52,7 @@ function RevenuePage() {
         <p className="text-sm text-muted-foreground">Loading…</p>
       ) : (
         <Tabs defaultValue="report">
-          <TabsList className="flex-wrap">
+          <TabsList className="flex-nowrap">
             <TabsTrigger value="report">Sales report</TabsTrigger>
             <TabsTrigger value="products">Products</TabsTrigger>
             <TabsTrigger value="coupons">Coupons</TabsTrigger>
@@ -93,7 +93,7 @@ function Report({ d }: { d: Data }) {
       <Panel title="Comment → DM → click → sale (30 days)">
         <div className="space-y-2">
           {steps.map((s) => (
-            <div key={s.label} className="flex items-center justify-between rounded-lg border border-border px-3 py-2 text-sm">
+            <div key={s.label} className="grid gap-1 rounded-lg border border-border px-3 py-2 text-sm sm:flex sm:items-center sm:justify-between">
               <span>{s.label}</span>
               <span className="font-semibold">{s.value}{s.rate !== null && <span className="ml-2 text-xs font-normal text-muted-foreground">{s.rate}% of previous</span>}</span>
             </div>

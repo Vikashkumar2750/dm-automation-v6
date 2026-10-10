@@ -275,7 +275,7 @@ function FlowsPage() {
         title="Flow Builder"
         description="Advanced mode: chain conditions and actions into one flow. Keyword rules stay as simple mode."
         actions={
-          <div className="flex gap-2">
+          <div className="flex min-w-0 flex-wrap gap-2">
             <GuideButton guide="automations" />
             <Button asChild variant="outline"><Link to="/automations">Back to rules</Link></Button>
             <span className="self-center text-xs text-muted-foreground" aria-live="polite">
@@ -291,7 +291,7 @@ function FlowsPage() {
           : "Test mode: flows are designed and tested here only. They do not send real messages until Super Admin turns on live sending."}
       </div>
       <div className="mt-4 grid gap-4 lg:grid-cols-[240px_minmax(0,1fr)] 2xl:grid-cols-[240px_minmax(0,1fr)_320px]">
-        <Panel title="Flows" action={<Button size="sm" variant="outline" onClick={addFlow} disabled={flows.length >= MAX_FLOWS}><Plus className="size-4" /></Button>}>
+        <Panel title="Flows" bodyClassName="max-h-80 overflow-y-auto lg:max-h-none" action={<Button size="sm" variant="outline" onClick={addFlow} disabled={flows.length >= MAX_FLOWS}><Plus className="size-4" /></Button>}>
           {flows.length === 0 ? (
             <p className="text-sm text-muted-foreground">No flows yet. Click + to start.</p>
           ) : (

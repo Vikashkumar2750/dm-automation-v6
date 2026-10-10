@@ -13,6 +13,7 @@ import {
   StatusBadge,
 } from "@/components/app/primitives";
 import { Button } from "@/components/ui/button";
+import { GuideButton } from "@/components/app/GuideButton";
 import { useTenant } from "@/hooks/useTenant";
 import { listConversations } from "@/lib/inbox.functions";
 import { contactLabel } from "@/lib/contact-name";
@@ -72,9 +73,10 @@ function CommentsPage() {
         title="Comments"
         description="Comment threads from Instagram and Facebook. Reply publicly or privately from the inbox."
         actions={
+          <><GuideButton guide="meta-review" />
           <Button asChild>
             <Link to="/inbox">Open inbox</Link>
-          </Button>
+          </Button></>
         }
       />
 
@@ -107,7 +109,7 @@ function CommentsPage() {
               <Link
                 key={c.id}
                 to="/inbox"
-                className="flex flex-wrap items-center gap-3 rounded-xl border px-4 py-3 transition-colors hover:bg-surface-secondary"
+                className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-3 rounded-xl border px-4 py-3 transition-colors hover:bg-surface-secondary sm:flex"
               >
                 <PlatformBadge platform={c.platform} size="sm" />
                 <div className="min-w-0 flex-1">
@@ -118,7 +120,7 @@ function CommentsPage() {
                     {c.last_message_preview ?? "No preview"}
                   </p>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="col-span-2 flex flex-wrap items-center gap-2 sm:shrink-0">
                   {c.unread_count > 0 && <StatusBadge tone="info">{c.unread_count} new</StatusBadge>}
                   <StatusBadge
                     tone={

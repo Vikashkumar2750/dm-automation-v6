@@ -105,7 +105,7 @@ function ContactsPage() {
         title="Contacts"
         description="Your CRM: tag people, store email/phone and custom fields, and save segments."
         actions={
-          <div className="flex gap-2">
+          <div className="flex min-w-0 flex-wrap gap-2">
             <GuideButton guide="contacts" />
             <Button variant="outline" onClick={exportCsv} disabled={visible.length === 0}><Download className="size-4" /> Export CSV</Button>
             <Button asChild variant="outline"><Link to="/inbox">Open inbox</Link></Button>
@@ -157,13 +157,13 @@ function ContactsPage() {
         ) : (
           <div className="space-y-2">
             {visible.map((c) => (
-              <button key={c.key} onClick={() => setOpenKey(c.key)} className="flex w-full flex-wrap items-center gap-3 rounded-xl border px-4 py-3 text-left hover:bg-muted/50">
+              <button key={c.key} onClick={() => setOpenKey(c.key)} className="grid w-full min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-3 rounded-xl border px-4 py-3 text-left hover:bg-muted/50 sm:flex">
                 <PlatformBadge platform={c.platform} size="sm" />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium">{c.name}</p>
                   <p className="truncate text-xs text-muted-foreground">{c.email ?? c.lastPreview ?? "No preview"}</p>
                 </div>
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="col-span-2 flex flex-wrap items-center gap-2">
                   {c.tags.slice(0, 3).map((t) => <StatusBadge key={t} tone="info">{t}</StatusBadge>)}
                   {c.unread > 0 && <StatusBadge tone="warning">{c.unread} unread</StatusBadge>}
                   <StatusBadge tone="neutral">{[...c.channels].join(" + ")}</StatusBadge>
@@ -429,8 +429,8 @@ function PageLeadsPanel({ orgId }: { orgId: string | null }) {
         {shownLeads.length === 0 ? (
           <p className="text-sm text-muted-foreground">People who fill the form on your delivery pages (Sales &amp; Revenue → Pages) show up here.</p>
         ) : (
-          <div className="max-h-96 overflow-auto">
-            <table className="w-full text-sm">
+          <div className="max-h-96 max-w-full overflow-auto">
+            <table className="w-full min-w-[700px] text-sm">
               <thead className="text-left text-xs text-muted-foreground"><tr><th className="py-2 pr-3">Name</th><th className="pr-3">Email</th><th className="pr-3">Phone</th><th className="pr-3">Pincode</th><th className="pr-3">Other answers</th><th className="pr-3">Page</th><th>When</th></tr></thead>
               <tbody className="divide-y">
                 {shownLeads.map((l) => {
