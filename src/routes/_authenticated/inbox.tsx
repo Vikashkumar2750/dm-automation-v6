@@ -5,6 +5,9 @@ import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useRef, useState } from "react";
 import {
   CheckCheck,
+  ArrowLeft,
+  Pencil,
+  Trash2,
   EyeOff,
   Inbox as InboxIcon,
   Loader2,
@@ -22,6 +25,9 @@ import {
   StatusBadge,
 } from "@/components/app/primitives";
 import { Button } from "@/components/ui/button";
+import { GuideButton } from "@/components/app/GuideButton";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { canEditComment } from "@/lib/comment-moderation";
 import { useTenant } from "@/hooks/useTenant";
 import {
   listConversations,
@@ -32,6 +38,8 @@ import {
   setCommentHidden,
   setConversationStatus,
   resumeBot,
+  moderateComment,
+  type MessageRow,
   type ConversationRow,
 } from "@/lib/inbox.functions";
 import { cn } from "@/lib/utils";
@@ -44,6 +52,8 @@ export const Route = createFileRoute("/_authenticated/inbox")({
         name: "description",
         content: "Every conversation from Instagram, Facebook and YouTube in one place.",
       },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       { property: "og:title", content: "Unified Inbox — AutoDM by Techaasvik" },
       {
         property: "og:description",
@@ -123,6 +133,8 @@ function InboxPage() {
   const [status, setStatus] = useState<Status | "all">("all");
   const [unreadOnly, setUnreadOnly] = useState(false);
   const [search, setSearch] = useState("");
+  const [moderation, setModeration] = useState<{ message: MessageRow; conversationId: string; action: "edit" | "delete" } | null>(null);
+  const [editText, setEditText] = useState("");
 
   const fetchConversations = useServerFn(listConversations);
   const fetchMessages = useServerFn(listMessages);
@@ -132,6 +144,20 @@ function InboxPage() {
   const setCommentHiddenFn = useServerFn(setCommentHidden);
   const setStatusFn = useServerFn(setConversationStatus);
   const resumeBotFn = useServerFn(resumeBot);
+  const moderateFn = useServerFn(moderateComment);
+  const moderationMutation = useMutation({
+    mutationFn: async () => {
+      if (!moderation) throw new Error("No comment selected");
+      return moderateFn({ data: { conversationId: moderation.conversationId, messageId: moderation.message.id, action: moderation.action, ...(moderation.action === "edit" ? { body: editText.trim() } : {}) } });
+    },
+    onSuccess: () => {
+      toast.success(moderation?.action === "delete" ? "Comment deleted on Meta." : "Comment updated on Facebook.");
+      setModeration(null);
+      queryClient.invalidateQueries({ queryKey: ["messages"] });
+      queryClient.invalidateQueries({ queryKey: ["conversations", orgId] });
+    },
+    onError: commentError,
+  });
   const resume = useMutation({
     mutationFn: (conversationId: string) => resumeBotFn({ data: { conversationId } }),
     onSuccess: () => {
@@ -154,7 +180,10 @@ function InboxPage() {
     enabled: Boolean(orgId),
     refetchInterval: 15_000,
     queryFn: () =>
-      fetchConversations({ data: { organizationId: orgId!, ...filters } }),
+      {
+      if (!orgId) throw new Error("No workspace selected");
+      return fetchConversations({ data: { organizationId: orgId, ...filters } });
+    },
   });
 
   const conversations = conversationsQuery.data ?? [];
@@ -165,7 +194,10 @@ function InboxPage() {
     queryKey: ["messages", selected?.id],
     enabled: Boolean(selected?.id),
     refetchInterval: 15_000,
-    queryFn: () => fetchMessages({ data: { conversationId: selected!.id } }),
+    queryFn: () => {
+      if (!selected) throw new Error("No conversation selected");
+      return fetchMessages({ data: { conversationId: selected.id } });
+    },
   });
 
   const threadRef = useRef<HTMLDivElement>(null);
@@ -175,8 +207,10 @@ function InboxPage() {
   }, [selected?.id, messagesQuery.data?.length]);
 
   const send = useMutation({
-    mutationFn: (body: string) =>
-      sendReplyFn({ data: { conversationId: selected!.id, body } }),
+    mutationFn: (body: string) => {
+      if (!selected) throw new Error("No conversation selected");
+      return sendReplyFn({ data: { conversationId: selected.id, body } });
+    },
     onSuccess: () => {
       setDraft("");
       queryClient.invalidateQueries({ queryKey: ["messages", selected?.id] });
@@ -222,14 +256,16 @@ function InboxPage() {
   }
 
   const commentReply = useMutation({
-    mutationFn: (body: string) =>
-      replyToCommentFn({
+    mutationFn: (body: string) => {
+      if (!selected) throw new Error("No conversation selected");
+      return replyToCommentFn({
         data: {
-          conversationId: selected!.id,
+          conversationId: selected.id,
           body,
-          mode: selected?.platform === "youtube" ? "public" : commentMode,
+          mode: selected.platform === "youtube" ? "public" : commentMode,
         },
-      }),
+      });
+    },
     onSuccess: () => {
       setDraft("");
       toast.success(
@@ -244,15 +280,19 @@ function InboxPage() {
   });
 
   const hideComment = useMutation({
-    mutationFn: (hidden: boolean) =>
-      setCommentHiddenFn({ data: { conversationId: selected!.id, hidden } }),
+    mutationFn: (hidden: boolean) => {
+      if (!selected) throw new Error("No conversation selected");
+      return setCommentHiddenFn({ data: { conversationId: selected.id, hidden } });
+    },
     onSuccess: () => toast.success("Comment hidden on the post."),
     onError: commentError,
   });
 
   const changeStatus = useMutation({
-    mutationFn: (next: Status) =>
-      setStatusFn({ data: { conversationId: selected!.id, status: next } }),
+    mutationFn: (next: Status) => {
+      if (!selected) throw new Error("No conversation selected");
+      return setStatusFn({ data: { conversationId: selected.id, status: next } });
+    },
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: ["conversations", orgId] }),
     onError: () => toast.error("Could not update the status."),
@@ -270,11 +310,12 @@ function InboxPage() {
       <PageHeader
         title="Unified Inbox"
         description="Messages and comments from Instagram, Facebook and YouTube in one place."
+        actions={<GuideButton guide="meta-review" />}
       />
 
-      <div className="grid gap-4 lg:grid-cols-[340px_1fr]">
+      <div className="grid min-w-0 gap-4 lg:grid-cols-[340px_minmax(0,1fr)]">
         {/* Conversation list */}
-        <Panel bodyClassName="p-0" className="min-h-[480px]">
+        <Panel bodyClassName="p-0" className={cn("min-h-[480px]", selectedId && "hidden lg:flex")}>
           <div className="space-y-2 border-b px-4 py-3">
             <div>
               <p className="text-sm font-semibold">Conversations</p>
@@ -384,7 +425,7 @@ function InboxPage() {
         </Panel>
 
         {/* Thread */}
-        <Panel bodyClassName="flex min-h-[480px] flex-col p-0">
+        <Panel className={cn(!selectedId && "hidden lg:flex")} bodyClassName="flex min-h-[480px] flex-col p-0">
           {!selected ? (
             <div className="flex flex-1 items-center justify-center py-16">
               <EmptyState
@@ -395,11 +436,12 @@ function InboxPage() {
             </div>
           ) : (
             <>
-              <div className="flex items-center justify-between gap-3 border-b px-5 py-3">
-                <div className="flex items-center gap-3">
+              <div className="grid min-w-0 gap-3 border-b px-3 py-3 sm:flex sm:flex-wrap sm:items-center sm:justify-between sm:px-5">
+                <div className="flex min-w-0 items-center gap-3">
+                  <Button variant="ghost" size="icon" className="shrink-0 lg:hidden" aria-label="Back to conversations" onClick={() => setSelectedId(null)}><ArrowLeft className="size-4" /></Button>
                   <PlatformBadge platform={selected.platform} />
-                  <div>
-                    <p className="text-sm font-semibold">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold">
                       {contactLabel(selected)}
                     </p>
                     <p className="text-xs text-muted-foreground">
@@ -463,6 +505,12 @@ function InboxPage() {
                         </span>
                       ) : null}
                       <p className="whitespace-pre-wrap break-words">{view.text}</p>
+                      {selected.channel === "comment" && selected.platform !== "youtube" && m.external_id && (m.direction === "inbound" || view.tag === "public reply") ? (
+                        <div className="mt-2 flex items-center gap-1">
+                          {canEditComment(selected.platform, m.direction, m.body, m.external_id) && <Button type="button" variant="ghost" size="icon" title="Edit Facebook reply" aria-label="Edit Facebook reply" onClick={() => { setEditText(view.text); setModeration({ message: m, conversationId: selected.id, action: "edit" }); }}><Pencil className="size-4" /></Button>}
+                          <Button type="button" variant="ghost" size="icon" title="Delete comment on Meta" aria-label="Delete comment on Meta" onClick={() => setModeration({ message: m, conversationId: selected.id, action: "delete" })}><Trash2 className="size-4" /></Button>
+                        </div>
+                      ) : null}
                       {view.buttons.length ? (
                         <div className="mt-2 space-y-1">
                           {view.buttons.map((b) => (
@@ -531,7 +579,6 @@ function InboxPage() {
                       ))}
                     </div>
                     ) : null}
-                    {selected.platform !== "youtube" ? (
                     <Button
                       type="submit"
                       size="sm"
@@ -544,8 +591,7 @@ function InboxPage() {
                       )}
                       Send
                     </Button>
-                    ) : null}
-                    <Button
+                    {selected.platform !== "youtube" ? <Button
                       type="button"
                       size="sm"
                       variant="outline"
@@ -554,7 +600,8 @@ function InboxPage() {
                     >
                       <EyeOff className="size-4" />
                       Hide comment
-                    </Button>
+                    </Button> : null}
+                    {selected.platform !== "youtube" ? <Button type="button" size="sm" variant="outline" disabled={hideComment.isPending} onClick={() => hideComment.mutate(false)}>Unhide comment</Button> : null}
                   </div>
                 </form>
               ) : selected.channel === "dm" && selected.platform !== "youtube" ? (
@@ -570,7 +617,7 @@ function InboxPage() {
                     value={draft}
                     onChange={(e) => setDraft(e.target.value)}
                     placeholder="Type a reply… (24-hour Meta window applies)"
-                    className="h-9 flex-1 rounded-md border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
+                    className="h-9 min-w-0 flex-1 rounded-md border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
                     maxLength={1000}
                   />
                   <Button type="submit" size="sm" disabled={!draft.trim() || send.isPending}>
@@ -592,6 +639,19 @@ function InboxPage() {
           )}
         </Panel>
       </div>
+      <Dialog open={Boolean(moderation)} onOpenChange={(open) => { if (!open && !moderationMutation.isPending) setModeration(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{moderation?.action === "delete" ? "Delete this comment?" : "Edit Facebook reply"}</DialogTitle>
+            <DialogDescription>{moderation?.action === "delete" ? "This permanently deletes the comment on the connected Facebook or Instagram post. Replies beneath it may also be removed." : "Only your Page's public reply can be edited. The change is published on Facebook."}</DialogDescription>
+          </DialogHeader>
+          {moderation?.action === "edit" ? <textarea aria-label="Updated reply" className="min-h-28 w-full rounded-md border bg-background p-3 text-base" maxLength={1000} value={editText} onChange={(event) => setEditText(event.target.value)} /> : <p className="break-words text-sm text-muted-foreground">{moderation?.message.body}</p>}
+          <DialogFooter className="gap-2">
+            <Button variant="outline" disabled={moderationMutation.isPending} onClick={() => setModeration(null)}>Cancel</Button>
+            <Button variant={moderation?.action === "delete" ? "destructive" : "default"} disabled={moderationMutation.isPending || (moderation?.action === "edit" && !editText.trim())} onClick={() => moderationMutation.mutate()}>{moderationMutation.isPending ? "Saving…" : moderation?.action === "delete" ? "Delete on Meta" : "Save reply"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AppShell>
   );
 }
