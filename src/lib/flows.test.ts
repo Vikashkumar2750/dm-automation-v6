@@ -23,10 +23,10 @@ describe("flows", () => {
   it("ignores other triggers", () => {
     expect(runFlowDry(base, { text: "price", isFollower: null, platform: "facebook", trigger: "new_dm" }).matched).toBe(false);
   });
-  it("sanitizes junk and drops http buttons", () => {
+  it("sanitizes junk and upgrades http buttons to https", () => {
     const f = sanitizeFlows([{ name: "x", steps: [{ kind: "send_dm", text: "hi", buttonTitle: "Go", buttonUrl: "http://x" }, { kind: "evil" }] }])[0]!;
     expect(f.steps).toHaveLength(1);
-    expect(f.steps[0]).not.toHaveProperty("buttonUrl");
+    expect(f.steps[0]).toHaveProperty("buttonUrl", "https://x");
     expect(f.active).toBe(false);
   });
   it("blocks public reply on DM trigger", () => {
@@ -92,8 +92,8 @@ describe("advanced flow steps", () => {
     expect(runFlowDry(f, { ...input, tags: ["discount-claimed"] }).stoppedAt).toBe(0);
     expect(runFlowDry(f, { ...input, hasEmail: true }).stoppedAt).toBe(1);
   });
-  it("follow gate needs an https profile link", () => {
-    const f = mk([{ id: "g", kind: "follow_gate", text: "Follow", buttonTitle: "Visit", profileUrl: "http://x" }]);
+  it("follow gate rejects a non-link profile", () => {
+    const f = mk([{ id: "g", kind: "follow_gate", text: "Follow", buttonTitle: "Visit", profileUrl: "my profile" }]);
     expect(validateFlow(sanitizeFlows([f])[0]!).length).toBeGreaterThan(0);
   });
   it("every template has a category and survives sanitizing", () => {
@@ -122,10 +122,10 @@ describe("lead form", () => {
   });
 });
 
-import { sanitizeFlows as _sf } from "./flows";
+import { sanitizeFlows as _sf2 } from "./flows";
 describe("canvas positions", () => {
   it("keeps card positions and clamps bad values", () => {
-    const [f] = _sf([{ name: "x", triggerPos: { x: 10, y: 20 }, steps: [{ id: "a", kind: "wait", minutes: 5, pos: { x: 99999, y: "nope" } }, { id: "b", kind: "wait", minutes: 5, pos: { x: 300, y: 40 } }] }]);
+    const [f] = _sf2([{ name: "x", triggerPos: { x: 10, y: 20 }, steps: [{ id: "a", kind: "wait", minutes: 5, pos: { x: 99999, y: "nope" } }, { id: "b", kind: "wait", minutes: 5, pos: { x: 300, y: 40 } }] }]);
     expect(f!.triggerPos).toEqual({ x: 10, y: 20 });
     expect(f!.steps[0]!.pos).toBeUndefined();
     expect(f!.steps[1]!.pos).toEqual({ x: 300, y: 40 });
@@ -150,4 +150,13 @@ describe("flow post targeting", () => {
     const [f] = sanitizeFlows([{ ...base, targetPostIds: ["111", "111", "bad id!"] }]);
     expect(f!.targetPostIds).toEqual(["111"]);
   });
+});
+
+import { normalizeUrl as _nu2, sanitizeFlows as _sfUrl } from "./flows";
+import { test as _t, expect as _e } from "vitest";
+_t("bare profile links get https added", () => {
+  _e(_nu2("instagram.com/techaasvik")).toBe("https://instagram.com/techaasvik");
+  _e(_nu2("http://x.com")).toBe("https://x.com");
+  const [f] = _sfUrl([{ name: "a", steps: [{ id: "1", kind: "follow_gate", text: "t", buttonTitle: "b", profileUrl: "instagram.com/me" }] }]);
+  _e((f!.steps[0] as { profileUrl: string }).profileUrl).toBe("https://instagram.com/me");
 });

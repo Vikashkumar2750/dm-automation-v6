@@ -8,6 +8,7 @@ import {
   ArrowLeft,
   Pencil,
   Trash2,
+  Eye,
   EyeOff,
   Inbox as InboxIcon,
   Loader2,
@@ -280,11 +281,12 @@ function InboxPage() {
   });
 
   const hideComment = useMutation({
-    mutationFn: (hidden: boolean) => {
+    mutationFn: (v: boolean | { hidden: boolean; messageId: string }) => {
       if (!selected) throw new Error("No conversation selected");
-      return setCommentHiddenFn({ data: { conversationId: selected.id, hidden } });
+      const o = typeof v === "boolean" ? { hidden: v } : v;
+      return setCommentHiddenFn({ data: { conversationId: selected.id, ...o } });
     },
-    onSuccess: () => toast.success("Comment hidden on the post."),
+    onSuccess: (_r, v) => toast.success((typeof v === "boolean" ? v : v.hidden) ? "Comment hidden on the post." : "Comment visible again on the post."),
     onError: commentError,
   });
 
@@ -508,6 +510,8 @@ function InboxPage() {
                       {selected.channel === "comment" && selected.platform !== "youtube" && m.external_id && (m.direction === "inbound" || view.tag === "public reply") ? (
                         <div className="mt-2 flex items-center gap-1">
                           {canEditComment(selected.platform, m.direction, m.body, m.external_id) && <Button type="button" variant="ghost" size="icon" title="Edit Facebook reply" aria-label="Edit Facebook reply" onClick={() => { setEditText(view.text); setModeration({ message: m, conversationId: selected.id, action: "edit" }); }}><Pencil className="size-4" /></Button>}
+                          <Button type="button" variant="ghost" size="icon" title="Hide this comment" aria-label="Hide this comment" disabled={hideComment.isPending} onClick={() => hideComment.mutate({ hidden: true, messageId: m.id })}><EyeOff className="size-4" /></Button>
+                          <Button type="button" variant="ghost" size="icon" title="Unhide this comment" aria-label="Unhide this comment" disabled={hideComment.isPending} onClick={() => hideComment.mutate({ hidden: false, messageId: m.id })}><Eye className="size-4" /></Button>
                           <Button type="button" variant="ghost" size="icon" title="Delete comment on Meta" aria-label="Delete comment on Meta" onClick={() => setModeration({ message: m, conversationId: selected.id, action: "delete" })}><Trash2 className="size-4" /></Button>
                         </div>
                       ) : null}

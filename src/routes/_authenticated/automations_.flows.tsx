@@ -353,6 +353,13 @@ function FlowsPage() {
                 </div>
               </div>
             </Panel>
+            {issues.length > 0 && (
+              <div role="alert" className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+                <p className="font-medium">Fix these before turning the flow on:</p>
+                <ul className="mt-1 list-disc space-y-1 pl-5">{issues.map((x) => <li key={x}>{x}</li>)}</ul>
+              </div>
+            )}
+            <p className="text-xs text-muted-foreground">Tip: drag a card by its title to place it anywhere, drag empty space to move around, Ctrl + mouse wheel zooms. Lines show the order steps run in (change it with the arrows). Add new steps from the side panel and pick the step number they go to.</p>
 
             <FlowCanvas
               flow={flow}
@@ -399,12 +406,6 @@ function FlowsPage() {
                 />
               )}
             />
-            <p className="text-xs text-muted-foreground">Tip: drag a card by its title to place it anywhere, drag empty space to move around, Ctrl + mouse wheel zooms. Lines show the order steps run in (change it with the arrows). Add new steps from the side panel and pick the step number they go to.</p>
-            {issues.length > 0 && (
-              <ul className="list-disc space-y-1 pl-5 text-sm text-destructive">
-                {issues.map((x) => <li key={x}>{x}</li>)}
-              </ul>
-            )}
           </div>
         ) : (
           <Panel><EmptyState icon={GitBranch} title="Pick or create a flow" description="Flows run top to bottom. A condition that is not met stops the flow." /></Panel>

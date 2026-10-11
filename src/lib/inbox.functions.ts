@@ -425,7 +425,7 @@ export const setCommentHidden = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) =>
     z
-      .object({ conversationId: z.string().uuid(), hidden: z.boolean() })
+      .object({ conversationId: z.string().uuid(), hidden: z.boolean(), messageId: z.string().uuid().optional() })
       .parse(data),
   )
   .handler(async ({ data, context }) => {
@@ -445,12 +445,13 @@ export const setCommentHidden = createServerFn({ method: "POST" })
     if (!allowed) throw new Error("not_allowed");
     if (!conversation.social_account_id) throw new Error("no_account");
 
-    const { data: lastComment } = await context.supabase
+    let commentQuery = context.supabase
       .from("messages")
       .select("external_id")
       .eq("conversation_id", conversation.id)
-      .eq("direction", "inbound")
-      .not("external_id", "is", null)
+      .not("external_id", "is", null);
+    commentQuery = data.messageId ? commentQuery.eq("id", data.messageId) : commentQuery.eq("direction", "inbound");
+    const { data: lastComment } = await commentQuery
       .order("sent_at", { ascending: false })
       .limit(1)
       .maybeSingle();
