@@ -151,3 +151,12 @@ describe("flow post targeting", () => {
     expect(f!.targetPostIds).toEqual(["111"]);
   });
 });
+
+import { normalizeUrl as _nu, sanitizeFlows as _sf } from "./flows";
+import { test as _t, expect as _e } from "vitest";
+_t("bare profile links get https added", () => {
+  _e(_nu("instagram.com/techaasvik")).toBe("https://instagram.com/techaasvik");
+  _e(_nu("http://x.com")).toBe("https://x.com");
+  const [f] = _sf([{ name: "a", steps: [{ id: "1", kind: "follow_gate", text: "t", buttonTitle: "b", profileUrl: "instagram.com/me" }] }]);
+  _e((f!.steps[0] as { profileUrl: string }).profileUrl).toBe("https://instagram.com/me");
+});

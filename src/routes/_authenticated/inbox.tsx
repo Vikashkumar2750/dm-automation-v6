@@ -10,7 +10,6 @@ import {
   Trash2,
   Eye,
   EyeOff,
-  EyeOff,
   Inbox as InboxIcon,
   Loader2,
   MessageSquareText,

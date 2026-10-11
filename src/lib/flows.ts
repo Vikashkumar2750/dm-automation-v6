@@ -147,10 +147,21 @@ export function sanitizeFlows(raw: unknown): Flow[] {
   });
 }
 
+/** Accept "instagram.com/me" or "http://…" and turn it into a https link; anything else stays as typed. */
+export function normalizeUrl(raw: string): string {
+  const v = raw.trim();
+  if (!v) return "";
+  if (/^https:\/\//i.test(v)) return v;
+  if (/^http:\/\//i.test(v)) return "https://" + v.slice(7);
+  if (/^[\w-]+(\.[\w-]+)+(\/\S*)?$/.test(v)) return "https://" + v;
+  return v;
+}
+
 function sanitizeStep(s: unknown): FlowStep[] {
       const x = s as { id?: unknown; kind?: unknown; check?: unknown; value?: unknown; text?: unknown; buttonTitle?: unknown; buttonUrl?: unknown; minutes?: unknown };
       const sid = typeof x.id === "string" ? x.id.slice(0, 20) : id();
       const text = (v: unknown, n: number) => String(v ?? "").trim().slice(0, n);
+      const link = (v: unknown, n: number) => normalizeUrl(text(v, n));
       if (!x || typeof x !== "object") return [];
       switch (x.kind) {
         case "condition":
@@ -163,7 +174,7 @@ function sanitizeStep(s: unknown): FlowStep[] {
           if (x.check === "not_contains") return [{ id: sid, kind: "condition", check: "not_contains", value: text(x.value, 200) }];
           return [{ id: sid, kind: "condition", check: "contains", value: text(x.value, 200) }];
         case "send_dm": {
-          const url = text(x.buttonUrl, 500);
+          const url = link(x.buttonUrl, 500);
           return [{
             id: sid, kind: "send_dm", text: text(x.text, 1000),
             ...(text(x.buttonTitle, 20) && /^https:\/\//i.test(url) ? { buttonTitle: text(x.buttonTitle, 20), buttonUrl: url } : {}),
@@ -183,7 +194,7 @@ function sanitizeStep(s: unknown): FlowStep[] {
           return [{ id: sid, kind: "opening_dm", text: text(x.text, 640), buttonTitle: text(x.buttonTitle, 20) || "Send me the link" }];
         case "follow_gate": {
           const y = s as { profileUrl?: unknown };
-          const url = text(y.profileUrl, 300);
+          const url = link(y.profileUrl, 300);
           return [{ id: sid, kind: "follow_gate", text: text(x.text, 1000), buttonTitle: text(x.buttonTitle, 20) || "Visit profile", profileUrl: /^https:\/\//i.test(url) ? url : "" }];
         }
         case "send_payment": {
