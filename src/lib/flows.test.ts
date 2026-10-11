@@ -122,10 +122,10 @@ describe("lead form", () => {
   });
 });
 
-import { sanitizeFlows as _sf } from "./flows";
+import { sanitizeFlows as _sf2 } from "./flows";
 describe("canvas positions", () => {
   it("keeps card positions and clamps bad values", () => {
-    const [f] = _sf([{ name: "x", triggerPos: { x: 10, y: 20 }, steps: [{ id: "a", kind: "wait", minutes: 5, pos: { x: 99999, y: "nope" } }, { id: "b", kind: "wait", minutes: 5, pos: { x: 300, y: 40 } }] }]);
+    const [f] = _sf2([{ name: "x", triggerPos: { x: 10, y: 20 }, steps: [{ id: "a", kind: "wait", minutes: 5, pos: { x: 99999, y: "nope" } }, { id: "b", kind: "wait", minutes: 5, pos: { x: 300, y: 40 } }] }]);
     expect(f!.triggerPos).toEqual({ x: 10, y: 20 });
     expect(f!.steps[0]!.pos).toBeUndefined();
     expect(f!.steps[1]!.pos).toEqual({ x: 300, y: 40 });
@@ -152,11 +152,11 @@ describe("flow post targeting", () => {
   });
 });
 
-import { normalizeUrl as _nu, sanitizeFlows as _sf } from "./flows";
+import { normalizeUrl as _nu2, sanitizeFlows as _sf2 } from "./flows";
 import { test as _t, expect as _e } from "vitest";
 _t("bare profile links get https added", () => {
-  _e(_nu("instagram.com/techaasvik")).toBe("https://instagram.com/techaasvik");
-  _e(_nu("http://x.com")).toBe("https://x.com");
-  const [f] = _sf([{ name: "a", steps: [{ id: "1", kind: "follow_gate", text: "t", buttonTitle: "b", profileUrl: "instagram.com/me" }] }]);
+  _e(_nu2("instagram.com/techaasvik")).toBe("https://instagram.com/techaasvik");
+  _e(_nu2("http://x.com")).toBe("https://x.com");
+  const [f] = _sf2([{ name: "a", steps: [{ id: "1", kind: "follow_gate", text: "t", buttonTitle: "b", profileUrl: "instagram.com/me" }] }]);
   _e((f!.steps[0] as { profileUrl: string }).profileUrl).toBe("https://instagram.com/me");
 });
