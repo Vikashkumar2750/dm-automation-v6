@@ -280,13 +280,17 @@ function InboxPage() {
     onError: commentError,
   });
 
+  const [hiddenIds, setHiddenIds] = useState<Record<string, boolean>>({});
   const hideComment = useMutation({
     mutationFn: (v: boolean | { hidden: boolean; messageId: string }) => {
       if (!selected) throw new Error("No conversation selected");
       const o = typeof v === "boolean" ? { hidden: v } : v;
       return setCommentHiddenFn({ data: { conversationId: selected.id, ...o } });
     },
-    onSuccess: (_r, v) => toast.success((typeof v === "boolean" ? v : v.hidden) ? "Comment hidden on the post." : "Comment visible again on the post."),
+    onSuccess: (_r, v) => {
+      if (typeof v !== "boolean") setHiddenIds((p) => ({ ...p, [v.messageId]: v.hidden }));
+      toast.success((typeof v === "boolean" ? v : v.hidden) ? "Comment hidden on the post." : "Comment visible again on the post.");
+    },
     onError: commentError,
   });
 
@@ -510,8 +514,7 @@ function InboxPage() {
                       {selected.channel === "comment" && selected.platform !== "youtube" && m.external_id && (m.direction === "inbound" || view.tag === "public reply") ? (
                         <div className="mt-2 flex items-center gap-1">
                           {canEditComment(selected.platform, m.direction, m.body, m.external_id) && <Button type="button" variant="ghost" size="icon" title="Edit Facebook reply" aria-label="Edit Facebook reply" onClick={() => { setEditText(view.text); setModeration({ message: m, conversationId: selected.id, action: "edit" }); }}><Pencil className="size-4" /></Button>}
-                          <Button type="button" variant="ghost" size="icon" title="Hide this comment" aria-label="Hide this comment" disabled={hideComment.isPending} onClick={() => hideComment.mutate({ hidden: true, messageId: m.id })}><EyeOff className="size-4" /></Button>
-                          <Button type="button" variant="ghost" size="icon" title="Unhide this comment" aria-label="Unhide this comment" disabled={hideComment.isPending} onClick={() => hideComment.mutate({ hidden: false, messageId: m.id })}><Eye className="size-4" /></Button>
+                          {(() => { const isHidden = !!hiddenIds[m.id]; const label = isHidden ? "Unhide this comment" : "Hide this comment"; return <Button type="button" variant="ghost" size="icon" title={label} aria-label={label} aria-pressed={isHidden} disabled={hideComment.isPending} onClick={() => hideComment.mutate({ hidden: !isHidden, messageId: m.id })}>{isHidden ? <EyeOff className="size-4" /> : <Eye className="size-4" />}</Button>; })()}
                           <Button type="button" variant="ghost" size="icon" title="Delete comment on Meta" aria-label="Delete comment on Meta" onClick={() => setModeration({ message: m, conversationId: selected.id, action: "delete" })}><Trash2 className="size-4" /></Button>
                         </div>
                       ) : null}
