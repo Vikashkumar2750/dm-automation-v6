@@ -23,10 +23,10 @@ describe("flows", () => {
   it("ignores other triggers", () => {
     expect(runFlowDry(base, { text: "price", isFollower: null, platform: "facebook", trigger: "new_dm" }).matched).toBe(false);
   });
-  it("sanitizes junk and drops http buttons", () => {
+  it("sanitizes junk and upgrades http buttons to https", () => {
     const f = sanitizeFlows([{ name: "x", steps: [{ kind: "send_dm", text: "hi", buttonTitle: "Go", buttonUrl: "http://x" }, { kind: "evil" }] }])[0]!;
     expect(f.steps).toHaveLength(1);
-    expect(f.steps[0]).not.toHaveProperty("buttonUrl");
+    expect(f.steps[0]).toHaveProperty("buttonUrl", "https://x");
     expect(f.active).toBe(false);
   });
   it("blocks public reply on DM trigger", () => {
@@ -92,8 +92,8 @@ describe("advanced flow steps", () => {
     expect(runFlowDry(f, { ...input, tags: ["discount-claimed"] }).stoppedAt).toBe(0);
     expect(runFlowDry(f, { ...input, hasEmail: true }).stoppedAt).toBe(1);
   });
-  it("follow gate needs an https profile link", () => {
-    const f = mk([{ id: "g", kind: "follow_gate", text: "Follow", buttonTitle: "Visit", profileUrl: "http://x" }]);
+  it("follow gate rejects a non-link profile", () => {
+    const f = mk([{ id: "g", kind: "follow_gate", text: "Follow", buttonTitle: "Visit", profileUrl: "my profile" }]);
     expect(validateFlow(sanitizeFlows([f])[0]!).length).toBeGreaterThan(0);
   });
   it("every template has a category and survives sanitizing", () => {
