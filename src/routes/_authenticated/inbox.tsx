@@ -514,7 +514,7 @@ function InboxPage() {
                       {selected.channel === "comment" && selected.platform !== "youtube" && m.external_id && (m.direction === "inbound" || view.tag === "public reply") ? (
                         <div className="mt-2 flex items-center gap-1">
                           {canEditComment(selected.platform, m.direction, m.body, m.external_id) && <Button type="button" variant="ghost" size="icon" title="Edit Facebook reply" aria-label="Edit Facebook reply" onClick={() => { setEditText(view.text); setModeration({ message: m, conversationId: selected.id, action: "edit" }); }}><Pencil className="size-4" /></Button>}
-                          {(() => { const isHidden = !!hiddenIds[m.id]; const label = isHidden ? "Unhide this comment" : "Hide this comment"; return <Button type="button" variant="ghost" size="icon" title={label} aria-label={label} aria-pressed={isHidden} disabled={hideComment.isPending} onClick={() => hideComment.mutate({ hidden: !isHidden, messageId: m.id })}>{isHidden ? <EyeOff className="size-4" /> : <Eye className="size-4" />}</Button>; })()}
+                          {(() => { const isHidden = !!hiddenIds[m.id]; const label = isHidden ? "Unhide this comment" : "Hide this comment"; return <Button type="button" variant="ghost" size="icon" title={label} aria-label={label} aria-pressed={isHidden} disabled={hideComment.isPending} onClick={() => hideComment.mutate({ hidden: !isHidden, messageId: m.id })}>{hideComment.isPending && typeof hideComment.variables === "object" && hideComment.variables?.messageId === m.id ? <Loader2 className="size-4 animate-spin" /> : isHidden ? <EyeOff className="size-4" /> : <Eye className="size-4" />}</Button>; })()}
                           <Button type="button" variant="ghost" size="icon" title="Delete comment on Meta" aria-label="Delete comment on Meta" onClick={() => setModeration({ message: m, conversationId: selected.id, action: "delete" })}><Trash2 className="size-4" /></Button>
                         </div>
                       ) : null}
@@ -605,10 +605,10 @@ function InboxPage() {
                       disabled={hideComment.isPending}
                       onClick={() => hideComment.mutate(true)}
                     >
-                      <EyeOff className="size-4" />
+                      {hideComment.isPending && hideComment.variables === true ? <Loader2 className="size-4 animate-spin" /> : <EyeOff className="size-4" />}
                       Hide comment
                     </Button> : null}
-                    {selected.platform !== "youtube" ? <Button type="button" size="sm" variant="outline" disabled={hideComment.isPending} onClick={() => hideComment.mutate(false)}>Unhide comment</Button> : null}
+                    {selected.platform !== "youtube" ? <Button type="button" size="sm" variant="outline" disabled={hideComment.isPending} onClick={() => hideComment.mutate(false)}>{hideComment.isPending && hideComment.variables === false ? <Loader2 className="size-4 animate-spin" /> : <Eye className="size-4" />}Unhide comment</Button> : null}
                   </div>
                 </form>
               ) : selected.channel === "dm" && selected.platform !== "youtube" ? (
@@ -655,7 +655,7 @@ function InboxPage() {
           {moderation?.action === "edit" ? <textarea aria-label="Updated reply" className="min-h-28 w-full rounded-md border bg-background p-3 text-base" maxLength={1000} value={editText} onChange={(event) => setEditText(event.target.value)} /> : <p className="break-words text-sm text-muted-foreground">{moderation?.message.body}</p>}
           <DialogFooter className="gap-2">
             <Button variant="outline" disabled={moderationMutation.isPending} onClick={() => setModeration(null)}>Cancel</Button>
-            <Button variant={moderation?.action === "delete" ? "destructive" : "default"} disabled={moderationMutation.isPending || (moderation?.action === "edit" && !editText.trim())} onClick={() => moderationMutation.mutate()}>{moderationMutation.isPending ? "Saving…" : moderation?.action === "delete" ? "Delete on Meta" : "Save reply"}</Button>
+            <Button variant={moderation?.action === "delete" ? "destructive" : "default"} disabled={moderationMutation.isPending || (moderation?.action === "edit" && !editText.trim())} onClick={() => moderationMutation.mutate()}>{moderationMutation.isPending ? <><Loader2 className="mr-2 size-4 animate-spin" />{moderation?.action === "delete" ? "Deleting…" : "Saving…"}</> : moderation?.action === "delete" ? "Delete on Meta" : "Save reply"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
