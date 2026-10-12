@@ -209,17 +209,25 @@ export async function publishPost(
 
       if (!creationId) return fail("Instagram did not return a media container");
 
-      // Videos/reels need processing time before they can be published.
-      // Always wait: image containers can also be "not found" if published too fast.
-      {
-        const ready = await waitForContainer(creationId, token);
+      // Videos need processing time; photos are usually ready instantly.
+      const hasVideo = isVideo || format === "reel" || format === "trial_reel";
+      if (hasVideo) {
+        const ready = await waitForContainer(creationId, token, 2000, 60);
         if (!ready.ok) return fail(ready.error);
       }
 
-      const publish = await graph(`${GRAPH}/${externalAccountId}/media_publish`, {
+      // Publish, retrying briefly if Meta says the media is not ready yet.
+      let publish = await graph(`${GRAPH}/${externalAccountId}/media_publish`, {
         creation_id: creationId,
         access_token: token,
       });
+      for (let attempt = 0; !publish.ok && attempt < 8 && isNotReady(publish.data); attempt++) {
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+        publish = await graph(`${GRAPH}/${externalAccountId}/media_publish`, {
+          creation_id: creationId,
+          access_token: token,
+        });
+      }
       if (!publish.ok) return fail(graphError(publish.data));
       const externalId = String((publish.data as { id?: string }).id ?? creationId);
       return succeed(externalId, null);
