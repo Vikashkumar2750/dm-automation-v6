@@ -27,6 +27,7 @@ import {
 } from "recharts";
 
 import { AppShell } from "@/components/app/AppShell";
+import { AutomationNotificationBanner } from "@/components/app/AutomationNotifications";
 import {
   EmptyState,
   PageHeader,
@@ -143,6 +144,7 @@ function Dashboard() {
         }
       />
 
+      <AutomationNotificationBanner />
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard info="All chat threads (DMs and comments) and how many are open." icon={MessagesSquare} label="Conversations" value={String(a?.totals.conversations ?? 0)} sub={`${a?.totals.openThreads ?? 0} open`} />
         <StatCard info="Messages and comments people sent you in the last 7 days." icon={MessageSquare} label="Messages received" value={String(a?.totals.inbound ?? 0)} sub={`${a?.totals.unread ?? 0} unread`} />
