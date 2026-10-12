@@ -112,11 +112,13 @@ async function credentials(admin: AdminClient, ev: FlowEvent) {
 
 async function recordOutbound(admin: AdminClient, ev: FlowEvent, flow: Flow, body: string, id: string | null) {
   const now = new Date().toISOString();
+  const { inboxThreadFor } = await import("@/lib/dm-thread.server");
+  const threadId = await inboxThreadFor(admin as never, ev.conversationId, body);
   await admin.from("messages").insert({
-    conversation_id: ev.conversationId, direction: "outbound", body, external_id: id,
+    conversation_id: threadId as string, direction: "outbound", body, external_id: id,
     sender_name: `Flow · ${flow.name}`, sent_at: now,
   });
-  await admin.from("conversations").update({ last_message_at: now, last_message_preview: body.slice(0, 140), status: "pending" }).eq("id", ev.conversationId);
+  await admin.from("conversations").update({ last_message_at: now, last_message_preview: body.slice(0, 140), status: "pending" }).eq("id", threadId as string);
 }
 
 /** Run steps from `from`. Returns true when at least one action was taken. */
