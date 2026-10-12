@@ -312,12 +312,25 @@ export async function publishPost(
   }
 }
 
+/** Meta error meaning "media container still processing" (code 9007 / subcode 2207027). */
+function isNotReady(data: Record<string, unknown>): boolean {
+  const err = (data as { error?: { code?: number; error_subcode?: number; message?: string } }).error;
+  if (!err) return false;
+  return (
+    err.code === 9007 ||
+    err.error_subcode === 2207027 ||
+    /not ready|not available|being processed/i.test(err.message ?? "")
+  );
+}
+
 /** Poll an Instagram media container until it finishes processing. */
 async function waitForContainer(
   creationId: string,
   token: string,
+  intervalMs = 2000,
+  attempts = 60,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
-  for (let attempt = 0; attempt < 12; attempt++) {
+  for (let attempt = 0; attempt < attempts; attempt++) {
     const response = await fetch(
       `${GRAPH}/${creationId}?fields=status_code,status&access_token=${encodeURIComponent(token)}`,
     );
@@ -326,10 +339,10 @@ async function waitForContainer(
       status?: string;
     };
     if (data.status_code === "FINISHED") return { ok: true };
-    if (data.status_code === "ERROR") {
+    if (data.status_code === "ERROR" || data.status_code === "EXPIRED") {
       return { ok: false, error: data.status ?? "Instagram could not process this video" };
     }
-    await new Promise((resolve) => setTimeout(resolve, 5000));
+    await new Promise((resolve) => setTimeout(resolve, intervalMs));
   }
   return { ok: false, error: "Instagram is still processing this video — try again shortly" };
 }
@@ -351,11 +364,9 @@ export async function publishDuePosts(
   const { data: due } = (await query) as { data: { id: string }[] | null };
   if (!due || due.length === 0) return { attempted: 0, published: 0 };
 
-  let published = 0;
-  for (const row of due) {
-    const result = await publishPost(admin, row.id);
-    if (result.ok) published += 1;
-  }
+  // Publish all due posts at the same time so one slow post never delays the rest.
+  const results = await Promise.allSettled(due.map((row) => publishPost(admin, row.id)));
+  const published = results.filter((r) => r.status === "fulfilled" && r.value.ok).length;
   return { attempted: due.length, published };
 }
 
