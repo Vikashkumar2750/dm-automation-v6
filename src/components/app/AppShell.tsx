@@ -5,7 +5,6 @@ import { useServerFn } from "@tanstack/react-start";
 import { getPlatformStatus } from "@/lib/platform-status.functions";
 import { getMyPlatformRole } from "@/lib/admin.functions";
 import {
-  Bell,
   Search,
   ChevronDown,
   LayoutDashboard,
@@ -45,6 +44,7 @@ import { cn } from "@/lib/utils";
 import { useTenant } from "@/hooks/useTenant";
 import { supabase } from "@/integrations/supabase/client";
 import { PageReadyGate } from "@/components/app/PageReadyGate";
+import { AutomationNotificationsProvider, AutomationNotificationBell } from "@/components/app/AutomationNotifications";
 
 type NavItem = { label: string; to: string; icon: LucideIcon; badge?: number };
 
@@ -230,12 +230,7 @@ function TopBar({ onMenu }: { onMenu: () => void }) {
       </div>
 
       <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-2">
-        <Button variant="ghost" size="icon" asChild>
-          <Link to="/account-health">
-            <Bell className="size-5" />
-            <span className="sr-only">Account health</span>
-          </Link>
-        </Button>
+        <AutomationNotificationBell />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="gap-2 px-2">
@@ -312,6 +307,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   }
 
   return (
+    <AutomationNotificationsProvider>
     <div className="min-h-screen bg-background">
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 lg:block">
         <Sidebar pathname={pathname} />
@@ -340,6 +336,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </main>
       </div>
     </div>
+    </AutomationNotificationsProvider>
   );
 }
 

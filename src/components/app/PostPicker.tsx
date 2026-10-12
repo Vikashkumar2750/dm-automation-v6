@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { StatusBadge } from "@/components/app/primitives";
+import { PostThumbnail } from "@/components/app/PostThumbnail";
 import { listRecentRemotePosts, listTargetablePosts } from "@/lib/automations.functions";
 
 /** Shared post/reel selector used by keyword rules and Flow Builder. Empty selection = all posts. */
@@ -215,15 +216,7 @@ export function PostPicker({
                   isOn ? "border-primary bg-primary/5" : "hover:bg-muted/50"
                 }`}
               >
-                {post.mediaUrl ? (
-                  <img
-                    src={post.mediaUrl}
-                    alt=""
-                    className="h-10 w-10 shrink-0 rounded object-cover"
-                  />
-                ) : (
-                  <div className="h-10 w-10 shrink-0 rounded bg-muted" />
-                )}
+                <PostThumbnail key={post.mediaUrl ?? post.id} src={post.mediaUrl} />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm">
                     {post.caption || "Untitled post"}

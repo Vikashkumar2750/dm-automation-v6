@@ -16,20 +16,20 @@
 - Phase A entry points (story reply/mention, ice breakers, menu) live in entry-points.* modules behind the `entry_points_enabled` flag (on unless a Super Admin switches it off) and only add an early branch to the Meta webhook — the locked comment/DM flows must behave identically when the flag is off.
 - Phase B flows live in flows.* modules; live sending (flows-runner.server) needs both `flows_enabled` and `flows_live_enabled` (each on unless set to false), runs after keyword rules only when no rule sent, and Wait steps resume via /api/public/cron/flows — the locked rule engine runs first and unchanged.
 - Phase C AI agent lives in ai-agent.* modules behind `ai_agent_enabled` plus a per-workspace switch, answers DMs only after rules and flows stayed silent, and reuses the flow safety gate — AI can never override or double-send over locked flows.
-- Phase D CRM data (contact_profiles, contact_segments, contact_tags) is read/written only via crm.* modules with RLS as the user — CRM never touches the locked Meta delivery flow.
+- CRM uses crm.* and user RLS; growth.* is read-only with manual competitor numbers — neither touches Meta delivery or adds Meta calls.
 - Phase E revenue lives in revenue.* modules; Razorpay keys sit in a server-only table (no browser grants) per workspace and payment/coupon steps reuse the flow sending + safety path — creators get paid directly and the locked rule engine stays untouched.
 - Buyer offers resolve unguessable tokens server-side; private delivery images require active page references — public sales pages must not expose customer identity, payment credentials, or unrelated workspace media.
 - Phase G team tools live in team-desk.* modules; API keys (hashed) and outgoing webhooks sit in server-only tables, the public API is read-only under /api/public/v1/* with X-API-Key, and webhooks are delivered by cron from stored messages — integrations never hook into the locked Meta delivery flow.
 - Phase H trust & safety lives in trust-safety.* modules; the audit trail is written only by DB triggers (field names, never values), and the predictive guard only sets the existing auto-pause via /api/public/cron/trust-guard — no change to the locked Meta delivery code.
-- Phase I growth.* modules are read-only (RLS as the user), competitor numbers typed manually — no extra Meta API calls.
 - Scheduler (cron) endpoints authenticate only via cronAuthFailure in src/lib/cron-secret.server.ts (constant-time, CRON_SECRET + optional CRON_SECRET_PREVIOUS) — one timing-safe check with rotation, no copy-pasted compares.
 - OAuth tokens and Razorpay secrets are read via readToken and written via storeToken (token-crypto.server); TOKEN_ENCRYPTION_KEY turns on AES-GCM and /api/public/cron/encrypt-tokens seals legacy rows — one switch encrypts at rest without breaking existing connections.
 - human-takeover.* sets bot_paused_until after manual replies using takeover_minutes; all automated paths check conversationInTakeover before sending — a human-owned chat never gets a bot reply, and expiry sends nothing by itself.
-- YouTube quota backoff (youtube-quota.ts) and the scheduler heartbeat (/api/public/cron/heartbeat + scheduler_heartbeats) are standalone — reliability signals without touching the locked Meta delivery flow.
-- PageReadyGate hides pages until first data; signed-in sessions share one store - why: no page ever shows placeholder values that switch a moment later.
-- Signed-in guards reuse local sessions and cached admin answers; links preload on hover and cached pages skip the loading gate - why: switching pages never waits on a network check or re-hides cached pages.
+- YouTube quota backoff and scheduler heartbeat stay standalone — reliability never changes Meta delivery.
+- PageReadyGate waits for first data; sessions share one store, guards cache admin answers and links preload on hover — no placeholders or re-hidden cached pages.
 - Every automation_runs row carries run_key (flow: per run, rule: rule+webhook correlation); plan usage counts distinct runs via count_org_runs and Activity groups by run_key — one triggered automation counts once and shows as one entry, however many steps it sends.
 - Flow post targeting lives on Flow.targetPostIds (empty = all posts), checked by flowTargetsPost in runLiveFlows; the post picker is shared in components/app/PostPicker — same matching rule as keyword rules, no change to the rule engine.
 
 - Manual moderation uses stored workspace conversation/message IDs, role checks and Meta-first writes; only Facebook Page-authored public replies can be edited — prevents unauthorized targets and unsupported edit claims.
 - Shells, panels, tabs and dialogs constrain mobile content; wide tables and the flow canvas scroll locally — preserves desktop and mobile workflows.
+- Notifications reuse workspace-scoped run reads in one AppShell provider; read IDs are local per user/workspace — consistent bell/banner without delivery changes.
+- PostPicker uses a shared poster resolver and image-error fallback — expired media and video URLs never show broken images.
