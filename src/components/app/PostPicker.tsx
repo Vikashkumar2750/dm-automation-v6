@@ -28,6 +28,16 @@ function parsePostId(raw: string): string | null {
   }
 }
 
+function friendlyWarning(raw: string) {
+  const [name, ...rest] = raw.split(": ");
+  const msg = rest.join(": ");
+  if (/pages_read_engagement|Page Public Content Access|#10\b/i.test(msg))
+    return `${name}: Facebook posts can't be listed until Meta approves "pages_read_engagement". Paste the post link below meanwhile.`;
+  if (/#190|expired|session/i.test(msg)) return `${name}: login expired — reconnect this account in Social Accounts.`;
+  if (/#200|permission/i.test(msg)) return `${name}: missing permission from Meta — reconnect the account or paste the post link below.`;
+  return msg ? `${name}: couldn't load posts right now.` : raw;
+}
+
 export function PostPicker({
   orgId,
   trigger,
@@ -45,6 +55,11 @@ export function PostPicker({
   const fetchRemote = useServerFn(listRecentRemotePosts);
   const [manual, setManual] = useState("");
   const [showManual, setShowManual] = useState(false);
+  const [tab, setTab] = useState<"instagram" | "facebook" | "youtube">(
+    platform === "all" ? "instagram" : platform,
+  );
+  const [account, setAccount] = useState("all");
+  const activePlatform = platform === "all" ? tab : platform;
   const postsQuery = useQuery({
     queryKey: ["targetable-posts", orgId],
     enabled: Boolean(orgId),
@@ -67,6 +82,7 @@ export function PostPicker({
         caption: string;
         mediaUrl: string | null;
         publishedAt: string | null;
+        accountName?: string;
       }
     >();
     for (const post of remoteQuery.data?.posts ?? []) {
@@ -76,16 +92,15 @@ export function PostPicker({
       if (!merged.has(post.externalPostId)) merged.set(post.externalPostId, post);
     }
     return [...merged.values()]
-      .filter((post) =>
-        platform === "youtube"
-          ? post.platform === "youtube"
-          : platform === "all"
-            ? post.platform !== "youtube"
-            : post.platform === platform,
-      )
+      .filter((post) => post.platform === activePlatform)
       .sort((a, b) => (b.publishedAt ?? "").localeCompare(a.publishedAt ?? ""));
-  }, [remoteQuery.data, postsQuery.data, platform]);
-  const warnings = remoteQuery.data?.warnings ?? [];
+  }, [remoteQuery.data, postsQuery.data, activePlatform]);
+  const accounts = useMemo(
+    () => [...new Set(posts.map((p) => p.accountName).filter(Boolean) as string[])],
+    [posts],
+  );
+  const visiblePosts = account === "all" ? posts : posts.filter((p) => p.accountName === account);
+  const warnings = (remoteQuery.data?.warnings ?? []).map(friendlyWarning);
 
   const toggle = (externalId: string) => {
     onChange(
@@ -138,6 +153,33 @@ export function PostPicker({
         </div>
       </div>
 
+      {platform === "all" && (
+        <div className="flex flex-wrap gap-1 rounded-md bg-muted/50 p-1">
+          {(["instagram", "facebook", "youtube"] as const).map((p) => (
+            <button
+              key={p}
+              type="button"
+              onClick={() => { setTab(p); setAccount("all"); }}
+              className={`rounded px-3 py-1 text-xs capitalize transition ${tab === p ? "bg-background font-medium shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+            >
+              {p}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {accounts.length > 1 && (
+        <select
+          value={account}
+          onChange={(e) => setAccount(e.target.value)}
+          className="h-9 rounded-md border bg-background px-2 text-sm"
+          aria-label="Account"
+        >
+          <option value="all">All {activePlatform} accounts</option>
+          {accounts.map((a) => <option key={a} value={a}>{a}</option>)}
+        </select>
+      )}
+
       {trigger === "dm_received" && (
         <p className="rounded-md bg-muted/50 p-2 text-xs text-muted-foreground">
           Direct messages don’t come from a single post, so this only applies when the
@@ -154,15 +196,15 @@ export function PostPicker({
 
       {postsQuery.isLoading || remoteQuery.isLoading ? (
         <p className="text-sm text-muted-foreground">Loading your latest posts…</p>
-      ) : posts.length === 0 ? (
+      ) : visiblePosts.length === 0 ? (
         <p className="text-sm text-muted-foreground">
-          {platform === "youtube"
+          {activePlatform === "youtube"
             ? "No YouTube videos found yet. Publish a video from Create Post, or paste a video link below."
             : "No posts found. Connect an Instagram or Facebook account, or add a post link manually below."}
         </p>
       ) : (
         <div className="grid max-h-64 gap-2 overflow-y-auto pr-1">
-          {posts.map((post) => {
+          {visiblePosts.map((post) => {
             const isOn = selected.includes(post.externalPostId);
             return (
               <button
@@ -188,6 +230,7 @@ export function PostPicker({
                   </span>
                   <span className="block text-xs capitalize text-muted-foreground">
                     {post.platform}
+                    {post.accountName ? ` · ${post.accountName}` : ""}
                     {post.publishedAt
                       ? ` · ${new Date(post.publishedAt).toLocaleDateString()}`
                       : ""}
