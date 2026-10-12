@@ -783,8 +783,10 @@ async function recordOutbound(
   externalId: string | null,
 ) {
   const now = new Date().toISOString();
+  const { inboxThreadFor } = await import("@/lib/dm-thread.server");
+  const threadId = await inboxThreadFor(admin, ctx.conversationId, body);
   await admin.from("messages").insert({
-    conversation_id: ctx.conversationId,
+    conversation_id: threadId,
     direction: "outbound",
     body,
     external_id: externalId,
@@ -798,7 +800,7 @@ async function recordOutbound(
       last_message_preview: body.slice(0, 140),
       status: "pending",
     })
-    .eq("id", ctx.conversationId);
+    .eq("id", threadId);
 }
 
 /** Send the rule's DM: text with the link as a tappable button, then attachment. */
