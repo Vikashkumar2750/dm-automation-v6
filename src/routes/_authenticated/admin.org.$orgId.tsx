@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { Input } from "@/components/ui/input";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { AlertTriangle, ArrowLeft } from "lucide-react";
@@ -23,6 +24,7 @@ import {
   setSimulatorAccess,
   setOrganizationAutomationPause,
   setOrganizationPlan,
+  deleteAdminOrganization,
 } from "@/lib/admin.functions";
 
 export const Route = createFileRoute("/_authenticated/admin/org/$orgId")({
@@ -56,6 +58,18 @@ function OrgDetailPage() {
   const setPause = useServerFn(setOrganizationAutomationPause);
   const setSimulator = useServerFn(setSimulatorAccess);
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const removeOrg = useServerFn(deleteAdminOrganization);
+  const [confirmName, setConfirmName] = useState("");
+  const deleteMutation = useMutation({
+    mutationFn: () => removeOrg({ data: { organizationId: orgId, confirmName: confirmName.trim() } }),
+    onSuccess: () => {
+      toast.success("Workspace deleted");
+      void queryClient.invalidateQueries();
+      void navigate({ to: "/admin/organizations" });
+    },
+    onError: (e: Error) => toast.error(e.message || "Could not delete the workspace"),
+  });
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["admin-org", orgId],
@@ -300,6 +314,31 @@ function OrgDetailPage() {
           )}
         </Panel>
       </div>
+
+      <Panel title="Danger zone">
+        <div className="space-y-3">
+          <p className="text-sm text-muted-foreground">
+            Permanently deletes this workspace with its connected accounts, conversations, contacts,
+            automations and activity. This cannot be undone. Type <span className="font-medium text-foreground">{data.org.name}</span> to confirm.
+          </p>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Input
+              value={confirmName}
+              onChange={(e) => setConfirmName(e.target.value)}
+              placeholder="Workspace name"
+              className="sm:max-w-xs"
+              aria-label="Type workspace name to confirm"
+            />
+            <Button
+              variant="destructive"
+              disabled={confirmName.trim() !== data.org.name.trim() || deleteMutation.isPending}
+              onClick={() => deleteMutation.mutate()}
+            >
+              {deleteMutation.isPending ? "Deleting…" : "Delete workspace"}
+            </Button>
+          </div>
+        </div>
+      </Panel>
     </div>
   );
 }

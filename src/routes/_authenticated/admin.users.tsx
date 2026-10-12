@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { adminUserAction, listAdminUsers, listSuspendedUserIds, setUserSuperAdmin, updateAdminUserProfile, type AdminUserRow } from "@/lib/admin.functions";
+import { adminUserAction, deleteAdminUser, listAdminUsers, listSuspendedUserIds, setUserSuperAdmin, updateAdminUserProfile, type AdminUserRow } from "@/lib/admin.functions";
 
 export const Route = createFileRoute("/_authenticated/admin/users")({
   head: () => ({
@@ -66,6 +66,18 @@ function UsersPage() {
       void queryClient.invalidateQueries({ queryKey: ["admin-users"] });
     },
     onError: (e: Error) => toast.error(e.message || "Could not update access"),
+  });
+  const removeUser = useServerFn(deleteAdminUser);
+  const [deleting, setDeleting] = useState<AdminUserRow | null>(null);
+  const deleteMutation = useMutation({
+    mutationFn: (userId: string) => removeUser({ data: { userId } }),
+    onSuccess: () => {
+      toast.success("User and owned workspaces deleted");
+      setDeleting(null);
+      void queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+      void queryClient.invalidateQueries({ queryKey: ["platform-overview"] });
+    },
+    onError: (e: Error) => toast.error(e.message || "Could not delete the user"),
   });
   const updateUser = useServerFn(updateAdminUserProfile);
   const editMutation = useMutation({
@@ -181,6 +193,11 @@ function UsersPage() {
                     <Button size="sm" variant="ghost" onClick={() => actionMutation.mutate({ userId: u.id, action: "send_reset" })}>
                       Send reset
                     </Button>
+                    {u.id !== meId && !u.isSuperAdmin ? (
+                      <Button size="sm" variant="destructive" onClick={() => setDeleting(u)}>
+                        Delete
+                      </Button>
+                    ) : null}
                   </div>
                 ),
               },
@@ -188,6 +205,26 @@ function UsersPage() {
           />
         )}
       </Panel>
+      <Dialog open={Boolean(deleting)} onOpenChange={(open) => !open && setDeleting(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete user permanently?</DialogTitle>
+            <DialogDescription>
+              {deleting?.email ?? "This user"} will lose access, and every workspace they own
+              {deleting && deleting.workspaces.filter((w) => w.role === "owner").length > 0
+                ? ` (${deleting.workspaces.filter((w) => w.role === "owner").map((w) => w.name).join(", ")})`
+                : ""}{" "}
+              will be deleted with all its data. This cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleting(null)}>Cancel</Button>
+            <Button variant="destructive" disabled={deleteMutation.isPending} onClick={() => deleting && deleteMutation.mutate(deleting.id)}>
+              {deleteMutation.isPending ? "Deleting…" : "Delete user"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <Dialog open={Boolean(editing)} onOpenChange={(open) => !open && setEditing(null)}>
         <DialogContent>
           <DialogHeader>
