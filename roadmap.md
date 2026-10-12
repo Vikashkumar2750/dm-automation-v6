@@ -98,6 +98,8 @@ Real Meta + YouTube credentials are available when we reach OAuth phases.
 - [ ] Owner: redeploy Railway and test a real comment on a selected post
 
 ## Comment review and mobile (Oct 10)
+- [ ] Add shared bell notifications and dashboard alerts for skipped/failed automations, with read controls.
+- [ ] Prefer reel thumbnails and replace unavailable PostPicker images with clean icons.
 - [ ] Add supported comment edit/delete controls with authorization and regression tests.
 - [ ] Improve phone layouts across customer/admin pages and verify representative workflows.
 - [ ] Add accurate comment re-submission and screencast instructions to Meta App Review guides.

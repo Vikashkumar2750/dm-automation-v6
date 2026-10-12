@@ -4,6 +4,8 @@
  * rules can be targeted at posts that were never published from this app.
  */
 
+import { postThumbnail } from "@/lib/post-thumbnail";
+
 const GRAPH = "https://graph.facebook.com/v21.0";
 
 export type RemotePost = {
@@ -92,7 +94,7 @@ export async function fetchRemotePosts(
           platform: account.platform as "instagram" | "facebook",
           accountName: label,
           caption: (item['caption'] ?? item['message'] ?? item['story'] ?? "").slice(0, 200),
-          mediaUrl: item['media_url'] ?? item['thumbnail_url'] ?? item['full_picture'] ?? null,
+          mediaUrl: postThumbnail(item),
           permalink: item['permalink'] ?? item['permalink_url'] ?? null,
           publishedAt: item['timestamp'] ?? item['created_time'] ?? null,
         });
