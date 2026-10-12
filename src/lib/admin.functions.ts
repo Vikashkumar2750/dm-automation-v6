@@ -1164,3 +1164,63 @@ export const listSuspendedUserIds = createServerFn({ method: "GET" })
       })
       .map((u) => u.id);
   });
+
+/** Super-admin: permanently delete one workspace and all of its data (FK cascades). */
+export const deleteAdminOrganization = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) =>
+    z.object({ organizationId: z.string().uuid(), confirmName: z.string().trim().min(1).max(200) }).parse(data),
+  )
+  .handler(async ({ data, context }) => {
+    await assertSuperAdmin(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: org, error: readError } = await supabaseAdmin
+      .from("organizations")
+      .select("id, name, owner_id")
+      .eq("id", data.organizationId)
+      .maybeSingle();
+    if (readError) throw new Error(readError.message);
+    if (!org) throw new Error("Workspace not found");
+    if (org.name.trim() !== data.confirmName) throw new Error("Workspace name does not match");
+    const { data: mine } = await supabaseAdmin
+      .from("organization_members")
+      .select("organization_id")
+      .eq("user_id", context.userId);
+    if ((mine ?? []).some((m) => m.organization_id === org.id)) {
+      throw new Error("You cannot delete a workspace you are a member of");
+    }
+    const { error } = await supabaseAdmin.from("organizations").delete().eq("id", org.id);
+    if (error) throw new Error(error.message);
+    await audit(context, "organization.deleted", { type: "organization", id: org.id });
+    return { ok: true };
+  });
+
+/** Super-admin: permanently delete a user and every workspace they own. */
+export const deleteAdminUser = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => z.object({ userId: z.string().uuid() }).parse(data))
+  .handler(async ({ data, context }) => {
+    await assertSuperAdmin(context);
+    if (data.userId === context.userId) throw new Error("You cannot delete your own account");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: roles } = await supabaseAdmin
+      .from("platform_roles")
+      .select("id")
+      .eq("user_id", data.userId);
+    if ((roles ?? []).length > 0) throw new Error("Remove platform access before deleting this user");
+    // Clear references that block deletion (no cascade on these columns).
+    const clears = await Promise.all([
+      supabaseAdmin.from("automation_rules").update({ created_by: null }).eq("created_by", data.userId),
+      supabaseAdmin.from("messages").update({ sent_by: null }).eq("sent_by", data.userId),
+      supabaseAdmin.from("organization_invitations").update({ invited_by: null }).eq("invited_by", data.userId),
+      supabaseAdmin.from("organization_invitations").update({ accepted_by: null }).eq("accepted_by", data.userId),
+      supabaseAdmin.from("plan_orders").update({ created_by: null }).eq("created_by", data.userId),
+    ]);
+    const clearError = clears.find((r) => r.error)?.error;
+    if (clearError) throw new Error(clearError.message);
+    // Owned workspaces are removed with the user (organizations.owner_id cascades).
+    const { error } = await supabaseAdmin.auth.admin.deleteUser(data.userId);
+    if (error) throw new Error(error.message);
+    await audit(context, "user.deleted", { type: "user", id: data.userId });
+    return { ok: true };
+  });
