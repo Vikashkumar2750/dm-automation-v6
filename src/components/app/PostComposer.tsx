@@ -219,18 +219,20 @@ export function PostComposerForm({
         setProgress(steps);
         const update = (id: string, patch: Partial<Progress>) =>
           setProgress((current) => current?.map((step) => (step.id === id ? { ...step, ...patch } : step)) ?? null);
-        // Publish one by one (main post first, then story) so one failure never blocks the others.
+        // Publish everywhere at the same time; one failure never blocks the others.
         let failed = 0;
-        for (const id of all) {
-          update(id, { state: "running" });
-          try {
-            await publish({ data: { id } });
-            update(id, { state: "done" });
-          } catch (error) {
-            failed += 1;
-            update(id, { state: "failed", detail: error instanceof Error ? error.message : "Failed" });
-          }
-        }
+        await Promise.all(
+          all.map(async (id) => {
+            update(id, { state: "running" });
+            try {
+              await publish({ data: { id } });
+              update(id, { state: "done" });
+            } catch (error) {
+              failed += 1;
+              update(id, { state: "failed", detail: error instanceof Error ? error.message : "Failed" });
+            }
+          }),
+        );
         void queryClient.invalidateQueries({ queryKey: ["posts", organizationId] });
         if (failed > 0) {
           toast.error(`${failed} of ${all.length} posts failed — check the Posts list for details`);
@@ -482,13 +484,15 @@ export function PostComposerForm({
 
       <div className="mt-5 flex flex-wrap justify-end gap-2">
         <Button variant="outline" disabled={disabled} onClick={() => mutation.mutate("draft")}>
+          {mutation.isPending && mutation.variables === "draft" && <Loader2 className="mr-2 size-4 animate-spin" />}
           Save draft
         </Button>
         <Button disabled={disabled || !when} onClick={() => mutation.mutate("scheduled")}>
-          {mutation.isPending && <Loader2 className="mr-2 size-4 animate-spin" />}
+          {mutation.isPending && mutation.variables === "scheduled" && <Loader2 className="mr-2 size-4 animate-spin" />}
           Schedule
         </Button>
         <Button disabled={disabled} variant="secondary" onClick={() => mutation.mutate("now")}>
+          {mutation.isPending && mutation.variables === "now" && <Loader2 className="mr-2 size-4 animate-spin" />}
           Publish now
         </Button>
       </div>
