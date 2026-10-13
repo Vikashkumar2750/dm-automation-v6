@@ -15,6 +15,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { GuideButton } from "@/components/app/GuideButton";
 import { useTenant } from "@/hooks/useTenant";
+import { Pager, pageSlice } from "@/components/app/Pager";
 import { listConversations } from "@/lib/inbox.functions";
 import { contactLabel } from "@/lib/contact-name";
 
@@ -65,7 +66,9 @@ function CommentsPage() {
       }),
   });
 
-  const rows = threads.data ?? [];
+  const allRows = threads.data ?? [];
+  const [page, setPage] = useState(1);
+  const rows = pageSlice(allRows, page, 10);
 
   return (
     <AppShell>
@@ -81,7 +84,7 @@ function CommentsPage() {
       />
 
       <Panel
-        title={`Comment threads (${rows.length})`}
+        title={`Comment threads (${allRows.length})`}
         action={
           <div className="flex flex-wrap gap-1">
             {FILTERS.map((f) => (
@@ -89,7 +92,7 @@ function CommentsPage() {
                 key={f.key}
                 size="sm"
                 variant={filter === f.key ? "default" : "outline"}
-                onClick={() => setFilter(f.key)}
+                onClick={() => { setFilter(f.key); setPage(1); }}
               >
                 {f.label}
               </Button>
@@ -135,6 +138,7 @@ function CommentsPage() {
                 </div>
               </Link>
             ))}
+            <Pager page={page} total={allRows.length} perPage={10} onPage={setPage} />
           </div>
         )}
       </Panel>

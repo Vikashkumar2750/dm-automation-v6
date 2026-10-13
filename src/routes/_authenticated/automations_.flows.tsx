@@ -285,6 +285,11 @@ function FlowsPage() {
           </div>
         }
       />
+      <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 text-sm md:hidden">
+        <p className="font-medium">Flow Builder works best on a computer.</p>
+        <p className="mt-1 text-muted-foreground">Open it on a desktop or laptop to drag and connect steps. On your phone you can create and manage simple automation rules.</p>
+        <Button asChild size="sm" className="mt-2"><Link to="/automations">Go to automation rules</Link></Button>
+      </div>
       <div className="rounded-lg border border-border bg-muted/40 p-3 text-sm text-muted-foreground">
         {q.data?.live
           ? "Live: active flows send real messages. Keyword rules run first; a flow only acts when no rule replied. Safety limits and quiet hours apply."
@@ -875,6 +880,19 @@ function FlowCanvas({ flow, zoom, setZoom, onFlow, trigger, renderStep }: {
     const el = viewport.current;
     if (!el) return;
     const wheel = (e: WheelEvent) => {
+      // Let lists inside cards (post picker, long text) scroll themselves instead of moving the canvas.
+      if (!(e.ctrlKey || e.metaKey)) {
+        let node = e.target instanceof HTMLElement ? e.target : null;
+        while (node && node !== el) {
+          const style = getComputedStyle(node);
+          if (/(auto|scroll)/.test(style.overflowY) && node.scrollHeight > node.clientHeight + 1) {
+            const atTop = node.scrollTop <= 0, atEnd = node.scrollTop + node.clientHeight >= node.scrollHeight - 1;
+            if (!((e.deltaY < 0 && atTop) || (e.deltaY > 0 && atEnd))) return;
+            if (node.hasAttribute("data-scroll-local")) { e.preventDefault(); return; }
+          }
+          node = node.parentElement;
+        }
+      }
       e.preventDefault();
       const dy = wheelPixels(e.deltaY, e.deltaMode, el.clientHeight);
       if (e.ctrlKey || e.metaKey) {

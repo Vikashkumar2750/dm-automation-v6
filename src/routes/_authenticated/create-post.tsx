@@ -149,6 +149,7 @@ function CreatePostPage() {
   const openEdit = (post: Post) => {
     if (post.status === "published") {
       if (post.platform === "facebook") setLiveEdit({ post, caption: post.caption });
+      else if (post.platform === "youtube") toast.info("YouTube video details can't be changed from here yet. Edit the title or description in YouTube Studio, or use Duplicate to post again.");
       else toast.info("Instagram doesn't allow editing a published post. Use Duplicate to post an updated version.");
       return;
     }

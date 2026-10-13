@@ -108,3 +108,14 @@ Real Meta + YouTube credentials are available when we reach OAuth phases.
 - [x] Posts list: Feed/Reel/Story/Carousel tabs + badges, thumbnails, likes/comments/shares/views
 - [x] Posts: Edit button (drafts full edit, live Facebook caption edit) and real delete on Facebook/YouTube (Instagram has no delete API)
 - [ ] Verify live delete/edit/stats on a real connected account (needs signed-in workspace)
+
+## Oct 13 batch
+- [x] Reel thumbnails show first video frame
+- [x] YouTube edit shows its own message (not Instagram's)
+- [x] Composer: title for IG/FB, YouTube title/description/tags, Instagram trial reel copy
+- [x] Calendar shows platform + post type instead of caption
+- [x] Inbox fits the screen on desktop
+- [x] Contacts 8 per page, Comments 10 per page
+- [x] Flow post list scrolls under the cursor; mobile notice on Flow Builder
+- [x] Rule editor opens as a full page view
+- [ ] Verify on live account after deploy (needs signed-in workspace)

@@ -27,6 +27,10 @@ const LABEL: Record<Exclude<FormatTab, "all">, string> = {
   carousel: "Carousel",
 };
 
+export function formatLabel(postFormat: string | null | undefined): string {
+  return postFormat === "trial_reel" ? "Trial reel" : LABEL[formatKey(postFormat)];
+}
+
 export function FormatBadge({ postFormat }: { postFormat: string }) {
   return (
     <span className="rounded-full border px-2 py-0.5 text-[11px] font-medium text-muted-foreground">

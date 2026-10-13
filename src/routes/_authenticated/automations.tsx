@@ -5,8 +5,8 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { checkPolicy } from "@/lib/trust-safety";
 import { useServerFn } from "@tanstack/react-start";
-import { useMemo, useState } from "react";
-import { ChevronDown, Copy, Loader2, Plus, ShieldCheck, Trash2, Workflow, Zap } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { ChevronDown, ChevronLeft, Copy, Loader2, Plus, ShieldCheck, Trash2, Workflow, Zap } from "lucide-react";
 import { toast } from "sonner";
 
 import { AppShell } from "@/components/app/AppShell";
@@ -16,13 +16,6 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -334,6 +327,8 @@ function AutomationsPage() {
   const entryPointsOn = entryQuery.data?.enabled === true;
 
   const [draft, setDraft] = useState<Draft | null>(null);
+  const editing = Boolean(draft);
+  useEffect(() => { if (typeof window !== "undefined") window.scrollTo({ top: 0 }); }, [editing]);
 
   const rulesQuery = useQuery({
     queryKey: ["automation-rules", orgId],
@@ -464,6 +459,7 @@ function AutomationsPage() {
 
   return (
     <AppShell>
+      <div className={draft ? "hidden" : "contents"}>
       <PageHeader
         title="Automations"
         description="Keyword rules that reply to DMs and comments automatically, with cooldowns and daily caps."
@@ -638,11 +634,15 @@ function AutomationsPage() {
       <SafetyPanel orgId={orgId} />
 
 
-      <Dialog open={Boolean(draft)} onOpenChange={(open) => !open && setDraft(null)}>
-        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>{draft?.id ? "Edit automation" : "New automation"}</DialogTitle>
-          </DialogHeader>
+      </div>
+      {draft && (
+      <div className="mx-auto w-full max-w-3xl space-y-4">
+        <Button variant="ghost" size="sm" onClick={() => setDraft(null)}><ChevronLeft className="size-4" /> Back to automations</Button>
+        <section className="panel">
+          <div className="border-b px-5 py-4">
+            <h1 className="text-xl font-semibold">{draft?.id ? "Edit automation" : "New automation"}</h1>
+          </div>
+          <div className="p-5">
           {draft && (
             <div className="grid gap-4">
               <div className="grid gap-2">
@@ -1116,7 +1116,8 @@ function AutomationsPage() {
               </div>
             </div>
           )}
-          <DialogFooter>
+          </div>
+          <div className="sticky bottom-0 flex justify-end gap-2 border-t bg-card px-5 py-3">
             <Button variant="outline" onClick={() => setDraft(null)}>
               Cancel
             </Button>
@@ -1127,9 +1128,10 @@ function AutomationsPage() {
               {saveMutation.isPending && <Loader2 className="size-4 animate-spin" />}
               Save rule
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </div>
+        </section>
+      </div>
+      )}
     </AppShell>
   );
 }
