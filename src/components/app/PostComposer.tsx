@@ -342,20 +342,20 @@ export function PostComposerForm({
               Connect an Instagram or Facebook account first.
             </p>
           ) : (
-            <div className="space-y-1.5 rounded-xl border p-2">
+            <div className="grid grid-cols-1 gap-3 rounded-xl border p-2 sm:grid-cols-3">
               {(["instagram", "facebook", "youtube"] as const).map((platform) => {
                 const group = publishable.filter((a) => a.platform === platform);
                 if (group.length === 0) return null;
                 return (
-                  <div key={platform} className="space-y-1">
-                    <p className="flex items-center gap-2 px-2 pt-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  <div key={platform} className="space-y-1 rounded-lg bg-surface-secondary/40 p-2">
+                    <p className="flex items-center gap-2 px-1 pt-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                       <PlatformBadge platform={platform} size="sm" />
                       {platform === "instagram" ? "Instagram" : platform === "facebook" ? "Facebook" : "YouTube"}
                     </p>
                     {group.map((account) => (
                       <label
                         key={account.id}
-                        className="ml-4 flex cursor-pointer items-center gap-3 rounded-lg px-2 py-1.5 hover:bg-surface-secondary"
+                        className="flex cursor-pointer items-center gap-3 rounded-lg px-1 py-1.5 hover:bg-surface-secondary"
                       >
                         <Checkbox
                           checked={selected.includes(account.id)}
