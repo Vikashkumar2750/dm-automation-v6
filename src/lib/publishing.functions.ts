@@ -76,7 +76,30 @@ const postInput = z.object({
   scheduledAt: z.string().datetime().nullable(),
   status: z.enum(["draft", "scheduled"]),
   alsoStory: z.boolean().optional().default(false),
+  /** Optional title shown as the first caption line on Instagram/Facebook. */
+  title: z.string().trim().max(150).optional().default(""),
+  /** YouTube-only overrides; empty falls back to the shared title/caption. */
+  youtubeTitle: z.string().trim().max(100).optional().default(""),
+  youtubeDescription: z.string().trim().max(5000).optional().default(""),
+  youtubeTags: z.array(z.string().trim().min(1).max(60)).max(15).optional().default([]),
+  /** Also queue an Instagram trial reel copy of a video reel/feed post. */
+  alsoTrialReel: z.boolean().optional().default(false),
 });
+
+/** Caption stored per platform. YouTube reads the first line as title and #hashtags as tags. */
+export function captionFor(
+  platform: "instagram" | "facebook" | "youtube",
+  d: { caption: string; title?: string; youtubeTitle?: string; youtubeDescription?: string; youtubeTags?: string[] },
+): string {
+  if (platform === "youtube") {
+    const title = (d.youtubeTitle || d.title || "").trim();
+    const body = (d.youtubeDescription || d.caption).trim();
+    const tags = (d.youtubeTags ?? []).map((t) => `#${t.replace(/^#/, "").replace(/\W+/g, "")}`).filter((t) => t.length > 1);
+    return [title, body, tags.join(" ")].filter(Boolean).join("\n\n").slice(0, 5000);
+  }
+  const title = (d.title ?? "").trim();
+  return (title ? `${title}\n\n${d.caption}` : d.caption).slice(0, 2200);
+}
 
 export const savePost = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -124,7 +147,7 @@ export const savePost = createServerFn({ method: "POST" })
       const first = targets[0]!;
       const { error } = await context.supabase
         .from("posts")
-        .update({ ...base, social_account_id: first.id, platform: first.platform })
+        .update({ ...base, caption: captionFor(first.platform, data), social_account_id: first.id, platform: first.platform })
         .eq("id", data.id);
       if (error) throw new Error(error.message);
       return { ids: [data.id] };
@@ -132,9 +155,10 @@ export const savePost = createServerFn({ method: "POST" })
 
     const groupId = crypto.randomUUID();
     const wantsStory = data.alsoStory && (data.postFormat === "feed" || data.postFormat === "reel" || data.postFormat === "trial_reel");
-    const useGroup = targets.length > 1 || wantsStory;
+    const useGroup = targets.length > 1 || wantsStory || data.alsoTrialReel;
     const rows = targets.map((account) => ({
       ...base,
+      caption: captionFor(account.platform, data),
       // Trial reels exist on Instagram only; other platforms get a normal reel.
       post_format: data.postFormat === "trial_reel" && account.platform !== "instagram" ? "reel" : data.postFormat,
       social_account_id: account.id,
@@ -172,7 +196,29 @@ export const savePost = createServerFn({ method: "POST" })
       if (storyError) throw new Error(storyError.message);
       storyIds = ((stories ?? []) as { id: string }[]).map((row) => row.id);
     }
-    return { ids, storyIds };
+
+    // Optional Instagram trial reel duplicate (video only, never for a post that is already a trial reel).
+    let trialIds: string[] = [];
+    const trialTargets = targets.filter((a) => a.platform === "instagram");
+    if (data.alsoTrialReel && data.mediaType === "video" && data.postFormat !== "trial_reel" && data.postFormat !== "story" && trialTargets.length > 0) {
+      const { data: trials, error: trialError } = await context.supabase
+        .from("posts")
+        .insert(trialTargets.map((account) => ({
+          ...base,
+          caption: captionFor(account.platform, data),
+          media_url: data.media[0]!,
+          media_urls: [data.media[0]!],
+          post_format: "trial_reel",
+          social_account_id: account.id,
+          platform: account.platform,
+          group_id: groupId,
+          created_by: context.userId,
+        })))
+        .select("id");
+      if (trialError) throw new Error(trialError.message);
+      trialIds = ((trials ?? []) as { id: string }[]).map((row) => row.id);
+    }
+    return { ids, storyIds, trialIds };
   });
 
 async function loadOwnPost(

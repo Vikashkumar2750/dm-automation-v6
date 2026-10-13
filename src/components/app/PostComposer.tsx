@@ -121,6 +121,11 @@ export function PostComposerForm({
   const [when, setWhen] = useState("");
   const [uploading, setUploading] = useState(false);
   const [alsoStory, setAlsoStory] = useState(false);
+  const [title, setTitle] = useState("");
+  const [ytTitle, setYtTitle] = useState("");
+  const [ytDescription, setYtDescription] = useState("");
+  const [ytTags, setYtTags] = useState("");
+  const [alsoTrialReel, setAlsoTrialReel] = useState(false);
   const [progress, setProgress] = useState<Progress[] | null>(null);
 
   // Instagram, Facebook and YouTube (video only) can publish.
@@ -141,6 +146,11 @@ export function PostComposerForm({
     setWhen(toLocalInput(post?.scheduled_at ?? draft?.scheduledAt ?? null));
     setLink("");
     setAlsoStory(false);
+    setTitle("");
+    setYtTitle("");
+    setYtDescription("");
+    setYtTags("");
+    setAlsoTrialReel(false);
     setProgress(null);
     setSelected(
       post?.social_account_id ? [post.social_account_id] : [],
@@ -180,6 +190,9 @@ export function PostComposerForm({
   }, [media, mediaType]);
   const selectedPlatforms = publishable.filter((a) => selected.includes(a.id)).map((a) => a.platform);
   const ratioRuleNow = combinedRule(selectedPlatforms, format);
+  const hasYouTube = selectedPlatforms.includes("youtube");
+  const hasMeta = selectedPlatforms.includes("instagram") || selectedPlatforms.includes("facebook");
+  const trialEligible = !editing && selectedPlatforms.includes("instagram") && mediaType === "video" && (format === "feed" || format === "reel");
   const badMedia = mediaType === "image"
     ? media.filter((ref) => sizes[ref] && !ratioFits(sizes[ref]!.width / sizes[ref]!.height, ratioRuleNow))
     : [];
@@ -240,12 +253,19 @@ export function PostComposerForm({
                 : null,
           status,
           alsoStory: storyEligible && alsoStory,
+          title,
+          youtubeTitle: ytTitle,
+          youtubeDescription: ytDescription,
+          youtubeTags: ytTags.split(",").map((t) => t.trim()).filter(Boolean).slice(0, 15),
+          alsoTrialReel: trialEligible && alsoTrialReel,
         },
       });
       const storyIds: string[] = "storyIds" in result ? (result.storyIds as string[]) : [];
-      const all = [...result.ids, ...storyIds];
+      const trialIds: string[] = "trialIds" in result ? (result.trialIds as string[]) : [];
+      const all = [...result.ids, ...storyIds, ...trialIds];
       if (mode === "now") {
         const nameOf = (index: number) => {
+          if (index >= result.ids.length + storyIds.length) return "Instagram — Trial reel";
           const isStory = index >= result.ids.length;
           const account = selectedAccounts[(isStory ? index - result.ids.length : index)];
           return `${account?.name ?? "Account"} — ${isStory ? "Story" : formats.find((f) => f.value === format)?.label ?? "Post"}`;
@@ -374,6 +394,13 @@ export function PostComposerForm({
           </p>
         </div>
 
+        {hasMeta && (
+          <div className="space-y-1.5">
+            <Label htmlFor="post-title">Title (optional)</Label>
+            <Input id="post-title" value={title} maxLength={150} onChange={(e) => setTitle(e.target.value)} placeholder="Shown as the first line of the Instagram / Facebook caption" />
+          </div>
+        )}
+
         <div className="space-y-1.5">
           <Label htmlFor="caption">Caption</Label>
           <Textarea
@@ -466,6 +493,37 @@ export function PostComposerForm({
               <span className="block text-sm font-medium">Also publish to Story</span>
               <span className="block text-xs text-muted-foreground">
                 Instagram and Facebook only. Uses the first photo or video, without the caption. Best in 9:16, videos up to 60 seconds. Facebook stories take photos only.
+              </span>
+            </span>
+          </label>
+        )}
+
+        {hasYouTube && (
+          <div className="space-y-3 rounded-xl border p-3">
+            <p className="text-sm font-medium">YouTube details</p>
+            <div className="space-y-1.5">
+              <Label htmlFor="yt-title">Video title</Label>
+              <Input id="yt-title" value={ytTitle} maxLength={100} onChange={(e) => setYtTitle(e.target.value)} placeholder="Leave empty to use the title or first caption line" />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="yt-desc">Description</Label>
+              <Textarea id="yt-desc" rows={4} value={ytDescription} maxLength={5000} onChange={(e) => setYtDescription(e.target.value)} placeholder="Leave empty to use the caption" />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="yt-tags">Tags</Label>
+              <Input id="yt-tags" value={ytTags} onChange={(e) => setYtTags(e.target.value)} placeholder="cooking, recipe, quick meals" />
+              <p className="text-xs text-muted-foreground">Separate with commas. Up to 15 tags.</p>
+            </div>
+          </div>
+        )}
+
+        {trialEligible && (
+          <label className="flex cursor-pointer items-start gap-3 rounded-xl border p-3">
+            <Checkbox checked={alsoTrialReel} onCheckedChange={(v) => setAlsoTrialReel(v === true)} />
+            <span className="space-y-0.5">
+              <span className="block text-sm font-medium">Also post a copy as Trial reel</span>
+              <span className="block text-xs text-muted-foreground">
+                Instagram only. A duplicate is posted as a trial reel, shown to non-followers first. Facebook has no trial reels.
               </span>
             </span>
           </label>
