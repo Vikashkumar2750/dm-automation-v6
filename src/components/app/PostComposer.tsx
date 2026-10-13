@@ -374,22 +374,29 @@ export function PostComposerForm({
                   </div>
                 );
               })}
-              {!editing && publishable.length > 1 && (
-                <button
-                  type="button"
-                  className="px-2 text-xs text-primary"
-                  onClick={() =>
+            </div>
+            {!editing && publishable.length > 1 && (
+              <label className="flex w-fit cursor-pointer items-center gap-2 px-1 text-xs text-muted-foreground transition-colors hover:text-foreground">
+                <Checkbox
+                  checked={
+                    selected.length === publishable.length
+                      ? true
+                      : selected.length === 0
+                        ? false
+                        : "indeterminate"
+                  }
+                  onCheckedChange={() =>
                     setSelected(
                       selected.length === publishable.length
                         ? []
                         : publishable.map((a) => a.id),
                     )
                   }
-                >
-                  {selected.length === publishable.length ? "Clear all" : "Select all"}
-                </button>
-              )}
-            </div>
+                />
+                Select all
+              </label>
+            )}
+          </div>
           )}
         </div>
 
