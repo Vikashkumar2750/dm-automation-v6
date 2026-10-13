@@ -361,7 +361,14 @@ export function PostComposerForm({
                           checked={selected.includes(account.id)}
                           onCheckedChange={() => toggleAccount(account.id)}
                         />
-                        <span className="min-w-0 flex-1 truncate text-sm">{account.name}</span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-sm">{account.name}</span>
+                          {account.handle && account.handle !== account.name ? (
+                            <span className="block truncate text-[11px] leading-tight text-muted-foreground">
+                              @{account.handle.replace(/^@/, "")}
+                            </span>
+                          ) : null}
+                        </span>
                       </label>
                     ))}
                   </div>
