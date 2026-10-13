@@ -475,6 +475,17 @@ export function PostComposerForm({
           <p className="text-xs text-warning">A trial reel needs a video.</p>
         )}
 
+        {badMedia.length > 0 && ratioRuleNow && (
+          <div role="alert" className="rounded-xl border border-destructive/40 bg-destructive/10 p-3 text-xs text-destructive">
+            <p className="font-medium">Wrong photo size for this post</p>
+            <p className="mt-1">
+              {badMedia.length === 1 ? "1 photo is" : `${badMedia.length} photos are`}{" "}
+              {describeRatio(sizes[badMedia[0]!]!.width, sizes[badMedia[0]!]!.height)} — this post needs {ratioRuleNow.label}.
+              If you publish anyway, we'll fit it to the right size without stretching (the empty sides get a soft blurred fill).
+            </p>
+          </div>
+        )}
+
         {igSelected && media.length === 0 && (
           <p className="text-xs text-warning">
             Instagram needs at least one photo or video — a text-only post will fail there.
