@@ -35,3 +35,48 @@ export async function previewUrl(ref: string) {
   const { data } = await supabase.storage.from(MEDIA_BUCKET).createSignedUrl(path, 3600);
   return data?.signedUrl ?? "";
 }
+
+function loadImage(url: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error("Could not read the photo"));
+    img.src = url;
+  });
+}
+
+/** Natural width/height of a stored or linked photo. */
+export async function imageSize(ref: string) {
+  const img = await loadImage(await previewUrl(ref));
+  return { width: img.naturalWidth, height: img.naturalHeight };
+}
+
+/**
+ * Place the whole photo, unstretched, on a canvas of the target ratio. The
+ * empty space is filled with a blurred, enlarged copy of the same photo.
+ * Uploads the result and returns its new reference.
+ */
+export async function fitImageToRatio(organizationId: string, ref: string, target: number) {
+  const { paddedCanvas } = await import("@/lib/aspect-ratio");
+  const img = await loadImage(await previewUrl(ref));
+  const w = img.naturalWidth;
+  const h = img.naturalHeight;
+  const size = paddedCanvas(w, h, target);
+  const canvas = document.createElement("canvas");
+  canvas.width = size.width;
+  canvas.height = size.height;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Could not prepare the photo");
+  // Background: cover-scaled blurred copy.
+  const cover = Math.max(size.width / w, size.height / h);
+  ctx.filter = "blur(40px) brightness(0.85)";
+  ctx.drawImage(img, (size.width - w * cover) / 2, (size.height - h * cover) / 2, w * cover, h * cover);
+  ctx.filter = "none";
+  // Foreground: original at 1:1 scale, centred.
+  ctx.drawImage(img, (size.width - w) / 2, (size.height - h) / 2, w, h);
+  const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.92));
+  if (!blob) throw new Error("Could not prepare the photo");
+  const file = new File([blob], "fitted.jpg", { type: "image/jpeg" });
+  return uploadPostMedia(organizationId, file);
+}
