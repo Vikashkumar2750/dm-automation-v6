@@ -5,7 +5,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { checkPolicy } from "@/lib/trust-safety";
 import { useServerFn } from "@tanstack/react-start";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ChevronDown, ChevronLeft, Copy, Loader2, Plus, ShieldCheck, Trash2, Workflow, Zap } from "lucide-react";
 import { toast } from "sonner";
 
@@ -327,6 +327,8 @@ function AutomationsPage() {
   const entryPointsOn = entryQuery.data?.enabled === true;
 
   const [draft, setDraft] = useState<Draft | null>(null);
+  const editing = Boolean(draft);
+  useEffect(() => { if (typeof window !== "undefined") window.scrollTo({ top: 0 }); }, [editing]);
 
   const rulesQuery = useQuery({
     queryKey: ["automation-rules", orgId],
