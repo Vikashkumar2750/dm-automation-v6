@@ -17,12 +17,15 @@ import { PostComposer, type ComposerDraft } from "@/components/app/PostComposer"
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { FORMAT_TABS, FormatBadge, PostMediaThumb, StatsRow, formatKey, type FormatTab } from "@/components/app/PostListExtras";
 import { useTenant } from "@/hooks/useTenant";
 import { listSocialAccounts } from "@/lib/social-accounts.functions";
 import {
   deletePost,
   editPublishedCaption,
+  editYouTubeDetails,
   getPostStats,
   listPosts,
   publishNow,
@@ -81,6 +84,11 @@ function CreatePostPage() {
   const [tab, setTab] = useState<FormatTab>("all");
   const [toDelete, setToDelete] = useState<Post | null>(null);
   const [liveEdit, setLiveEdit] = useState<{ post: Post; caption: string } | null>(null);
+  const [ytEdit, setYtEdit] = useState<{ post: Post; title: string; description: string; tags: string } | null>(null);
+  const editYt = useServerFn(editYouTubeDetails);
+  const [platformFilter, setPlatformFilter] = useState<"all" | "instagram" | "facebook" | "youtube">("all");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
 
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<ComposerDraft | null>(null);
@@ -129,6 +137,16 @@ function CreatePostPage() {
     onError: (error: Error) => toast.error(error.message),
   });
 
+  const ytEditMutation = useMutation({
+    mutationFn: (v: { id: string; title: string; description: string; tags: string[] }) => editYt({ data: v }),
+    onSuccess: () => {
+      toast.success("Video updated on YouTube");
+      setYtEdit(null);
+      invalidate();
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
   const deleteMutation = useMutation({
     mutationFn: (v: { id: string; alsoRemote: boolean }) => remove({ data: v }),
     onSuccess: (res) => {
@@ -142,14 +160,24 @@ function CreatePostPage() {
     onError: (error: Error) => toast.error(error.message),
   });
 
-  const allPosts = postsQuery.data ?? [];
+  const postDate = (p: Post) => (p.published_at ?? p.scheduled_at ?? p.created_at ?? "").slice(0, 10);
+  const allPosts = (postsQuery.data ?? []).filter((p) =>
+    (platformFilter === "all" || p.platform === platformFilter) &&
+    (!fromDate || postDate(p) >= fromDate) &&
+    (!toDate || postDate(p) <= toDate),
+  );
   const posts = tab === "all" ? allPosts : allPosts.filter((p) => formatKey(p.post_format) === tab);
   const accounts = accountsQuery.data ?? [];
 
   const openEdit = (post: Post) => {
     if (post.status === "published") {
       if (post.platform === "facebook") setLiveEdit({ post, caption: post.caption });
-      else if (post.platform === "youtube") toast.info("YouTube video details can't be changed from here yet. Edit the title or description in YouTube Studio, or use Duplicate to post again.");
+      else if (post.platform === "youtube") {
+        const lines = post.caption.split("\n");
+        const tags = Array.from(post.caption.matchAll(/#(\w+)/g)).map((m) => m[1]!).filter((t) => t.toLowerCase() !== "shorts");
+        const body = lines.slice(1).join("\n").replace(/(^|\s)#\w+/g, "").trim();
+        setYtEdit({ post, title: (lines[0] ?? "").replace(/\s*#shorts/i, "").trim(), description: body, tags: tags.join(", ") });
+      }
       else toast.info("Instagram doesn't allow editing a published post. Use Duplicate to post an updated version.");
       return;
     }
@@ -176,7 +204,31 @@ function CreatePostPage() {
         }
       />
 
-      <Panel title="Your posts" bodyClassName="p-0">
+      <Panel
+        title="Your posts"
+        bodyClassName="p-0"
+        action={
+          <div className="flex flex-wrap items-center gap-2">
+            <select
+              aria-label="Platform"
+              value={platformFilter}
+              onChange={(e) => setPlatformFilter(e.target.value as typeof platformFilter)}
+              className="h-8 rounded-md border bg-background px-2 text-xs"
+            >
+              <option value="all">All platforms</option>
+              <option value="instagram">Instagram</option>
+              <option value="facebook">Facebook</option>
+              <option value="youtube">YouTube</option>
+            </select>
+            <Input type="date" aria-label="From date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="h-8 w-36 text-xs" />
+            <span className="text-xs text-muted-foreground">to</span>
+            <Input type="date" aria-label="To date" value={toDate} min={fromDate || undefined} onChange={(e) => setToDate(e.target.value)} className="h-8 w-36 text-xs" />
+            {(fromDate || toDate || platformFilter !== "all") && (
+              <Button size="sm" variant="ghost" onClick={() => { setFromDate(""); setToDate(""); setPlatformFilter("all"); }}>Clear</Button>
+            )}
+          </div>
+        }
+      >
         <div className="flex gap-1 overflow-x-auto border-b px-5 py-2">
           {FORMAT_TABS.map((t) => {
             const count = t.key === "all" ? allPosts.length : allPosts.filter((p) => formatKey(p.post_format) === t.key).length;
@@ -321,6 +373,45 @@ function CreatePostPage() {
           <DialogFooter>
             <Button disabled={liveEditMutation.isPending} onClick={() => liveEdit && liveEditMutation.mutate({ id: liveEdit.post.id, caption: liveEdit.caption })}>
               {liveEditMutation.isPending && <Loader2 className="mr-2 size-4 animate-spin" />}
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={Boolean(ytEdit)} onOpenChange={(o) => !o && setYtEdit(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit YouTube video</DialogTitle>
+            <DialogDescription>Title, description and tags update on YouTube right away.</DialogDescription>
+          </DialogHeader>
+          {ytEdit && (
+            <div className="space-y-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="yt-edit-title">Title</Label>
+                <Input id="yt-edit-title" maxLength={100} value={ytEdit.title} onChange={(e) => setYtEdit({ ...ytEdit, title: e.target.value })} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="yt-edit-desc">Description</Label>
+                <Textarea id="yt-edit-desc" rows={5} maxLength={5000} value={ytEdit.description} onChange={(e) => setYtEdit({ ...ytEdit, description: e.target.value })} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="yt-edit-tags">Tags (comma separated)</Label>
+                <Input id="yt-edit-tags" value={ytEdit.tags} onChange={(e) => setYtEdit({ ...ytEdit, tags: e.target.value })} />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button
+              disabled={ytEditMutation.isPending || !ytEdit?.title.trim()}
+              onClick={() => ytEdit && ytEditMutation.mutate({
+                id: ytEdit.post.id,
+                title: ytEdit.title,
+                description: ytEdit.description,
+                tags: ytEdit.tags.split(",").map((t) => t.trim()).filter(Boolean).slice(0, 15),
+              })}
+            >
+              {ytEditMutation.isPending && <Loader2 className="mr-2 size-4 animate-spin" />}
               Save
             </Button>
           </DialogFooter>
