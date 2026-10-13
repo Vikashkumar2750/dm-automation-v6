@@ -1,7 +1,7 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import {
-  ArrowLeft,
+
   Newspaper,
   Activity,
   Building2,
@@ -113,15 +113,6 @@ function Sidebar({ pathname }: { pathname: string }) {
           ))}
         </div>
       </nav>
-
-      <div className="border-t p-3">
-        <Button variant="outline" className="w-full justify-start gap-2" size="sm" asChild>
-          <Link to="/dashboard">
-            <ArrowLeft className="size-4" />
-            Back to workspace
-          </Link>
-        </Button>
-      </div>
     </div>
   );
 }

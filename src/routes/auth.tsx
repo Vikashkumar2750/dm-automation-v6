@@ -53,15 +53,17 @@ function AuthPage() {
     if (redirectingRef.current) return;
     redirectingRef.current = true;
 
-    // The role check can fail right after sign-in while the session settles; retry,
-    // then fall back to the dashboard (admin pages still check access themselves).
+    // One database-evaluated role check (uses the signed-in session server-side, never
+    // client metadata). The protected route guard re-checks on every navigation.
     let isAdmin = false;
-    for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const { data } = await supabase.rpc("current_user_has_platform_role", { _role: "super_admin" });
+      isAdmin = data === true;
+    } catch {
       try {
         isAdmin = (await fetchPlatformRole()).isSuperAdmin;
-        break;
       } catch {
-        await new Promise((r) => setTimeout(r, 600 * (attempt + 1)));
+        /* guard will still route correctly */
       }
     }
     try {
