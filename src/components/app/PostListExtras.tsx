@@ -49,7 +49,7 @@ export function PostMediaThumb({ refs }: { refs: string[] }) {
   return <PostThumbnail src={src} />;
 }
 
-export function StatsRow({ stats }: { stats?: { likes: number | null; comments: number | null; shares: number | null; views: number | null } }) {
+export function StatsRow({ stats }: { stats?: undefined | { likes: number | null; comments: number | null; shares: number | null; views: number | null } }) {
   if (!stats) return null;
   const items = [
     { icon: Eye, value: stats.views, label: "views" },

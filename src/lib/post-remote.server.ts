@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Live actions on already-published posts: delete on the platform, edit the
  * caption, and read public engagement counts. Kept separate from the publish
@@ -31,15 +32,15 @@ async function tokenFor(admin: AdminClient, row: RemotePostRow): Promise<string 
   return (await readToken((data as { access_token?: string } | null)?.access_token)) ?? null;
 }
 
-async function json(res: Response): Promise<Record<string, unknown>> {
+async function json(res: Response): Promise<Record<string, any>> {
   try {
-    return (await res.json()) as Record<string, unknown>;
+    return (await res.json()) as Record<string, any>;
   } catch {
     return {};
   }
 }
 
-function errMsg(body: Record<string, unknown>, fallback: string) {
+function errMsg(body: Record<string, any>, fallback: string) {
   const e = body.error as { message?: string } | undefined;
   return e?.message ?? fallback;
 }
