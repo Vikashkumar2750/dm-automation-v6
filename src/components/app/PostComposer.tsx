@@ -342,7 +342,8 @@ export function PostComposerForm({
               Connect an Instagram or Facebook account first.
             </p>
           ) : (
-            <div className="grid grid-cols-1 gap-3 rounded-xl border p-2 sm:grid-cols-3">
+            <div className="space-y-1">
+              <div className="grid grid-cols-1 gap-3 rounded-xl border p-2 sm:grid-cols-3">
               {(["instagram", "facebook", "youtube"] as const).map((platform) => {
                 const group = publishable.filter((a) => a.platform === platform);
                 if (group.length === 0) return null;
