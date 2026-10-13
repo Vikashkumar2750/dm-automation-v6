@@ -41,7 +41,7 @@ async function json(res: Response): Promise<Record<string, any>> {
 }
 
 function errMsg(body: Record<string, any>, fallback: string) {
-  const e = body.error as { message?: string } | undefined;
+  const e = body["error"] as { message?: string } | undefined;
   return e?.message ?? fallback;
 }
 
@@ -57,7 +57,7 @@ export async function deleteRemotePost(
   if (row.platform === "facebook") {
     const res = await fetch(`${GRAPH}/${row.external_post_id}?access_token=${encodeURIComponent(token)}`, { method: "DELETE" });
     const body = await json(res);
-    if (!res.ok || body.success === false) return { ok: false, error: errMsg(body, "Facebook refused the delete") };
+    if (!res.ok || body["success"] === false) return { ok: false, error: errMsg(body, "Facebook refused the delete") };
     return { ok: true };
   }
   const res = await fetch(`https://www.googleapis.com/youtube/v3/videos?id=${encodeURIComponent(row.external_post_id)}`, {
@@ -83,7 +83,7 @@ export async function editRemoteCaption(
     body: new URLSearchParams({ message: caption, access_token: token }),
   });
   const body = await json(res);
-  if (!res.ok || body.success === false) return { ok: false, error: errMsg(body, "Facebook refused the edit") };
+  if (!res.ok || body["success"] === false) return { ok: false, error: errMsg(body, "Facebook refused the edit") };
   return { ok: true };
 }
 
@@ -95,19 +95,19 @@ export async function fetchPostStats(admin: AdminClient, row: RemotePostRow): Pr
   try {
     if (row.platform === "instagram") {
       const b = await json(await fetch(`${GRAPH}/${row.external_post_id}?fields=like_count,comments_count&access_token=${encodeURIComponent(token)}`));
-      if (b.error) return null;
-      return { ...empty, likes: Number(b.like_count ?? 0), comments: Number(b.comments_count ?? 0) };
+      if (b["error"]) return null;
+      return { ...empty, likes: Number(b["like_count"] ?? 0), comments: Number(b["comments_count"] ?? 0) };
     }
     if (row.platform === "facebook") {
       const b = await json(await fetch(`${GRAPH}/${row.external_post_id}?fields=shares,likes.summary(true).limit(0),comments.summary(true).limit(0)&access_token=${encodeURIComponent(token)}`));
-      if (b.error) return null;
+      if (b["error"]) return null;
       const sum = (k: string) => Number(((b[k] as { summary?: { total_count?: number } })?.summary?.total_count) ?? 0);
-      return { ...empty, likes: sum("likes"), comments: sum("comments"), shares: Number((b.shares as { count?: number })?.count ?? 0) };
+      return { ...empty, likes: sum("likes"), comments: sum("comments"), shares: Number((b["shares"] as { count?: number })?.count ?? 0) };
     }
     const b = await json(await fetch(`https://www.googleapis.com/youtube/v3/videos?part=statistics&id=${encodeURIComponent(row.external_post_id)}`, { headers: { Authorization: `Bearer ${token}` } }));
-    const s = ((b.items as { statistics?: Record<string, string> }[] | undefined)?.[0]?.statistics) ?? null;
+    const s = ((b["items"] as { statistics?: Record<string, string> }[] | undefined)?.[0]?.statistics) ?? null;
     if (!s) return null;
-    return { likes: Number(s.likeCount ?? 0), comments: Number(s.commentCount ?? 0), shares: null, views: Number(s.viewCount ?? 0) };
+    return { likes: Number(s["likeCount"] ?? 0), comments: Number(s["commentCount"] ?? 0), shares: null, views: Number(s["viewCount"] ?? 0) };
   } catch {
     return null;
   }
