@@ -319,9 +319,9 @@ function InboxPage() {
         actions={<GuideButton guide="meta-review" />}
       />
 
-      <div className="grid min-w-0 gap-4 lg:grid-cols-[340px_minmax(0,1fr)]">
+      <div className="grid min-w-0 gap-4 lg:h-[calc(100dvh-12.5rem)] lg:min-h-[520px] lg:grid-cols-[340px_minmax(0,1fr)]">
         {/* Conversation list */}
-        <Panel bodyClassName="p-0" className={cn("min-h-[480px]", selectedId && "hidden lg:flex")}>
+        <Panel bodyClassName="flex min-h-0 flex-1 flex-col p-0" className={cn("min-h-[480px] lg:min-h-0", selectedId && "hidden lg:flex")}>
           <div className="space-y-2 border-b px-4 py-3">
             <div>
               <p className="text-sm font-semibold">Conversations</p>
@@ -390,7 +390,7 @@ function InboxPage() {
               description="Once your webhook is subscribed in the Meta app, incoming DMs and comments appear here in real time."
             />
           ) : (
-            <ul className="max-h-[60vh] min-h-[240px] divide-y overflow-y-auto">
+            <ul className="max-h-[60vh] min-h-[240px] divide-y overflow-y-auto lg:max-h-none lg:min-h-0 lg:flex-1">
               {conversations.map((c) => (
                 <li key={c.id}>
                   <button
@@ -431,7 +431,7 @@ function InboxPage() {
         </Panel>
 
         {/* Thread */}
-        <Panel className={cn(!selectedId && "hidden lg:flex")} bodyClassName="flex min-h-[480px] flex-col p-0">
+        <Panel className={cn("lg:min-h-0", !selectedId && "hidden lg:flex")} bodyClassName="flex min-h-[480px] flex-1 flex-col p-0 lg:min-h-0">
           {!selected ? (
             <div className="flex flex-1 items-center justify-center py-16">
               <EmptyState
@@ -486,7 +486,7 @@ function InboxPage() {
 
               <div
                 ref={threadRef}
-                className="h-[60vh] min-h-[320px] space-y-3 overflow-y-auto px-5 py-4"
+                className="h-[60vh] min-h-[320px] space-y-3 overflow-y-auto px-5 py-4 lg:h-auto lg:min-h-0 lg:flex-1"
               >
                 {messagesQuery.isLoading ? (
                   <div className="flex items-center justify-center py-10 text-sm text-muted-foreground">
