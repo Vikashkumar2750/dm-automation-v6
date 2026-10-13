@@ -51,15 +51,22 @@ function AuthPage() {
     if (redirectingRef.current) return;
     redirectingRef.current = true;
 
+    // The role check can fail right after sign-in while the session settles; retry,
+    // then fall back to the dashboard (admin pages still check access themselves).
+    let isAdmin = false;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        isAdmin = (await fetchPlatformRole()).isSuperAdmin;
+        break;
+      } catch {
+        await new Promise((r) => setTimeout(r, 600 * (attempt + 1)));
+      }
+    }
     try {
-      const role = await fetchPlatformRole();
-      await navigate({
-        to: role.isSuperAdmin ? "/admin" : "/dashboard",
-        replace: true,
-      });
+      await navigate({ to: isAdmin ? "/admin" : "/dashboard", replace: true });
     } catch {
       redirectingRef.current = false;
-      setError("Signed in, but we could not verify your access. Please try again.");
+      setError("Signed in, but we could not open your workspace. Please try again.");
     }
   }, [fetchPlatformRole, navigate]);
 
