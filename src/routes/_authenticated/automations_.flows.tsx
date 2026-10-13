@@ -875,6 +875,19 @@ function FlowCanvas({ flow, zoom, setZoom, onFlow, trigger, renderStep }: {
     const el = viewport.current;
     if (!el) return;
     const wheel = (e: WheelEvent) => {
+      // Let lists inside cards (post picker, long text) scroll themselves instead of moving the canvas.
+      if (!(e.ctrlKey || e.metaKey)) {
+        let node = e.target instanceof HTMLElement ? e.target : null;
+        while (node && node !== el) {
+          const style = getComputedStyle(node);
+          if (/(auto|scroll)/.test(style.overflowY) && node.scrollHeight > node.clientHeight + 1) {
+            const atTop = node.scrollTop <= 0, atEnd = node.scrollTop + node.clientHeight >= node.scrollHeight - 1;
+            if (!((e.deltaY < 0 && atTop) || (e.deltaY > 0 && atEnd))) return;
+            if (node.hasAttribute("data-scroll-local")) { e.preventDefault(); return; }
+          }
+          node = node.parentElement;
+        }
+      }
       e.preventDefault();
       const dy = wheelPixels(e.deltaY, e.deltaMode, el.clientHeight);
       if (e.ctrlKey || e.metaKey) {

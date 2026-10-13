@@ -204,7 +204,7 @@ export function PostPicker({
             : "No posts found. Connect an Instagram or Facebook account, or add a post link manually below."}
         </p>
       ) : (
-        <div className="grid max-h-64 gap-2 overflow-y-auto pr-1">
+        <div data-scroll-local className="grid max-h-64 gap-2 overflow-y-auto overscroll-contain pr-1">
           {visiblePosts.map((post) => {
             const isOn = selected.includes(post.externalPostId);
             return (
