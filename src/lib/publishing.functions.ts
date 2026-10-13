@@ -175,15 +175,86 @@ export const savePost = createServerFn({ method: "POST" })
     return { ids, storyIds };
   });
 
+async function loadOwnPost(
+  supabase: import("@supabase/supabase-js").SupabaseClient,
+  id: string,
+  userId: string,
+) {
+  const { data: post } = await supabase
+    .from("posts")
+    .select("id, organization_id, platform, social_account_id, external_post_id, status")
+    .eq("id", id)
+    .maybeSingle();
+  if (!post) throw new Error("Post not found");
+  const row = post as {
+    id: string; organization_id: string; platform: "instagram" | "facebook" | "youtube";
+    social_account_id: string | null; external_post_id: string | null; status: string;
+  };
+  await assertWriter(supabase, row.organization_id, userId);
+  return row;
+}
+
 export const deletePost = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { id: string }) =>
-    z.object({ id: z.string().uuid() }).parse(input),
+  .inputValidator((input: { id: string; alsoRemote?: boolean }) =>
+    z.object({ id: z.string().uuid(), alsoRemote: z.boolean().optional().default(false) }).parse(input),
   )
   .handler(async ({ data, context }) => {
+    const row = await loadOwnPost(context.supabase, data.id, context.userId);
+    let remote: "deleted" | "unsupported" | "skipped" = "skipped";
+    if (data.alsoRemote && row.status === "published" && row.external_post_id) {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const { deleteRemotePost } = await import("./post-remote.server");
+      const result = await deleteRemotePost(supabaseAdmin, row);
+      if (result.unsupported) remote = "unsupported";
+      else if (!result.ok) throw new Error(result.error ?? "Could not delete on the platform");
+      else remote = "deleted";
+    }
     const { error } = await context.supabase.from("posts").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
+    return { ok: true, remote };
+  });
+
+/** Edit the caption of a published post (live on Facebook; app-only elsewhere). */
+export const editPublishedCaption = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { id: string; caption: string }) =>
+    z.object({ id: z.string().uuid(), caption: z.string().trim().max(2200) }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const row = await loadOwnPost(context.supabase, data.id, context.userId);
+    if (row.platform !== "facebook") throw new Error("This platform does not allow editing a live post's caption");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { editRemoteCaption } = await import("./post-remote.server");
+    const result = await editRemoteCaption(supabaseAdmin, row, data.caption);
+    if (!result.ok) throw new Error(result.error ?? "Could not edit the post");
+    const { error } = await context.supabase.from("posts").update({ caption: data.caption }).eq("id", data.id);
+    if (error) throw new Error(error.message);
     return { ok: true };
+  });
+
+/** Public like/comment/share counts for published posts. */
+export const getPostStats = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { organizationId: string }) =>
+    z.object({ organizationId: z.string().uuid() }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: rows } = await context.supabase
+      .from("posts")
+      .select("id, platform, social_account_id, external_post_id")
+      .eq("organization_id", data.organizationId)
+      .eq("status", "published")
+      .not("external_post_id", "is", null)
+      .order("published_at", { ascending: false })
+      .limit(40);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { fetchPostStats } = await import("./post-remote.server");
+    type Row = import("./post-remote.server").RemotePostRow;
+    const entries = await Promise.all(
+      ((rows ?? []) as Row[]).map(async (r) => [r.id, await fetchPostStats(supabaseAdmin, r)] as const),
+    );
+    return Object.fromEntries(entries.filter(([, s]) => s)) as Record<string, import("./post-remote.server").PostStats>;
   });
 
 /** Reschedule a post to a new time (used by the calendar). */

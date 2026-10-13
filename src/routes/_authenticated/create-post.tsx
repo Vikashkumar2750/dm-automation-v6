@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
-import { Copy, Loader2, PenSquare, Plus, Send, Trash2 } from "lucide-react";
+import { Copy, Loader2, Pencil, PenSquare, Plus, Send, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { AppShell } from "@/components/app/AppShell";
@@ -15,10 +15,15 @@ import {
 } from "@/components/app/primitives";
 import { PostComposer, type ComposerDraft } from "@/components/app/PostComposer";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { FORMAT_TABS, FormatBadge, PostMediaThumb, StatsRow, formatKey, type FormatTab } from "@/components/app/PostListExtras";
 import { useTenant } from "@/hooks/useTenant";
 import { listSocialAccounts } from "@/lib/social-accounts.functions";
 import {
   deletePost,
+  editPublishedCaption,
+  getPostStats,
   listPosts,
   publishNow,
   type Post,
@@ -71,6 +76,11 @@ function CreatePostPage() {
   const fetchAccounts = useServerFn(listSocialAccounts);
   const publish = useServerFn(publishNow);
   const remove = useServerFn(deletePost);
+  const editLive = useServerFn(editPublishedCaption);
+  const fetchStats = useServerFn(getPostStats);
+  const [tab, setTab] = useState<FormatTab>("all");
+  const [toDelete, setToDelete] = useState<Post | null>(null);
+  const [liveEdit, setLiveEdit] = useState<{ post: Post; caption: string } | null>(null);
 
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<ComposerDraft | null>(null);
@@ -102,19 +112,46 @@ function CreatePostPage() {
     },
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: (id: string) => remove({ data: { id } }),
+  const statsQuery = useQuery({
+    queryKey: ["post-stats", orgId],
+    queryFn: () => fetchStats({ data: { organizationId: orgId } }),
+    enabled: Boolean(orgId),
+    staleTime: 5 * 60_000,
+  });
+
+  const liveEditMutation = useMutation({
+    mutationFn: (v: { id: string; caption: string }) => editLive({ data: v }),
     onSuccess: () => {
-      toast.success("Post deleted");
+      toast.success("Caption updated on Facebook");
+      setLiveEdit(null);
       invalidate();
     },
     onError: (error: Error) => toast.error(error.message),
   });
 
-  const posts = postsQuery.data ?? [];
+  const deleteMutation = useMutation({
+    mutationFn: (v: { id: string; alsoRemote: boolean }) => remove({ data: v }),
+    onSuccess: (res) => {
+      setToDelete(null);
+      if (res.remote === "deleted") toast.success("Post deleted here and on the platform");
+      else if (res.remote === "unsupported")
+        toast.success("Removed from AutoDM. Instagram doesn't let apps delete posts — please delete it in the Instagram app.", { duration: 8000 });
+      else toast.success("Post deleted");
+      invalidate();
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
+  const allPosts = postsQuery.data ?? [];
+  const posts = tab === "all" ? allPosts : allPosts.filter((p) => formatKey(p.post_format) === tab);
   const accounts = accountsQuery.data ?? [];
 
   const openEdit = (post: Post) => {
+    if (post.status === "published") {
+      if (post.platform === "facebook") setLiveEdit({ post, caption: post.caption });
+      else toast.info("Instagram doesn't allow editing a published post. Use Duplicate to post an updated version.");
+      return;
+    }
     setDraft({ post });
     setOpen(true);
   };
@@ -139,6 +176,16 @@ function CreatePostPage() {
       />
 
       <Panel title="Your posts" bodyClassName="p-0">
+        <div className="flex gap-1 overflow-x-auto border-b px-5 py-2">
+          {FORMAT_TABS.map((t) => {
+            const count = t.key === "all" ? allPosts.length : allPosts.filter((p) => formatKey(p.post_format) === t.key).length;
+            return (
+              <Button key={t.key} size="sm" variant={tab === t.key ? "secondary" : "ghost"} onClick={() => setTab(t.key)}>
+                {t.label} <span className="ml-1 text-muted-foreground">{count}</span>
+              </Button>
+            );
+          })}
+        </div>
         {postsQuery.isLoading ? (
           <div className="flex items-center justify-center py-16">
             <Loader2 className="size-5 animate-spin text-muted-foreground" />
@@ -165,13 +212,17 @@ function CreatePostPage() {
                 key={post.id}
                 className="flex flex-wrap items-start gap-3 px-5 py-4"
               >
-                <PlatformBadge platform={post.platform} size="sm" />
+                <PostMediaThumb refs={post.media_urls?.length ? post.media_urls : post.media_url ? [post.media_url] : []} />
                 <button
                   type="button"
                   onClick={() => openEdit(post)}
                   className="min-w-0 flex-1 text-left"
                 >
-                  <p className="truncate text-sm font-medium">
+                  <span className="flex items-center gap-2">
+                    <PlatformBadge platform={post.platform} size="sm" />
+                    <FormatBadge postFormat={post.post_format} />
+                  </span>
+                  <p className="mt-1 truncate text-sm font-medium">
                     {post.caption.trim() || "(no caption)"}
                   </p>
                   <p className="mt-0.5 text-xs text-muted-foreground">
@@ -180,6 +231,7 @@ function CreatePostPage() {
                       : formatWhen(post.scheduled_at)}
                     {post.error ? ` · ${post.error}` : ""}
                   </p>
+                  {post.status === "published" && <StatsRow stats={statsQuery.data?.[post.id]} />}
                 </button>
                 <div className="flex items-center gap-2">
                   <StatusBadge tone={statusTone[post.status]}>
@@ -198,6 +250,15 @@ function CreatePostPage() {
                   <Button
                     size="icon"
                     variant="ghost"
+                    onClick={() => openEdit(post)}
+                    aria-label="Edit post"
+                    title="Edit"
+                  >
+                    <Pencil className="size-4" />
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant="ghost"
                     onClick={() => openDuplicate(post)}
                     aria-label="Duplicate post"
                     title="Duplicate"
@@ -207,7 +268,7 @@ function CreatePostPage() {
                   <Button
                     size="icon"
                     variant="ghost"
-                    onClick={() => deleteMutation.mutate(post.id)}
+                    onClick={() => setToDelete(post)}
                     aria-label="Delete post"
                   >
                     <Trash2 className="size-4" />
@@ -218,6 +279,52 @@ function CreatePostPage() {
           </ul>
         )}
       </Panel>
+
+      <Dialog open={Boolean(toDelete)} onOpenChange={(o) => !o && setToDelete(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete this post?</DialogTitle>
+            <DialogDescription>
+              {toDelete?.status !== "published"
+                ? "It hasn't been published, so it's only removed from AutoDM."
+                : toDelete.platform === "instagram"
+                  ? "Instagram doesn't let apps delete posts. We'll remove it from AutoDM — delete it in the Instagram app too."
+                  : `Delete it from ${toDelete.platform === "facebook" ? "Facebook" : "YouTube"} as well, or only from AutoDM?`}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            {toDelete?.status === "published" && toDelete.platform !== "instagram" && (
+              <Button variant="outline" disabled={deleteMutation.isPending} onClick={() => toDelete && deleteMutation.mutate({ id: toDelete.id, alsoRemote: false })}>
+                Only from AutoDM
+              </Button>
+            )}
+            <Button
+              variant="destructive"
+              disabled={deleteMutation.isPending}
+              onClick={() => toDelete && deleteMutation.mutate({ id: toDelete.id, alsoRemote: toDelete.status === "published" })}
+            >
+              {deleteMutation.isPending && <Loader2 className="mr-2 size-4 animate-spin" />}
+              {toDelete?.status === "published" && toDelete.platform !== "instagram" ? "Delete everywhere" : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={Boolean(liveEdit)} onOpenChange={(o) => !o && setLiveEdit(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit live Facebook post</DialogTitle>
+            <DialogDescription>The new caption updates on your Facebook Page right away.</DialogDescription>
+          </DialogHeader>
+          <Textarea rows={6} value={liveEdit?.caption ?? ""} onChange={(e) => liveEdit && setLiveEdit({ ...liveEdit, caption: e.target.value })} />
+          <DialogFooter>
+            <Button disabled={liveEditMutation.isPending} onClick={() => liveEdit && liveEditMutation.mutate({ id: liveEdit.post.id, caption: liveEdit.caption })}>
+              {liveEditMutation.isPending && <Loader2 className="mr-2 size-4 animate-spin" />}
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {orgId && (
         <PostComposer
