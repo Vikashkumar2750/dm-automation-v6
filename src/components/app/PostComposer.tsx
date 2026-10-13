@@ -24,7 +24,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { savePost, publishNow, type Post } from "@/lib/publishing.functions";
-import { previewUrl, uploadPostMedia } from "@/lib/media-upload";
+import { fitImageToRatio, imageSize, previewUrl, uploadPostMedia } from "@/lib/media-upload";
+import { combinedRule, describeRatio, fitTarget, ratioFits } from "@/lib/aspect-ratio";
 import type { SocialAccountRow } from "@/lib/social";
 
 export type ComposerDraft = {
@@ -166,6 +167,23 @@ export function PostComposerForm({
     );
   }
 
+  const [sizes, setSizes] = useState<Record<string, { width: number; height: number }>>({});
+  useEffect(() => {
+    if (mediaType !== "image") return;
+    for (const ref of media) {
+      if (sizes[ref]) continue;
+      void imageSize(ref)
+        .then((size) => setSizes((current) => ({ ...current, [ref]: size })))
+        .catch(() => undefined);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [media, mediaType]);
+  const selectedPlatforms = publishable.filter((a) => selected.includes(a.id)).map((a) => a.platform);
+  const ratioRuleNow = combinedRule(selectedPlatforms, format);
+  const badMedia = mediaType === "image"
+    ? media.filter((ref) => sizes[ref] && !ratioFits(sizes[ref]!.width / sizes[ref]!.height, ratioRuleNow))
+    : [];
+
   async function handleFiles(files: FileList | null) {
     if (!files || files.length === 0) return;
     setUploading(true);
@@ -188,13 +206,30 @@ export function PostComposerForm({
   const mutation = useMutation({
     mutationFn: async (mode: "draft" | "scheduled" | "now") => {
       const status = mode === "draft" ? "draft" : "scheduled";
+      // Wrong-ratio photos are padded (never stretched) to fit the platform.
+      let finalMedia = media;
+      if (mode !== "draft" && mediaType === "image" && ratioRuleNow && badMedia.length > 0) {
+        finalMedia = await Promise.all(
+          media.map(async (ref) => {
+            const size = sizes[ref];
+            if (!size || ratioFits(size.width / size.height, ratioRuleNow)) return ref;
+            try {
+              return await fitImageToRatio(organizationId, ref, fitTarget(size.width / size.height, ratioRuleNow));
+            } catch {
+              return ref;
+            }
+          }),
+        );
+        setMedia(finalMedia);
+        toast.message("Photos were fitted to the platform size without stretching");
+      }
       const result = await save({
         data: {
           ...(editing && draft?.post ? { id: draft.post.id } : {}),
           organizationId,
           socialAccountIds: selected,
           caption,
-          media,
+          media: finalMedia,
           mediaType,
           postFormat: format,
           scheduledAt:
