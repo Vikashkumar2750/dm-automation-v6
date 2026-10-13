@@ -343,19 +343,30 @@ export function PostComposerForm({
             </p>
           ) : (
             <div className="space-y-1.5 rounded-xl border p-2">
-              {publishable.map((account) => (
-                <label
-                  key={account.id}
-                  className="flex cursor-pointer items-center gap-3 rounded-lg px-2 py-1.5 hover:bg-surface-secondary"
-                >
-                  <Checkbox
-                    checked={selected.includes(account.id)}
-                    onCheckedChange={() => toggleAccount(account.id)}
-                  />
-                  <PlatformBadge platform={account.platform} size="sm" />
-                  <span className="min-w-0 flex-1 truncate text-sm">{account.name}</span>
-                </label>
-              ))}
+              {(["instagram", "facebook", "youtube"] as const).map((platform) => {
+                const group = publishable.filter((a) => a.platform === platform);
+                if (group.length === 0) return null;
+                return (
+                  <div key={platform} className="space-y-1">
+                    <p className="flex items-center gap-2 px-2 pt-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      <PlatformBadge platform={platform} size="sm" />
+                      {platform === "instagram" ? "Instagram" : platform === "facebook" ? "Facebook" : "YouTube"}
+                    </p>
+                    {group.map((account) => (
+                      <label
+                        key={account.id}
+                        className="ml-4 flex cursor-pointer items-center gap-3 rounded-lg px-2 py-1.5 hover:bg-surface-secondary"
+                      >
+                        <Checkbox
+                          checked={selected.includes(account.id)}
+                          onCheckedChange={() => toggleAccount(account.id)}
+                        />
+                        <span className="min-w-0 flex-1 truncate text-sm">{account.name}</span>
+                      </label>
+                    ))}
+                  </div>
+                );
+              })}
               {!editing && publishable.length > 1 && (
                 <button
                   type="button"
