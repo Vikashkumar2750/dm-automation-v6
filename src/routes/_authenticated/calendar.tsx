@@ -13,6 +13,7 @@ import { useTenant } from "@/hooks/useTenant";
 import { listSocialAccounts } from "@/lib/social-accounts.functions";
 import { listPosts, runDuePosts, type Post } from "@/lib/publishing.functions";
 import { statusTone } from "./create-post";
+import { formatLabel } from "@/components/app/PostListExtras";
 
 export const Route = createFileRoute("/_authenticated/calendar")({
   head: () => ({
@@ -225,7 +226,7 @@ function CalendarPage() {
                               "en-IN",
                               { hour: "numeric", minute: "2-digit" },
                             )}{" "}
-                            · {post.caption.trim().slice(0, 22) || "(no caption)"}
+                            · {post.platform} {formatLabel(post.post_format)}
                           </span>
                         ))}
                         {items.length > 3 && (

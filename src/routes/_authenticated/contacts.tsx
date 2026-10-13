@@ -84,6 +84,9 @@ function ContactsPage() {
 
   const allTags = useMemo(() => [...new Set(contacts.flatMap((c) => c.tags))].sort(), [contacts]);
   const visible = contacts.filter((c) => matchesSegment(c, filter));
+  const [page, setPage] = useState(1);
+  const filterKey = JSON.stringify(filter);
+  useEffect(() => setPage(1), [filterKey]);
   const open = contacts.find((c) => c.key === openKey) ?? null;
 
   const saveSeg = useMutation({
@@ -156,7 +159,7 @@ function ContactsPage() {
           <EmptyState icon={Users} title="No contacts here" description="People appear as soon as they message or comment. Try clearing filters." />
         ) : (
           <div className="space-y-2">
-            {visible.map((c) => (
+            {pageSlice(visible, page, 8).map((c) => (
               <button key={c.key} onClick={() => setOpenKey(c.key)} className="grid w-full min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-3 rounded-xl border px-4 py-3 text-left hover:bg-muted/50 sm:flex">
                 <PlatformBadge platform={c.platform} size="sm" />
                 <div className="min-w-0 flex-1">
@@ -171,6 +174,7 @@ function ContactsPage() {
                 </div>
               </button>
             ))}
+            <Pager page={page} total={visible.length} perPage={8} onPage={setPage} />
           </div>
         )}
       </Panel>
