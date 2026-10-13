@@ -285,6 +285,11 @@ function FlowsPage() {
           </div>
         }
       />
+      <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 text-sm md:hidden">
+        <p className="font-medium">Flow Builder works best on a computer.</p>
+        <p className="mt-1 text-muted-foreground">Open it on a desktop or laptop to drag and connect steps. On your phone you can create and manage simple automation rules.</p>
+        <Button asChild size="sm" className="mt-2"><Link to="/automations">Go to automation rules</Link></Button>
+      </div>
       <div className="rounded-lg border border-border bg-muted/40 p-3 text-sm text-muted-foreground">
         {q.data?.live
           ? "Live: active flows send real messages. Keyword rules run first; a flow only acts when no rule replied. Safety limits and quiet hours apply."
