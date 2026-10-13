@@ -87,6 +87,31 @@ export async function editRemoteCaption(
   return { ok: true };
 }
 
+/** Updates title, description and tags of a live YouTube video (keeps its category). */
+export async function editYouTubeVideo(
+  admin: AdminClient,
+  row: RemotePostRow,
+  details: { title: string; description: string; tags: string[] },
+): Promise<{ ok: boolean; error?: string }> {
+  if (row.platform !== "youtube" || !row.external_post_id) return { ok: false, error: "Not a YouTube video" };
+  const token = await tokenFor(admin, row);
+  if (!token) return { ok: false, error: "Reconnect your YouTube account to edit this video" };
+  const headers = { Authorization: `Bearer ${token}`, "Content-Type": "application/json" };
+  const current = await json(await fetch(`https://www.googleapis.com/youtube/v3/videos?part=snippet&id=${encodeURIComponent(row.external_post_id)}`, { headers }));
+  const snippet = (current["items"] as any[] | undefined)?.[0]?.snippet;
+  if (!snippet) return { ok: false, error: "Video not found on YouTube" };
+  const res = await fetch("https://www.googleapis.com/youtube/v3/videos?part=snippet", {
+    method: "PUT",
+    headers,
+    body: JSON.stringify({
+      id: row.external_post_id,
+      snippet: { title: details.title, description: details.description, tags: details.tags, categoryId: snippet.categoryId ?? "22" },
+    }),
+  });
+  if (!res.ok) return { ok: false, error: errMsg(await json(res), "YouTube refused the edit") };
+  return { ok: true };
+}
+
 export async function fetchPostStats(admin: AdminClient, row: RemotePostRow): Promise<PostStats | null> {
   if (!row.external_post_id) return null;
   const token = await tokenFor(admin, row);

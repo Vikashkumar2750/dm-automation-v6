@@ -261,6 +261,29 @@ export const deletePost = createServerFn({ method: "POST" })
     return { ok: true, remote };
   });
 
+/** Edit title/description/tags of a published YouTube video, any time. */
+export const editYouTubeDetails = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { id: string; title: string; description: string; tags: string[] }) =>
+    z.object({
+      id: z.string().uuid(),
+      title: z.string().trim().min(1, "Add a title").max(100),
+      description: z.string().trim().max(5000),
+      tags: z.array(z.string().trim().min(1).max(60)).max(15),
+    }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const row = await loadOwnPost(context.supabase, data.id, context.userId);
+    if (row.platform !== "youtube" || row.status !== "published") throw new Error("Only published YouTube videos can be edited here");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { editYouTubeVideo } = await import("./post-remote.server");
+    const result = await editYouTubeVideo(supabaseAdmin, row, data);
+    if (!result.ok) throw new Error(result.error ?? "Could not update the video");
+    const caption = captionFor("youtube", { caption: "", youtubeTitle: data.title, youtubeDescription: data.description, youtubeTags: data.tags });
+    await context.supabase.from("posts").update({ caption }).eq("id", data.id);
+    return { ok: true };
+  });
+
 /** Edit the caption of a published post (live on Facebook; app-only elsewhere). */
 export const editPublishedCaption = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
