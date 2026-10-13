@@ -105,3 +105,6 @@ Real Meta + YouTube credentials are available when we reach OAuth phases.
 - [ ] Improve phone layouts across customer/admin pages and verify representative workflows.
 - [ ] Add accurate comment re-submission and screencast instructions to Meta App Review guides.
 - [ ] Owner: verify actual Meta comment changes on the connected test Page/account after deployment.
+- [x] Posts list: Feed/Reel/Story/Carousel tabs + badges, thumbnails, likes/comments/shares/views
+- [x] Posts: Edit button (drafts full edit, live Facebook caption edit) and real delete on Facebook/YouTube (Instagram has no delete API)
+- [ ] Verify live delete/edit/stats on a real connected account (needs signed-in workspace)
