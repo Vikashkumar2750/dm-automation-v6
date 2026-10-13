@@ -343,6 +343,27 @@ export function PostComposerForm({
             </p>
           ) : (
             <div className="space-y-1">
+            {!editing && publishable.length > 1 && (
+              <label className="flex w-fit cursor-pointer items-center gap-2 px-1 text-xs text-muted-foreground transition-colors hover:text-foreground">
+                <Checkbox
+                  checked={
+                    selected.length === publishable.length
+                      ? true
+                      : selected.length === 0
+                        ? false
+                        : "indeterminate"
+                  }
+                  onCheckedChange={() =>
+                    setSelected(
+                      selected.length === publishable.length
+                        ? []
+                        : publishable.map((a) => a.id),
+                    )
+                  }
+                />
+                Select all
+              </label>
+            )}
               <div className="grid grid-cols-1 gap-3 rounded-xl border p-2 sm:grid-cols-3">
               {(["instagram", "facebook", "youtube"] as const).map((platform) => {
                 const group = publishable.filter((a) => a.platform === platform);
@@ -376,27 +397,6 @@ export function PostComposerForm({
                 );
               })}
             </div>
-            {!editing && publishable.length > 1 && (
-              <label className="flex w-fit cursor-pointer items-center gap-2 px-1 text-xs text-muted-foreground transition-colors hover:text-foreground">
-                <Checkbox
-                  checked={
-                    selected.length === publishable.length
-                      ? true
-                      : selected.length === 0
-                        ? false
-                        : "indeterminate"
-                  }
-                  onCheckedChange={() =>
-                    setSelected(
-                      selected.length === publishable.length
-                        ? []
-                        : publishable.map((a) => a.id),
-                    )
-                  }
-                />
-                Select all
-              </label>
-            )}
           </div>
           )}
         </div>
