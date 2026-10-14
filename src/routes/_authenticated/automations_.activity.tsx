@@ -93,9 +93,7 @@ function ActivityPage() {
                 const name = activityName(first, ruleName);
                 const c = g.steps.find((x) => x.contact)?.contact;
                 return (
-                  <li key={g.key} className="relative border-y-2 border-foreground/70 pt-2 pb-2">
-                    <span className="absolute -top-2 left-3 bg-card px-1 text-[9px] font-semibold uppercase leading-none tracking-wider text-foreground/70">Start</span>
-                    <span className="absolute -bottom-1.5 left-3 bg-card px-1 text-[9px] font-semibold uppercase leading-none tracking-wider text-foreground/70">End</span>
+                  <li key={g.key} className="pt-1 pb-1">
                     <details className="group">
                       <summary className="flex cursor-pointer list-none items-center gap-3 px-5 py-3 hover:bg-muted/50">
                         <StatusBadge tone={groupTone[g.status]}>{groupLabel[g.status]}</StatusBadge>
@@ -108,6 +106,9 @@ function ActivityPage() {
                         </div>
                         <ChevronRight className="size-4 text-muted-foreground transition-transform group-open:rotate-90" />
                       </summary>
+                      <div className="relative mx-4 mb-1 h-px bg-foreground/60">
+                        <span className="absolute -top-1.5 left-3 bg-card px-1 text-[9px] font-semibold uppercase leading-none tracking-wider text-foreground/70">Start</span>
+                      </div>
                       <ol className="ml-8 border-l pb-2">
                         {g.steps.map((run) => {
                           const ok = run.status === "sent" || run.status === "matched";
@@ -128,6 +129,9 @@ function ActivityPage() {
                           );
                         })}
                       </ol>
+                      <div className="relative mx-4 mt-1 h-px bg-foreground/60">
+                        <span className="absolute -top-1.5 left-3 bg-card px-1 text-[9px] font-semibold uppercase leading-none tracking-wider text-foreground/70">End</span>
+                      </div>
                     </details>
                   </li>
                 );
