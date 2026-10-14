@@ -4,7 +4,9 @@ import { useServerFn } from "@tanstack/react-start";
 import { Loader2, MessageSquare, Send } from "lucide-react";
 import { toast } from "sonner";
 import { Textarea } from "@/components/ui/textarea";
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { PostThumbnail } from "@/components/app/PostThumbnail";
+import { listRecentRemotePosts, listTargetablePosts } from "@/lib/automations.functions";
 
 import { AppShell } from "@/components/app/AppShell";
 import {
@@ -18,7 +20,7 @@ import { Button } from "@/components/ui/button";
 import { GuideButton } from "@/components/app/GuideButton";
 import { useTenant } from "@/hooks/useTenant";
 import { Pager, pageSlice } from "@/components/app/Pager";
-import { listConversations, listMessages, replyToComment, type ConversationRow } from "@/lib/inbox.functions";
+import { listCommentPostLinks, listConversations, listMessages, replyToComment, type ConversationRow } from "@/lib/inbox.functions";
 import { contactLabel } from "@/lib/contact-name";
 
 export const Route = createFileRoute("/_authenticated/comments")({
@@ -70,7 +72,31 @@ function CommentsPage() {
       }),
   });
 
-  const allRows = threads.data ?? [];
+  const convRows = threads.data ?? [];
+  const fetchLinks = useServerFn(listCommentPostLinks);
+  const links = useQuery({
+    queryKey: ["comment-post-links", orgId, convRows.map((c) => c.id).join(",")],
+    enabled: convRows.length > 0,
+    queryFn: () => fetchLinks({ data: { conversationIds: convRows.slice(0, 500).map((c) => c.id) } }),
+  });
+  const fetchPosts = useServerFn(listTargetablePosts);
+  const fetchRemote = useServerFn(listRecentRemotePosts);
+  const localPosts = useQuery({ queryKey: ["targetable-posts", orgId], enabled: !!orgId, queryFn: () => fetchPosts({ data: { organizationId: orgId! } }) });
+  const remotePosts = useQuery({ queryKey: ["remote-posts", orgId], enabled: !!orgId, staleTime: 60_000, queryFn: () => fetchRemote({ data: { organizationId: orgId! } }) });
+  const postMap = useMemo(() => {
+    const m = new Map<string, PostInfo>();
+    for (const p of (remotePosts.data?.posts ?? []) as PostInfo[]) m.set(p.externalPostId, p);
+    for (const p of (localPosts.data ?? []) as PostInfo[]) if (!m.has(p.externalPostId)) m.set(p.externalPostId, p);
+    return m;
+  }, [remotePosts.data, localPosts.data]);
+  const linkMap = links.data ?? {};
+  const groups = useMemo(() => {
+    const g = new Map<string, number>();
+    for (const c of convRows) { const k = linkMap[c.id] ?? "__other"; g.set(k, (g.get(k) ?? 0) + 1); }
+    return [...g.entries()].sort((a, b) => (a[0] === "__other" ? 1 : b[0] === "__other" ? -1 : b[1] - a[1]));
+  }, [convRows, linkMap]);
+  const [postFilter, setPostFilter] = useState<string>("all");
+  const allRows = postFilter === "all" ? convRows : convRows.filter((c) => (linkMap[c.id] ?? "__other") === postFilter);
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<ConversationRow | null>(null);
   const rows = pageSlice(allRows, page, 10);
@@ -116,6 +142,27 @@ function CommentsPage() {
           </div>
         }
       >
+        {groups.length > 1 || (groups[0] && groups[0][0] !== "__other") ? (
+          <div className="mb-4 flex gap-2 overflow-x-auto pb-1">
+            <button type="button" onClick={() => { setPostFilter("all"); setPage(1); }}
+              className={`shrink-0 rounded-xl border px-3 py-2 text-left text-xs font-medium ${postFilter === "all" ? "border-primary bg-primary/5" : "hover:bg-muted"}`}>
+              All posts<span className="block text-muted-foreground">{convRows.length} threads</span>
+            </button>
+            {groups.map(([key, count]) => {
+              const post = postMap.get(key);
+              return (
+                <button type="button" key={key} onClick={() => { setPostFilter(key); setPage(1); }}
+                  className={`flex w-52 shrink-0 items-center gap-2 rounded-xl border px-2 py-2 text-left text-xs ${postFilter === key ? "border-primary bg-primary/5" : "hover:bg-muted"}`}>
+                  {key === "__other" ? <span className="grid size-10 place-items-center rounded bg-muted"><MessageSquare className="size-4" /></span> : <PostThumbnail src={post?.mediaUrl ?? null} />}
+                  <span className="min-w-0 flex-1">
+                    <span className="line-clamp-2 font-medium">{key === "__other" ? "Older / unlinked comments" : post?.caption || "Post"}</span>
+                    <span className="text-muted-foreground">{count} {count === 1 ? "comment" : "comments"}</span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        ) : null}
         {rows.length === 0 ? (
           <EmptyState
             icon={MessageSquare}
@@ -146,7 +193,7 @@ function CommentsPage() {
             ))}
             <Pager page={page} total={allRows.length} perPage={10} onPage={setPage} />
           </div>
-          {selected ? <CommentThread conv={selected} onClose={() => setSelected(null)} /> : (
+          {selected ? <CommentThread conv={selected} post={linkMap[selected.id] ? postMap.get(linkMap[selected.id]!) : undefined} onClose={() => setSelected(null)} /> : (
             <div className="hidden items-center justify-center rounded-xl border border-dashed p-10 text-sm text-muted-foreground lg:flex">Select a comment to see the thread and reply here.</div>
           )}
           </div>
@@ -156,7 +203,9 @@ function CommentsPage() {
   );
 }
 
-function CommentThread({ conv, onClose }: { conv: ConversationRow; onClose: () => void }) {
+type PostInfo = { externalPostId: string; caption: string; mediaUrl: string | null; publishedAt: string | null; accountName?: string };
+
+function CommentThread({ conv, post, onClose }: { conv: ConversationRow; post?: PostInfo | undefined; onClose: () => void }) {
   const qc = useQueryClient();
   const fetchMessages = useServerFn(listMessages);
   const reply = useServerFn(replyToComment);
@@ -175,6 +224,15 @@ function CommentThread({ conv, onClose }: { conv: ConversationRow; onClose: () =
         <p className="min-w-0 flex-1 truncate text-sm font-semibold">{contactLabel(conv)}</p>
         <Button variant="ghost" size="sm" onClick={onClose}>Close</Button>
       </div>
+      {post && (
+        <div className="flex gap-3 border-b p-3">
+          <PostThumbnail src={post.mediaUrl} />
+          <div className="min-w-0 text-xs">
+            <p className="font-semibold">{post.accountName ?? "Your post"}{post.publishedAt ? ` · ${new Date(post.publishedAt).toLocaleDateString()}` : ""}</p>
+            <p className="line-clamp-3 text-muted-foreground">{post.caption || "No caption"}</p>
+          </div>
+        </div>
+      )}
       <div className="flex-1 space-y-2 overflow-y-auto p-4">
         {msgs.isLoading ? <Loader2 className="mx-auto size-5 animate-spin text-muted-foreground" /> : (msgs.data ?? []).map((m) => (
           <div key={m.id} className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm ${m.direction === "inbound" ? "bg-muted" : "ml-auto bg-primary text-primary-foreground"}`}>

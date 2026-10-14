@@ -1,0 +1,2 @@
+ALTER TABLE public.messages ADD COLUMN IF NOT EXISTS post_external_id text;
+CREATE INDEX IF NOT EXISTS messages_post_external_id_idx ON public.messages (post_external_id) WHERE post_external_id IS NOT NULL;

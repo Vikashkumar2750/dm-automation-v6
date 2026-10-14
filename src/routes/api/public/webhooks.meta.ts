@@ -329,6 +329,15 @@ async function ingestIntoInbox(
     trace("deduplication", "ignored", "trace:duplicate_delivery");
     return "trace:duplicate_delivery";
   }
+  // Display-only post tag for the Comments page. Best effort: never blocks or changes delivery.
+  if (postExternalId && externalId) {
+    try {
+      await admin.from("messages").update({ post_external_id: postExternalId } as never)
+        .eq("conversation_id", conversation.id).eq("external_id", externalId);
+    } catch {
+      /* column missing on older databases — ignore */
+    }
+  }
 
   await admin.rpc("increment_unread", { p_conversation_id: conversation.id });
 

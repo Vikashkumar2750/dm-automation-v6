@@ -219,6 +219,50 @@ const MESSAGE_TEMPLATES: Array<{
       "Messaged you how to order 📩",
     ],
   },
+  {
+    label: "Hinglish · Link bhejo",
+    text: "Heyy 👋 comment karne ke liye thank you! Ye raha aapka link — ek baar zaroor dekhna 💛",
+    variations: [
+      "Hii! Aapne pucha tha na, ye lo link 👇 koi doubt ho to yahin message kar dena 😊",
+      "Thank you yaar 🙌 Link niche hai, abhi check karo!",
+      "Aapke liye special link 👇 dekh ke batana kaisa laga!",
+    ],
+    comment: "DM check karo, link bhej diya hai 💌",
+    commentVariations: ["Inbox me aa gaya hoga 📩", "Bhej diya! DM dekho 😊", "Aapka link DM me hai ✨"],
+  },
+  {
+    label: "Hinglish · Price batao",
+    text: "Hii 😊 Price aur saari details aapko DM me bhej di hain. Koi bhi sawal ho to bindaas pucho!",
+    variations: [
+      "Hello ji 🙏 Price list ye rahi 👇 aapke liye best option bhi suggest kar sakte hain.",
+      "Thanks for asking! Saare plans aur price niche diye hain 👇",
+      "Hey! Details bhej rahe hain — dekh ke batao kaunsa pasand aaya 😍",
+    ],
+    comment: "Price DM kar diya hai 📩",
+    commentVariations: ["Details inbox me bhej di 😊", "DM check karo ji 📩", "Sab bata diya DM me ✨"],
+  },
+  {
+    label: "Hinglish · Freebie / guide",
+    text: "Aapka free guide ready hai 🎁 Niche tap karo aur abhi download karo!",
+    variations: [
+      "Ye lo aapka freebie 🎉 enjoy karo aur share bhi karna!",
+      "Promise ke mutabik — free guide 👇",
+      "Yay! Aapka gift aa gaya 🎁 link niche hai.",
+    ],
+    comment: "Freebie DM me bhej diya 🎁",
+    commentVariations: ["Gift inbox me hai 🎉", "Check DM, free guide sent 📩", "Bhej diya, enjoy! 😊"],
+  },
+  {
+    label: "Hinglish · Webinar / register",
+    text: "Seat book karne ke liye thank you 🙌 Niche button se register kar lo, limited seats hain!",
+    variations: [
+      "Register yahan se karo 👇 milte hain live session me!",
+      "Aapka registration link ready hai ✨ jaldi karo!",
+      "Join karne ka link 👇 reminder bhi bhej denge 😊",
+    ],
+    comment: "Registration link DM kar diya 📩",
+    commentVariations: ["Inbox check karo, link bheja hai 😊", "DM me register link hai ✨", "Bhej diya ji 🙏"],
+  },
 ];
 
 /**
@@ -898,7 +942,9 @@ function AutomationsPage() {
                 <div className="grid gap-2 rounded-lg border p-4">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <Label className="text-sm font-semibold">{draft.platform === "youtube" ? "YouTube public reply" : draft.action === "comment_public_reply" ? "Public reply text" : "DM message to user"}</Label>
-                    <TemplateMenu templates={draft.platform === "youtube" ? YOUTUBE_MESSAGE_TEMPLATES : MESSAGE_TEMPLATES} onPick={pickTemplate} />
+                    {!(draft.trigger === "comment_received" && draft.platform !== "youtube") && (
+                      <TemplateMenu templates={draft.platform === "youtube" ? YOUTUBE_MESSAGE_TEMPLATES : MESSAGE_TEMPLATES} onPick={pickTemplate} />
+                    )}
                   </div>
                   <Textarea
                     rows={3}
@@ -1137,7 +1183,7 @@ function AutomationsPage() {
             </Button>
           </div>
         </section>
-        <AutomationPreview draft={draft} />
+        <AutomationPreview draft={draft} orgId={orgId} selectedPostIds={draft.targetPostIds} />
         </div>
       </div>
       )}
