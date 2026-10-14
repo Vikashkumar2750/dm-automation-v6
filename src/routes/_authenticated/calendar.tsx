@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, Loader2, Plus } from "lucide-react";
+import { ChevronLeft, ChevronRight, CircleCheck, CircleX, Clock, Loader2, Plus } from "lucide-react";
 
 import { AppShell } from "@/components/app/AppShell";
 import { PageHeader, Panel, StatusBadge } from "@/components/app/primitives";
@@ -220,13 +220,26 @@ function CalendarPage() {
                               setDraft({ post });
                               setOpen(true);
                             }}
-                            className="block truncate rounded-md bg-surface-secondary px-1.5 py-1 text-[11px]"
+                            title={post.status}
+                            className={cn(
+                              "flex items-center gap-1 truncate rounded-md border bg-surface-secondary px-1.5 py-1 text-[11px]",
+                              post.status === "published" ? "border-success/40" : post.status === "failed" ? "border-destructive/40" : "border-info/40",
+                            )}
                           >
+                            {post.status === "published" ? (
+                              <CircleCheck className="size-3.5 shrink-0 text-success" strokeWidth={2.25} aria-label="Published" />
+                            ) : post.status === "failed" ? (
+                              <CircleX className="size-3.5 shrink-0 text-destructive" strokeWidth={2.25} aria-label="Failed" />
+                            ) : (
+                              <Clock className="size-3.5 shrink-0 text-info" strokeWidth={2.25} aria-label="Scheduled" />
+                            )}
+                            <span className="truncate">
                             {new Date(post.scheduled_at ?? post.published_at ?? "").toLocaleTimeString(
                               "en-IN",
                               { hour: "numeric", minute: "2-digit" },
                             )}{" "}
                             · {post.platform} {formatLabel(post.post_format)}
+                            </span>
                           </span>
                         ))}
                         {items.length > 3 && (
