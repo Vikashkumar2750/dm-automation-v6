@@ -336,7 +336,7 @@ function InboxPage() {
         <GuideButton guide="meta-review" />
       </div>
 
-      <div className="grid min-w-0 gap-4 lg:h-[calc(100dvh-10.5rem)] lg:min-h-[520px] lg:grid-cols-[340px_minmax(0,1fr)]">
+      <div className="grid min-w-0 gap-4 lg:h-[calc(100dvh-12rem)] lg:min-h-[520px] lg:grid-cols-[340px_minmax(0,1fr)]">
         {/* Conversation list */}
         <Panel bodyClassName="flex min-h-0 flex-1 flex-col p-0" className={cn("min-h-[480px] lg:min-h-0", selectedId && "hidden lg:flex")}>
           <div className="space-y-2 border-b px-4 py-3">
