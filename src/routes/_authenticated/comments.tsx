@@ -1,7 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { MessageSquare } from "lucide-react";
+import { Loader2, MessageSquare, Send } from "lucide-react";
+import { toast } from "sonner";
+import { Textarea } from "@/components/ui/textarea";
 import { useState } from "react";
 
 import { AppShell } from "@/components/app/AppShell";
@@ -16,7 +18,7 @@ import { Button } from "@/components/ui/button";
 import { GuideButton } from "@/components/app/GuideButton";
 import { useTenant } from "@/hooks/useTenant";
 import { Pager, pageSlice } from "@/components/app/Pager";
-import { listConversations } from "@/lib/inbox.functions";
+import { listConversations, listMessages, replyToComment, type ConversationRow } from "@/lib/inbox.functions";
 import { contactLabel } from "@/lib/contact-name";
 
 export const Route = createFileRoute("/_authenticated/comments")({
@@ -70,13 +72,14 @@ function CommentsPage() {
 
   const allRows = threads.data ?? [];
   const [page, setPage] = useState(1);
+  const [selected, setSelected] = useState<ConversationRow | null>(null);
   const rows = pageSlice(allRows, page, 10);
 
   return (
     <AppShell>
       <PageHeader
         title="Comments"
-        description="Comment threads from Instagram and Facebook. Reply publicly or privately from the inbox."
+        description="Comment threads from Instagram and Facebook. Click a comment to read the thread and reply right here."
         actions={
           <><GuideButton guide="meta-review" />
           <Button asChild>
@@ -120,41 +123,81 @@ function CommentsPage() {
             description="Comments on your posts appear here as soon as an account is connected."
           />
         ) : (
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
           <div className="space-y-2">
             {rows.map((c) => (
-              <Link
+              <button
+                type="button"
                 key={c.id}
-                to="/inbox"
-                className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-3 rounded-xl border px-4 py-3 transition-colors hover:bg-surface-secondary sm:flex"
+                onClick={() => setSelected(c)}
+                className={`grid w-full min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-3 rounded-xl border px-4 py-3 text-left transition-colors hover:bg-surface-secondary ${selected?.id === c.id ? "border-primary bg-primary/5" : ""}`}
               >
                 <PlatformBadge platform={c.platform} size="sm" />
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium">
-                    {contactLabel(c)}
-                  </p>
-                  <p className="truncate text-xs text-muted-foreground">
-                    {c.last_message_preview ?? "No preview"}
-                  </p>
+                  <p className="truncate text-sm font-medium">{contactLabel(c)}</p>
+                  <p className="truncate text-xs text-muted-foreground">{c.last_message_preview ?? "No preview"}</p>
+                  <div className="mt-1 flex flex-wrap items-center gap-2">
+                    {c.unread_count > 0 && <StatusBadge tone="info">{c.unread_count} new</StatusBadge>}
+                    <StatusBadge tone={c.status === "open" ? "warning" : c.status === "pending" ? "info" : "success"}>{c.status}</StatusBadge>
+                    <span className="text-xs text-muted-foreground">{new Date(c.last_message_at).toLocaleString()}</span>
+                  </div>
                 </div>
-                <div className="col-span-2 flex flex-wrap items-center gap-2 sm:shrink-0">
-                  {c.unread_count > 0 && <StatusBadge tone="info">{c.unread_count} new</StatusBadge>}
-                  <StatusBadge
-                    tone={
-                      c.status === "open" ? "warning" : c.status === "pending" ? "info" : "success"
-                    }
-                  >
-                    {c.status}
-                  </StatusBadge>
-                  <span className="text-xs text-muted-foreground">
-                    {new Date(c.last_message_at).toLocaleString()}
-                  </span>
-                </div>
-              </Link>
+              </button>
             ))}
             <Pager page={page} total={allRows.length} perPage={10} onPage={setPage} />
+          </div>
+          {selected ? <CommentThread conv={selected} onClose={() => setSelected(null)} /> : (
+            <div className="hidden items-center justify-center rounded-xl border border-dashed p-10 text-sm text-muted-foreground lg:flex">Select a comment to see the thread and reply here.</div>
+          )}
           </div>
         )}
       </Panel>
     </AppShell>
+  );
+}
+
+function CommentThread({ conv, onClose }: { conv: ConversationRow; onClose: () => void }) {
+  const qc = useQueryClient();
+  const fetchMessages = useServerFn(listMessages);
+  const reply = useServerFn(replyToComment);
+  const [body, setBody] = useState("");
+  const [mode, setMode] = useState<"public" | "private">("public");
+  const msgs = useQuery({ queryKey: ["messages", conv.id], refetchInterval: 15_000, queryFn: () => fetchMessages({ data: { conversationId: conv.id } }) });
+  const send = useMutation({
+    mutationFn: () => reply({ data: { conversationId: conv.id, body, mode: conv.platform === "youtube" ? "public" : mode } }),
+    onSuccess: () => { setBody(""); toast.success(mode === "public" ? "Public reply posted" : "Private reply sent"); void qc.invalidateQueries({ queryKey: ["messages", conv.id] }); void qc.invalidateQueries({ queryKey: ["conversations"] }); },
+    onError: (e: Error) => toast.error(e.message.includes("window_expired") ? "Meta allows replies only within 7 days of the comment." : e.message),
+  });
+  return (
+    <div className="flex min-h-[420px] min-w-0 flex-col rounded-xl border lg:sticky lg:top-20 lg:max-h-[calc(100vh-7rem)]">
+      <div className="flex items-center gap-2 border-b px-4 py-3">
+        <PlatformBadge platform={conv.platform} size="sm" />
+        <p className="min-w-0 flex-1 truncate text-sm font-semibold">{contactLabel(conv)}</p>
+        <Button variant="ghost" size="sm" onClick={onClose}>Close</Button>
+      </div>
+      <div className="flex-1 space-y-2 overflow-y-auto p-4">
+        {msgs.isLoading ? <Loader2 className="mx-auto size-5 animate-spin text-muted-foreground" /> : (msgs.data ?? []).map((m) => (
+          <div key={m.id} className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm ${m.direction === "inbound" ? "bg-muted" : "ml-auto bg-primary text-primary-foreground"}`}>
+            <p className="whitespace-pre-wrap break-words">{m.body}</p>
+            <p className="mt-1 text-[10px] opacity-70">{m.direction === "inbound" ? m.sender_name ?? "Commenter" : "You / bot"} · {new Date(m.sent_at).toLocaleString()}</p>
+          </div>
+        ))}
+      </div>
+      <div className="space-y-2 border-t p-3">
+        {conv.platform !== "youtube" && (
+          <div className="flex gap-1">
+            {(["public", "private"] as const).map((m) => (
+              <Button key={m} size="sm" variant={mode === m ? "default" : "outline"} onClick={() => setMode(m)}>{m === "public" ? "Public reply" : "Private DM"}</Button>
+            ))}
+          </div>
+        )}
+        <div className="flex items-end gap-2">
+          <Textarea rows={2} value={body} placeholder="Write a reply…" onChange={(e) => setBody(e.target.value)} />
+          <Button onClick={() => send.mutate()} disabled={!body.trim() || send.isPending} aria-label="Send reply">
+            {send.isPending ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
+          </Button>
+        </div>
+      </div>
+    </div>
   );
 }
