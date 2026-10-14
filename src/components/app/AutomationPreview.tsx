@@ -186,3 +186,14 @@ function Bubble({ children, fb }: { children: React.ReactNode; fb?: boolean }) {
 function Btn({ children }: { children: React.ReactNode }) {
   return <div className="rounded-lg bg-background py-1.5 text-center text-xs font-semibold text-primary">{children}</div>;
 }
+
+function PreviewImage({ src, caption }: { src: string; caption: string }) {
+  const [broken, setBroken] = useState(false);
+  if (broken)
+    return (
+      <div className="grid h-full place-items-center px-6 text-center text-xs text-muted-foreground">
+        <span className="flex flex-col items-center gap-2"><ImageIcon className="size-8" />{caption || "Post image expired"}</span>
+      </div>
+    );
+  return <img src={src} alt="" className="h-full w-full object-cover" onError={() => setBroken(true)} />;
+}
