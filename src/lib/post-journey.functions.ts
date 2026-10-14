@@ -119,3 +119,38 @@ export const getLivePostComments = createServerFn({ method: "GET" })
     const { fetchPostComments } = await import("./post-remote.server");
     return fetchPostComments(supabaseAdmin, { id: data.externalPostId, platform: data.platform, social_account_id: data.socialAccountId, external_post_id: data.externalPostId });
   });
+
+/** Delete (or hide on Instagram) an older comment that only exists on the platform. The ID must belong to this post. */
+export const moderateLiveComment = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({
+    organizationId: z.string().uuid(),
+    socialAccountId: z.string().uuid(),
+    platform: z.enum(["instagram", "facebook"]),
+    externalPostId: z.string().min(1).max(200),
+    commentId: z.string().regex(/^[\w-]+$/).max(200),
+    action: z.enum(["delete", "hide", "unhide"]),
+  }).parse(d))
+  .handler(async ({ data, context }) => {
+    if (data.platform === "facebook" && data.action !== "delete") throw new Error("Hide is not available for Facebook comments.");
+    const { data: allowed } = await context.supabase.rpc("current_user_has_org_role", { _org_id: data.organizationId, _roles: ["owner", "admin", "manager", "agent"] });
+    if (!allowed) throw new Error("You don't have permission to moderate comments.");
+    const { data: acc } = await context.supabase.from("social_accounts").select("id").eq("id", data.socialAccountId).eq("organization_id", data.organizationId).maybeSingle();
+    if (!acc) throw new Error("This post's account is not connected to the workspace.");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { fetchPostComments } = await import("./post-remote.server");
+    const live = await fetchPostComments(supabaseAdmin, { id: data.externalPostId, platform: data.platform, social_account_id: data.socialAccountId, external_post_id: data.externalPostId });
+    const ids = new Set(live.comments.flatMap((c) => [c.id, ...c.replies.map((r) => r.id)]));
+    if (!ids.has(data.commentId)) throw new Error("This comment is no longer on the post. Refresh and try again.");
+    const { data: tokenRow } = await supabaseAdmin.from("social_account_tokens").select("access_token").eq("social_account_id", data.socialAccountId).single();
+    const { readToken } = await import("@/lib/token-crypto.server");
+    const token = tokenRow?.access_token ? await readToken(tokenRow.access_token) : null;
+    if (!token) throw new Error("Reconnect this account and try again.");
+    const url = `https://graph.facebook.com/v21.0/${encodeURIComponent(data.commentId)}`;
+    const res = data.action === "delete"
+      ? await fetch(`${url}?access_token=${encodeURIComponent(token)}`, { method: "DELETE" })
+      : await fetch(url, { method: "POST", body: new URLSearchParams({ hide: String(data.action === "hide"), access_token: token }) });
+    const body = (await res.json().catch(() => ({}))) as { success?: boolean; error?: { message?: string } };
+    if (!res.ok || body.error || body.success === false) throw new Error(body.error?.message ?? "Meta could not complete this action.");
+    return { ok: true };
+  });

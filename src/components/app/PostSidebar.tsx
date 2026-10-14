@@ -19,6 +19,12 @@ export function usePosts(orgId: string | null) {
   return { posts: posts.data?.posts ?? [], counts: counts.data ?? {}, loading: posts.isLoading };
 }
 
+/** Platform's own total wins (includes old comments); saved comments are the fallback. */
+export function postCommentCount(p: SidebarPost, counts: Record<string, { comments: number }>): number {
+  if (typeof p.commentsCount === "number") return p.commentsCount;
+  return (counts[p.externalPostId] ?? counts[p.externalPostId.slice(p.externalPostId.lastIndexOf("_") + 1)])?.comments ?? 0;
+}
+
 /** Left column: posts with thumbnails, platform filter, 10 per page. */
 export function PostSidebar({ orgId, selectedId, onSelect, onPlatformChange, countLabel = "comments" }: {
   orgId: string | null;
@@ -33,7 +39,7 @@ export function PostSidebar({ orgId, selectedId, onSelect, onPlatformChange, cou
   const filtered = useMemo(() => {
     const list = platform === "all" ? posts : posts.filter((p) => p.platform === platform);
     // Posts with activity first, then newest.
-    return [...list].sort((a, b) => (counts[b.externalPostId]?.comments ?? 0) - (counts[a.externalPostId]?.comments ?? 0) || (b.publishedAt ?? "").localeCompare(a.publishedAt ?? ""));
+    return [...list].sort((a, b) => postCommentCount(b, counts) - postCommentCount(a, counts) || (b.publishedAt ?? "").localeCompare(a.publishedAt ?? ""));
   }, [posts, platform, counts]);
   const rows = pageSlice(filtered, page, 10);
 
@@ -50,7 +56,7 @@ export function PostSidebar({ orgId, selectedId, onSelect, onPlatformChange, cou
       {loading ? <Loader2 className="mx-auto my-8 size-5 animate-spin text-muted-foreground" /> : rows.length === 0 ? (
         <p className="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">No posts found.</p>
       ) : rows.map((p) => {
-        const c = (counts[p.externalPostId] ?? counts[p.externalPostId.slice(p.externalPostId.lastIndexOf("_") + 1)])?.comments ?? 0;
+        const c = postCommentCount(p, counts);
         return (
           <button key={p.externalPostId} type="button" onClick={() => onSelect(p)}
             className={`grid w-full grid-cols-[auto_minmax(0,1fr)] items-center gap-3 rounded-xl border p-2 text-left transition-colors hover:bg-muted ${selectedId === p.externalPostId ? "border-primary bg-primary/5" : ""}`}>

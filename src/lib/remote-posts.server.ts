@@ -22,6 +22,8 @@ export type RemotePost = {
   mediaType: string | null;
   permalink: string | null;
   publishedAt: string | null;
+  /** Comment total reported by the platform (null when unknown). */
+  commentsCount?: number | null;
 };
 
 type AccountRow = { id: string; platform: string; external_id: string; name: string | null };
@@ -116,8 +118,8 @@ export async function fetchRemotePosts(
       const qs = `access_token=${encodeURIComponent(token)}&limit=100`;
       let url: string | null =
         account.platform === "instagram"
-          ? `${GRAPH}/${account.external_id}/media?fields=id,caption,media_type,media_product_type,media_url,thumbnail_url,permalink,timestamp&${qs}`
-          : `${GRAPH}/${account.external_id}/posts?fields=id,message,story,full_picture,permalink_url,created_time,attachments{media_type,type,media}&${qs}`;
+          ? `${GRAPH}/${account.external_id}/media?fields=id,caption,media_type,media_product_type,media_url,thumbnail_url,permalink,timestamp,comments_count&${qs}`
+          : `${GRAPH}/${account.external_id}/posts?fields=id,message,story,full_picture,permalink_url,created_time,attachments{media_type,type,media},comments.summary(true).limit(0)&${qs}`;
       let count = 0;
       while (url && count < maxPerAccount) {
         const j = await getJson(url);
@@ -126,7 +128,9 @@ export async function fetchRemotePosts(
           // Facebook videos/reels: playable file lives in attachments.media.source.
           const att = ((raw["attachments"] as { data?: Array<{ media_type?: string; type?: string; media?: { source?: string } }> } | undefined)?.data ?? [])[0];
           const fbVideo = att && /video|reel/i.test(`${att.media_type ?? ""} ${att.type ?? ""}`) ? att : null;
-          const item = { ...raw, attachments: undefined } as Record<string, string | undefined>;
+          const sum = (raw["comments"] as { summary?: { total_count?: number } } | undefined)?.summary?.total_count;
+          const commentsCount = typeof raw["comments_count"] === "number" ? raw["comments_count"] as number : typeof sum === "number" ? sum : null;
+          const item = { ...raw, attachments: undefined, comments: undefined, comments_count: undefined } as Record<string, string | undefined>;
           if (fbVideo) { item["media_type"] = "VIDEO"; if (fbVideo.media?.source) item["media_url"] = fbVideo.media.source; if (/reel/i.test(fbVideo.type ?? "")) item["media_product_type"] = "REELS"; }
           if (!item["id"]) continue;
           count++;
@@ -141,6 +145,7 @@ export async function fetchRemotePosts(
             mediaType: item["media_product_type"] === "REELS" ? "REELS" : item["media_type"] ?? null,
             permalink: item["permalink"] ?? item["permalink_url"] ?? null,
             publishedAt: item["timestamp"] ?? item["created_time"] ?? null,
+            commentsCount,
           });
         }
         url = ((j["paging"] as { next?: string } | undefined)?.next) ?? null;
