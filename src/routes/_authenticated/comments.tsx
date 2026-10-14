@@ -165,13 +165,16 @@ function PostView({ orgId, post }: { orgId: string; post: SidebarPost }) {
     staleTime: 30_000,
     queryFn: () => fetchLive({ data: { organizationId: orgId, socialAccountId: post.socialAccountId ?? null, platform: post.platform, externalPostId: post.externalPostId } }),
   });
-  const convs = (journey.data?.conversations ?? []).filter((c) => c.channel === "comment");
-  const msgs = journey.data?.messages ?? [];
+  const allConvs = (journey.data?.conversations ?? []).filter((c) => c.channel === "comment");
+  const msgs = messagesForPost(journey.data?.messages ?? [], post.externalPostId);
+  const convs = allConvs.filter((c) => msgs.some((m) => m.conversation_id === c.id));
+  const commentCount = msgs.filter((m) => m.direction === "inbound").length;
   const known = new Set(msgs.map((m) => m.external_id).filter(Boolean));
   const extra = (live.data ?? []).filter((c) => !known.has(c.id));
-  const targetConv = convs.find((c) => c.id === target) ?? null;
+  const targetMsg = msgs.find((m) => m.id === target) ?? null;
+  const targetConv = targetMsg ? convs.find((c) => c.id === targetMsg.conversation_id) ?? null : null;
   const send = useMutation({
-    mutationFn: () => reply({ data: { conversationId: target!, body, mode: post.platform === "youtube" ? "public" : mode } }),
+    mutationFn: () => reply({ data: { conversationId: targetMsg!.conversation_id, commentMessageId: targetMsg!.id, body, mode: post.platform === "youtube" ? "public" : mode } }),
     onSuccess: () => { setBody(""); toast.success(mode === "public" || post.platform === "youtube" ? "Public reply posted" : "Private reply sent"); void qc.invalidateQueries({ queryKey: ["post-journey", orgId, post.externalPostId] }); },
     onError: (e: Error) => toast.error(e.message.includes("window_expired") ? "Meta allows replies only within 7 days of the comment." : e.message),
   });
