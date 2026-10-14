@@ -745,7 +745,7 @@ function AutomationsPage() {
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="grid gap-2">
-                  <Label>When</Label>
+                  <Label>If you receieve a&nbsp;</Label>
                   <Select
                     value={draft.trigger}
                     onValueChange={(v) =>
@@ -772,7 +772,7 @@ function AutomationsPage() {
                   </Select>
                 </div>
                 <div className="grid gap-2">
-                  <Label>Platform</Label>
+                  <Label>On Platform</Label>
                   <Select
                     value={draft.platform}
                     onValueChange={(v) => {
@@ -813,7 +813,7 @@ function AutomationsPage() {
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="grid gap-2">
-                  <Label>Match</Label>
+                  <Label>if the user comment matches with</Label>
                   <Select
                     value={draft.matchType}
                     onValueChange={(v) => setDraft({ ...draft, matchType: v as MatchType })}
@@ -839,7 +839,7 @@ function AutomationsPage() {
               </div>
 
               <div className="grid gap-2">
-                <Label>Then</Label>
+                <Label>Trigger the automation</Label>
                 <Select
                   value={draft.action}
                   onValueChange={(v) => setDraft({ ...draft, action: v as Action })}
@@ -912,7 +912,7 @@ function AutomationsPage() {
               {draft.trigger === "comment_received" && draft.platform !== "youtube" && (
                 <div className="grid gap-2 rounded-lg border p-4">
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <Label className="text-sm font-semibold">Public reply under the comment (optional)</Label>
+                    <Label className="text-sm font-semibold">Reply User comment - Public reply</Label>
                     <TemplateMenu templates={MESSAGE_TEMPLATES} onPick={pickTemplate} />
                   </div>
                   <Textarea
@@ -941,7 +941,7 @@ function AutomationsPage() {
               {needsText && (
                 <div className="grid gap-2 rounded-lg border p-4">
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <Label className="text-sm font-semibold">{draft.platform === "youtube" ? "YouTube public reply" : draft.action === "comment_public_reply" ? "Public reply text" : "DM message to user"}</Label>
+                    <Label className="text-sm font-semibold">{draft.platform === "youtube" ? "YouTube public reply" : draft.action === "comment_public_reply" ? "Public reply text" : "DM to user - Private Reply"}</Label>
                     {!(draft.trigger === "comment_received" && draft.platform !== "youtube") && (
                       <TemplateMenu templates={draft.platform === "youtube" ? YOUTUBE_MESSAGE_TEMPLATES : MESSAGE_TEMPLATES} onPick={pickTemplate} />
                     )}
@@ -959,7 +959,7 @@ function AutomationsPage() {
 
               {needsText && (
                 <div className="grid gap-2">
-                  <Label>Alternate messages (one per line)</Label>
+                  <Label>Randomize messages - Alternatives (one per line)</Label>
                   <Textarea
                     rows={3}
                     value={draft.responseVariations}
@@ -980,7 +980,7 @@ function AutomationsPage() {
 
               {needsDm && (
                 <div className="grid gap-4 rounded-lg border bg-muted/30 p-4">
-                  <p className="text-sm font-semibold">What you want to send / attach (optional)</p>
+                  <p className="text-sm font-semibold">What you want to send / attach</p>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div className="grid gap-2">
                       <Label>Link URL</Label>
