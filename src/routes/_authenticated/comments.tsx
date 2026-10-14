@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Bot, ExternalLink, Eye, Heart, Loader2, MessageCircle, MessageSquare, Send, Share2, UserRound } from "lucide-react";
+import { Bot, EyeOff, Pencil, RefreshCw, Trash2, ExternalLink, Eye, Heart, Loader2, MessageCircle, MessageSquare, Send, Share2, UserRound } from "lucide-react";
 import { toast } from "sonner";
 import { useState } from "react";
 import { AppShell } from "@/components/app/AppShell";
@@ -12,7 +12,8 @@ import { GuideButton } from "@/components/app/GuideButton";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useTenant } from "@/hooks/useTenant";
-import { replyToComment } from "@/lib/inbox.functions";
+import { moderateComment, replyToComment, setCommentHidden } from "@/lib/inbox.functions";
+import { canEditComment } from "@/lib/comment-moderation";
 import { getPostJourney, getSinglePostStats, type JourneyMessage } from "@/lib/post-journey.functions";
 
 export const Route = createFileRoute("/_authenticated/comments")({
@@ -38,7 +39,7 @@ function CommentsPage() {
       <PageHeader
         title="Comments"
         description="Pick a post on the left to see it like on Instagram, Facebook or YouTube, with all comments and replies."
-        actions={<><GuideButton guide="meta-review" /><Button asChild variant="outline"><Link to="/inbox">Open inbox</Link></Button></>}
+        actions={<><RefreshButton /><GuideButton guide="meta-review" /><Button asChild variant="outline"><Link to="/inbox">Open inbox</Link></Button></>}
       />
       <div className="grid gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
         <PostSidebar orgId={orgId} selectedId={post?.externalPostId ?? null} onSelect={setPost} />
@@ -47,6 +48,64 @@ function CommentsPage() {
         )}
       </div>
     </AppShell>
+  );
+}
+
+function RefreshButton() {
+  const qc = useQueryClient();
+  const [busy, setBusy] = useState(false);
+  return (
+    <Button variant="outline" disabled={busy} onClick={async () => {
+      setBusy(true);
+      await Promise.all(["post-journey", "post-comment-counts", "post-stats"].map((k) => qc.invalidateQueries({ queryKey: [k] })));
+      setBusy(false);
+      toast.success("Comments refreshed");
+    }}>{busy ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}Sync comments</Button>
+  );
+}
+
+function CommentActions({ m, convId, platform, onDone }: { m: JourneyMessage; convId: string; platform: string; onDone: () => void }) {
+  const hide = useServerFn(setCommentHidden);
+  const moderate = useServerFn(moderateComment);
+  const [hidden, setHidden] = useState(false);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [editing, setEditing] = useState<string | null>(null);
+  if (platform === "youtube" || !m.external_id || m.body === "[deleted comment]") return null;
+  const isComment = m.direction === "inbound" || m.body.startsWith("[public reply] ");
+  if (!isComment) return null;
+  const run = async (key: string, fn: () => Promise<unknown>, ok: string) => {
+    setBusy(key);
+    try { await fn(); toast.success(ok); onDone(); } catch (e) { toast.error(e instanceof Error ? e.message : "Action failed"); } finally { setBusy(null); }
+  };
+  const spin = (k: string, Icon: typeof Trash2) => busy === k ? <Loader2 className="size-3 animate-spin" /> : <Icon className="size-3" />;
+  const edit = canEditComment(platform, m.direction, m.body, m.external_id);
+  return (
+    <div className="mt-1 space-y-1">
+      <div className="flex flex-wrap gap-1">
+        {m.direction === "inbound" && (
+          <Button size="sm" variant="ghost" className="h-6 px-2 text-xs" disabled={!!busy}
+            onClick={() => run("hide", async () => { await hide({ data: { conversationId: convId, messageId: m.id, hidden: !hidden } }); setHidden(!hidden); }, hidden ? "Comment visible again" : "Comment hidden")}>
+            {spin("hide", hidden ? Eye : EyeOff)}{hidden ? "Unhide" : "Hide"}
+          </Button>
+        )}
+        {edit && (
+          <Button size="sm" variant="ghost" className="h-6 px-2 text-xs" disabled={!!busy} onClick={() => setEditing(m.body.replace(/^\[public reply\] /, ""))}>
+            <Pencil className="size-3" />Edit
+          </Button>
+        )}
+        <Button size="sm" variant="ghost" className="h-6 px-2 text-xs text-destructive" disabled={!!busy}
+          onClick={() => { if (confirm("Delete this comment on the platform?")) void run("delete", () => moderate({ data: { conversationId: convId, messageId: m.id, action: "delete" } }), "Comment deleted"); }}>
+          {spin("delete", Trash2)}Delete
+        </Button>
+      </div>
+      {editing !== null && (
+        <div className="flex items-end gap-2">
+          <Textarea rows={2} value={editing} onChange={(e) => setEditing(e.target.value)} />
+          <Button size="sm" disabled={!editing.trim() || !!busy} onClick={() => run("edit", async () => { await moderate({ data: { conversationId: convId, messageId: m.id, action: "edit", body: editing } }); setEditing(null); }, "Reply updated")}>{spin("edit", Pencil)}Save</Button>
+          <Button size="sm" variant="ghost" onClick={() => setEditing(null)}>Cancel</Button>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -123,7 +182,8 @@ function PostView({ orgId, post }: { orgId: string; post: SidebarPost }) {
               {msgs.filter((m) => m.conversation_id === c.id).map((m) => (
                 <div key={m.id} className={`py-1 text-sm ${m.direction === "inbound" ? "" : "ml-6 border-l-2 pl-3"}`}>
                   <p className="flex flex-wrap items-center gap-1.5 text-xs"><span className="font-semibold">{m.direction === "inbound" ? m.sender_name ?? c.name ?? "Commenter" : post.accountName}</span><SenderTag m={m} /><span className="text-muted-foreground">{new Date(m.sent_at).toLocaleString()}</span></p>
-                  <p className="whitespace-pre-wrap break-words">{m.body}</p>
+                  <p className="whitespace-pre-wrap break-words">{m.body.replace(/^\[public reply\] /, "")}</p>
+                  <CommentActions m={m} convId={c.id} platform={post.platform} onDone={() => void qc.invalidateQueries({ queryKey: ["post-journey", orgId, post.externalPostId] })} />
                 </div>
               ))}
               <button type="button" onClick={() => setTarget(c.id)} className="mt-1 text-xs font-medium text-primary hover:underline">Reply</button>

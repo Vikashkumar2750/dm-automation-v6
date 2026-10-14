@@ -203,7 +203,12 @@ export async function publishPost(
           body["caption"] = post.caption;
         }
         const container = await graph(`${GRAPH}/${externalAccountId}/media`, body);
-        if (!container.ok) return fail(graphError(container.data));
+        if (!container.ok) {
+          if (format === "trial_reel" && /permission/i.test(graphError(container.data))) {
+            return fail("Instagram hasn't enabled trial reels for this app/account yet. Your normal Reel is unaffected — publish this one as a regular Reel instead.");
+          }
+          return fail(graphError(container.data));
+        }
         creationId = String((container.data as { id?: string }).id ?? "");
       }
 
@@ -235,8 +240,21 @@ export async function publishPost(
 
     // ---- Facebook Page ----
     if (format === "story") {
-      if (media.length === 0) return fail("A story needs a photo");
-      if (isVideo) return fail("Facebook video stories aren't supported yet — use a photo for the Facebook story");
+      if (media.length === 0) return fail("A story needs a photo or video");
+      if (isVideo) {
+        // Facebook video stories: start an upload session, hand Meta the file URL, then finish.
+        const start = await graph(`${GRAPH}/${externalAccountId}/video_stories`, { upload_phase: "start", access_token: token });
+        if (!start.ok) return fail(graphError(start.data));
+        const { video_id: videoId, upload_url: uploadUrl } = start.data as { video_id?: string; upload_url?: string };
+        if (!videoId || !uploadUrl) return fail("Facebook did not start the story upload");
+        const up = await fetch(uploadUrl, { method: "POST", headers: { authorization: `OAuth ${token}`, file_url: media[0]! } });
+        const upData = (await up.json().catch(() => ({}))) as Record<string, unknown>;
+        if (!up.ok || (upData as { error?: unknown }).error) return fail(graphError(upData));
+        const finish = await graph(`${GRAPH}/${externalAccountId}/video_stories`, { upload_phase: "finish", video_id: videoId, access_token: token });
+        if (!finish.ok) return fail(graphError(finish.data));
+        const raw = finish.data as { post_id?: string; id?: string };
+        return succeed(String(raw.post_id ?? raw.id ?? videoId), null);
+      }
       const photo = await graph(`${GRAPH}/${externalAccountId}/photos`, {
         url: media[0],
         published: false,
@@ -352,6 +370,15 @@ export async function publishDuePosts(
   admin: AdminClient,
   organizationId?: string,
 ): Promise<{ attempted: number; published: number }> {
+  // A server restart or timeout can leave a post stuck in "publishing"; release it after 15 minutes
+  // so it shows a clear message and can be retried with "Publish now" instead of hanging forever.
+  let stale = admin
+    .from("posts")
+    .update({ status: "failed", error: "Publishing took too long. Check the platform — if it isn't there, press Publish now." })
+    .eq("status", "publishing")
+    .lt("updated_at", new Date(Date.now() - 15 * 60_000).toISOString());
+  if (organizationId) stale = stale.eq("organization_id", organizationId);
+  await stale;
   let query = admin
     .from("posts")
     .select("id")

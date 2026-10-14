@@ -49,7 +49,7 @@ export function PostSidebar({ orgId, selectedId, onSelect, countLabel = "comment
       {loading ? <Loader2 className="mx-auto my-8 size-5 animate-spin text-muted-foreground" /> : rows.length === 0 ? (
         <p className="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">No posts found.</p>
       ) : rows.map((p) => {
-        const c = counts[p.externalPostId]?.comments ?? 0;
+        const c = (counts[p.externalPostId] ?? counts[p.externalPostId.slice(p.externalPostId.lastIndexOf("_") + 1)])?.comments ?? 0;
         return (
           <button key={p.externalPostId} type="button" onClick={() => onSelect(p)}
             className={`grid w-full grid-cols-[auto_minmax(0,1fr)] items-center gap-3 rounded-xl border p-2 text-left transition-colors hover:bg-muted ${selectedId === p.externalPostId ? "border-primary bg-primary/5" : ""}`}>

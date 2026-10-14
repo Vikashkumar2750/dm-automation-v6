@@ -27,6 +27,9 @@ export const listPostCommentCounts = createServerFn({ method: "GET" })
       const e = (out[k] ??= { comments: 0, convs: new Set() });
       e.comments += 1;
       e.convs.add(r.conversation_id);
+      // Facebook stores "PAGEID_POSTID" in some places and "POSTID" in others; count under both.
+      const tail = k.includes("_") ? k.slice(k.lastIndexOf("_") + 1) : null;
+      if (tail) { const t = (out[tail] ??= { comments: 0, convs: new Set() }); t.comments += 1; t.convs.add(r.conversation_id); }
     }
     return Object.fromEntries(Object.entries(out).map(([k, v]) => [k, { comments: v.comments, conversations: v.convs.size }])) as PostCounts;
   });
@@ -38,6 +41,7 @@ export type JourneyMessage = {
   body: string;
   sender_name: string | null;
   sent_at: string;
+  external_id: string | null;
   manual: boolean;
   post_external_id: string | null;
 };
@@ -46,20 +50,22 @@ export type JourneyConversation = { id: string; platform: string; channel: strin
 /** Everything that happened on one post: commenters, messages (bot vs manual) and automation runs. */
 export const getPostJourney = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ organizationId: z.string().uuid(), postExternalId: z.string().min(1).max(200) }).parse(d))
+  .inputValidator((d: unknown) => z.object({ organizationId: z.string().uuid(), postExternalId: z.string().regex(/^[A-Za-z0-9_-]{1,200}$/) }).parse(d))
   .handler(async ({ data, context }) => {
+    const id = data.postExternalId;
+    const tail = id.includes("_") ? id.slice(id.lastIndexOf("_") + 1) : id;
     const { data: links, error } = await context.supabase
       .from("messages")
       .select("conversation_id, conversations!inner(organization_id)")
       .eq("conversations.organization_id", data.organizationId)
-      .eq("post_external_id", data.postExternalId)
+      .or(`post_external_id.eq.${id},post_external_id.eq.${tail},post_external_id.like.*_${tail}`)
       .limit(1000);
     if (error) throw new Error(error.message);
     const ids = [...new Set((links ?? []).map((l) => l.conversation_id))].slice(0, 300);
     if (!ids.length) return { conversations: [] as JourneyConversation[], messages: [] as JourneyMessage[], runs: [] as AutomationRun[] };
     const [convs, msgs, runs] = await Promise.all([
       context.supabase.from("conversations").select("id, platform, channel, external_user_name, status").in("id", ids),
-      context.supabase.from("messages").select("id, conversation_id, direction, body, sender_name, sent_at, sent_by, post_external_id").in("conversation_id", ids).order("sent_at", { ascending: true }).limit(3000),
+      context.supabase.from("messages").select("id, conversation_id, direction, body, sender_name, sent_at, sent_by, post_external_id, external_id").in("conversation_id", ids).order("sent_at", { ascending: true }).limit(3000),
       context.supabase.from("automation_runs").select("id, rule_id, conversation_id, status, detail, created_at, run_key").eq("organization_id", data.organizationId).in("conversation_id", ids).order("created_at", { ascending: true }).limit(3000),
     ]);
     if (convs.error) throw new Error(convs.error.message);
