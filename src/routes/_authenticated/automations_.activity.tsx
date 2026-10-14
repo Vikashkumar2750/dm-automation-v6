@@ -106,32 +106,37 @@ function ActivityPage() {
                         </div>
                         <ChevronRight className="size-4 text-muted-foreground transition-transform group-open:rotate-90" />
                       </summary>
-                      <div className="relative mx-4 mb-1 h-px bg-foreground/60">
-                        <span className="absolute -top-1.5 left-3 bg-card px-1 text-[9px] font-semibold uppercase leading-none tracking-wider text-foreground/70">Start</span>
-                      </div>
                       <ol className="ml-8 border-l pb-2">
-                        {g.steps.map((run) => {
-                          const ok = run.status === "sent" || run.status === "matched";
-                          const ex = ok ? null : explainReason(run.detail);
-                          return (
-                            <li key={run.id}>
-                              <Link to="/automations/activity/$runId" params={{ runId: run.id }} search={{ source, filter }}
-                                className="flex items-center gap-3 px-4 py-2 hover:bg-muted/50">
-                                <StatusBadge tone={tone[run.status]}>{run.status}</StatusBadge>
-                                <div className="min-w-0 flex-1">
-                                  <p className="truncate text-sm">{ok ? stepLabel(run.detail) : ex?.title}</p>
-                                  {ex?.hint && <p className="truncate text-xs text-muted-foreground">{ex.hint}</p>}
-                                  <p className="text-xs text-muted-foreground">{new Date(run.created_at).toLocaleTimeString()}</p>
-                                </div>
-                                <ChevronRight className="size-4 text-muted-foreground" />
-                              </Link>
-                            </li>
-                          );
-                        })}
+                        {(() => {
+                          let startIdx = -1;
+                          let endIdx = -1;
+                          g.steps.forEach((r, i) => {
+                            const k = stepMarkerKind(r.detail);
+                            if (k === "start") startIdx = i;
+                            if (k === "end" && endIdx < 0) endIdx = i;
+                          });
+                          return g.steps.map((run, i) => {
+                            const ok = run.status === "sent" || run.status === "matched";
+                            const ex = ok ? null : explainReason(run.detail);
+                            return (
+                              <li key={run.id}>
+                                {i === endIdx && <RunMarker label="End" />}
+                                <Link to="/automations/activity/$runId" params={{ runId: run.id }} search={{ source, filter }}
+                                  className="flex items-center gap-3 px-4 py-2 hover:bg-muted/50">
+                                  <StatusBadge tone={tone[run.status]}>{run.status}</StatusBadge>
+                                  <div className="min-w-0 flex-1">
+                                    <p className="truncate text-sm">{ok ? stepLabel(run.detail) : ex?.title}</p>
+                                    {ex?.hint && <p className="truncate text-xs text-muted-foreground">{ex.hint}</p>}
+                                    <p className="text-xs text-muted-foreground">{new Date(run.created_at).toLocaleTimeString()}</p>
+                                  </div>
+                                  <ChevronRight className="size-4 text-muted-foreground" />
+                                </Link>
+                                {i === startIdx && <RunMarker label="Start" />}
+                              </li>
+                            );
+                          });
+                        })()}
                       </ol>
-                      <div className="relative mx-4 mt-1 h-px bg-foreground/60">
-                        <span className="absolute -top-1.5 left-3 bg-card px-1 text-[9px] font-semibold uppercase leading-none tracking-wider text-foreground/70">End</span>
-                      </div>
                     </details>
                   </li>
                 );
