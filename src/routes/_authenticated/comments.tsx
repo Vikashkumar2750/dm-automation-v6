@@ -14,6 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useTenant } from "@/hooks/useTenant";
 import { moderateComment, replyToComment, setCommentHidden } from "@/lib/inbox.functions";
 import { canEditComment } from "@/lib/comment-moderation";
+import { messagesForPost } from "@/lib/post-comments";
 import { getLivePostComments, getPostJourney, getSinglePostStats, type JourneyMessage } from "@/lib/post-journey.functions";
 
 export const Route = createFileRoute("/_authenticated/comments")({
@@ -183,7 +184,7 @@ function PostView({ orgId, post }: { orgId: string; post: SidebarPost }) {
     <div className="grid min-w-0 gap-4 lg:h-full lg:min-h-0 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
       <div className="min-w-0 lg:min-h-0 lg:overflow-y-auto"><PostCard orgId={orgId} post={post} /></div>
       <div className="flex min-h-[420px] min-w-0 flex-col rounded-xl border lg:min-h-0">
-        <p className="border-b px-4 py-3 text-sm font-semibold">Comments ({convs.length + extra.length})</p>
+        <p className="border-b px-4 py-3 text-sm font-semibold">Comments ({commentCount + extra.length})</p>
         <div className="min-h-0 flex-1 divide-y overflow-y-auto">
           {extra.flatMap((c) => [{ ...c, reply: false }, ...c.replies.map((r) => ({ ...r, replies: [], reply: true }))]).map((c) => (
             <div key={c.id} className={`px-4 py-2.5 text-sm ${c.reply ? "pl-9" : ""}`}>
@@ -194,13 +195,13 @@ function PostView({ orgId, post }: { orgId: string; post: SidebarPost }) {
           {journey.isLoading ? <Loader2 className="mx-auto my-4 size-5 animate-spin text-muted-foreground" /> : convs.length === 0 && extra.length === 0 ? (
             <EmptyState icon={MessageSquare} title="No comments linked yet" description="New comments on this post will show up here." />
           ) : convs.flatMap((c) => msgs
-            .filter((m) => m.conversation_id === c.id && (m.direction === "inbound" || m.body.startsWith("[public reply] ")))
+            .filter((m) => m.conversation_id === c.id)
             .map((m) => (
-              <div key={m.id} className={`px-4 py-2.5 text-sm ${m.direction === "inbound" ? "" : "pl-9"} ${target === c.id && m.direction === "inbound" ? "bg-primary/5" : ""}`}>
+              <div key={m.id} className={`px-4 py-2.5 text-sm ${m.direction === "inbound" ? "" : "pl-9"} ${target === m.id ? "bg-primary/5" : ""}`}>
                 <p className="flex flex-wrap items-center gap-1.5 text-xs"><span className="font-semibold">{m.direction === "inbound" ? m.sender_name ?? c.name ?? "Commenter" : post.accountName}</span><SenderTag m={m} /><span className="text-muted-foreground">{new Date(m.sent_at).toLocaleDateString()} · {new Date(m.sent_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span></p>
                 <p className="mt-0.5 whitespace-pre-wrap break-words">{m.body.replace(/^\[public reply\] /, "")}</p>
                 <div className="mt-1 flex flex-wrap items-center gap-3 text-[11px]">
-                  {m.direction === "inbound" && <button type="button" onClick={() => setTarget(c.id)} className="font-medium text-primary hover:underline">Reply</button>}
+                  {m.direction === "inbound" && <button type="button" onClick={() => setTarget(m.id)} className="font-medium text-primary hover:underline">Reply</button>}
                   <CommentActions m={m} convId={c.id} platform={post.platform} onDone={() => void qc.invalidateQueries({ queryKey: ["post-journey", orgId, post.externalPostId] })} />
                 </div>
               </div>
