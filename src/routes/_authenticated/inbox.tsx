@@ -115,11 +115,22 @@ const BUTTON_TITLES = ["Send me the link", "Visit profile", "I followed ✅"];
 function describeMessage(body: string, outbound: boolean) {
   const match = body.match(/^\[(public reply|private reply)\]\s*/i);
   const tag = match ? (match[1] ?? "").toLowerCase() : null;
-  const text = match ? body.slice(match[0].length) : body;
+  let text = match ? body.slice(match[0].length) : body;
   const buttons: string[] = [];
+  if (outbound) {
+    // A sent button is logged on its own line as "[Button title] https://…".
+    text = text
+      .replace(/(?:^|\n)\[([^\]\n]{1,40})\]\s*(?:https?:\/\/|www\.)\S+/g, (_m, title: string) => {
+        buttons.push(title.trim());
+        return "\n";
+      })
+      .trim();
+  }
   if (outbound && /tap the button below/i.test(text)) buttons.push("Send me the link");
   if (outbound && /follow/i.test(text) && /tap/i.test(text)) buttons.push("Visit profile", "I followed ✅");
-  return { tag, text, buttons: buttons.filter((b) => BUTTON_TITLES.includes(b)) };
+  const seen = new Set<string>();
+  const unique = buttons.filter((b) => (seen.has(b) ? false : (seen.add(b), true)));
+  return { tag, text, buttons: unique };
 }
 
 function InboxPage() {
@@ -315,7 +326,7 @@ function InboxPage() {
     <AppShell>
       <PageHeader
         title="Unified Inbox"
-        description="Messages and comments from Instagram, Facebook and YouTube in one place."
+        description={<>Messages and comments from Instagram,<br />Facebook and YouTube in one place.</>}
         actions={<GuideButton guide="meta-review" />}
       />
 
@@ -476,7 +487,7 @@ function InboxPage() {
               ) : null}
 
               <div className="flex min-h-0 justify-center bg-muted/30 px-3 py-3 lg:flex-1">
-              <div className="flex h-[60vh] min-h-[320px] w-full max-w-[380px] flex-col overflow-hidden rounded-[2.25rem] border-[6px] border-neutral-800 bg-neutral-950 shadow-xl lg:h-full lg:min-h-0">
+              <div className="flex h-[70vh] min-h-[380px] w-full max-w-[380px] flex-col overflow-hidden rounded-[2.25rem] border-[6px] border-neutral-800 bg-neutral-950 shadow-xl lg:h-full lg:min-h-0">
               <div className="mx-auto mt-1.5 h-4 w-24 shrink-0 rounded-full bg-neutral-800" />
               <div className="flex shrink-0 items-center gap-2 border-b border-neutral-800 px-4 py-2 text-xs font-semibold text-neutral-100">{contactLabel(selected)}</div>
               <div
