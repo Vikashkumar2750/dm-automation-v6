@@ -88,7 +88,7 @@ function CommentActions({ m, convId, platform, onDone }: { m: JourneyMessage; co
         )}
         {m.direction === "inbound" && (
           <button type="button" className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground disabled:opacity-50" disabled={!!busy}
-            onClick={() => run("hide", async () => { const r = await hide({ data: { conversationId: convId, messageId: m.id, hidden: !hidden } }); if (!r.ok) throw new Error(r.error ?? "Could not change visibility"); setHidden(!hidden); }, hidden ? "Comment visible again" : "Comment hidden — the public can't see it. The commenter, their friends and Page admins still can.")}>
+            onClick={() => run("hide", async () => { let r: { ok: boolean; error?: string }; try { r = await hide({ data: { conversationId: convId, messageId: m.id, hidden: !hidden } }); } catch (e) { const msg = e instanceof Error ? e.message : ""; throw new Error(/<html|unknown/i.test(msg) || !msg ? "Couldn't reach Facebook to hide this comment. Refresh the page and try again." : msg); } if (!r.ok) throw new Error(r.error ?? "Could not change visibility"); setHidden(!hidden); }, hidden ? "Comment visible again" : "Comment hidden — the public can't see it. The commenter, their friends and Page admins still can.")}>
             {busy === "hide" && <Loader2 className="size-3 animate-spin" />}{hidden ? "Unhide" : "Hide"}
           </button>
         )}
@@ -169,7 +169,14 @@ function PostView({ orgId, post }: { orgId: string; post: SidebarPost }) {
     queryFn: () => fetchLive({ data: { organizationId: orgId, socialAccountId: post.socialAccountId ?? null, platform: post.platform, externalPostId: post.externalPostId } }),
   });
   const allConvs = (journey.data?.conversations ?? []).filter((c) => c.channel === "comment");
-  const msgs = messagesForPost(journey.data?.messages ?? [], post.externalPostId);
+  // Drop deleted comments and the replies under them (older rows saved as "[deleted comment]").
+  const msgs = (() => {
+    const skip = new Map<string, boolean>();
+    return messagesForPost(journey.data?.messages ?? [], post.externalPostId).filter((m) => {
+      if (m.direction === "inbound") skip.set(m.conversation_id, m.body === "[deleted comment]");
+      return !skip.get(m.conversation_id) && m.body !== "[deleted comment]";
+    });
+  })();
   const convs = allConvs.filter((c) => msgs.some((m) => m.conversation_id === c.id));
   const commentCount = msgs.filter((m) => m.direction === "inbound").length;
   const known = new Set(msgs.map((m) => m.external_id).filter(Boolean));

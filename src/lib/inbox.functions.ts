@@ -501,8 +501,7 @@ export const setCommentHidden = createServerFn({ method: "POST" })
     const commentUrl = `https://graph.facebook.com/v21.0/${encodeURIComponent(lastComment.external_id)}`;
     const response = await fetch(commentUrl, {
       method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ [hiddenField(conversation.platform)]: data.hidden, access_token: tokenRow.access_token }),
+      body: new URLSearchParams({ [hiddenField(conversation.platform)]: String(data.hidden), access_token: tokenRow.access_token }),
     });
     const result = (await response.json().catch(() => ({}))) as { error?: { message?: string } };
     if (!response.ok || result.error) {
@@ -576,10 +575,22 @@ export const moderateComment = createServerFn({ method: "POST" })
         .then((r) => r.json() as Promise<Record<string, unknown>>).catch(() => null);
       if (!deleteConfirmed(check)) throw new Error("Meta accepted the request but the comment still exists on the post. Try again in a minute.");
     }
-    const body = data.action === "delete" ? "[deleted comment]" : `[public reply] ${data.body}`;
-    const { error: saveError } = await supabaseAdmin.from("messages")
-      .update({ body, ...(data.action === "delete" ? { external_id: null } : {}) })
-      .eq("id", message.id).eq("conversation_id", conversation.id);
+    let saveError: { message: string } | null = null;
+    if (data.action === "delete") {
+      // Remove the comment and, for a user comment, the replies under it — Meta deletes those too.
+      const ids = [message.id];
+      if (message.direction === "inbound") {
+        const { data: rest } = await supabaseAdmin.from("messages").select("id, direction, sent_at")
+          .eq("conversation_id", conversation.id).order("sent_at", { ascending: true });
+        const list = rest ?? [];
+        const i = list.findIndex((r) => r.id === message.id);
+        for (let j = i + 1; i >= 0 && j < list.length && list[j]!.direction !== "inbound"; j++) ids.push(list[j]!.id);
+      }
+      ({ error: saveError } = await supabaseAdmin.from("messages").delete().in("id", ids).eq("conversation_id", conversation.id));
+    } else {
+      ({ error: saveError } = await supabaseAdmin.from("messages").update({ body: `[public reply] ${data.body}` })
+        .eq("id", message.id).eq("conversation_id", conversation.id));
+    }
     if (saveError) throw new Error("Comment changed on Meta, but the inbox could not refresh. Reload before trying again.");
     const { data: latest } = await supabaseAdmin.from("messages").select("body")
       .eq("conversation_id", conversation.id).order("sent_at", { ascending: false }).limit(1).maybeSingle();
