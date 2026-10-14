@@ -45,4 +45,12 @@ describe("activity journey boundaries", () => {
   it("standalone replies complete without waiting for a nonexistent follow gate", () => {
     expect(activityJourneys([row("direct", "direct", "reply_dm", 1)])[0]?.endKey).toBe("direct");
   });
+  it("an unrelated skipped repeat does not break the active follow journey", () => {
+    const journeys = activityJourneys([...example, row("skip", "skip", "cooldown", 4, "vikas", "arth", "skipped")]);
+    expect(journeys.find((j) => j.key === "comment")?.groups.map((g) => g.key)).toEqual(["comment", "tap", "follow", "click"]);
+  });
+  it("an expired gate is a terminal entry", () => {
+    const journeys = activityJourneys([...example.slice(0, 3), row("expired", "expiry", "follow_gate_expired", 9, "vikas", "arth", "skipped")]);
+    expect(journeys[0]?.endKey).toBe("expiry");
+  });
 });

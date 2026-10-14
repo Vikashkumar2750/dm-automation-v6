@@ -27,7 +27,7 @@ export function activityJourneys(rows: AutomationRun[]): ActivityJourney[] {
     if (!journey) {
       journey = { key: group.key, groups: [], startKey: opening ? group.key : null, endKey: null };
       journeys.push(journey);
-      if (scope) current.set(scope, journey);
+      if (scope && (opening || isContinuation(group))) current.set(scope, journey);
     }
     journey.groups.push(group);
     if (group.steps.some(isClick) || group.status === "failed" || group.steps.some((row) => /^(follow_gate_expired|gate_gave_up)/.test(code(row))) || (opening && !isWaiting(group))) {
