@@ -39,7 +39,7 @@ const errOf = (j: Record<string, unknown>) =>
 export async function fetchRemotePosts(
   admin: import("@supabase/supabase-js").SupabaseClient,
   organizationId: string,
-  maxPerAccount = 500,
+  maxPerAccount = 5000,
 ): Promise<{ posts: RemotePost[]; warnings: string[] }> {
   const { data: accounts } = await admin
     .from("social_accounts")

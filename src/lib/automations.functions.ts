@@ -620,7 +620,7 @@ export const listRecentRemotePosts = createServerFn({ method: "POST" })
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { fetchRemotePosts } = await import("@/lib/remote-posts.server");
-    const result = await fetchRemotePosts(supabaseAdmin, data.organizationId, 500);
+    const result = await fetchRemotePosts(supabaseAdmin, data.organizationId, 5000);
     return { posts: result.posts as RemotePostItem[], warnings: result.warnings };
   });
 
