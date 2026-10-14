@@ -638,12 +638,16 @@ export const listTargetablePosts = createServerFn({ method: "GET" })
       .order("published_at", { ascending: false })
       .limit(60);
     if (error) throw new Error(error.message);
+    const { youtubeThumbnail } = await import("@/lib/post-thumbnail");
     return (rows ?? []).map((row) => ({
       id: row.id,
       externalPostId: row.external_post_id as string,
       platform: row.platform,
       caption: row.caption ?? "",
-      mediaUrl: row.media_url ?? row.media_urls?.[0] ?? null,
+      mediaUrl:
+        row.platform === "youtube"
+          ? youtubeThumbnail(row.external_post_id as string)
+          : row.media_url ?? row.media_urls?.[0] ?? null,
       permalink: row.permalink,
       publishedAt: row.published_at,
     })) as TargetablePost[];
