@@ -65,7 +65,7 @@ function RefreshButton() {
   );
 }
 
-function CommentActions({ m, convId, platform, onDone }: { m: JourneyMessage; convId: string; platform: string; onDone: () => void }) {
+function CommentActions({ m, convId, platform, onDone, onDeleted }: { m: JourneyMessage; convId: string; platform: string; onDone: () => void; onDeleted?: (id: string) => void }) {
   const hide = useServerFn(setCommentHidden);
   const moderate = useServerFn(moderateComment);
   const [hidden, setHidden] = useState(!!m.is_hidden);
@@ -93,7 +93,7 @@ function CommentActions({ m, convId, platform, onDone }: { m: JourneyMessage; co
           </button>
         )}
         <button type="button" className="inline-flex items-center gap-1 text-destructive/80 hover:text-destructive disabled:opacity-50" disabled={!!busy}
-          onClick={() => { if (confirm("Delete this comment on the platform?")) void run("delete", () => moderate({ data: { conversationId: convId, messageId: m.id, action: "delete" } }), "Comment deleted"); }}>
+          onClick={() => { if (confirm("Delete this comment on the platform?")) void run("delete", async () => { await moderate({ data: { conversationId: convId, messageId: m.id, action: "delete" } }); onDeleted?.(m.id); }, "Comment deleted"); }}>
           {busy === "delete" && <Loader2 className="size-3 animate-spin" />}Delete
         </button>
       </div>
@@ -108,7 +108,7 @@ function CommentActions({ m, convId, platform, onDone }: { m: JourneyMessage; co
   );
 }
 
-function LiveActions({ orgId, post, commentId, canReply = true }: { orgId: string; post: SidebarPost; commentId: string; canReply?: boolean }) {
+function LiveActions({ orgId, post, commentId, canReply = true, onDeleted }: { orgId: string; post: SidebarPost; commentId: string; canReply?: boolean; onDeleted?: (id: string) => void }) {
   const qc = useQueryClient();
   const act = useServerFn(moderateLiveComment);
   const replyFn = useServerFn(replyLiveComment);
@@ -128,7 +128,7 @@ function LiveActions({ orgId, post, commentId, canReply = true }: { orgId: strin
     try {
       await act({ data: { organizationId: orgId, socialAccountId: post.socialAccountId!, platform: post.platform as "instagram" | "facebook", externalPostId: post.externalPostId, commentId, action } });
       toast.success(ok);
-      if (action === "delete") void qc.invalidateQueries({ queryKey: ["post-journey", "live", post.externalPostId] });
+      if (action === "delete") { onDeleted?.(commentId); setTimeout(() => { void qc.invalidateQueries({ queryKey: ["post-journey", "live", post.externalPostId] }); void qc.invalidateQueries({ queryKey: ["post-comment-counts"] }); void qc.invalidateQueries({ queryKey: ["post-stats", post.externalPostId] }); }, 1500); }
       else setHidden(action === "hide");
     } catch (e) { toast.error(e instanceof Error && e.message ? e.message : "Action failed"); } finally { setBusy(null); }
   };
@@ -206,6 +206,8 @@ function PostView({ orgId, post }: { orgId: string; post: SidebarPost }) {
   const [target, setTarget] = useState<string | null>(null);
   const [body, setBody] = useState("");
   const [mode, setMode] = useState<"public" | "private">("public");
+  const [removed, setRemoved] = useState<Set<string>>(() => new Set());
+  const markRemoved = (id: string) => setRemoved((s) => new Set(s).add(id));
   const fetchLive = useServerFn(getLivePostComments);
   const live = useQuery({
     queryKey: ["post-journey", "live", post.externalPostId],
@@ -218,14 +220,14 @@ function PostView({ orgId, post }: { orgId: string; post: SidebarPost }) {
   const msgs = (() => {
     const skip = new Map<string, boolean>();
     return messagesForPost(journey.data?.messages ?? [], post.externalPostId).filter((m) => {
-      if (m.direction === "inbound") skip.set(m.conversation_id, m.body === "[deleted comment]");
-      return !skip.get(m.conversation_id) && m.body !== "[deleted comment]";
+      if (m.direction === "inbound") skip.set(m.conversation_id, m.body === "[deleted comment]" || removed.has(m.id));
+      return !skip.get(m.conversation_id) && m.body !== "[deleted comment]" && !removed.has(m.id) && !(m.external_id && removed.has(m.external_id));
     });
   })();
   const convs = allConvs.filter((c) => msgs.some((m) => m.conversation_id === c.id));
   const commentCount = msgs.filter((m) => m.direction === "inbound").length;
   const known = new Set(msgs.map((m) => m.external_id).filter(Boolean));
-  const liveList = live.data?.comments ?? [];
+  const liveList = (live.data?.comments ?? []).filter((c) => !removed.has(c.id)).map((c) => ({ ...c, replies: c.replies.filter((r) => !removed.has(r.id)) }));
   const extra = liveList.filter((c) => !known.has(c.id));
   // Replies made on the platform (or not saved by us) under comments we do have.
   const liveReplies = new Map(liveList.filter((c) => known.has(c.id)).map((c) => [c.id, c.replies.filter((r) => !known.has(r.id))]));
@@ -247,7 +249,7 @@ function PostView({ orgId, post }: { orgId: string; post: SidebarPost }) {
             <div key={c.id} className={`px-4 py-2.5 text-sm ${c.reply ? "pl-9" : ""}`}>
               <p className="flex flex-wrap items-center gap-1.5 text-xs"><span className="font-semibold">{c.author ?? "Commenter"}</span>{c.createdAt && <span className="text-muted-foreground">{new Date(c.createdAt).toLocaleDateString()} · {new Date(c.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>}</p>
               <p className="mt-0.5 whitespace-pre-wrap break-words">{c.text}</p>
-              {post.socialAccountId && post.platform !== "youtube" && <LiveActions orgId={orgId} post={post} commentId={c.id} canReply={!c.reply} />}
+              {post.socialAccountId && post.platform !== "youtube" && <LiveActions orgId={orgId} post={post} commentId={c.id} canReply={!c.reply} onDeleted={markRemoved} />}
             </div>
           ))}
           {live.data?.error && <p className="bg-warning/10 px-4 py-2 text-xs text-warning">Older comments could not be loaded: {live.data.error}</p>}
@@ -261,14 +263,14 @@ function PostView({ orgId, post }: { orgId: string; post: SidebarPost }) {
                 <p className="mt-0.5 whitespace-pre-wrap break-words">{m.body.replace(/^\[public reply\] /, "")}</p>
                 <div className="mt-1 flex flex-wrap items-center gap-3 text-[11px]">
                   {m.direction === "inbound" && <button type="button" onClick={() => setTarget(m.id)} className="font-medium text-primary hover:underline">Reply</button>}
-                  <CommentActions m={m} convId={c.id} platform={post.platform} onDone={() => void qc.invalidateQueries({ queryKey: ["post-journey", orgId, post.externalPostId] })} />
+                  <CommentActions m={m} convId={c.id} platform={post.platform} onDeleted={markRemoved} onDone={() => { void qc.invalidateQueries({ queryKey: ["post-journey", orgId, post.externalPostId] }); void qc.invalidateQueries({ queryKey: ["post-comment-counts"] }); void qc.invalidateQueries({ queryKey: ["post-stats", post.externalPostId] }); }} />
                 </div>
               </div>
             ), ...((m.external_id && liveReplies.get(m.external_id)) || []).map((r) => (
               <div key={r.id} className="px-4 py-2.5 pl-9 text-sm">
                 <p className="flex flex-wrap items-center gap-1.5 text-xs"><span className="font-semibold">{r.author ?? "Reply"}</span>{r.createdAt && <span className="text-muted-foreground">{new Date(r.createdAt).toLocaleDateString()} · {new Date(r.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>}</p>
                 <p className="mt-0.5 whitespace-pre-wrap break-words">{r.text}</p>
-                {post.socialAccountId && <LiveActions orgId={orgId} post={post} commentId={r.id} canReply={false} />}
+                {post.socialAccountId && <LiveActions orgId={orgId} post={post} commentId={r.id} canReply={false} onDeleted={markRemoved} />}
               </div>
             ))]))}
         </div>
