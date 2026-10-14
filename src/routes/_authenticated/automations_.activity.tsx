@@ -8,7 +8,7 @@ import { EmptyState, PageHeader, Panel, StatusBadge } from "@/components/app/pri
 import { Button } from "@/components/ui/button";
 import { useTenant } from "@/hooks/useTenant";
 import { activityName, explainReason, stepLabel } from "@/lib/activity-explain";
-import { groupRuns, type RunGroup } from "@/lib/activity-groups";
+import { activityJourneys, filterActivityJourneys } from "@/lib/activity-journeys";
 import { listAutomationRules, listAutomationRuns } from "@/lib/automations.functions";
 
 export const Route = createFileRoute("/_authenticated/automations_/activity")({
@@ -50,24 +50,26 @@ function ActivityPage() {
   const runsQuery = useQuery({
     queryKey: ["automation-runs-all", orgId, source],
     enabled: Boolean(orgId),
-    queryFn: () => fetchRuns({ data: { organizationId: orgId!, limit: 300, source } }),
+    queryFn: () => {
+      if (!orgId) throw new Error("Workspace not available");
+      return fetchRuns({ data: { organizationId: orgId, limit: 300, source } });
+    },
     refetchInterval: 15_000,
   });
   const rulesQuery = useQuery({
     queryKey: ["automation-rules", orgId],
     enabled: Boolean(orgId),
-    queryFn: () => fetchRules({ data: { organizationId: orgId! } }),
+    queryFn: () => {
+      if (!orgId) throw new Error("Workspace not available");
+      return fetchRules({ data: { organizationId: orgId } });
+    },
   });
   const rules = rulesQuery.data ?? [];
   const ruleName = (id: string | null) =>
     !id ? "Safety settings" : (rules.find((r) => r.id === id)?.name ?? "Deleted rule");
-  const runs = (runsQuery.data ?? []).filter((r) => filter === "all" || r.status === filter);
-  const groups = groupRuns(runs);
-  // One START border before an automation rule's first entry and one END border after its last
-  // entry — consecutive entries of the same rule form one block, no borders between entries.
-  const ruleKeyOf = (g: RunGroup) => g.steps[0]?.rule_id ?? `name:${activityName(g.steps[0]!, ruleName)}`;
-  const blockStart = groups.map((g, i) => i === 0 || ruleKeyOf(groups[i - 1]!) !== ruleKeyOf(g));
-  const blockEnd = groups.map((g, i) => i === groups.length - 1 || ruleKeyOf(groups[i + 1]!) !== ruleKeyOf(g));
+  const journeys = filterActivityJourneys(activityJourneys(runsQuery.data ?? []), filter);
+  const entries = journeys.flatMap((journey) => journey.groups.map((group) => ({ group, journey })));
+  const stepCount = entries.reduce((count, { group }) => count + group.steps.length, 0);
 
   return (
     <AppShell>
@@ -77,11 +79,11 @@ function ActivityPage() {
         </Button>
         <PageHeader
           title="Automation activity"
-          description="One entry per automation run. Tap a run to see every step; tap a step for full details."
+          description="Comment triggers, button taps, follow checks and link opens."
         />
         <div className="flex gap-2">{(["flows", "rules", "system"] as const).map((s) => <Button key={s} variant={source === s ? "default" : "outline"} onClick={() => navigate({ search: { source: s, filter } })}>{s === "flows" ? "FLOW" : s === "rules" ? "Rule" : "System / safety"}</Button>)}</div>
         <Panel
-          title={`${groups.length} automation runs · ${runs.length} steps`}
+          title={`${journeys.length} automations · ${entries.length} entries · ${stepCount} steps`}
           bodyClassName="p-0"
           action={
             <div className="flex gap-1">
@@ -95,20 +97,20 @@ function ActivityPage() {
         >
           {runsQuery.isLoading ? (
             <p className="p-5 text-sm text-muted-foreground">Loading…</p>
-          ) : runs.length === 0 ? (
+          ) : entries.length === 0 ? (
             <div className="p-5">
               <EmptyState icon={Zap} title="No activity" description="Nothing matches this filter yet." />
             </div>
           ) : (
             <ul className="space-y-3 p-3">
-              {groups.map((g, i) => {
+              {entries.map(({ group: g, journey }) => {
                 const first = g.steps[0];
                 if (!first) return null;
                 const name = activityName(first, ruleName);
                 const c = g.steps.find((x) => x.contact)?.contact;
                 return (
                   <li key={g.key} className="pt-1 pb-1">
-                    {blockStart[i] && <RunMarker label="Start" />}
+                    {journey.startKey === g.key && <RunMarker label="Start" />}
                     <details className="group">
                       <summary className="flex cursor-pointer list-none items-center gap-3 px-5 py-3 hover:bg-muted/50">
                         <StatusBadge tone={groupTone[g.status]}>{groupLabel[g.status]}</StatusBadge>
@@ -142,7 +144,7 @@ function ActivityPage() {
                           })}
                       </ol>
                     </details>
-                    {blockEnd[i] && <RunMarker label="End" />}
+                    {journey.endKey === g.key && <RunMarker label="End" />}
                   </li>
                 );
               })}
