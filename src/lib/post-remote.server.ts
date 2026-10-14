@@ -141,20 +141,25 @@ export async function fetchPostStats(admin: AdminClient, row: RemotePostRow): Pr
 export type LiveComment = { id: string; text: string; author: string | null; createdAt: string | null; replies: { id: string; text: string; author: string | null; createdAt: string | null }[] };
 
 /** Read-only: comments straight from Instagram / Facebook for one post (display only). */
-export async function fetchPostComments(admin: AdminClient, row: RemotePostRow): Promise<LiveComment[]> {
-  if (!row.external_post_id || row.platform === "youtube") return [];
+export async function fetchPostComments(admin: AdminClient, row: RemotePostRow): Promise<{ comments: LiveComment[]; error: string | null }> {
+  if (!row.external_post_id || row.platform === "youtube") return { comments: [], error: null };
   const token = await tokenFor(admin, row);
-  if (!token) return [];
+  if (!token) return { comments: [], error: "Reconnect this account to load older comments." };
   const t = encodeURIComponent(token);
-  const url = row.platform === "instagram"
+  let url: string | null = row.platform === "instagram"
     ? `${GRAPH}/${row.external_post_id}/comments?fields=id,text,username,timestamp,replies{id,text,username,timestamp}&limit=100&access_token=${t}`
     : `${GRAPH}/${row.external_post_id}/comments?fields=id,message,from,created_time,comments{id,message,from,created_time}&filter=toplevel&limit=100&access_token=${t}`;
+  const map = (c: any) => ({ id: String(c.id), text: c.text ?? c.message ?? "", author: c.username ?? c.from?.name ?? null, createdAt: c.timestamp ?? c.created_time ?? null });
+  const out: LiveComment[] = [];
   try {
-    const b = await json(await fetch(url));
-    if (b["error"]) return [];
-    const map = (c: any) => ({ id: String(c.id), text: c.text ?? c.message ?? "", author: c.username ?? c.from?.name ?? null, createdAt: c.timestamp ?? c.created_time ?? null });
-    return ((b["data"] ?? []) as any[]).map((c) => ({ ...map(c), replies: (((c.replies ?? c.comments)?.data ?? []) as any[]).map(map) }));
+    for (let page = 0; url && page < 10; page++) {
+      const b: Record<string, any> = await json(await fetch(url));
+      if (b["error"]) return { comments: out, error: errMsg(b, "The platform did not return older comments.") };
+      for (const c of (b["data"] ?? []) as any[]) out.push({ ...map(c), replies: (((c.replies ?? c.comments)?.data ?? []) as any[]).map(map) });
+      url = (b["paging"] as { next?: string } | undefined)?.next ?? null;
+    }
+    return { comments: out, error: null };
   } catch {
-    return [];
+    return { comments: out, error: "Could not reach the platform." };
   }
 }
