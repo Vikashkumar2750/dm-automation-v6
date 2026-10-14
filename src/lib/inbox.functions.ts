@@ -28,6 +28,7 @@ export type MessageRow = {
   external_id: string | null;
   sender_name: string | null;
   sent_at: string;
+  is_hidden: boolean;
 };
 
 const WRITE_ROLES = ["owner", "admin", "manager", "agent"] as const;
@@ -89,7 +90,7 @@ export const listMessages = createServerFn({ method: "GET" })
   .handler(async ({ data, context }) => {
     const { data: rows, error } = await context.supabase
       .from("messages")
-      .select("id, conversation_id, direction, body, external_id, sender_name, sent_at")
+      .select("id, conversation_id, direction, body, external_id, sender_name, sent_at, is_hidden")
       .eq("conversation_id", data.conversationId)
       .order("sent_at", { ascending: true })
       .limit(200);
@@ -508,6 +509,10 @@ export const setCommentHidden = createServerFn({ method: "POST" })
     if (!hideConfirmed(conversation.platform, check, data.hidden)) {
       if (check && check["can_hide"] === false) throw new Error("Facebook does not allow hiding this comment (the Page's own comments cannot be hidden).");
       throw new Error(`Meta accepted the request but the comment is still ${data.hidden ? "visible" : "hidden"}. Try again in a minute.`);
+    }
+    // Remember the confirmed state so Hide/Unhide survives a page refresh.
+    if (data.messageId) {
+      await supabaseAdmin.from("messages").update({ is_hidden: data.hidden }).eq("id", data.messageId);
     }
     return { ok: true, hidden: data.hidden };
   });

@@ -1339,6 +1339,7 @@ export type Database = {
           direction: Database["public"]["Enums"]["message_direction"]
           external_id: string | null
           id: string
+          is_hidden: boolean
           post_external_id: string | null
           sender_name: string | null
           sent_at: string
@@ -1351,6 +1352,7 @@ export type Database = {
           direction: Database["public"]["Enums"]["message_direction"]
           external_id?: string | null
           id?: string
+          is_hidden?: boolean
           post_external_id?: string | null
           sender_name?: string | null
           sent_at?: string
@@ -1363,6 +1365,7 @@ export type Database = {
           direction?: Database["public"]["Enums"]["message_direction"]
           external_id?: string | null
           id?: string
+          is_hidden?: boolean
           post_external_id?: string | null
           sender_name?: string | null
           sent_at?: string
