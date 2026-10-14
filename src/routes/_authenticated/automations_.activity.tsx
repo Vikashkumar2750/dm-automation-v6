@@ -8,7 +8,7 @@ import { EmptyState, PageHeader, Panel, StatusBadge } from "@/components/app/pri
 import { Button } from "@/components/ui/button";
 import { useTenant } from "@/hooks/useTenant";
 import { activityName, explainReason, stepLabel } from "@/lib/activity-explain";
-import { groupRuns } from "@/lib/activity-groups";
+import { groupRuns, type RunGroup } from "@/lib/activity-groups";
 import { listAutomationRules, listAutomationRuns } from "@/lib/automations.functions";
 
 export const Route = createFileRoute("/_authenticated/automations_/activity")({
@@ -63,6 +63,11 @@ function ActivityPage() {
     !id ? "Safety settings" : (rules.find((r) => r.id === id)?.name ?? "Deleted rule");
   const runs = (runsQuery.data ?? []).filter((r) => filter === "all" || r.status === filter);
   const groups = groupRuns(runs);
+  // One START border before an automation rule's first entry and one END border after its last
+  // entry — consecutive entries of the same rule form one block, no borders between entries.
+  const ruleKeyOf = (g: RunGroup) => g.steps[0]?.rule_id ?? `name:${activityName(g.steps[0]!, ruleName)}`;
+  const blockStart = groups.map((g, i) => i === 0 || ruleKeyOf(groups[i - 1]!) !== ruleKeyOf(g));
+  const blockEnd = groups.map((g, i) => i === groups.length - 1 || ruleKeyOf(groups[i + 1]!) !== ruleKeyOf(g));
 
   return (
     <AppShell>
@@ -96,14 +101,14 @@ function ActivityPage() {
             </div>
           ) : (
             <ul className="space-y-3 p-3">
-              {groups.map((g) => {
+              {groups.map((g, i) => {
                 const first = g.steps[0];
                 if (!first) return null;
                 const name = activityName(first, ruleName);
                 const c = g.steps.find((x) => x.contact)?.contact;
                 return (
                   <li key={g.key} className="pt-1 pb-1">
-                    <RunMarker label="End" />
+                    {blockStart[i] && <RunMarker label="Start" />}
                     <details className="group">
                       <summary className="flex cursor-pointer list-none items-center gap-3 px-5 py-3 hover:bg-muted/50">
                         <StatusBadge tone={groupTone[g.status]}>{groupLabel[g.status]}</StatusBadge>
@@ -137,7 +142,7 @@ function ActivityPage() {
                           })}
                       </ol>
                     </details>
-                    <RunMarker label="Start" />
+                    {blockEnd[i] && <RunMarker label="End" />}
                   </li>
                 );
               })}
