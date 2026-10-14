@@ -20,10 +20,11 @@ export function usePosts(orgId: string | null) {
 }
 
 /** Left column: posts with thumbnails, platform filter, 10 per page. */
-export function PostSidebar({ orgId, selectedId, onSelect, countLabel = "comments" }: {
+export function PostSidebar({ orgId, selectedId, onSelect, onPlatformChange, countLabel = "comments" }: {
   orgId: string | null;
   selectedId: string | null;
   onSelect: (p: SidebarPost) => void;
+  onPlatformChange?: () => void;
   countLabel?: string;
 }) {
   const { posts, counts, loading } = usePosts(orgId);
@@ -40,7 +41,7 @@ export function PostSidebar({ orgId, selectedId, onSelect, countLabel = "comment
     <div className="min-w-0 space-y-2">
       <div className="flex flex-wrap gap-1">
         {(["all", "instagram", "facebook", "youtube"] as const).map((p) => (
-          <button key={p} type="button" onClick={() => { setPlatform(p); setPage(1); }}
+          <button key={p} type="button" onClick={() => { if (p !== platform) onPlatformChange?.(); setPlatform(p); setPage(1); }}
             className={`rounded-full border px-3 py-1 text-xs font-medium capitalize transition-colors ${platform === p ? "border-primary bg-primary text-primary-foreground" : "hover:bg-muted"}`}>
             {p === "all" ? "All" : p === "youtube" ? "YouTube" : p}
           </button>

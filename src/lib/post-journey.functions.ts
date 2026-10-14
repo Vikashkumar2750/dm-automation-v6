@@ -95,3 +95,21 @@ export const getSinglePostStats = createServerFn({ method: "GET" })
     const { fetchPostStats } = await import("./post-remote.server");
     return fetchPostStats(supabaseAdmin, { id: data.externalPostId, platform: data.platform, social_account_id: data.socialAccountId, external_post_id: data.externalPostId });
   });
+
+/** Live comments from Meta for one post, so older / missed comments still show. */
+export const getLivePostComments = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({
+    organizationId: z.string().uuid(),
+    socialAccountId: z.string().uuid().nullable(),
+    platform: z.enum(["instagram", "facebook", "youtube"]),
+    externalPostId: z.string().min(1).max(200),
+  }).parse(d))
+  .handler(async ({ data, context }) => {
+    if (!data.socialAccountId || data.platform === "youtube") return [];
+    const { data: acc } = await context.supabase.from("social_accounts").select("id").eq("id", data.socialAccountId).eq("organization_id", data.organizationId).maybeSingle();
+    if (!acc) return [];
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { fetchPostComments } = await import("./post-remote.server");
+    return fetchPostComments(supabaseAdmin, { id: data.externalPostId, platform: data.platform, social_account_id: data.socialAccountId, external_post_id: data.externalPostId });
+  });
