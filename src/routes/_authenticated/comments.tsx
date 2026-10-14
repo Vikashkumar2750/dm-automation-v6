@@ -88,7 +88,7 @@ function CommentActions({ m, convId, platform, onDone }: { m: JourneyMessage; co
         )}
         {m.direction === "inbound" && (
           <button type="button" className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground disabled:opacity-50" disabled={!!busy}
-            onClick={() => run("hide", async () => { await hide({ data: { conversationId: convId, messageId: m.id, hidden: !hidden } }); setHidden(!hidden); }, hidden ? "Comment visible again" : "Comment hidden — the public can't see it. The commenter, their friends and Page admins still can.")}>
+            onClick={() => run("hide", async () => { const r = await hide({ data: { conversationId: convId, messageId: m.id, hidden: !hidden } }); if (!r.ok) throw new Error(r.error ?? "Could not change visibility"); setHidden(!hidden); }, hidden ? "Comment visible again" : "Comment hidden — the public can't see it. The commenter, their friends and Page admins still can.")}>
             {busy === "hide" && <Loader2 className="size-3 animate-spin" />}{hidden ? "Unhide" : "Hide"}
           </button>
         )}
@@ -117,6 +117,8 @@ function PostCard({ orgId, post }: { orgId: string; post: SidebarPost }) {
   });
   const s = stats.data;
   const isVideo = /video|reel/i.test(post.mediaType ?? "") || /\.mp4/i.test(post.mediaUrl ?? "");
+  const videoSrc = post.videoUrl ?? (/\.mp4|#video/i.test(post.mediaUrl ?? "") ? post.mediaUrl!.replace(/#video$/, "") : null);
+  const ytId = post.platform === "youtube" ? post.externalPostId : null;
   return (
     <div className="overflow-hidden rounded-xl border bg-card">
       <div className="flex items-center gap-2 px-3 py-2">
@@ -125,9 +127,9 @@ function PostCard({ orgId, post }: { orgId: string; post: SidebarPost }) {
         {post.permalink && <a href={post.permalink} target="_blank" rel="noreferrer" className="text-muted-foreground hover:text-foreground" aria-label="Open on platform"><ExternalLink className="size-4" /></a>}
       </div>
       <div className={`mx-auto flex justify-center bg-muted ${post.platform === "youtube" ? "aspect-video w-full" : isVideo ? "aspect-[9/16] h-[min(70vh,640px)] max-w-full" : "aspect-square max-h-[420px] w-full"}`}>
-        {post.mediaUrl ? (isVideo
-          ? <video src={post.mediaUrl} controls playsInline preload="metadata" className="h-full w-full object-contain" />
-          : <img src={post.mediaUrl} alt="" className="h-full w-full object-contain" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />)
+        {ytId ? <iframe src={`https://www.youtube.com/embed/${ytId}`} title="YouTube video" allow="accelerometer; autoplay; encrypted-media; picture-in-picture" allowFullScreen className="h-full w-full" /> : post.mediaUrl || videoSrc ? (isVideo && videoSrc
+          ? <video src={videoSrc} poster={post.mediaUrl && post.mediaUrl !== videoSrc ? post.mediaUrl : undefined} controls playsInline preload="metadata" className="h-full w-full object-contain" />
+          : <img src={post.mediaUrl ?? ""} alt="" className="h-full w-full object-contain" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />)
           : <div className="grid place-items-center"><PostThumbnail src={null} /></div>}
       </div>
       <div className="space-y-1 px-3 py-2">

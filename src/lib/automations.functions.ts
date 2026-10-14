@@ -596,6 +596,7 @@ export type RemotePostItem = {
   mediaType: string | null;
   caption: string;
   mediaUrl: string | null;
+  videoUrl?: string | null;
   permalink: string | null;
   publishedAt: string | null;
 };

@@ -458,7 +458,8 @@ export const setCommentHidden = createServerFn({ method: "POST" })
       .object({ conversationId: z.string().uuid(), hidden: z.boolean(), messageId: z.string().uuid().optional() })
       .parse(data),
   )
-  .handler(async ({ data, context }) => {
+  .handler(async ({ data, context }): Promise<{ ok: boolean; hidden?: boolean; error?: string }> => {
+    try {
     const { data: conversation, error } = await context.supabase
       .from("conversations")
       .select("id, organization_id, social_account_id, channel, platform")
@@ -516,9 +517,13 @@ export const setCommentHidden = createServerFn({ method: "POST" })
     }
     // Remember the confirmed state so Hide/Unhide survives a page refresh.
     if (data.messageId) {
-      await supabaseAdmin.from("messages").update({ is_hidden: data.hidden }).eq("id", data.messageId);
+      try { await supabaseAdmin.from("messages").update({ is_hidden: data.hidden }).eq("id", data.messageId); } catch { /* column may be missing */ }
     }
     return { ok: true, hidden: data.hidden };
+    } catch (err) {
+      // Return the reason instead of throwing so the screen shows the real cause.
+      return { ok: false, error: err instanceof Error ? err.message : "Could not change comment visibility" };
+    }
   });
 
 /** Moderation targets a stored message, never an arbitrary caller-supplied Meta ID. */

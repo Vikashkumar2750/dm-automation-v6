@@ -285,7 +285,7 @@ function InboxPage() {
     mutationFn: (v: boolean | { hidden: boolean; messageId: string }) => {
       if (!selected) throw new Error("No conversation selected");
       const o = typeof v === "boolean" ? { hidden: v } : v;
-      return setCommentHiddenFn({ data: { conversationId: selected.id, ...o } });
+      return setCommentHiddenFn({ data: { conversationId: selected.id, ...o } }).then((r) => { if (!r.ok) throw new Error(r.error ?? "Could not change visibility"); return r; });
     },
     onSuccess: (_r, v) => {
       if (typeof v !== "boolean") setHiddenIds((p) => ({ ...p, [v.messageId]: v.hidden }));
@@ -345,7 +345,7 @@ function InboxPage() {
                 { value: "youtube", label: "YouTube" },
               ]}
             />
-            <div className="flex flex-wrap items-center gap-1">
+            <div className="flex flex-wrap items-center gap-1 [&>*:first-child]:contents">
               <FilterChips
                 value={status}
                 onChange={setStatus}
