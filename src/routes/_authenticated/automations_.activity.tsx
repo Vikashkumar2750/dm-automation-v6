@@ -87,13 +87,15 @@ function ActivityPage() {
               <EmptyState icon={Zap} title="No activity" description="Nothing matches this filter yet." />
             </div>
           ) : (
-            <ul className="divide-y">
+            <ul className="space-y-3 p-3">
               {groups.map((g) => {
                 const first = g.steps[0]!;
                 const name = activityName(first, ruleName);
                 const c = g.steps.find((x) => x.contact)?.contact;
                 return (
-                  <li key={g.key}>
+                  <li key={g.key} className="relative border-y-2 border-foreground/70 pt-2 pb-2">
+                    <span className="absolute -top-2 left-3 bg-card px-1 text-[9px] font-semibold uppercase leading-none tracking-wider text-foreground/70">Start</span>
+                    <span className="absolute -bottom-1.5 left-3 bg-card px-1 text-[9px] font-semibold uppercase leading-none tracking-wider text-foreground/70">End</span>
                     <details className="group">
                       <summary className="flex cursor-pointer list-none items-center gap-3 px-5 py-3 hover:bg-muted/50">
                         <StatusBadge tone={groupTone[g.status]}>{groupLabel[g.status]}</StatusBadge>

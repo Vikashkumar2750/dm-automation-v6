@@ -611,24 +611,28 @@ function AutomationsPage() {
           )}
         </Panel>
 
-        <div className="grid gap-4 lg:grid-cols-2">
-          {([{ source: "flows" as const, title: "FLOW", entries: flowRunsQuery.data ?? [] }, { source: "rules" as const, title: "Rule", entries: runs }] ).map(({ source, title, entries }) => (
-            <Panel key={source} title={`${title} recent activity`} bodyClassName="p-0">
-              {entries.length === 0 ? <div className="p-5"><EmptyState icon={Zap} title={`No ${title} activity yet`} description="Sent, skipped and failed steps appear here." /></div> : <ul className="divide-y">
-                {entries.slice(0, 5).map((run) => {
+        {(() => {
+          const entries = [
+            ...(flowRunsQuery.data ?? []).map((r) => ({ run: r, source: "flows" as const })),
+            ...runs.map((r) => ({ run: r, source: "rules" as const })),
+          ].sort((a, b) => b.run.created_at.localeCompare(a.run.created_at));
+          return (
+            <Panel title="Recent activity" bodyClassName="p-0">
+              {entries.length === 0 ? <div className="p-5"><EmptyState icon={Zap} title="No activity yet" description="Sent, skipped and failed steps appear here." /></div> : <ul className="divide-y">
+                {entries.slice(0, 6).map(({ run, source }) => {
                   const sent = run.status === "sent" || run.status === "matched";
                   const ex = sent ? null : explainReason(run.detail);
-                  return <li key={run.id}><Link to="/automations/activity/$runId" params={{ runId: run.id }} search={{ source, filter: "all" }} className="flex items-start gap-3 px-5 py-3 hover:bg-muted/50">
-                    <StatusBadge tone={runTone[run.status]}>{run.status}</StatusBadge>
+                  return <li key={`${source}-${run.id}`}><Link to="/automations/activity/$runId" params={{ runId: run.id }} search={{ source, filter: "all" }} className="flex items-start gap-3 px-5 py-3 hover:bg-muted/50">
+                    <div className="flex shrink-0 flex-col gap-1"><StatusBadge tone={runTone[run.status]}>{run.status}</StatusBadge><span className="text-[10px] font-medium uppercase text-muted-foreground">{source === "flows" ? "Flow" : "Rule"}</span></div>
                     <div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{activityName(run, ruleName)}: {sent ? stepLabel(run.detail) : ex?.title}</p>
                     {ex?.hint && <p className="truncate text-xs text-muted-foreground">{ex.hint}</p>}<p className="text-xs text-muted-foreground">{new Date(run.created_at).toLocaleString()}</p></div>
                   </Link></li>;
                 })}
               </ul>}
-              <div className="border-t p-3 text-center"><Button asChild variant="ghost" size="sm"><Link to="/automations/activity" search={{ source, filter: "all" }}>View all {title} activity</Link></Button></div>
+              <div className="border-t p-3 text-center"><Button asChild variant="ghost" size="sm"><Link to="/automations/activity" search={{ source: "rules", filter: "all" }}>View all activity</Link></Button></div>
             </Panel>
-          ))}
-        </div>
+          );
+        })()}
       </div>
 
       <SafetyPanel orgId={orgId} />
