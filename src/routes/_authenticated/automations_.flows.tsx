@@ -986,3 +986,59 @@ function FlowCanvas({ flow, zoom, setZoom, onFlow, trigger, renderStep }: {
     </div>
   );
 }
+
+const FLOW_FILTERS = [
+  { key: "all", label: "All" },
+  { key: "active", label: "Active" },
+  { key: "draft", label: "Draft" },
+] as const;
+
+/** Compact "All flows" menu: filter by status, pick a flow to open it. */
+function AllFlowsMenu({ flows, selected, onSelect }: { flows: Flow[]; selected: string | null; onSelect: (id: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const [filter, setFilter] = useState<(typeof FLOW_FILTERS)[number]["key"]>("all");
+  const current = flows.find((f) => f.id === selected);
+  const list = flows.filter((f) => filter === "all" || (filter === "active" ? f.active : !f.active));
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button variant="outline" className="w-full justify-between">
+          <span className="truncate">{current ? current.name : `All flows (${flows.length})`}</span>
+          <ArrowDown className="size-4 shrink-0" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-72 p-2">
+        <div role="tablist" className="mb-2 flex gap-1">
+          {FLOW_FILTERS.map((x) => {
+            const n = flows.filter((f) => x.key === "all" || (x.key === "active" ? f.active : !f.active)).length;
+            return (
+              <Button key={x.key} size="sm" variant={filter === x.key ? "default" : "ghost"} onClick={() => setFilter(x.key)}>
+                {x.label} ({n})
+              </Button>
+            );
+          })}
+        </div>
+        {list.length === 0 ? (
+          <p className="px-2 py-3 text-sm text-muted-foreground">No flows here yet.</p>
+        ) : (
+          <ul className="max-h-72 space-y-1 overflow-y-auto overscroll-contain">
+            {list.map((f) => (
+              <li key={f.id}>
+                <button
+                  onClick={() => { onSelect(f.id); setOpen(false); }}
+                  className={`w-full rounded-md px-3 py-2 text-left text-sm ${f.id === selected ? "bg-accent text-accent-foreground" : "hover:bg-muted"}`}
+                >
+                  <span className="flex items-center justify-between gap-2">
+                    <span className="truncate font-medium">{f.name}</span>
+                    <StatusBadge tone={f.active ? "success" : "neutral"}>{f.active ? "Active" : "Draft"}</StatusBadge>
+                  </span>
+                  <span className="text-xs text-muted-foreground">{TRIGGER_LABELS[f.trigger]} · {f.steps.length} steps</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </PopoverContent>
+    </Popover>
+  );
+}
