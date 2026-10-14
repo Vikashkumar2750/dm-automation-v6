@@ -50,10 +50,11 @@ function CommentsPage() {
   const { activeOrg } = useTenant();
   const orgId = activeOrg?.id ?? null;
   const [filter, setFilter] = useState<(typeof FILTERS)[number]["key"]>("all");
+  const [platform, setPlatform] = useState<"all" | "instagram" | "facebook" | "youtube">("all");
 
   const fetchConversations = useServerFn(listConversations);
   const threads = useQuery({
-    queryKey: ["conversations", orgId, "comments", filter],
+    queryKey: ["conversations", orgId, "comments", filter, platform],
     enabled: !!orgId,
     refetchInterval: 30_000,
     queryFn: () =>
@@ -61,6 +62,7 @@ function CommentsPage() {
         data: {
           organizationId: orgId!,
           channel: "comment",
+          ...(platform === "all" ? {} : { platform }),
           ...(filter === "all" ? {} : { status: filter }),
         },
       }),
@@ -87,6 +89,17 @@ function CommentsPage() {
         title={`Comment threads (${allRows.length})`}
         action={
           <div className="flex flex-wrap gap-1">
+            <select
+              aria-label="Platform"
+              className="h-8 rounded-md border border-input bg-background px-2 text-sm"
+              value={platform}
+              onChange={(e) => { setPlatform(e.target.value as typeof platform); setPage(1); }}
+            >
+              <option value="all">All platforms</option>
+              <option value="instagram">Instagram</option>
+              <option value="facebook">Facebook</option>
+              <option value="youtube">YouTube</option>
+            </select>
             {FILTERS.map((f) => (
               <Button
                 key={f.key}

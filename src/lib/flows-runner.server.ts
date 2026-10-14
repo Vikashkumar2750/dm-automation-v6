@@ -94,7 +94,16 @@ async function safetyBlock(admin: AdminClient, ev: FlowEvent): Promise<string | 
   };
   if ((await count(hourAgo)) >= s.hourly_send_limit) return "org_hourly_limit";
   if ((await count(dayAgo)) >= s.daily_send_limit) return "org_daily_limit";
-  if ((await count(dayAgo, ev.conversationId)) >= s.per_contact_daily_limit) return "per_contact_limit";
+  // Per-contact cap counts automation journeys (distinct run_key), not individual steps,
+  // so a 12-step flow the contact is actively tapping through is never cut mid-way.
+  const { data: convRuns } = await admin.from("automation_runs").select("run_key")
+    .eq("organization_id", ev.organizationId).eq("conversation_id", ev.conversationId)
+    .eq("status", "sent").gte("created_at", dayAgo).limit(1000);
+  const keys = new Set((convRuns ?? []).map((r: { run_key: string | null }) => r.run_key ?? "legacy"));
+  if (!(ev.runKey && keys.has(ev.runKey))) {
+    if (ev.runKey) keys.delete(ev.runKey);
+    if (keys.size >= s.per_contact_daily_limit) return "per_contact_limit";
+  }
   return null;
 }
 
