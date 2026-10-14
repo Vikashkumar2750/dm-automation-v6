@@ -15,7 +15,7 @@ import { useTenant } from "@/hooks/useTenant";
 import { moderateComment, replyToComment, setCommentHidden } from "@/lib/inbox.functions";
 import { canEditComment } from "@/lib/comment-moderation";
 import { messagesForPost } from "@/lib/post-comments";
-import { getLivePostComments, getPostJourney, getSinglePostStats, type JourneyMessage } from "@/lib/post-journey.functions";
+import { moderateLiveComment, getLivePostComments, getPostJourney, getSinglePostStats, type JourneyMessage } from "@/lib/post-journey.functions";
 
 export const Route = createFileRoute("/_authenticated/comments")({
   head: () => ({
@@ -86,7 +86,7 @@ function CommentActions({ m, convId, platform, onDone }: { m: JourneyMessage; co
         {edit && (
           <button type="button" className="text-muted-foreground hover:text-foreground disabled:opacity-50" disabled={!!busy} onClick={() => setEditing(m.body.replace(/^\[public reply\] /, ""))}>Edit</button>
         )}
-        {m.direction === "inbound" && (
+        {m.direction === "inbound" && platform !== "facebook" && (
           <button type="button" className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground disabled:opacity-50" disabled={!!busy}
             onClick={() => run("hide", async () => { let r: { ok: boolean; error?: string }; try { r = await hide({ data: { conversationId: convId, messageId: m.id, hidden: !hidden } }); } catch (e) { const msg = e instanceof Error ? e.message : ""; throw new Error(/<html|unknown/i.test(msg) || !msg ? "Couldn't reach Facebook to hide this comment. Refresh the page and try again." : msg); } if (!r.ok) throw new Error(r.error ?? "Could not change visibility"); setHidden(!hidden); }, hidden ? "Comment visible again" : "Comment hidden — the public can't see it. The commenter, their friends and Page admins still can.")}>
             {busy === "hide" && <Loader2 className="size-3 animate-spin" />}{hidden ? "Unhide" : "Hide"}
@@ -105,6 +105,34 @@ function CommentActions({ m, convId, platform, onDone }: { m: JourneyMessage; co
         </div>
       )}
     </>
+  );
+}
+
+function LiveActions({ orgId, post, commentId }: { orgId: string; post: SidebarPost; commentId: string }) {
+  const qc = useQueryClient();
+  const act = useServerFn(moderateLiveComment);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [hidden, setHidden] = useState(false);
+  const run = async (action: "delete" | "hide" | "unhide", ok: string) => {
+    setBusy(action);
+    try {
+      await act({ data: { organizationId: orgId, socialAccountId: post.socialAccountId!, platform: post.platform as "instagram" | "facebook", externalPostId: post.externalPostId, commentId, action } });
+      toast.success(ok);
+      if (action === "delete") void qc.invalidateQueries({ queryKey: ["post-journey", "live", post.externalPostId] });
+      else setHidden(action === "hide");
+    } catch (e) { toast.error(e instanceof Error && e.message ? e.message : "Action failed"); } finally { setBusy(null); }
+  };
+  return (
+    <div className="mt-1 flex flex-wrap items-center gap-3 text-[11px]">
+      {post.platform === "instagram" && (
+        <button type="button" disabled={!!busy} className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground disabled:opacity-50" onClick={() => void run(hidden ? "unhide" : "hide", hidden ? "Comment visible again" : "Comment hidden")}>
+          {(busy === "hide" || busy === "unhide") && <Loader2 className="size-3 animate-spin" />}{hidden ? "Unhide" : "Hide"}
+        </button>
+      )}
+      <button type="button" disabled={!!busy} className="inline-flex items-center gap-1 text-destructive/80 hover:text-destructive disabled:opacity-50" onClick={() => { if (confirm("Delete this comment on the platform?")) void run("delete", "Comment deleted"); }}>
+        {busy === "delete" && <Loader2 className="size-3 animate-spin" />}Delete
+      </button>
+    </div>
   );
 }
 
@@ -202,6 +230,7 @@ function PostView({ orgId, post }: { orgId: string; post: SidebarPost }) {
             <div key={c.id} className={`px-4 py-2.5 text-sm ${c.reply ? "pl-9" : ""}`}>
               <p className="flex flex-wrap items-center gap-1.5 text-xs"><span className="font-semibold">{c.author ?? "Commenter"}</span>{c.createdAt && <span className="text-muted-foreground">{new Date(c.createdAt).toLocaleDateString()} · {new Date(c.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>}</p>
               <p className="mt-0.5 whitespace-pre-wrap break-words">{c.text}</p>
+              {post.socialAccountId && post.platform !== "youtube" && <LiveActions orgId={orgId} post={post} commentId={c.id} />}
             </div>
           ))}
           {live.data?.error && <p className="bg-warning/10 px-4 py-2 text-xs text-warning">Older comments could not be loaded: {live.data.error}</p>}

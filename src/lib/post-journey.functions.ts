@@ -133,7 +133,7 @@ export const moderateLiveComment = createServerFn({ method: "POST" })
   }).parse(d))
   .handler(async ({ data, context }) => {
     if (data.platform === "facebook" && data.action !== "delete") throw new Error("Hide is not available for Facebook comments.");
-    const { data: allowed } = await context.supabase.rpc("current_user_has_org_role", { _org_id: data.organizationId, _roles: ["owner", "admin", "manager"] });
+    const { data: allowed } = await context.supabase.rpc("current_user_has_org_role", { _org_id: data.organizationId, _roles: ["owner", "admin", "manager", "agent"] });
     if (!allowed) throw new Error("You don't have permission to moderate comments.");
     const { data: acc } = await context.supabase.from("social_accounts").select("id").eq("id", data.socialAccountId).eq("organization_id", data.organizationId).maybeSingle();
     if (!acc) throw new Error("This post's account is not connected to the workspace.");
