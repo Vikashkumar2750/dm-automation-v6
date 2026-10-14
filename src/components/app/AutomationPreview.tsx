@@ -30,7 +30,7 @@ export function AutomationPreview({
   selectedPostIds = [],
 }: {
   draft: PreviewDraft;
-  orgId?: string;
+  orgId?: string | undefined;
   selectedPostIds?: string[];
 }) {
   const isComment = draft.trigger === "comment_received";

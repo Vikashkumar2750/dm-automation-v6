@@ -205,7 +205,7 @@ function CommentsPage() {
 
 type PostInfo = { externalPostId: string; caption: string; mediaUrl: string | null; publishedAt: string | null; accountName?: string };
 
-function CommentThread({ conv, post, onClose }: { conv: ConversationRow; post?: PostInfo; onClose: () => void }) {
+function CommentThread({ conv, post, onClose }: { conv: ConversationRow; post?: PostInfo | undefined; onClose: () => void }) {
   const qc = useQueryClient();
   const fetchMessages = useServerFn(listMessages);
   const reply = useServerFn(replyToComment);
