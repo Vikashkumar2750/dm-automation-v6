@@ -171,7 +171,10 @@ function PostView({ orgId, post }: { orgId: string; post: SidebarPost }) {
   const convs = allConvs.filter((c) => msgs.some((m) => m.conversation_id === c.id));
   const commentCount = msgs.filter((m) => m.direction === "inbound").length;
   const known = new Set(msgs.map((m) => m.external_id).filter(Boolean));
-  const extra = (live.data ?? []).filter((c) => !known.has(c.id));
+  const liveList = live.data?.comments ?? [];
+  const extra = liveList.filter((c) => !known.has(c.id));
+  // Replies made on the platform (or not saved by us) under comments we do have.
+  const liveReplies = new Map(liveList.filter((c) => known.has(c.id)).map((c) => [c.id, c.replies.filter((r) => !known.has(r.id))]));
   const targetMsg = msgs.find((m) => m.id === target) ?? null;
   const targetConv = targetMsg ? convs.find((c) => c.id === targetMsg.conversation_id) ?? null : null;
   const send = useMutation({
@@ -192,11 +195,12 @@ function PostView({ orgId, post }: { orgId: string; post: SidebarPost }) {
               <p className="mt-0.5 whitespace-pre-wrap break-words">{c.text}</p>
             </div>
           ))}
+          {live.data?.error && <p className="bg-warning/10 px-4 py-2 text-xs text-warning">Older comments could not be loaded: {live.data.error}</p>}
           {journey.isLoading ? <Loader2 className="mx-auto my-4 size-5 animate-spin text-muted-foreground" /> : convs.length === 0 && extra.length === 0 ? (
             <EmptyState icon={MessageSquare} title="No comments linked yet" description="New comments on this post will show up here." />
           ) : convs.flatMap((c) => msgs
             .filter((m) => m.conversation_id === c.id)
-            .map((m) => (
+            .flatMap((m) => [(
               <div key={m.id} className={`px-4 py-2.5 text-sm ${m.direction === "inbound" ? "" : "pl-9"} ${target === m.id ? "bg-primary/5" : ""}`}>
                 <p className="flex flex-wrap items-center gap-1.5 text-xs"><span className="font-semibold">{m.direction === "inbound" ? m.sender_name ?? c.name ?? "Commenter" : post.accountName}</span><SenderTag m={m} /><span className="text-muted-foreground">{new Date(m.sent_at).toLocaleDateString()} · {new Date(m.sent_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span></p>
                 <p className="mt-0.5 whitespace-pre-wrap break-words">{m.body.replace(/^\[public reply\] /, "")}</p>
@@ -205,7 +209,12 @@ function PostView({ orgId, post }: { orgId: string; post: SidebarPost }) {
                   <CommentActions m={m} convId={c.id} platform={post.platform} onDone={() => void qc.invalidateQueries({ queryKey: ["post-journey", orgId, post.externalPostId] })} />
                 </div>
               </div>
-            )))}
+            ), ...((m.external_id && liveReplies.get(m.external_id)) || []).map((r) => (
+              <div key={r.id} className="px-4 py-2.5 pl-9 text-sm">
+                <p className="flex flex-wrap items-center gap-1.5 text-xs"><span className="font-semibold">{r.author ?? "Reply"}</span>{r.createdAt && <span className="text-muted-foreground">{new Date(r.createdAt).toLocaleDateString()} · {new Date(r.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>}</p>
+                <p className="mt-0.5 whitespace-pre-wrap break-words">{r.text}</p>
+              </div>
+            ))]))}
         </div>
         <div className="space-y-2 border-t p-3">
           {targetConv ? (
