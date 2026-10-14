@@ -119,3 +119,7 @@ Real Meta + YouTube credentials are available when we reach OAuth phases.
 - [x] Flow post list scrolls under the cursor; mobile notice on Flow Builder
 - [x] Rule editor opens as a full page view
 - [ ] Verify on live account after deploy (needs signed-in workspace)
+
+## Activity journey borders (Oct 14)
+- [ ] Trace rule callbacks and group outer activity borders across one contact's multi-event journey, with regression tests.
+- [ ] Verify activity borders in the signed-in preview without sending messages.
