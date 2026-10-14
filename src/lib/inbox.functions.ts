@@ -584,7 +584,7 @@ export const moderateComment = createServerFn({ method: "POST" })
           .eq("conversation_id", conversation.id).order("sent_at", { ascending: true });
         const list = rest ?? [];
         const i = list.findIndex((r) => r.id === message.id);
-        for (let j = i + 1; i >= 0 && j < list.length && list[j].direction !== "inbound"; j++) ids.push(list[j].id);
+        for (let j = i + 1; i >= 0 && j < list.length && list[j]!.direction !== "inbound"; j++) ids.push(list[j]!.id);
       }
       ({ error: saveError } = await supabaseAdmin.from("messages").delete().in("id", ids).eq("conversation_id", conversation.id));
     } else {
