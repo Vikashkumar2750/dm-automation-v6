@@ -31,25 +31,9 @@ const groupTone = { completed: "success", in_progress: "info", skipped: "neutral
 const groupLabel = { completed: "Completed", in_progress: "In progress", skipped: "Skipped", failed: "Failed" } as const;
 const FILTERS = ["all", "sent", "skipped", "failed"] as const;
 
-/** Steps where an automation begins its delivery vs. where it completes. */
-const START_CODES = ["tap_prompt", "dm_link", "reply_dm", "attachment", "follow_prompt"];
-const FLOW_START_CODES = ["opening_dm", "send_dm", "send_payment", "send_coupon", "follow_gate"];
-
-function stepMarkerKind(detail: string | null): "start" | "end" | null {
-  const code = (detail ?? "").toLowerCase().replace(/^trace:[^:]+:/, "");
-  if (code.startsWith("click:link") || code.startsWith("click:attachment")) return "end";
-  if (START_CODES.some((k) => code.startsWith(k))) return "start";
-  if (code.startsWith("flow:")) {
-    const at = code.lastIndexOf(":");
-    const fc = at < 0 ? code.slice(5) : code.slice(at + 1);
-    if (FLOW_START_CODES.includes(fc)) return "start";
-  }
-  return null;
-}
-
 function RunMarker({ label }: { label: string }) {
   return (
-    <div className="relative my-1 h-px bg-foreground/60">
+    <div className="relative my-3 h-px bg-foreground/60">
       <span className="absolute -top-1.5 left-2 bg-card px-1 text-[9px] font-semibold uppercase leading-none tracking-wider text-foreground/70">{label}</span>
     </div>
   );
@@ -113,11 +97,13 @@ function ActivityPage() {
           ) : (
             <ul className="space-y-3 p-3">
               {groups.map((g) => {
-                const first = g.steps[0]!;
+                const first = g.steps[0];
+                if (!first) return null;
                 const name = activityName(first, ruleName);
                 const c = g.steps.find((x) => x.contact)?.contact;
                 return (
                   <li key={g.key} className="pt-1 pb-1">
+                    <RunMarker label="End" />
                     <details className="group">
                       <summary className="flex cursor-pointer list-none items-center gap-3 px-5 py-3 hover:bg-muted/50">
                         <StatusBadge tone={groupTone[g.status]}>{groupLabel[g.status]}</StatusBadge>
@@ -131,20 +117,11 @@ function ActivityPage() {
                         <ChevronRight className="size-4 text-muted-foreground transition-transform group-open:rotate-90" />
                       </summary>
                       <ol className="ml-8 border-l pb-2">
-                        {(() => {
-                          let startIdx = -1;
-                          let endIdx = -1;
-                          g.steps.forEach((r, i) => {
-                            const k = stepMarkerKind(r.detail);
-                            if (k === "start") startIdx = i;
-                            if (k === "end" && endIdx < 0) endIdx = i;
-                          });
-                          return g.steps.map((run, i) => {
+                        {g.steps.map((run) => {
                             const ok = run.status === "sent" || run.status === "matched";
                             const ex = ok ? null : explainReason(run.detail);
                             return (
                               <li key={run.id}>
-                                {i === endIdx && <RunMarker label="End" />}
                                 <Link to="/automations/activity/$runId" params={{ runId: run.id }} search={{ source, filter }}
                                   className="flex items-center gap-3 px-4 py-2 hover:bg-muted/50">
                                   <StatusBadge tone={tone[run.status]}>{run.status}</StatusBadge>
@@ -155,13 +132,12 @@ function ActivityPage() {
                                   </div>
                                   <ChevronRight className="size-4 text-muted-foreground" />
                                 </Link>
-                                {i === startIdx && <RunMarker label="Start" />}
                               </li>
                             );
-                          });
-                        })()}
+                          })}
                       </ol>
                     </details>
+                    <RunMarker label="Start" />
                   </li>
                 );
               })}
