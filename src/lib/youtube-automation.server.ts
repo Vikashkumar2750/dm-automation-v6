@@ -623,7 +623,8 @@ export async function runYouTubeCommentAutomation(
           external_id: comment.id,
           sender_name: comment.authorName,
           sent_at: comment.publishedAt,
-          });
+          ...(comment.videoId ? { post_external_id: comment.videoId } : {}),
+          } as never);
           if (!conversation?.created) {
             await admin.rpc("increment_unread", { p_conversation_id: conversationId });
           }
