@@ -42,7 +42,7 @@ function CommentsPage() {
         actions={<><RefreshButton /><GuideButton guide="meta-review" /><Button asChild variant="outline"><Link to="/inbox">Open inbox</Link></Button></>}
       />
       <div className="grid gap-4 lg:h-[calc(100vh-14rem)] lg:min-h-[480px] lg:grid-cols-[320px_minmax(0,1fr)] [&>*]:lg:min-h-0 [&>*:first-child]:lg:overflow-y-auto">
-        <PostSidebar orgId={orgId} selectedId={post?.externalPostId ?? null} onSelect={setPost} />
+        <PostSidebar orgId={orgId} selectedId={post?.externalPostId ?? null} onSelect={setPost} onPlatformChange={() => setPost(null)} />
         {post && orgId ? <PostView key={post.externalPostId} orgId={orgId} post={post} /> : (
           <div className="hidden min-h-[420px] items-center justify-center rounded-xl border border-dashed text-sm text-muted-foreground lg:flex">Select a post to see its comments.</div>
         )}
