@@ -30,6 +30,6 @@
 - Flow post targeting lives on Flow.targetPostIds (empty = all posts), checked by flowTargetsPost in runLiveFlows; the post picker is shared in components/app/PostPicker — same matching rule as keyword rules, no change to the rule engine.
 
 - Manual moderation uses stored workspace conversation/message IDs, role checks and Meta-first writes; only Facebook Page-authored public replies can be edited — prevents unauthorized targets and unsupported edit claims.
-- Shells, panels, tabs and dialogs constrain mobile content; wide tables and the flow canvas scroll locally — preserves desktop and mobile workflows.
+- Constrain mobile shells/panels/dialogs; tables/canvases scroll locally. Inbox chat spans heading/list grid rows for full height without page scroll.
 - Notifications reuse workspace-scoped run reads in one AppShell provider; read IDs are local per user/workspace — consistent bell/banner without delivery changes.
-- PostPicker uses a shared poster resolver and image-error fallback — expired media and video URLs never show broken images.
+- PostPicker shares poster resolution/error fallback — prevents broken media.
