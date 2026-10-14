@@ -501,7 +501,8 @@ export const setCommentHidden = createServerFn({ method: "POST" })
     const commentUrl = `https://graph.facebook.com/v21.0/${encodeURIComponent(lastComment.external_id)}`;
     const response = await fetch(commentUrl, {
       method: "POST",
-      body: new URLSearchParams({ [hiddenField(conversation.platform)]: String(data.hidden), access_token: tokenRow.access_token }),
+      // Instagram's write parameter is `hide` (read-back field is `hidden`); Facebook uses `is_hidden` for both.
+      body: new URLSearchParams({ [conversation.platform === "facebook" ? "is_hidden" : "hide"]: String(data.hidden), access_token: tokenRow.access_token }),
     });
     const result = (await response.json().catch(() => ({}))) as { error?: { message?: string } };
     if (!response.ok || result.error) {
