@@ -41,7 +41,7 @@ function CommentsPage() {
         description="Pick a post on the left to see it like on Instagram, Facebook or YouTube, with all comments and replies."
         actions={<><RefreshButton /><GuideButton guide="meta-review" /><Button asChild variant="outline"><Link to="/inbox">Open inbox</Link></Button></>}
       />
-      <div className="grid gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
+      <div className="grid gap-4 lg:h-[calc(100vh-14rem)] lg:min-h-[480px] lg:grid-cols-[320px_minmax(0,1fr)] [&>*]:lg:min-h-0 [&>*:first-child]:lg:overflow-y-auto">
         <PostSidebar orgId={orgId} selectedId={post?.externalPostId ?? null} onSelect={setPost} />
         {post && orgId ? <PostView key={post.externalPostId} orgId={orgId} post={post} /> : (
           <div className="hidden min-h-[420px] items-center justify-center rounded-xl border border-dashed text-sm text-muted-foreground lg:flex">Select a post to see its comments.</div>
@@ -80,32 +80,30 @@ function CommentActions({ m, convId, platform, onDone }: { m: JourneyMessage; co
   const spin = (k: string, Icon: typeof Trash2) => busy === k ? <Loader2 className="size-3 animate-spin" /> : <Icon className="size-3" />;
   const edit = canEditComment(platform, m.direction, m.body, m.external_id);
   return (
-    <div className="mt-1 space-y-1">
-      <div className="flex flex-wrap gap-1">
-        {m.direction === "inbound" && (
-          <Button size="sm" variant="ghost" className="h-6 px-2 text-xs" disabled={!!busy}
-            onClick={() => run("hide", async () => { await hide({ data: { conversationId: convId, messageId: m.id, hidden: !hidden } }); setHidden(!hidden); }, hidden ? "Comment visible again" : "Comment hidden")}>
-            {spin("hide", hidden ? Eye : EyeOff)}{hidden ? "Unhide" : "Hide"}
-          </Button>
-        )}
+    <>
+      <div className="contents">
         {edit && (
-          <Button size="sm" variant="ghost" className="h-6 px-2 text-xs" disabled={!!busy} onClick={() => setEditing(m.body.replace(/^\[public reply\] /, ""))}>
-            <Pencil className="size-3" />Edit
-          </Button>
+          <button type="button" className="text-muted-foreground hover:text-foreground disabled:opacity-50" disabled={!!busy} onClick={() => setEditing(m.body.replace(/^\[public reply\] /, ""))}>Edit</button>
         )}
-        <Button size="sm" variant="ghost" className="h-6 px-2 text-xs text-destructive" disabled={!!busy}
+        {m.direction === "inbound" && (
+          <button type="button" className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground disabled:opacity-50" disabled={!!busy}
+            onClick={() => run("hide", async () => { await hide({ data: { conversationId: convId, messageId: m.id, hidden: !hidden } }); setHidden(!hidden); }, hidden ? "Comment visible again" : "Comment hidden")}>
+            {busy === "hide" && <Loader2 className="size-3 animate-spin" />}{hidden ? "Unhide" : "Hide"}
+          </button>
+        )}
+        <button type="button" className="inline-flex items-center gap-1 text-destructive/80 hover:text-destructive disabled:opacity-50" disabled={!!busy}
           onClick={() => { if (confirm("Delete this comment on the platform?")) void run("delete", () => moderate({ data: { conversationId: convId, messageId: m.id, action: "delete" } }), "Comment deleted"); }}>
-          {spin("delete", Trash2)}Delete
-        </Button>
+          {busy === "delete" && <Loader2 className="size-3 animate-spin" />}Delete
+        </button>
       </div>
       {editing !== null && (
-        <div className="flex items-end gap-2">
+        <div className="flex w-full items-end gap-2">
           <Textarea rows={2} value={editing} onChange={(e) => setEditing(e.target.value)} />
           <Button size="sm" disabled={!editing.trim() || !!busy} onClick={() => run("edit", async () => { await moderate({ data: { conversationId: convId, messageId: m.id, action: "edit", body: editing } }); setEditing(null); }, "Reply updated")}>{spin("edit", Pencil)}Save</Button>
           <Button size="sm" variant="ghost" onClick={() => setEditing(null)}>Cancel</Button>
         </div>
       )}
-    </div>
+    </>
   );
 }
 
@@ -170,25 +168,25 @@ function PostView({ orgId, post }: { orgId: string; post: SidebarPost }) {
   });
 
   return (
-    <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-      <div className="min-w-0"><PostCard orgId={orgId} post={post} /></div>
-      <div className="flex min-h-[420px] min-w-0 flex-col rounded-xl border xl:max-h-[calc(100vh-9rem)]">
+    <div className="grid min-w-0 gap-4 lg:h-full lg:min-h-0 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+      <div className="min-w-0 lg:min-h-0 lg:overflow-y-auto"><PostCard orgId={orgId} post={post} /></div>
+      <div className="flex min-h-[420px] min-w-0 flex-col rounded-xl border lg:min-h-0">
         <p className="border-b px-4 py-3 text-sm font-semibold">Comments ({convs.length})</p>
-        <div className="flex-1 space-y-3 overflow-y-auto p-3">
-          {journey.isLoading ? <Loader2 className="mx-auto size-5 animate-spin text-muted-foreground" /> : convs.length === 0 ? (
+        <div className="min-h-0 flex-1 divide-y overflow-y-auto">
+          {journey.isLoading ? <Loader2 className="mx-auto my-4 size-5 animate-spin text-muted-foreground" /> : convs.length === 0 ? (
             <EmptyState icon={MessageSquare} title="No comments linked yet" description="New comments on this post will show up here." />
-          ) : convs.map((c) => (
-            <div key={c.id} className={`rounded-xl border p-3 ${target === c.id ? "border-primary bg-primary/5" : ""}`}>
-              {msgs.filter((m) => m.conversation_id === c.id).map((m) => (
-                <div key={m.id} className={`py-1 text-sm ${m.direction === "inbound" ? "" : "ml-6 border-l-2 pl-3"}`}>
-                  <p className="flex flex-wrap items-center gap-1.5 text-xs"><span className="font-semibold">{m.direction === "inbound" ? m.sender_name ?? c.name ?? "Commenter" : post.accountName}</span><SenderTag m={m} /><span className="text-muted-foreground">{new Date(m.sent_at).toLocaleString()}</span></p>
-                  <p className="whitespace-pre-wrap break-words">{m.body.replace(/^\[public reply\] /, "")}</p>
+          ) : convs.flatMap((c) => msgs
+            .filter((m) => m.conversation_id === c.id && (m.direction === "inbound" || m.body.startsWith("[public reply] ")))
+            .map((m) => (
+              <div key={m.id} className={`px-4 py-2.5 text-sm ${m.direction === "inbound" ? "" : "pl-9"} ${target === c.id && m.direction === "inbound" ? "bg-primary/5" : ""}`}>
+                <p className="flex flex-wrap items-center gap-1.5 text-xs"><span className="font-semibold">{m.direction === "inbound" ? m.sender_name ?? c.name ?? "Commenter" : post.accountName}</span><SenderTag m={m} /><span className="text-muted-foreground">{new Date(m.sent_at).toLocaleDateString()} · {new Date(m.sent_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span></p>
+                <p className="mt-0.5 whitespace-pre-wrap break-words">{m.body.replace(/^\[public reply\] /, "")}</p>
+                <div className="mt-1 flex flex-wrap items-center gap-3 text-[11px]">
+                  {m.direction === "inbound" && <button type="button" onClick={() => setTarget(c.id)} className="font-medium text-primary hover:underline">Reply</button>}
                   <CommentActions m={m} convId={c.id} platform={post.platform} onDone={() => void qc.invalidateQueries({ queryKey: ["post-journey", orgId, post.externalPostId] })} />
                 </div>
-              ))}
-              <button type="button" onClick={() => setTarget(c.id)} className="mt-1 text-xs font-medium text-primary hover:underline">Reply</button>
-            </div>
-          ))}
+              </div>
+            )))}
         </div>
         <div className="space-y-2 border-t p-3">
           {targetConv ? (
