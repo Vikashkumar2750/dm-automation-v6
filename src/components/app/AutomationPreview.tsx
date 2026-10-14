@@ -55,9 +55,14 @@ export function AutomationPreview({
   const posts = useMemo(() => {
     const map = new Map<string, PreviewPost>();
     for (const p of (remote.data?.posts ?? []) as PreviewPost[]) map.set(p.externalPostId, p);
-    for (const p of (local.data ?? []) as PreviewPost[]) if (!map.has(p.externalPostId)) map.set(p.externalPostId, p);
+    const failed = new Set(remote.data?.failedPlatforms ?? []);
+    for (const p of (local.data ?? []) as PreviewPost[]) {
+      if (map.has(p.externalPostId)) continue;
+      if (remote.isSuccess && p.platform !== "youtube" && !failed.has(p.platform)) continue; // deleted on platform
+      map.set(p.externalPostId, p);
+    }
     return selectedPostIds.map((id) => map.get(id)).filter(Boolean) as PreviewPost[];
-  }, [remote.data, local.data, selectedPostIds]);
+  }, [remote.data, remote.isSuccess, local.data, selectedPostIds]);
   const current = posts.length ? posts[Math.min(slide, posts.length - 1)] : null;
   const handle = current?.accountName || "yourbrand";
 

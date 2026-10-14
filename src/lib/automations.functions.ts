@@ -615,7 +615,7 @@ export const listRecentRemotePosts = createServerFn({ method: "POST" })
       .limit(1);
     if (error) throw new Error(error.message);
     if (!visible || visible.length === 0) {
-      return { posts: [] as RemotePostItem[], warnings: [] as string[] };
+      return { posts: [] as RemotePostItem[], warnings: [] as string[], failedPlatforms: [] as string[] };
     }
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
