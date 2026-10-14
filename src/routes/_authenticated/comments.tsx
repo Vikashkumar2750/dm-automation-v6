@@ -169,7 +169,14 @@ function PostView({ orgId, post }: { orgId: string; post: SidebarPost }) {
     queryFn: () => fetchLive({ data: { organizationId: orgId, socialAccountId: post.socialAccountId ?? null, platform: post.platform, externalPostId: post.externalPostId } }),
   });
   const allConvs = (journey.data?.conversations ?? []).filter((c) => c.channel === "comment");
-  const msgs = messagesForPost(journey.data?.messages ?? [], post.externalPostId);
+  // Drop deleted comments and the replies under them (older rows saved as "[deleted comment]").
+  const msgs = (() => {
+    let skip = false;
+    return messagesForPost(journey.data?.messages ?? [], post.externalPostId).filter((m) => {
+      if (m.direction === "inbound") skip = m.body === "[deleted comment]";
+      return !skip && m.body !== "[deleted comment]";
+    });
+  })();
   const convs = allConvs.filter((c) => msgs.some((m) => m.conversation_id === c.id));
   const commentCount = msgs.filter((m) => m.direction === "inbound").length;
   const known = new Set(msgs.map((m) => m.external_id).filter(Boolean));
