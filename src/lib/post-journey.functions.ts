@@ -71,12 +71,15 @@ export const getPostJourney = createServerFn({ method: "GET" })
       loadMsgs(`${msgBase}, is_hidden`),
       context.supabase.from("automation_runs").select("id, rule_id, conversation_id, status, detail, created_at, run_key").eq("organization_id", data.organizationId).in("conversation_id", ids).order("created_at", { ascending: true }).limit(3000),
     ]);
+    let msgs = msgsFirst;
+    if (msgs.error && /is_hidden/.test(msgs.error.message)) msgs = await loadMsgs(msgBase);
     if (convs.error) throw new Error(convs.error.message);
     if (msgs.error) throw new Error(msgs.error.message);
     if (runs.error) throw new Error(runs.error.message);
+    type Raw = Omit<JourneyMessage, "manual" | "is_hidden"> & { sent_by: string | null; is_hidden?: boolean };
     return {
       conversations: (convs.data ?? []).map((c) => ({ id: c.id, platform: c.platform, channel: c.channel, name: c.external_user_name, status: c.status })) as JourneyConversation[],
-      messages: (msgs.data ?? []).map(({ sent_by, ...m }) => ({ ...m, manual: !!sent_by })) as JourneyMessage[],
+      messages: ((msgs.data ?? []) as unknown as Raw[]).map(({ sent_by, ...m }) => ({ ...m, is_hidden: !!m.is_hidden, manual: !!sent_by })) as JourneyMessage[],
       runs: (runs.data ?? []) as AutomationRun[],
     };
   });
