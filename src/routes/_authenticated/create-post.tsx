@@ -22,6 +22,7 @@ import { Label } from "@/components/ui/label";
 import { FORMAT_TABS, FormatBadge, PostMediaThumb, StatsRow, formatKey, type FormatTab } from "@/components/app/PostListExtras";
 import { useTenant } from "@/hooks/useTenant";
 import { listSocialAccounts } from "@/lib/social-accounts.functions";
+import { listRecentRemotePosts } from "@/lib/automations.functions";
 import {
   deletePost,
   editPublishedCaption,
@@ -100,6 +101,14 @@ function CreatePostPage() {
     enabled: Boolean(orgId),
   });
 
+  const fetchRemote = useServerFn(listRecentRemotePosts);
+  const remoteQuery = useQuery({
+    queryKey: ["remote-posts", orgId],
+    queryFn: () => fetchRemote({ data: { organizationId: orgId } }),
+    enabled: Boolean(orgId),
+    staleTime: 60_000,
+  });
+
   const accountsQuery = useQuery({
     queryKey: ["social-accounts", orgId],
     queryFn: () => fetchAccounts({ data: { organizationId: orgId } }),
@@ -162,7 +171,32 @@ function CreatePostPage() {
   });
 
   const postDate = (p: Post) => (p.published_at ?? p.scheduled_at ?? p.created_at ?? "").slice(0, 10);
-  const allPosts = (postsQuery.data ?? []).filter((p) =>
+  const ownIds = new Set((postsQuery.data ?? []).map((p) => p.external_post_id).filter(Boolean));
+  const livePosts: Post[] = (remoteQuery.data?.posts ?? [])
+    .filter((r) => !ownIds.has(r.externalPostId))
+    .map((r) => ({
+      id: `remote:${r.id}`,
+      organization_id: orgId,
+      social_account_id: r.socialAccountId,
+      platform: r.platform,
+      caption: r.caption,
+      media_url: r.mediaUrl,
+      media_urls: r.mediaUrl ? [r.mediaUrl] : [],
+      post_format:
+        r.platform === "youtube" || r.mediaType === "REELS" ? "reel"
+        : r.mediaType === "CAROUSEL_ALBUM" ? "carousel"
+        : r.mediaType === "STORY" ? "story" : "feed",
+      group_id: null,
+      media_type: r.mediaType === "VIDEO" || r.mediaType === "REELS" ? "video" : "image",
+      scheduled_at: null,
+      status: "published",
+      external_post_id: r.externalPostId,
+      permalink: r.permalink,
+      error: null,
+      published_at: r.publishedAt,
+      created_at: r.publishedAt ?? "",
+    }));
+  const allPosts = [...(postsQuery.data ?? []), ...livePosts].filter((p) =>
     (platformFilter === "all" || p.platform === platformFilter) &&
     (!fromDate || postDate(p) >= fromDate) &&
     (!toDate || postDate(p) <= toDate),
@@ -325,6 +359,13 @@ function CreatePostPage() {
                       <Send className="mr-1.5 size-3.5" /> Publish now
                     </Button>
                   )}
+                  {post.id.startsWith("remote:") ? (
+                    post.permalink && (
+                      <Button size="sm" variant="ghost" asChild>
+                        <a href={post.permalink} target="_blank" rel="noreferrer">Open</a>
+                      </Button>
+                    )
+                  ) : (<>
                   <Button
                     size="icon"
                     variant="ghost"
@@ -351,6 +392,7 @@ function CreatePostPage() {
                   >
                     <Trash2 className="size-4" />
                   </Button>
+                  </>)}
                 </div>
               </li>
             ))}

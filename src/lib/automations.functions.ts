@@ -590,8 +590,10 @@ export type TargetablePost = {
 export type RemotePostItem = {
   id: string;
   externalPostId: string;
-  platform: "instagram" | "facebook";
+  socialAccountId: string;
+  platform: "instagram" | "facebook" | "youtube";
   accountName: string;
+  mediaType: string | null;
   caption: string;
   mediaUrl: string | null;
   permalink: string | null;
@@ -618,7 +620,7 @@ export const listRecentRemotePosts = createServerFn({ method: "POST" })
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { fetchRemotePosts } = await import("@/lib/remote-posts.server");
-    const result = await fetchRemotePosts(supabaseAdmin, data.organizationId, 20);
+    const result = await fetchRemotePosts(supabaseAdmin, data.organizationId, 500);
     return { posts: result.posts as RemotePostItem[], warnings: result.warnings };
   });
 
