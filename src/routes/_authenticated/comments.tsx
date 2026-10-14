@@ -15,7 +15,7 @@ import { useTenant } from "@/hooks/useTenant";
 import { moderateComment, replyToComment, setCommentHidden } from "@/lib/inbox.functions";
 import { canEditComment } from "@/lib/comment-moderation";
 import { messagesForPost } from "@/lib/post-comments";
-import { moderateLiveComment, getLivePostComments, getPostJourney, getSinglePostStats, type JourneyMessage } from "@/lib/post-journey.functions";
+import { moderateLiveComment, replyLiveComment, getLivePostComments, getPostJourney, getSinglePostStats, type JourneyMessage } from "@/lib/post-journey.functions";
 
 export const Route = createFileRoute("/_authenticated/comments")({
   head: () => ({
@@ -58,7 +58,7 @@ function RefreshButton() {
   return (
     <Button variant="outline" disabled={busy} onClick={async () => {
       setBusy(true);
-      await Promise.all(["post-journey", "post-comment-counts", "post-stats"].map((k) => qc.invalidateQueries({ queryKey: [k] })));
+      await Promise.all(["remote-posts", "post-journey", "post-comment-counts", "post-stats"].map((k) => qc.invalidateQueries({ queryKey: [k] })));
       setBusy(false);
       toast.success("Comments refreshed");
     }}>{busy ? <Loader2 className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}Sync comments</Button>
@@ -108,9 +108,19 @@ function CommentActions({ m, convId, platform, onDone }: { m: JourneyMessage; co
   );
 }
 
-function LiveActions({ orgId, post, commentId }: { orgId: string; post: SidebarPost; commentId: string }) {
+function LiveActions({ orgId, post, commentId, canReply = true }: { orgId: string; post: SidebarPost; commentId: string; canReply?: boolean }) {
   const qc = useQueryClient();
   const act = useServerFn(moderateLiveComment);
+  const replyFn = useServerFn(replyLiveComment);
+  const [text, setText] = useState<string | null>(null);
+  const sendReply = async () => {
+    setBusy("reply");
+    try {
+      await replyFn({ data: { organizationId: orgId, socialAccountId: post.socialAccountId!, platform: post.platform as "instagram" | "facebook", externalPostId: post.externalPostId, commentId, body: text ?? "" } });
+      toast.success("Public reply posted"); setText(null);
+      void qc.invalidateQueries({ queryKey: ["post-journey", "live", post.externalPostId] });
+    } catch (e) { toast.error(e instanceof Error && e.message ? e.message : "Reply failed"); } finally { setBusy(null); }
+  };
   const [busy, setBusy] = useState<string | null>(null);
   const [hidden, setHidden] = useState(false);
   const run = async (action: "delete" | "hide" | "unhide", ok: string) => {
@@ -124,6 +134,7 @@ function LiveActions({ orgId, post, commentId }: { orgId: string; post: SidebarP
   };
   return (
     <div className="mt-1 flex flex-wrap items-center gap-3 text-[11px]">
+      {canReply && <button type="button" onClick={() => setText(text === null ? "" : null)} className="font-medium text-primary hover:underline">Reply</button>}
       {post.platform === "instagram" && (
         <button type="button" disabled={!!busy} className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground disabled:opacity-50" onClick={() => void run(hidden ? "unhide" : "hide", hidden ? "Comment visible again" : "Comment hidden")}>
           {(busy === "hide" || busy === "unhide") && <Loader2 className="size-3 animate-spin" />}{hidden ? "Unhide" : "Hide"}
@@ -132,6 +143,12 @@ function LiveActions({ orgId, post, commentId }: { orgId: string; post: SidebarP
       <button type="button" disabled={!!busy} className="inline-flex items-center gap-1 text-destructive/80 hover:text-destructive disabled:opacity-50" onClick={() => { if (confirm("Delete this comment on the platform?")) void run("delete", "Comment deleted"); }}>
         {busy === "delete" && <Loader2 className="size-3 animate-spin" />}Delete
       </button>
+      {text !== null && (
+        <div className="flex w-full items-end gap-2">
+          <Textarea rows={2} value={text} placeholder="Write a public reply…" onChange={(e) => setText(e.target.value)} />
+          <Button size="sm" disabled={!text.trim() || !!busy} onClick={() => void sendReply()}>{busy === "reply" ? <Loader2 className="size-3 animate-spin" /> : <Send className="size-3" />}Send</Button>
+        </div>
+      )}
     </div>
   );
 }
@@ -230,7 +247,7 @@ function PostView({ orgId, post }: { orgId: string; post: SidebarPost }) {
             <div key={c.id} className={`px-4 py-2.5 text-sm ${c.reply ? "pl-9" : ""}`}>
               <p className="flex flex-wrap items-center gap-1.5 text-xs"><span className="font-semibold">{c.author ?? "Commenter"}</span>{c.createdAt && <span className="text-muted-foreground">{new Date(c.createdAt).toLocaleDateString()} · {new Date(c.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>}</p>
               <p className="mt-0.5 whitespace-pre-wrap break-words">{c.text}</p>
-              {post.socialAccountId && post.platform !== "youtube" && <LiveActions orgId={orgId} post={post} commentId={c.id} />}
+              {post.socialAccountId && post.platform !== "youtube" && <LiveActions orgId={orgId} post={post} commentId={c.id} canReply={!c.reply} />}
             </div>
           ))}
           {live.data?.error && <p className="bg-warning/10 px-4 py-2 text-xs text-warning">Older comments could not be loaded: {live.data.error}</p>}
@@ -251,6 +268,7 @@ function PostView({ orgId, post }: { orgId: string; post: SidebarPost }) {
               <div key={r.id} className="px-4 py-2.5 pl-9 text-sm">
                 <p className="flex flex-wrap items-center gap-1.5 text-xs"><span className="font-semibold">{r.author ?? "Reply"}</span>{r.createdAt && <span className="text-muted-foreground">{new Date(r.createdAt).toLocaleDateString()} · {new Date(r.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>}</p>
                 <p className="mt-0.5 whitespace-pre-wrap break-words">{r.text}</p>
+                {post.socialAccountId && <LiveActions orgId={orgId} post={post} commentId={r.id} canReply={false} />}
               </div>
             ))]))}
         </div>

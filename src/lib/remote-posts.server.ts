@@ -119,7 +119,7 @@ export async function fetchRemotePosts(
       let url: string | null =
         account.platform === "instagram"
           ? `${GRAPH}/${account.external_id}/media?fields=id,caption,media_type,media_product_type,media_url,thumbnail_url,permalink,timestamp,comments_count&${qs}`
-          : `${GRAPH}/${account.external_id}/posts?fields=id,message,story,full_picture,permalink_url,created_time,attachments{media_type,type,media},comments.summary(true).limit(0)&${qs}`;
+          : `${GRAPH}/${account.external_id}/posts?fields=id,message,story,full_picture,permalink_url,created_time,attachments{media_type,type,media},comments.filter(toplevel).summary(true).limit(0)&${qs}`;
       let count = 0;
       while (url && count < maxPerAccount) {
         const j = await getJson(url);
