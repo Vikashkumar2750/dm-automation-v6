@@ -38,9 +38,9 @@ export function PostSidebar({ orgId, selectedId, onSelect, onPlatformChange, cou
   const [page, setPage] = useState(1);
   const filtered = useMemo(() => {
     const list = platform === "all" ? posts : posts.filter((p) => p.platform === platform);
-    // Posts with activity first, then newest.
-    return [...list].sort((a, b) => postCommentCount(b, counts) - postCommentCount(a, counts) || (b.publishedAt ?? "").localeCompare(a.publishedAt ?? ""));
-  }, [posts, platform, counts]);
+    // Newest posts first.
+    return [...list].sort((a, b) => (b.publishedAt ?? "").localeCompare(a.publishedAt ?? ""));
+  }, [posts, platform]);
   const rows = pageSlice(filtered, page, 10);
 
   return (
