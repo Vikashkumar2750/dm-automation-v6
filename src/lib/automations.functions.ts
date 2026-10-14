@@ -599,6 +599,7 @@ export type RemotePostItem = {
   videoUrl?: string | null;
   permalink: string | null;
   publishedAt: string | null;
+  commentsCount?: number | null;
 };
 
 /** Recent posts pulled live from the connected Instagram / Facebook accounts. */
