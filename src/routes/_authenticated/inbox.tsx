@@ -321,7 +321,8 @@ function InboxPage() {
 
   return (
     <AppShell>
-      <div className="mb-3 flex min-w-0 flex-wrap items-start justify-between gap-4 lg:-mt-2">
+      <div className="grid min-w-0 gap-4 lg:h-[calc(100dvh-8rem)] lg:min-h-0 lg:grid-cols-[340px_minmax(0,1fr)] lg:grid-rows-[auto_minmax(0,1fr)]">
+      <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-3 lg:col-start-1 lg:row-start-1">
         <div className="min-w-0">
           <h1 className="break-words text-2xl font-semibold">Unified Inbox</h1>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -333,9 +334,8 @@ function InboxPage() {
         <GuideButton guide="meta-review" />
       </div>
 
-      <div className="grid min-w-0 gap-4 lg:h-[calc(100dvh-12rem)] lg:min-h-[520px] lg:grid-cols-[340px_minmax(0,1fr)]">
         {/* Conversation list */}
-        <Panel bodyClassName="flex min-h-0 flex-1 flex-col p-0" className={cn("min-h-[480px] lg:min-h-0", selectedId && "hidden lg:flex")}>
+        <Panel bodyClassName="flex min-h-0 flex-1 flex-col p-0" className={cn("min-h-[480px] lg:col-start-1 lg:row-start-2 lg:min-h-0 lg:overflow-hidden", selectedId && "hidden lg:flex")}>
           <div className="space-y-2 border-b px-4 py-3">
             <div>
               <p className="text-sm font-semibold">Conversations</p>
@@ -436,7 +436,7 @@ function InboxPage() {
         </Panel>
 
         {/* Thread */}
-        <Panel className={cn("lg:min-h-0", !selectedId && "hidden lg:flex")} bodyClassName="flex min-h-[480px] flex-1 flex-col p-0 lg:min-h-0">
+        <Panel className={cn("lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:min-h-0 lg:overflow-hidden", !selectedId && "hidden lg:flex")} bodyClassName="flex min-h-[480px] flex-1 flex-col p-0 lg:min-h-0">
           {!selected ? (
             <div className="flex flex-1 items-center justify-center py-16">
               <EmptyState
