@@ -621,7 +621,25 @@ export const listRecentRemotePosts = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { fetchRemotePosts } = await import("@/lib/remote-posts.server");
     const result = await fetchRemotePosts(supabaseAdmin, data.organizationId, 5000);
-    return { posts: result.posts as RemotePostItem[], warnings: result.warnings };
+    // Fix B: refresh expired stored image links with the fresh ones Meta just returned.
+    try {
+      const fresh = new Map(result.posts.filter((p) => p.mediaUrl && p.platform !== "youtube").map((p) => [p.externalPostId, p.mediaUrl!]));
+      if (fresh.size) {
+        const { data: stored } = await supabaseAdmin
+          .from("posts")
+          .select("id, external_post_id, media_url")
+          .eq("organization_id", data.organizationId)
+          .in("external_post_id", [...fresh.keys()].slice(0, 500));
+        await Promise.all(
+          (stored ?? [])
+            .filter((r) => r.external_post_id && fresh.get(r.external_post_id) !== r.media_url)
+            .map((r) => supabaseAdmin.from("posts").update({ media_url: fresh.get(r.external_post_id!)! }).eq("id", r.id)),
+        );
+      }
+    } catch {
+      /* display-only refresh; never block listing */
+    }
+    return { posts: result.posts as RemotePostItem[], warnings: result.warnings, failedPlatforms: result.failedPlatforms };
   });
 
 /** Published posts that can be used to scope an automation to one post. */
