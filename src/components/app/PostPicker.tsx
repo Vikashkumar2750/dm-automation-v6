@@ -89,13 +89,18 @@ export function PostPicker({
     for (const post of remoteQuery.data?.posts ?? []) {
       merged.set(post.externalPostId, post);
     }
+    const failed = new Set(remoteQuery.data?.failedPlatforms ?? []);
+    const live = remoteQuery.isSuccess;
     for (const post of postsQuery.data ?? []) {
-      if (!merged.has(post.externalPostId)) merged.set(post.externalPostId, post);
+      if (merged.has(post.externalPostId)) continue;
+      // Fix A: a stored IG/FB post Meta no longer returns was deleted on the platform — hide it.
+      if (live && post.platform !== "youtube" && !failed.has(post.platform)) continue;
+      merged.set(post.externalPostId, post);
     }
     return [...merged.values()]
       .filter((post) => post.platform === activePlatform)
       .sort((a, b) => (b.publishedAt ?? "").localeCompare(a.publishedAt ?? ""));
-  }, [remoteQuery.data, postsQuery.data, activePlatform]);
+  }, [remoteQuery.data, remoteQuery.isSuccess, postsQuery.data, activePlatform]);
   const accounts = useMemo(
     () => [...new Set(posts.map((p) => p.accountName).filter(Boolean) as string[])],
     [posts],

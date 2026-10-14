@@ -40,7 +40,7 @@ export async function fetchRemotePosts(
   admin: import("@supabase/supabase-js").SupabaseClient,
   organizationId: string,
   maxPerAccount = 5000,
-): Promise<{ posts: RemotePost[]; warnings: string[] }> {
+): Promise<{ posts: RemotePost[]; warnings: string[]; failedPlatforms: string[] }> {
   const { data: accounts } = await admin
     .from("social_accounts")
     .select("id, platform, external_id, name")
@@ -48,7 +48,7 @@ export async function fetchRemotePosts(
     .in("platform", ["instagram", "facebook", "youtube"]);
 
   const rows = (accounts ?? []) as AccountRow[];
-  if (rows.length === 0) return { posts: [], warnings: [] };
+  if (rows.length === 0) return { posts: [], warnings: [], failedPlatforms: [] };
 
   const { data: tokens } = await admin
     .from("social_account_tokens")
@@ -62,29 +62,31 @@ export async function fetchRemotePosts(
     ] as const)),
   );
 
-  const warnings: string[] = [];
+  const failed = new Set<string>();
+  const warnList: string[] = [];
   const posts: RemotePost[] = [];
 
   await Promise.all(
     rows.map(async (account) => {
       const label = account.name || account.platform;
+      const warn = { push: (w: string) => { failed.add(account.platform); return warnList.push(w); } };
       const base = { socialAccountId: account.id, accountName: label };
 
       if (account.platform === "youtube") {
         const { freshYouTubeToken } = await import("@/lib/youtube-automation.server");
         const token = await freshYouTubeToken(admin, account.id).catch(() => null);
-        if (!token) return void warnings.push(`${label}: reconnect this account to load its videos.`);
+        if (!token) return void warn.push(`${label}: reconnect this account to load its videos.`);
         const auth = { headers: { authorization: `Bearer ${token}` } };
         const ch = await getJson(`${YT}/channels?part=contentDetails&id=${encodeURIComponent(account.external_id)}`, auth);
         const uploads = (ch["items"] as { contentDetails?: { relatedPlaylists?: { uploads?: string } } }[] | undefined)?.[0]
           ?.contentDetails?.relatedPlaylists?.uploads;
-        if (!uploads) return void warnings.push(`${label}: ${errOf(ch) ?? "could not load videos"}`);
+        if (!uploads) return void warn.push(`${label}: ${errOf(ch) ?? "could not load videos"}`);
         let pageToken: string | null = null;
         let count = 0;
         do {
           const params = new URLSearchParams({ part: "snippet", maxResults: "50", playlistId: uploads, ...(pageToken ? { pageToken } : {}) });
           const j = await getJson(`${YT}/playlistItems?${params}`, auth);
-          if (j["error"]) { warnings.push(`${label}: ${errOf(j)}`); break; }
+          if (j["error"]) { warn.push(`${label}: ${errOf(j)}`); break; }
           for (const it of (j["items"] ?? []) as { snippet?: { title?: string; publishedAt?: string; resourceId?: { videoId?: string }; thumbnails?: Record<string, { url?: string }> } }[]) {
             const vid = it.snippet?.resourceId?.videoId;
             if (!vid) continue;
@@ -108,7 +110,7 @@ export async function fetchRemotePosts(
       }
 
       const token = tokenBy.get(account.id);
-      if (!token) return void warnings.push(`${label}: reconnect this account to load its posts.`);
+      if (!token) return void warn.push(`${label}: reconnect this account to load its posts.`);
       const qs = `access_token=${encodeURIComponent(token)}&limit=100`;
       let url: string | null =
         account.platform === "instagram"
@@ -117,7 +119,7 @@ export async function fetchRemotePosts(
       let count = 0;
       while (url && count < maxPerAccount) {
         const j = await getJson(url);
-        if (j["error"]) { warnings.push(`${label}: ${errOf(j) ?? "could not load posts"}`); break; }
+        if (j["error"]) { warn.push(`${label}: ${errOf(j) ?? "could not load posts"}`); break; }
         for (const item of (j["data"] ?? []) as Record<string, string | undefined>[]) {
           if (!item["id"]) continue;
           count++;
@@ -139,5 +141,5 @@ export async function fetchRemotePosts(
   );
 
   posts.sort((a, b) => (b.publishedAt ?? "").localeCompare(a.publishedAt ?? ""));
-  return { posts, warnings };
+  return { posts, warnings: warnList, failedPlatforms: [...failed] };
 }
