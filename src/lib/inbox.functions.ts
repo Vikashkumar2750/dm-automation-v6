@@ -509,6 +509,10 @@ export const setCommentHidden = createServerFn({ method: "POST" })
       if (check && check["can_hide"] === false) throw new Error("Facebook does not allow hiding this comment (the Page's own comments cannot be hidden).");
       throw new Error(`Meta accepted the request but the comment is still ${data.hidden ? "visible" : "hidden"}. Try again in a minute.`);
     }
+    // Remember the confirmed state so Hide/Unhide survives a page refresh.
+    if (data.messageId) {
+      await supabaseAdmin.from("messages").update({ is_hidden: data.hidden }).eq("id", data.messageId);
+    }
     return { ok: true, hidden: data.hidden };
   });
 

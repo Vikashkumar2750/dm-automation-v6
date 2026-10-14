@@ -68,7 +68,7 @@ function RefreshButton() {
 function CommentActions({ m, convId, platform, onDone }: { m: JourneyMessage; convId: string; platform: string; onDone: () => void }) {
   const hide = useServerFn(setCommentHidden);
   const moderate = useServerFn(moderateComment);
-  const [hidden, setHidden] = useState(false);
+  const [hidden, setHidden] = useState(!!m.is_hidden);
   const [busy, setBusy] = useState<string | null>(null);
   const [editing, setEditing] = useState<string | null>(null);
   if (platform === "youtube" || !m.external_id || m.body === "[deleted comment]") return null;

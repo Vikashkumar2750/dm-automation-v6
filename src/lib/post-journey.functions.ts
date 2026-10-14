@@ -44,6 +44,7 @@ export type JourneyMessage = {
   external_id: string | null;
   manual: boolean;
   post_external_id: string | null;
+  is_hidden: boolean;
 };
 export type JourneyConversation = { id: string; platform: string; channel: string; name: string | null; status: string };
 
@@ -65,7 +66,7 @@ export const getPostJourney = createServerFn({ method: "GET" })
     if (!ids.length) return { conversations: [] as JourneyConversation[], messages: [] as JourneyMessage[], runs: [] as AutomationRun[] };
     const [convs, msgs, runs] = await Promise.all([
       context.supabase.from("conversations").select("id, platform, channel, external_user_name, status").in("id", ids),
-      context.supabase.from("messages").select("id, conversation_id, direction, body, sender_name, sent_at, sent_by, post_external_id, external_id").in("conversation_id", ids).order("sent_at", { ascending: true }).limit(3000),
+      context.supabase.from("messages").select("id, conversation_id, direction, body, sender_name, sent_at, sent_by, post_external_id, external_id, is_hidden").in("conversation_id", ids).order("sent_at", { ascending: true }).limit(3000),
       context.supabase.from("automation_runs").select("id, rule_id, conversation_id, status, detail, created_at, run_key").eq("organization_id", data.organizationId).in("conversation_id", ids).order("created_at", { ascending: true }).limit(3000),
     ]);
     if (convs.error) throw new Error(convs.error.message);
