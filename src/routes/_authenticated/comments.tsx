@@ -42,7 +42,7 @@ function CommentsPage() {
         description="Pick a post on the left to see it like on Instagram, Facebook or YouTube, with all comments and replies."
         actions={<><RefreshButton /><GuideButton guide="meta-review" /><Button asChild variant="outline"><Link to="/inbox">Open inbox</Link></Button></>}
       />
-      <div className="grid gap-4 lg:h-[calc(100vh-14rem)] lg:min-h-[480px] lg:grid-cols-[320px_minmax(0,1fr)] [&>*]:lg:min-h-0 [&>*:first-child]:lg:overflow-y-auto">
+      <div className="grid gap-4 lg:h-[calc(100vh-15rem)] lg:min-h-[480px] lg:grid-cols-[320px_minmax(0,1fr)] [&>*]:lg:min-h-0">
         <PostSidebar orgId={orgId} selectedId={post?.externalPostId ?? null} onSelect={setPost} onPlatformChange={() => setPost(null)} />
         {post && orgId ? <PostView key={post.externalPostId} orgId={orgId} post={post} /> : (
           <div className="hidden min-h-[420px] items-center justify-center rounded-xl border border-dashed text-sm text-muted-foreground lg:flex">Select a post to see its comments.</div>
@@ -171,7 +171,7 @@ function PostCard({ orgId, post }: { orgId: string; post: SidebarPost }) {
         <p className="min-w-0 flex-1 truncate text-sm font-semibold">{post.accountName}</p>
         {post.permalink && <a href={post.permalink} target="_blank" rel="noreferrer" className="text-muted-foreground hover:text-foreground" aria-label="Open on platform"><ExternalLink className="size-4" /></a>}
       </div>
-      <div className={`mx-auto flex justify-center bg-muted ${post.platform === "youtube" ? "aspect-video w-full" : isVideo ? "aspect-[9/16] h-[min(70vh,640px)] max-w-full" : "aspect-square max-h-[420px] w-full"}`}>
+      <div className={`mx-auto flex justify-center bg-muted ${post.platform === "youtube" ? "aspect-video w-full" : isVideo ? "aspect-[9/16] h-[min(46vh,420px)] max-w-full" : "aspect-square max-h-[360px] w-full"}`}>
         {ytId ? <iframe src={`https://www.youtube.com/embed/${ytId}`} title="YouTube video" allow="accelerometer; autoplay; encrypted-media; picture-in-picture" allowFullScreen className="h-full w-full" /> : post.mediaUrl || videoSrc ? (isVideo && videoSrc
           ? <video src={videoSrc} poster={post.mediaUrl && post.mediaUrl !== videoSrc ? post.mediaUrl : undefined} controls playsInline preload="metadata" className="h-full w-full object-contain" />
           : <img src={post.mediaUrl ?? ""} alt="" className="h-full w-full object-contain" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />)

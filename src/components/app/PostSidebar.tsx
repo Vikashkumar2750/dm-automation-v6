@@ -70,7 +70,10 @@ export function PostSidebar({ orgId, selectedId, onSelect, onPlatformChange, cou
           </button>
         );
       })}
-      <Pager page={page} total={filtered.length} perPage={10} onPage={setPage} />
+      </div>
+      <div className="shrink-0 border-t pt-2">
+        <Pager page={page} total={filtered.length} perPage={10} onPage={setPage} />
+      </div>
     </div>
   );
 }
