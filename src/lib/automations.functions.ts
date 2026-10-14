@@ -590,8 +590,10 @@ export type TargetablePost = {
 export type RemotePostItem = {
   id: string;
   externalPostId: string;
-  platform: "instagram" | "facebook";
+  socialAccountId: string;
+  platform: "instagram" | "facebook" | "youtube";
   accountName: string;
+  mediaType: string | null;
   caption: string;
   mediaUrl: string | null;
   permalink: string | null;
