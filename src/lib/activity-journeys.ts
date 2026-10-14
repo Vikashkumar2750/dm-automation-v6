@@ -30,7 +30,7 @@ export function activityJourneys(rows: AutomationRun[]): ActivityJourney[] {
       if (scope) current.set(scope, journey);
     }
     journey.groups.push(group);
-    if (group.steps.some(isClick) || group.status === "failed" || (opening && !isWaiting(group))) {
+    if (group.steps.some(isClick) || group.status === "failed" || group.steps.some((row) => /^(follow_gate_expired|gate_gave_up)/.test(code(row))) || (opening && !isWaiting(group))) {
       journey.endKey = group.key;
     }
   }
@@ -42,7 +42,7 @@ export function activityJourneys(rows: AutomationRun[]): ActivityJourney[] {
 }
 
 /** Filter after correlation: hiding a boundary must not turn a middle stage into START/END. */
-export function filterActivityJourneys(journeys: ActivityJourney[], status: "all" | "sent" | "skipped" | "failed"): ActivityJourney[] {
+export function filterActivityJourneys(journeys: ActivityJourney[], status: string): ActivityJourney[] {
   if (status === "all") return journeys;
   return journeys.flatMap((journey) => {
     const groups = journey.groups.flatMap((group) => {

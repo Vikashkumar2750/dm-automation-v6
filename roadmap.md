@@ -121,5 +121,5 @@ Real Meta + YouTube credentials are available when we reach OAuth phases.
 - [ ] Verify on live account after deploy (needs signed-in workspace)
 
 ## Activity journey borders (Oct 14)
-- [ ] Trace rule callbacks and group outer activity borders across one contact's multi-event journey, with regression tests.
-- [ ] Verify activity borders in the signed-in preview without sending messages.
+- [x] Trace rule callbacks and group outer activity borders across one contact's multi-event journey, with regression tests.
+- [ ] Verify activity borders in the signed-in preview without sending messages (blocked: requesting user has no matching preview account; sign-in required).
