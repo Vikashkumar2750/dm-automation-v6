@@ -115,11 +115,15 @@ export function AutomationPreview({
               <div className="relative aspect-square bg-muted">
                 {current?.mediaUrl ? (
                   /\.(mp4|mov|webm|m4v)(?:[?#]|$)|#video$/i.test(current.mediaUrl)
-                    ? <video src={`${current.mediaUrl.replace(/#video$/i, "")}#t=0.1`} muted playsInline preload="metadata" className="h-full w-full object-cover" />
-                    : <img src={current.mediaUrl} alt="" className="h-full w-full object-cover" onError={(e) => (e.currentTarget.style.display = "none")} />
+                    ? <video key={current.mediaUrl} src={`${current.mediaUrl.replace(/#video$/i, "")}#t=0.1`} muted playsInline preload="metadata" className="h-full w-full object-cover" />
+                    : <PreviewImage key={current.mediaUrl} src={current.mediaUrl} caption={current.caption} />
                 ) : (
                   <div className="grid h-full place-items-center px-6 text-center text-xs text-muted-foreground">
-                    {selectedPostIds.length ? "Loading selected post…" : "All posts — select a post to preview it here"}
+                    {current
+                      ? <span className="flex flex-col items-center gap-2"><ImageIcon className="size-8" />{current.caption || "Post image not available"}</span>
+                      : !selectedPostIds.length
+                        ? "All posts — select a post to preview it here"
+                        : local.isLoading || remote.isLoading ? "Loading selected post…" : "Preview not available for this post"}
                   </div>
                 )}
                 {posts.length > 1 && (
@@ -181,4 +185,15 @@ function Bubble({ children, fb }: { children: React.ReactNode; fb?: boolean }) {
 
 function Btn({ children }: { children: React.ReactNode }) {
   return <div className="rounded-lg bg-background py-1.5 text-center text-xs font-semibold text-primary">{children}</div>;
+}
+
+function PreviewImage({ src, caption }: { src: string; caption: string }) {
+  const [broken, setBroken] = useState(false);
+  if (broken)
+    return (
+      <div className="grid h-full place-items-center px-6 text-center text-xs text-muted-foreground">
+        <span className="flex flex-col items-center gap-2"><ImageIcon className="size-8" />{caption || "Post image expired"}</span>
+      </div>
+    );
+  return <img src={src} alt="" className="h-full w-full object-cover" onError={() => setBroken(true)} />;
 }

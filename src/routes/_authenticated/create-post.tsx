@@ -202,6 +202,10 @@ function CreatePostPage() {
     (!toDate || postDate(p) <= toDate),
   );
   const posts = tab === "all" ? allPosts : allPosts.filter((p) => formatKey(p.post_format) === tab);
+  // Story copies are saved without a caption; show the caption of the post they were made with.
+  const groupCaption = new Map<string, string>();
+  for (const p of allPosts) if (p.group_id && p.caption.trim() && !groupCaption.has(p.group_id)) groupCaption.set(p.group_id, p.caption);
+  const captionOf = (p: (typeof allPosts)[number]) => p.caption.trim() || (p.group_id ? groupCaption.get(p.group_id) : "") || "(no caption)";
   const accounts = accountsQuery.data ?? [];
 
   const openEdit = (post: Post) => {
@@ -335,7 +339,7 @@ function CreatePostPage() {
                     <FormatBadge postFormat={post.post_format} />
                   </span>
                   <p className="mt-1 truncate text-sm font-medium">
-                    {post.caption.trim() || "(no caption)"}
+                    {captionOf(post)}
                   </p>
                   <p className="mt-0.5 text-xs text-muted-foreground">
                     {post.status === "published"
