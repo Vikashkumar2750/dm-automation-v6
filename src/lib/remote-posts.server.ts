@@ -17,6 +17,8 @@ export type RemotePost = {
   accountName: string;
   caption: string;
   mediaUrl: string | null;
+  /** Playable video file (Instagram Reels/videos); mediaUrl stays the poster. */
+  videoUrl?: string | null;
   mediaType: string | null;
   permalink: string | null;
   publishedAt: string | null;
@@ -130,6 +132,7 @@ export async function fetchRemotePosts(
             platform: account.platform as "instagram" | "facebook",
             caption: (item["caption"] ?? item["message"] ?? item["story"] ?? "").slice(0, 200),
             mediaUrl: postThumbnail(item),
+            videoUrl: item["media_type"] === "VIDEO" && item["media_url"] ? item["media_url"] : null,
             mediaType: item["media_product_type"] === "REELS" ? "REELS" : item["media_type"] ?? null,
             permalink: item["permalink"] ?? item["permalink_url"] ?? null,
             publishedAt: item["timestamp"] ?? item["created_time"] ?? null,
