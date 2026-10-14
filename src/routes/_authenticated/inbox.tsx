@@ -324,11 +324,17 @@ function InboxPage() {
 
   return (
     <AppShell>
-      <PageHeader
-        title="Unified Inbox"
-        description={<>Messages and comments from Instagram,<br />Facebook and YouTube in one place.</>}
-        actions={<GuideButton guide="meta-review" />}
-      />
+      <div className="mb-3 flex min-w-0 flex-wrap items-start justify-between gap-4 lg:-mt-2">
+        <div className="min-w-0">
+          <h1 className="break-words text-2xl font-semibold">Unified Inbox</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Messages and comments from Instagram,
+            <br />
+            Facebook and YouTube in one place.
+          </p>
+        </div>
+        <GuideButton guide="meta-review" />
+      </div>
 
       <div className="grid min-w-0 gap-4 lg:h-[calc(100dvh-10.5rem)] lg:min-h-[520px] lg:grid-cols-[340px_minmax(0,1fr)]">
         {/* Conversation list */}
@@ -444,7 +450,7 @@ function InboxPage() {
             </div>
           ) : (
             <>
-              <div className="grid min-w-0 gap-3 border-b px-3 py-3 sm:flex sm:flex-wrap sm:items-center sm:justify-between sm:px-5">
+              <div className="grid min-w-0 gap-3 border-b px-3 py-2 sm:flex sm:flex-wrap sm:items-center sm:justify-between sm:px-5">
                 <div className="flex min-w-0 items-center gap-3">
                   <Button variant="ghost" size="icon" className="shrink-0 lg:hidden" aria-label="Back to conversations" onClick={() => setSelectedId(null)}><ArrowLeft className="size-4" /></Button>
                   <PlatformBadge platform={selected.platform} />
@@ -621,7 +627,7 @@ function InboxPage() {
                 </form>
               ) : selected.channel === "dm" && selected.platform !== "youtube" ? (
                 <form
-                  className="flex items-center gap-2 border-t px-4 py-3"
+                  className="flex items-center gap-2 border-t px-4 py-2"
                   onSubmit={(e) => {
                     e.preventDefault();
                     const body = draft.trim();
