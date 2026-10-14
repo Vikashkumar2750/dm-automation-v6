@@ -97,6 +97,27 @@ export const listMessages = createServerFn({ method: "GET" })
     return (rows ?? []) as MessageRow[];
   });
 
+/** conversation id -> latest post the person commented on (display-only grouping). */
+export const listCommentPostLinks = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => z.object({ conversationIds: z.array(z.string().uuid()).max(500) }).parse(data))
+  .handler(async ({ data, context }) => {
+    if (!data.conversationIds.length) return {} as Record<string, string>;
+    const { data: rows, error } = await context.supabase
+      .from("messages")
+      .select("conversation_id, post_external_id, sent_at")
+      .in("conversation_id", data.conversationIds)
+      .not("post_external_id", "is", null)
+      .order("sent_at", { ascending: false })
+      .limit(2000);
+    if (error) return {} as Record<string, string>;
+    const out: Record<string, string> = {};
+    for (const r of (rows ?? []) as Array<{ conversation_id: string; post_external_id: string | null }>) {
+      if (r.post_external_id && !out[r.conversation_id]) out[r.conversation_id] = r.post_external_id;
+    }
+    return out;
+  });
+
 export const markConversationRead = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) =>
