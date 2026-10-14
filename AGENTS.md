@@ -26,7 +26,7 @@
 - human-takeover.* sets bot_paused_until after manual replies using takeover_minutes; all automated paths check conversationInTakeover before sending — a human-owned chat never gets a bot reply, and expiry sends nothing by itself.
 - YouTube quota backoff and scheduler heartbeat stay standalone — reliability never changes Meta delivery.
 - PageReadyGate waits for first data; sessions share one store, guards cache admin answers and links preload on hover — no placeholders or re-hidden cached pages.
-- Every automation_runs row carries run_key (flow: per run, rule: rule+webhook correlation); plan usage counts distinct runs via count_org_runs and Activity groups by run_key — one triggered automation counts once and shows as one entry, however many steps it sends.
+- Usage counts distinct run_key via count_org_runs. Activity retains run_key entries; activity-journeys groups rule/conversation callbacks between fresh triggers before filtering — why: one journey border pair without delivery changes or mixing contacts.
 - Flow post targeting lives on Flow.targetPostIds (empty = all posts), checked by flowTargetsPost in runLiveFlows; the post picker is shared in components/app/PostPicker — same matching rule as keyword rules, no change to the rule engine.
 
 - Manual moderation uses stored workspace conversation/message IDs, role checks and Meta-first writes; only Facebook Page-authored public replies can be edited — prevents unauthorized targets and unsupported edit claims.
