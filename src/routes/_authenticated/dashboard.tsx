@@ -325,9 +325,14 @@ function Dashboard() {
           <Panel
             title="Live automation activity"
             action={
-              <Link to="/automations" className="inline-flex items-center gap-1 text-sm font-medium text-primary">
-                Automations <ArrowRight className="size-4" />
-              </Link>
+              <span className="flex items-center gap-3">
+                <Link to="/workflows" className="inline-flex items-center gap-1 text-sm font-medium text-primary">
+                  Post workflows <ArrowRight className="size-4" />
+                </Link>
+                <Link to="/automations" className="inline-flex items-center gap-1 text-sm font-medium text-primary">
+                  Automations <ArrowRight className="size-4" />
+                </Link>
+              </span>
             }
           >
             {activityItems.length === 0 ? (

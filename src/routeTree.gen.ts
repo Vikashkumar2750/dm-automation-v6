@@ -41,6 +41,7 @@ import { Route as AuthenticatedTeamRouteImport } from './routes/_authenticated/t
 import { Route as AuthenticatedTeamDeskRouteImport } from './routes/_authenticated/team-desk'
 import { Route as AuthenticatedTrustSafetyRouteImport } from './routes/_authenticated/trust-safety'
 import { Route as AuthenticatedUsageRouteImport } from './routes/_authenticated/usage'
+import { Route as AuthenticatedWorkflowsRouteImport } from './routes/_authenticated/workflows'
 import { Route as BlogIndexRouteImport } from './routes/blog.index'
 import { Route as BlogSlugRouteImport } from './routes/blog.$slug'
 import { Route as OTokenRouteImport } from './routes/o.$token'
@@ -248,6 +249,11 @@ const AuthenticatedTrustSafetyRoute =
 const AuthenticatedUsageRoute = AuthenticatedUsageRouteImport.update({
   id: '/usage',
   path: '/usage',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedWorkflowsRoute = AuthenticatedWorkflowsRouteImport.update({
+  id: '/workflows',
+  path: '/workflows',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const BlogIndexRoute = BlogIndexRouteImport.update({
@@ -526,6 +532,7 @@ export interface FileRoutesByFullPath {
   '/team-desk': typeof AuthenticatedTeamDeskRoute
   '/trust-safety': typeof AuthenticatedTrustSafetyRoute
   '/usage': typeof AuthenticatedUsageRoute
+  '/workflows': typeof AuthenticatedWorkflowsRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/o/$token': typeof OTokenRoute
   '/p/$slug': typeof PSlugRoute
@@ -602,6 +609,7 @@ export interface FileRoutesByTo {
   '/team-desk': typeof AuthenticatedTeamDeskRoute
   '/trust-safety': typeof AuthenticatedTrustSafetyRoute
   '/usage': typeof AuthenticatedUsageRoute
+  '/workflows': typeof AuthenticatedWorkflowsRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/o/$token': typeof OTokenRoute
   '/p/$slug': typeof PSlugRoute
@@ -681,6 +689,7 @@ export interface FileRoutesById {
   '/_authenticated/team-desk': typeof AuthenticatedTeamDeskRoute
   '/_authenticated/trust-safety': typeof AuthenticatedTrustSafetyRoute
   '/_authenticated/usage': typeof AuthenticatedUsageRoute
+  '/_authenticated/workflows': typeof AuthenticatedWorkflowsRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/o/$token': typeof OTokenRoute
   '/p/$slug': typeof PSlugRoute
@@ -760,6 +769,7 @@ export interface FileRouteTypes {
     | '/team-desk'
     | '/trust-safety'
     | '/usage'
+    | '/workflows'
     | '/blog/$slug'
     | '/o/$token'
     | '/p/$slug'
@@ -836,6 +846,7 @@ export interface FileRouteTypes {
     | '/team-desk'
     | '/trust-safety'
     | '/usage'
+    | '/workflows'
     | '/blog/$slug'
     | '/o/$token'
     | '/p/$slug'
@@ -914,6 +925,7 @@ export interface FileRouteTypes {
     | '/_authenticated/team-desk'
     | '/_authenticated/trust-safety'
     | '/_authenticated/usage'
+    | '/_authenticated/workflows'
     | '/blog/$slug'
     | '/o/$token'
     | '/p/$slug'
@@ -1220,6 +1232,13 @@ declare module '@tanstack/react-router' {
       path: '/usage'
       fullPath: '/usage'
       preLoaderRoute: typeof AuthenticatedUsageRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/workflows': {
+      id: '/_authenticated/workflows'
+      path: '/workflows'
+      fullPath: '/workflows'
+      preLoaderRoute: typeof AuthenticatedWorkflowsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/blog/': {
@@ -1595,6 +1614,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedTeamDeskRoute: typeof AuthenticatedTeamDeskRoute
   AuthenticatedTrustSafetyRoute: typeof AuthenticatedTrustSafetyRoute
   AuthenticatedUsageRoute: typeof AuthenticatedUsageRoute
+  AuthenticatedWorkflowsRoute: typeof AuthenticatedWorkflowsRoute
   AuthenticatedAutomationsActivityRoute: typeof AuthenticatedAutomationsActivityRoute
   AuthenticatedAutomationsAiAgentRoute: typeof AuthenticatedAutomationsAiAgentRoute
   AuthenticatedAutomationsFlowsRoute: typeof AuthenticatedAutomationsFlowsRoute
@@ -1625,6 +1645,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedTeamDeskRoute: AuthenticatedTeamDeskRoute,
   AuthenticatedTrustSafetyRoute: AuthenticatedTrustSafetyRoute,
   AuthenticatedUsageRoute: AuthenticatedUsageRoute,
+  AuthenticatedWorkflowsRoute: AuthenticatedWorkflowsRoute,
   AuthenticatedAutomationsActivityRoute: AuthenticatedAutomationsActivityRoute,
   AuthenticatedAutomationsAiAgentRoute: AuthenticatedAutomationsAiAgentRoute,
   AuthenticatedAutomationsFlowsRoute: AuthenticatedAutomationsFlowsRoute,
