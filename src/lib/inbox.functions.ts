@@ -276,6 +276,7 @@ export const replyToComment = createServerFn({ method: "POST" })
         conversationId: z.string().uuid(),
         body: z.string().trim().min(1).max(1000),
         mode: z.enum(["public", "private"]),
+        commentMessageId: z.string().uuid().optional(),
       })
       .parse(data),
   )
@@ -297,11 +298,14 @@ export const replyToComment = createServerFn({ method: "POST" })
     if (!conversation.social_account_id) throw new Error("no_account");
 
     // Latest inbound comment id — that is what we reply to.
-    const { data: lastComment } = await context.supabase
+    let commentQuery = context.supabase
       .from("messages")
       .select("external_id, sent_at")
       .eq("conversation_id", conversation.id)
-      .eq("direction", "inbound")
+      .eq("direction", "inbound");
+    // Reply to the exact comment picked on the Comments page (one thread can span posts).
+    if (data.commentMessageId) commentQuery = commentQuery.eq("id", data.commentMessageId);
+    const { data: lastComment } = await commentQuery
       .not("external_id", "is", null)
       .order("sent_at", { ascending: false })
       .limit(1)
