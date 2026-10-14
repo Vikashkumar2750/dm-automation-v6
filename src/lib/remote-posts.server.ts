@@ -117,12 +117,17 @@ export async function fetchRemotePosts(
       let url: string | null =
         account.platform === "instagram"
           ? `${GRAPH}/${account.external_id}/media?fields=id,caption,media_type,media_product_type,media_url,thumbnail_url,permalink,timestamp&${qs}`
-          : `${GRAPH}/${account.external_id}/posts?fields=id,message,story,full_picture,permalink_url,created_time&${qs}`;
+          : `${GRAPH}/${account.external_id}/posts?fields=id,message,story,full_picture,permalink_url,created_time,attachments{media_type,type,media}&${qs}`;
       let count = 0;
       while (url && count < maxPerAccount) {
         const j = await getJson(url);
         if (j["error"]) { warn.push(`${label}: ${errOf(j) ?? "could not load posts"}`); break; }
-        for (const item of (j["data"] ?? []) as Record<string, string | undefined>[]) {
+        for (const raw of (j["data"] ?? []) as Record<string, unknown>[]) {
+          // Facebook videos/reels: playable file lives in attachments.media.source.
+          const att = ((raw["attachments"] as { data?: Array<{ media_type?: string; type?: string; media?: { source?: string } }> } | undefined)?.data ?? [])[0];
+          const fbVideo = att && /video|reel/i.test(`${att.media_type ?? ""} ${att.type ?? ""}`) ? att : null;
+          const item = { ...raw, attachments: undefined } as Record<string, string | undefined>;
+          if (fbVideo) { item["media_type"] = "VIDEO"; if (fbVideo.media?.source) item["media_url"] = fbVideo.media.source; if (/reel/i.test(fbVideo.type ?? "")) item["media_product_type"] = "REELS"; }
           if (!item["id"]) continue;
           count++;
           posts.push({
