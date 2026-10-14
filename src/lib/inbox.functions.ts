@@ -28,6 +28,7 @@ export type MessageRow = {
   external_id: string | null;
   sender_name: string | null;
   sent_at: string;
+  is_hidden: boolean;
 };
 
 const WRITE_ROLES = ["owner", "admin", "manager", "agent"] as const;
@@ -89,7 +90,7 @@ export const listMessages = createServerFn({ method: "GET" })
   .handler(async ({ data, context }) => {
     const { data: rows, error } = await context.supabase
       .from("messages")
-      .select("id, conversation_id, direction, body, external_id, sender_name, sent_at")
+      .select("id, conversation_id, direction, body, external_id, sender_name, sent_at, is_hidden")
       .eq("conversation_id", data.conversationId)
       .order("sent_at", { ascending: true })
       .limit(200);
