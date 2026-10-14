@@ -129,7 +129,7 @@ export function PostPicker({
     <div className="grid gap-3 rounded-lg border p-4">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <p className="text-sm font-medium">Which posts?</p>
+          <p className="text-sm font-medium">Automation On Which posts?</p>
           <p className="text-xs text-muted-foreground">
             {selected.length === 0
               ? "All posts — runs on every post."
