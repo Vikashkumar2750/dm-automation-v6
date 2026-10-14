@@ -31,6 +31,30 @@ const groupTone = { completed: "success", in_progress: "info", skipped: "neutral
 const groupLabel = { completed: "Completed", in_progress: "In progress", skipped: "Skipped", failed: "Failed" } as const;
 const FILTERS = ["all", "sent", "skipped", "failed"] as const;
 
+/** Steps where an automation begins its delivery vs. where it completes. */
+const START_CODES = ["tap_prompt", "dm_link", "reply_dm", "attachment", "follow_prompt"];
+const FLOW_START_CODES = ["opening_dm", "send_dm", "send_payment", "send_coupon", "follow_gate"];
+
+function stepMarkerKind(detail: string | null): "start" | "end" | null {
+  const code = (detail ?? "").toLowerCase().replace(/^trace:[^:]+:/, "");
+  if (code.startsWith("click:link") || code.startsWith("click:attachment")) return "end";
+  if (START_CODES.some((k) => code.startsWith(k))) return "start";
+  if (code.startsWith("flow:")) {
+    const at = code.lastIndexOf(":");
+    const fc = at < 0 ? code.slice(5) : code.slice(at + 1);
+    if (FLOW_START_CODES.includes(fc)) return "start";
+  }
+  return null;
+}
+
+function RunMarker({ label }: { label: string }) {
+  return (
+    <div className="relative my-1 h-px bg-foreground/60">
+      <span className="absolute -top-1.5 left-2 bg-card px-1 text-[9px] font-semibold uppercase leading-none tracking-wider text-foreground/70">{label}</span>
+    </div>
+  );
+}
+
 function ActivityPage() {
   const { activeOrg } = useTenant();
   const orgId = activeOrg?.id;
