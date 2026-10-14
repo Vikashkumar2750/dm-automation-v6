@@ -1126,14 +1126,17 @@ function AutomationsPage() {
               Cancel
             </Button>
             <Button
+              className="bg-success text-success-foreground hover:bg-success/90"
               onClick={() => draft && saveMutation.mutate(draft)}
               disabled={!draft?.name.trim() || saveMutation.isPending}
             >
               {saveMutation.isPending && <Loader2 className="size-4 animate-spin" />}
-              Save rule
+              Save automation
             </Button>
           </div>
         </section>
+        <AutomationPreview draft={draft} />
+        </div>
       </div>
       )}
     </AppShell>
