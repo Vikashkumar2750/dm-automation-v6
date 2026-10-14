@@ -88,7 +88,7 @@ function CommentActions({ m, convId, platform, onDone }: { m: JourneyMessage; co
         )}
         {m.direction === "inbound" && (
           <button type="button" className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground disabled:opacity-50" disabled={!!busy}
-            onClick={() => run("hide", async () => { await hide({ data: { conversationId: convId, messageId: m.id, hidden: !hidden } }); setHidden(!hidden); }, hidden ? "Comment visible again" : "Comment hidden")}>
+            onClick={() => run("hide", async () => { await hide({ data: { conversationId: convId, messageId: m.id, hidden: !hidden } }); setHidden(!hidden); }, hidden ? "Comment visible again" : "Comment hidden — the public can't see it. The commenter, their friends and Page admins still can.")}>
             {busy === "hide" && <Loader2 className="size-3 animate-spin" />}{hidden ? "Unhide" : "Hide"}
           </button>
         )}
