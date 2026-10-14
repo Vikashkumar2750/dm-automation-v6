@@ -41,7 +41,7 @@ function CommentsPage() {
         description="Pick a post on the left to see it like on Instagram, Facebook or YouTube, with all comments and replies."
         actions={<><RefreshButton /><GuideButton guide="meta-review" /><Button asChild variant="outline"><Link to="/inbox">Open inbox</Link></Button></>}
       />
-      <div className="grid gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
+      <div className="grid gap-4 lg:h-[calc(100vh-14rem)] lg:min-h-[480px] lg:grid-cols-[320px_minmax(0,1fr)] [&>*]:lg:min-h-0 [&>*:first-child]:lg:overflow-y-auto">
         <PostSidebar orgId={orgId} selectedId={post?.externalPostId ?? null} onSelect={setPost} />
         {post && orgId ? <PostView key={post.externalPostId} orgId={orgId} post={post} /> : (
           <div className="hidden min-h-[420px] items-center justify-center rounded-xl border border-dashed text-sm text-muted-foreground lg:flex">Select a post to see its comments.</div>
@@ -97,13 +97,13 @@ function CommentActions({ m, convId, platform, onDone }: { m: JourneyMessage; co
         </button>
       </div>
       {editing !== null && (
-        <div className="flex items-end gap-2">
+        <div className="flex w-full items-end gap-2">
           <Textarea rows={2} value={editing} onChange={(e) => setEditing(e.target.value)} />
           <Button size="sm" disabled={!editing.trim() || !!busy} onClick={() => run("edit", async () => { await moderate({ data: { conversationId: convId, messageId: m.id, action: "edit", body: editing } }); setEditing(null); }, "Reply updated")}>{spin("edit", Pencil)}Save</Button>
           <Button size="sm" variant="ghost" onClick={() => setEditing(null)}>Cancel</Button>
         </div>
       )}
-    </div>
+    </>
   );
 }
 
