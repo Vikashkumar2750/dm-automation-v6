@@ -88,14 +88,18 @@ export const listMessages = createServerFn({ method: "GET" })
     z.object({ conversationId: z.string().uuid() }).parse(data),
   )
   .handler(async ({ data, context }) => {
-    const { data: rows, error } = await context.supabase
+    const load = (cols: string) => context.supabase
       .from("messages")
-      .select("id, conversation_id, direction, body, external_id, sender_name, sent_at, is_hidden")
+      .select(cols)
       .eq("conversation_id", data.conversationId)
       .order("sent_at", { ascending: true })
       .limit(200);
-    if (error) throw new Error(error.message);
-    return (rows ?? []) as MessageRow[];
+    const base = "id, conversation_id, direction, body, external_id, sender_name, sent_at";
+    let res = await load(`${base}, is_hidden`);
+    // Older databases may not have is_hidden yet — fall back instead of showing an empty inbox.
+    if (res.error && /is_hidden/.test(res.error.message)) res = await load(base);
+    if (res.error) throw new Error(res.error.message);
+    return ((res.data ?? []) as unknown as Partial<MessageRow>[]).map((m) => ({ ...m, is_hidden: !!m.is_hidden })) as MessageRow[];
   });
 
 /** conversation id -> latest post the person commented on (display-only grouping). */

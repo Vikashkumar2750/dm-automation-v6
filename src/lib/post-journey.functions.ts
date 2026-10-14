@@ -64,9 +64,11 @@ export const getPostJourney = createServerFn({ method: "GET" })
     if (error) throw new Error(error.message);
     const ids = [...new Set((links ?? []).map((l) => l.conversation_id))].slice(0, 300);
     if (!ids.length) return { conversations: [] as JourneyConversation[], messages: [] as JourneyMessage[], runs: [] as AutomationRun[] };
-    const [convs, msgs, runs] = await Promise.all([
+    const loadMsgs = (cols: string) => context.supabase.from("messages").select(cols).in("conversation_id", ids).order("sent_at", { ascending: true }).limit(3000);
+    const msgBase = "id, conversation_id, direction, body, sender_name, sent_at, sent_by, post_external_id, external_id";
+    const [convs, msgsFirst, runs] = await Promise.all([
       context.supabase.from("conversations").select("id, platform, channel, external_user_name, status").in("id", ids),
-      context.supabase.from("messages").select("id, conversation_id, direction, body, sender_name, sent_at, sent_by, post_external_id, external_id, is_hidden").in("conversation_id", ids).order("sent_at", { ascending: true }).limit(3000),
+      loadMsgs(`${msgBase}, is_hidden`),
       context.supabase.from("automation_runs").select("id, rule_id, conversation_id, status, detail, created_at, run_key").eq("organization_id", data.organizationId).in("conversation_id", ids).order("created_at", { ascending: true }).limit(3000),
     ]);
     if (convs.error) throw new Error(convs.error.message);

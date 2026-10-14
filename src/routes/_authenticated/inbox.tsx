@@ -170,7 +170,7 @@ function InboxPage() {
 
   const filters = {
     ...(platform !== "all" ? { platform } : {}),
-    ...(channel !== "all" ? { channel } : {}),
+    channel: "dm" as const,
     ...(status !== "all" ? { status } : {}),
     ...(unreadOnly ? { unreadOnly: true } : {}),
     ...(search.trim() ? { search: search.trim() } : {}),
@@ -343,15 +343,6 @@ function InboxPage() {
                 { value: "instagram", label: "Instagram" },
                 { value: "facebook", label: "Facebook" },
                 { value: "youtube", label: "YouTube" },
-              ]}
-            />
-            <FilterChips
-              value={channel}
-              onChange={setChannel}
-              options={[
-                { value: "all", label: "All types" },
-                { value: "dm", label: "DMs" },
-                { value: "comment", label: "Comments" },
               ]}
             />
             <div className="flex flex-wrap items-center gap-1">
