@@ -6,7 +6,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { checkPolicy } from "@/lib/trust-safety";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useState } from "react";
-import { ChevronDown, ChevronLeft, Copy, Loader2, Plus, ShieldCheck, Trash2, Workflow, Zap } from "lucide-react";
+import { ChevronDown, ChevronLeft, Copy, Loader2, Plus, ShieldCheck, Sparkles, Trash2, Workflow, Zap } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { AutomationPreview } from "@/components/app/AutomationPreview";
 import { toast } from "sonner";
 
 import { AppShell } from "@/components/app/AppShell";
@@ -126,6 +128,28 @@ const emptyDraft: Draft = {
   requireFollow: false,
   followPromptText: "",
 };
+
+type TemplatePack = { label: string; text: string; variations: string[]; comment?: string; commentVariations?: string[] };
+
+function TemplateMenu({ templates, onPick }: { templates: TemplatePack[]; onPick: (t: TemplatePack) => void }) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button type="button" size="sm" variant="outline" className="border-primary/40 text-primary hover:bg-primary/10">
+          <Sparkles className="size-3.5" /> Autofill <ChevronDown className="size-3.5" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-64">
+        {templates.map((t) => (
+          <DropdownMenuItem key={t.label} onSelect={() => onPick(t)} className="flex-col items-start gap-0.5 focus:bg-primary/10 focus:text-primary">
+            <span className="text-sm font-medium">{t.label}</span>
+            <span className="line-clamp-1 text-xs text-muted-foreground">{t.text}</span>
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
 
 /** One-click message packs: a main reply plus three ready variations. */
 const MESSAGE_TEMPLATES: Array<{
@@ -457,6 +481,22 @@ function AutomationsPage() {
     ? ["reply_dm", "comment_private_reply"].includes(draft.action)
     : false;
 
+  const pickTemplate = (template: TemplatePack) =>
+    setDraft((d) =>
+      d
+        ? {
+            ...d,
+            responseText: template.text,
+            responseVariations: template.variations.join("\n"),
+            commentReplyText: d.trigger === "comment_received" && template.comment ? template.comment : d.commentReplyText,
+            commentReplyVariations:
+              d.trigger === "comment_received" && template.commentVariations
+                ? template.commentVariations.join("\n")
+                : d.commentReplyVariations,
+          }
+        : d,
+    );
+
   return (
     <AppShell>
       <div className={draft ? "hidden" : "contents"}>
@@ -480,7 +520,7 @@ function AutomationsPage() {
               </Button>
             )}
             <Button onClick={() => setDraft({ ...emptyDraft })} disabled={!orgId}>
-              <Plus className="size-4" /> {ruleLimitHit ? `Rule limit reached (${activeCount}/${maxRules})` : "New rule"}
+              <Plus className="size-4" /> {ruleLimitHit ? `Automation limit reached (${activeCount}/${maxRules})` : "New automation"}
             </Button>
           </div>
         }
@@ -535,7 +575,7 @@ function AutomationsPage() {
                 description="Create a rule so incoming DMs or comments get an instant reply."
                 action={
                   <Button onClick={() => setDraft({ ...emptyDraft })} disabled={!orgId}>
-                    <Plus className="size-4" /> New rule
+                    <Plus className="size-4" /> New automation
                   </Button>
                 }
               />
@@ -640,15 +680,16 @@ function AutomationsPage() {
 
       </div>
       {draft && (
-      <div className="mx-auto w-full max-w-3xl space-y-4">
+      <div className="mx-auto w-full max-w-6xl space-y-4">
         <Button variant="ghost" size="sm" onClick={() => setDraft(null)}><ChevronLeft className="size-4" /> Back to automations</Button>
-        <section className="panel">
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start">
+        <section className="panel min-w-0">
           <div className="border-b px-5 py-4">
             <h1 className="text-xl font-semibold">{draft?.id ? "Edit automation" : "New automation"}</h1>
           </div>
           <div className="p-5">
           {draft && (
-            <div className="grid gap-4">
+            <div className="grid gap-6">
               <div className="grid gap-2">
                 <Label>Name</Label>
                 <Input
@@ -825,8 +866,11 @@ function AutomationsPage() {
               />
 
               {draft.trigger === "comment_received" && draft.platform !== "youtube" && (
-                <div className="grid gap-2">
-                  <Label>Public reply under the comment (optional)</Label>
+                <div className="grid gap-2 rounded-lg border p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <Label className="text-sm font-semibold">Public reply under the comment (optional)</Label>
+                    <TemplateMenu templates={MESSAGE_TEMPLATES} onPick={pickTemplate} />
+                  </div>
                   <Textarea
                     rows={2}
                     value={draft.commentReplyText}
@@ -851,53 +895,11 @@ function AutomationsPage() {
               )}
 
               {needsText && (
-                <div className="grid gap-2">
-                  <Label>Ready-made messages</Label>
-                  <div className="flex flex-wrap gap-2">
-                    {(draft.platform === "youtube"
-                      ? YOUTUBE_MESSAGE_TEMPLATES
-                      : MESSAGE_TEMPLATES
-                    ).map((template) => (
-                      <Button
-                        key={template.label}
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          const meta = template as Partial<{
-                            comment: string;
-                            commentVariations: string[];
-                          }>;
-                          setDraft({
-                            ...draft,
-                            responseText: template.text,
-                            responseVariations: template.variations.join("\n"),
-                            commentReplyText:
-                              draft.trigger === "comment_received" && meta.comment
-                                ? meta.comment
-                                : draft.commentReplyText,
-                            commentReplyVariations:
-                              draft.trigger === "comment_received" && meta.commentVariations
-                                ? meta.commentVariations.join("\n")
-                                : draft.commentReplyVariations,
-                          });
-                        }}
-                      >
-                        {template.label}
-                      </Button>
-                    ))}
+                <div className="grid gap-2 rounded-lg border p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <Label className="text-sm font-semibold">{draft.platform === "youtube" ? "YouTube public reply" : draft.action === "comment_public_reply" ? "Public reply text" : "DM message to user"}</Label>
+                    <TemplateMenu templates={draft.platform === "youtube" ? YOUTUBE_MESSAGE_TEMPLATES : MESSAGE_TEMPLATES} onPick={pickTemplate} />
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    {draft.platform === "youtube"
-                      ? "Optional backup replies — the AI reads each comment and writes a contextual reply; these are used only if AI is unavailable."
-                      : "One tap fills the message plus three alternates — edit them as you like."}
-                  </p>
-                </div>
-              )}
-
-              {needsText && (
-                <div className="grid gap-2">
-                  <Label>{draft.platform === "youtube" ? "YouTube public reply" : "Message"}</Label>
                   <Textarea
                     rows={3}
                     value={draft.responseText}
@@ -931,8 +933,8 @@ function AutomationsPage() {
               )}
 
               {needsDm && (
-                <div className="grid gap-4 rounded-lg border p-4">
-                  <p className="text-sm font-medium">Link & attachment (optional)</p>
+                <div className="grid gap-4 rounded-lg border bg-muted/30 p-4">
+                  <p className="text-sm font-semibold">What you want to send / attach (optional)</p>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div className="grid gap-2">
                       <Label>Link URL</Label>
@@ -997,7 +999,7 @@ function AutomationsPage() {
 
               {needsDm && (
                 <div className="grid gap-4 rounded-lg border p-4">
-                  <p className="text-sm font-medium">Follower check</p>
+                  <p className="text-sm font-semibold">Who should get the DM? (follower check)</p>
                   <div className="grid gap-2">
                     <Label>Reply to</Label>
                     <Select
