@@ -44,8 +44,8 @@ export function PostSidebar({ orgId, selectedId, onSelect, onPlatformChange, cou
   const rows = pageSlice(filtered, page, 10);
 
   return (
-    <div className="min-w-0 space-y-2">
-      <div className="flex flex-wrap gap-1">
+    <div className="flex min-w-0 flex-col gap-2 lg:h-full lg:min-h-0">
+      <div className="flex shrink-0 flex-wrap gap-1">
         {(["all", "instagram", "facebook", "youtube"] as const).map((p) => (
           <button key={p} type="button" onClick={() => { if (p !== platform) onPlatformChange?.(); setPlatform(p); setPage(1); }}
             className={`rounded-full border px-3 py-1 text-xs font-medium capitalize transition-colors ${platform === p ? "border-primary bg-primary text-primary-foreground" : "hover:bg-muted"}`}>
@@ -53,6 +53,7 @@ export function PostSidebar({ orgId, selectedId, onSelect, onPlatformChange, cou
           </button>
         ))}
       </div>
+      <div className="min-h-0 space-y-2 lg:flex-1 lg:overflow-y-auto lg:pr-1">
       {loading ? <Loader2 className="mx-auto my-8 size-5 animate-spin text-muted-foreground" /> : rows.length === 0 ? (
         <p className="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">No posts found.</p>
       ) : rows.map((p) => {
