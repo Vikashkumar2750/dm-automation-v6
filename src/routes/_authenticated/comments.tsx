@@ -124,9 +124,9 @@ function PostCard({ orgId, post }: { orgId: string; post: SidebarPost }) {
         <p className="min-w-0 flex-1 truncate text-sm font-semibold">{post.accountName}</p>
         {post.permalink && <a href={post.permalink} target="_blank" rel="noreferrer" className="text-muted-foreground hover:text-foreground" aria-label="Open on platform"><ExternalLink className="size-4" /></a>}
       </div>
-      <div className={`flex justify-center bg-muted ${post.platform === "youtube" ? "aspect-video" : "aspect-square max-h-[420px]"}`}>
+      <div className={`mx-auto flex justify-center bg-muted ${post.platform === "youtube" ? "aspect-video w-full" : isVideo ? "aspect-[9/16] h-[min(70vh,640px)] max-w-full" : "aspect-square max-h-[420px] w-full"}`}>
         {post.mediaUrl ? (isVideo
-          ? <video src={`${post.mediaUrl}#t=0.1`} controls preload="metadata" className="h-full w-full object-contain" />
+          ? <video src={post.mediaUrl} controls playsInline preload="metadata" className="h-full w-full object-contain" />
           : <img src={post.mediaUrl} alt="" className="h-full w-full object-contain" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />)
           : <div className="grid place-items-center"><PostThumbnail src={null} /></div>}
       </div>

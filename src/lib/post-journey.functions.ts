@@ -64,17 +64,22 @@ export const getPostJourney = createServerFn({ method: "GET" })
     if (error) throw new Error(error.message);
     const ids = [...new Set((links ?? []).map((l) => l.conversation_id))].slice(0, 300);
     if (!ids.length) return { conversations: [] as JourneyConversation[], messages: [] as JourneyMessage[], runs: [] as AutomationRun[] };
-    const [convs, msgs, runs] = await Promise.all([
+    const loadMsgs = (cols: string) => context.supabase.from("messages").select(cols).in("conversation_id", ids).order("sent_at", { ascending: true }).limit(3000);
+    const msgBase = "id, conversation_id, direction, body, sender_name, sent_at, sent_by, post_external_id, external_id";
+    const [convs, msgsFirst, runs] = await Promise.all([
       context.supabase.from("conversations").select("id, platform, channel, external_user_name, status").in("id", ids),
-      context.supabase.from("messages").select("id, conversation_id, direction, body, sender_name, sent_at, sent_by, post_external_id, external_id, is_hidden").in("conversation_id", ids).order("sent_at", { ascending: true }).limit(3000),
+      loadMsgs(`${msgBase}, is_hidden`),
       context.supabase.from("automation_runs").select("id, rule_id, conversation_id, status, detail, created_at, run_key").eq("organization_id", data.organizationId).in("conversation_id", ids).order("created_at", { ascending: true }).limit(3000),
     ]);
+    let msgs = msgsFirst;
+    if (msgs.error && /is_hidden/.test(msgs.error.message)) msgs = await loadMsgs(msgBase);
     if (convs.error) throw new Error(convs.error.message);
     if (msgs.error) throw new Error(msgs.error.message);
     if (runs.error) throw new Error(runs.error.message);
+    type Raw = Omit<JourneyMessage, "manual" | "is_hidden"> & { sent_by: string | null; is_hidden?: boolean };
     return {
       conversations: (convs.data ?? []).map((c) => ({ id: c.id, platform: c.platform, channel: c.channel, name: c.external_user_name, status: c.status })) as JourneyConversation[],
-      messages: (msgs.data ?? []).map(({ sent_by, ...m }) => ({ ...m, manual: !!sent_by })) as JourneyMessage[],
+      messages: ((msgs.data ?? []) as unknown as Raw[]).map(({ sent_by, ...m }) => ({ ...m, is_hidden: !!m.is_hidden, manual: !!sent_by })) as JourneyMessage[],
       runs: (runs.data ?? []) as AutomationRun[],
     };
   });
