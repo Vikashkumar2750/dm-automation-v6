@@ -501,8 +501,7 @@ export const setCommentHidden = createServerFn({ method: "POST" })
     const commentUrl = `https://graph.facebook.com/v21.0/${encodeURIComponent(lastComment.external_id)}`;
     const response = await fetch(commentUrl, {
       method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ [hiddenField(conversation.platform)]: data.hidden, access_token: tokenRow.access_token }),
+      body: new URLSearchParams({ [hiddenField(conversation.platform)]: String(data.hidden), access_token: tokenRow.access_token }),
     });
     const result = (await response.json().catch(() => ({}))) as { error?: { message?: string } };
     if (!response.ok || result.error) {
