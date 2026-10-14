@@ -14,7 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useTenant } from "@/hooks/useTenant";
 import { moderateComment, replyToComment, setCommentHidden } from "@/lib/inbox.functions";
 import { canEditComment } from "@/lib/comment-moderation";
-import { getPostJourney, getSinglePostStats, type JourneyMessage } from "@/lib/post-journey.functions";
+import { getLivePostComments, getPostJourney, getSinglePostStats, type JourneyMessage } from "@/lib/post-journey.functions";
 
 export const Route = createFileRoute("/_authenticated/comments")({
   head: () => ({
@@ -158,8 +158,17 @@ function PostView({ orgId, post }: { orgId: string; post: SidebarPost }) {
   const [target, setTarget] = useState<string | null>(null);
   const [body, setBody] = useState("");
   const [mode, setMode] = useState<"public" | "private">("public");
+  const fetchLive = useServerFn(getLivePostComments);
+  const live = useQuery({
+    queryKey: ["post-journey", "live", post.externalPostId],
+    enabled: post.platform !== "youtube",
+    staleTime: 30_000,
+    queryFn: () => fetchLive({ data: { organizationId: orgId, socialAccountId: post.socialAccountId ?? null, platform: post.platform, externalPostId: post.externalPostId } }),
+  });
   const convs = (journey.data?.conversations ?? []).filter((c) => c.channel === "comment");
   const msgs = journey.data?.messages ?? [];
+  const known = new Set(msgs.map((m) => m.external_id).filter(Boolean));
+  const extra = (live.data ?? []).filter((c) => !known.has(c.id));
   const targetConv = convs.find((c) => c.id === target) ?? null;
   const send = useMutation({
     mutationFn: () => reply({ data: { conversationId: target!, body, mode: post.platform === "youtube" ? "public" : mode } }),
@@ -171,9 +180,15 @@ function PostView({ orgId, post }: { orgId: string; post: SidebarPost }) {
     <div className="grid min-w-0 gap-4 lg:h-full lg:min-h-0 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
       <div className="min-w-0 lg:min-h-0 lg:overflow-y-auto"><PostCard orgId={orgId} post={post} /></div>
       <div className="flex min-h-[420px] min-w-0 flex-col rounded-xl border lg:min-h-0">
-        <p className="border-b px-4 py-3 text-sm font-semibold">Comments ({convs.length})</p>
+        <p className="border-b px-4 py-3 text-sm font-semibold">Comments ({convs.length + extra.length})</p>
         <div className="min-h-0 flex-1 divide-y overflow-y-auto">
-          {journey.isLoading ? <Loader2 className="mx-auto my-4 size-5 animate-spin text-muted-foreground" /> : convs.length === 0 ? (
+          {extra.flatMap((c) => [{ ...c, reply: false }, ...c.replies.map((r) => ({ ...r, replies: [], reply: true }))]).map((c) => (
+            <div key={c.id} className={`px-4 py-2.5 text-sm ${c.reply ? "pl-9" : ""}`}>
+              <p className="flex flex-wrap items-center gap-1.5 text-xs"><span className="font-semibold">{c.author ?? "Commenter"}</span>{c.createdAt && <span className="text-muted-foreground">{new Date(c.createdAt).toLocaleDateString()} · {new Date(c.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>}</p>
+              <p className="mt-0.5 whitespace-pre-wrap break-words">{c.text}</p>
+            </div>
+          ))}
+          {journey.isLoading ? <Loader2 className="mx-auto my-4 size-5 animate-spin text-muted-foreground" /> : convs.length === 0 && extra.length === 0 ? (
             <EmptyState icon={MessageSquare} title="No comments linked yet" description="New comments on this post will show up here." />
           ) : convs.flatMap((c) => msgs
             .filter((m) => m.conversation_id === c.id && (m.direction === "inbound" || m.body.startsWith("[public reply] ")))
