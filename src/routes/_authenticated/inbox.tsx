@@ -330,7 +330,7 @@ function InboxPage() {
         actions={<GuideButton guide="meta-review" />}
       />
 
-      <div className="grid min-w-0 gap-4 lg:h-[calc(100dvh-12.5rem)] lg:min-h-[520px] lg:grid-cols-[340px_minmax(0,1fr)]">
+      <div className="grid min-w-0 gap-4 lg:h-[calc(100dvh-10.5rem)] lg:min-h-[520px] lg:grid-cols-[340px_minmax(0,1fr)]">
         {/* Conversation list */}
         <Panel bodyClassName="flex min-h-0 flex-1 flex-col p-0" className={cn("min-h-[480px] lg:min-h-0", selectedId && "hidden lg:flex")}>
           <div className="space-y-2 border-b px-4 py-3">
@@ -486,7 +486,7 @@ function InboxPage() {
                 </div>
               ) : null}
 
-              <div className="flex min-h-0 justify-center bg-muted/30 px-3 py-3 lg:flex-1">
+              <div className="flex min-h-0 justify-center bg-muted/30 px-3 py-2 lg:flex-1">
               <div className="flex h-[70vh] min-h-[380px] w-full max-w-[380px] flex-col overflow-hidden rounded-[2.25rem] border-[6px] border-neutral-800 bg-neutral-950 shadow-xl lg:h-full lg:min-h-0">
               <div className="mx-auto mt-1.5 h-4 w-24 shrink-0 rounded-full bg-neutral-800" />
               <div className="flex shrink-0 items-center gap-2 border-b border-neutral-800 px-4 py-2 text-xs font-semibold text-neutral-100">{contactLabel(selected)}</div>
