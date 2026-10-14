@@ -50,7 +50,7 @@ function CommentsPage() {
   );
 }
 
-export function PostCard({ orgId, post }: { orgId: string; post: SidebarPost }) {
+function PostCard({ orgId, post }: { orgId: string; post: SidebarPost }) {
   const fetchStats = useServerFn(getSinglePostStats);
   const stats = useQuery({
     queryKey: ["post-stats", post.externalPostId],
