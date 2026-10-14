@@ -108,8 +108,6 @@ function FilterChips<T extends string>({
   );
 }
 
-const BUTTON_TITLES = ["Send me the link", "Visit profile", "I followed ✅"];
-
 /** Split "[public reply] text" into a tag + the text the contact actually sees. */
 function describeMessage(body: string, outbound: boolean) {
   const match = body.match(/^\[(public reply|private reply)\]\s*/i);
