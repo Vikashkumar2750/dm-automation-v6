@@ -1183,7 +1183,7 @@ function AutomationsPage() {
             </Button>
           </div>
         </section>
-        <AutomationPreview draft={draft} />
+        <AutomationPreview draft={draft} orgId={orgId} selectedPostIds={draft.targetPostIds} />
         </div>
       </div>
       )}
