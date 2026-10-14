@@ -18,3 +18,19 @@ export function commentRequest(action: CommentAction, commentId: string, token: 
     },
   };
 }
+
+/** Field Meta uses to report a comment's hidden state: Facebook `is_hidden`, Instagram `hidden`. */
+export function hiddenField(platform: string) {
+  return platform === "facebook" ? "is_hidden" : "hidden";
+}
+
+/** Read-back check: Meta sometimes answers success without changing anything. */
+export function hideConfirmed(platform: string, readBack: Record<string, unknown> | null, wanted: boolean) {
+  if (!readBack || readBack["error"]) return false;
+  return readBack[hiddenField(platform)] === wanted;
+}
+
+/** A deleted comment can no longer be read; any readable id means it still exists. */
+export function deleteConfirmed(readBack: Record<string, unknown> | null) {
+  return !readBack || Boolean(readBack["error"]) || !readBack["id"];
+}

@@ -491,22 +491,25 @@ export const setCommentHidden = createServerFn({ method: "POST" })
     if (tokenRow?.access_token) tokenRow.access_token = (await (await import("@/lib/token-crypto.server")).readToken(tokenRow.access_token)) ?? "";
     if (!tokenRow?.access_token) throw new Error("no_token");
 
-    const response = await fetch(
-      `https://graph.facebook.com/v21.0/${lastComment.external_id}`,
-      {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          ...(conversation.platform === "facebook" ? { is_hidden: data.hidden } : { hide: data.hidden }),
-          access_token: tokenRow.access_token,
-        }),
-      },
-    );
-    const result = (await response.json()) as { error?: { message?: string } };
+    const { hiddenField, hideConfirmed } = await import("@/lib/comment-moderation");
+    const commentUrl = `https://graph.facebook.com/v21.0/${encodeURIComponent(lastComment.external_id)}`;
+    const response = await fetch(commentUrl, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ [hiddenField(conversation.platform)]: data.hidden, access_token: tokenRow.access_token }),
+    });
+    const result = (await response.json().catch(() => ({}))) as { error?: { message?: string } };
     if (!response.ok || result.error) {
       throw new Error(result.error?.message ?? "Meta rejected the request");
     }
-    return { ok: true };
+    // Confirm on Meta itself so we never report "hidden" when nothing changed.
+    const check = await fetch(`${commentUrl}?fields=id,${hiddenField(conversation.platform)}${conversation.platform === "facebook" ? ",can_hide" : ""}&access_token=${encodeURIComponent(tokenRow.access_token)}`)
+      .then((r) => r.json() as Promise<Record<string, unknown>>).catch(() => null);
+    if (!hideConfirmed(conversation.platform, check, data.hidden)) {
+      if (check && check["can_hide"] === false) throw new Error("Facebook does not allow hiding this comment (the Page's own comments cannot be hidden).");
+      throw new Error(`Meta accepted the request but the comment is still ${data.hidden ? "visible" : "hidden"}. Try again in a minute.`);
+    }
+    return { ok: true, hidden: data.hidden };
   });
 
 /** Moderation targets a stored message, never an arbitrary caller-supplied Meta ID. */
@@ -549,9 +552,15 @@ export const moderateComment = createServerFn({ method: "POST" })
     if (!token) throw new Error("no_token");
     const request = commentRequest(data.action, message.external_id, token, data.body);
     const response = await fetch(request.url, request.init);
-    const result = await response.json() as { success?: boolean; error?: { code?: number } } | boolean;
+    const result = await response.json().catch(() => ({})) as { success?: boolean; error?: { code?: number } } | boolean;
     if (!response.ok || result === false || (typeof result === "object" && (result.error || result.success === false))) {
       throw new Error("Meta could not complete this action. Check the comment still exists and the connected account has comment permissions.");
+    }
+    if (data.action === "delete") {
+      const { deleteConfirmed } = await import("@/lib/comment-moderation");
+      const check = await fetch(`${request.url}?fields=id&access_token=${encodeURIComponent(token)}`)
+        .then((r) => r.json() as Promise<Record<string, unknown>>).catch(() => null);
+      if (!deleteConfirmed(check)) throw new Error("Meta accepted the request but the comment still exists on the post. Try again in a minute.");
     }
     const body = data.action === "delete" ? "[deleted comment]" : `[public reply] ${data.body}`;
     const { error: saveError } = await supabaseAdmin.from("messages")

@@ -289,7 +289,7 @@ function InboxPage() {
     },
     onSuccess: (_r, v) => {
       if (typeof v !== "boolean") setHiddenIds((p) => ({ ...p, [v.messageId]: v.hidden }));
-      toast.success((typeof v === "boolean" ? v : v.hidden) ? "Comment hidden on the post." : "Comment visible again on the post.");
+      toast.success((typeof v === "boolean" ? v : v.hidden) ? "Comment hidden — the public can't see it. The commenter, their friends and Page admins still can." : "Comment visible again on the post.");
     },
     onError: commentError,
   });
