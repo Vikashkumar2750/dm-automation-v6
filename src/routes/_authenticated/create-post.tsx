@@ -89,6 +89,7 @@ function CreatePostPage() {
   const [platformFilter, setPlatformFilter] = useState<"all" | "instagram" | "facebook" | "youtube">("all");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
+  const [range, setRange] = useState<"all" | "7" | "30" | "custom">("all");
 
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<ComposerDraft | null>(null);
@@ -220,11 +221,35 @@ function CreatePostPage() {
               <option value="facebook">Facebook</option>
               <option value="youtube">YouTube</option>
             </select>
-            <Input type="date" aria-label="From date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="h-8 w-36 text-xs" />
-            <span className="text-xs text-muted-foreground">to</span>
-            <Input type="date" aria-label="To date" value={toDate} min={fromDate || undefined} onChange={(e) => setToDate(e.target.value)} className="h-8 w-36 text-xs" />
-            {(fromDate || toDate || platformFilter !== "all") && (
-              <Button size="sm" variant="ghost" onClick={() => { setFromDate(""); setToDate(""); setPlatformFilter("all"); }}>Clear</Button>
+            <select
+              aria-label="Date range"
+              value={range}
+              onChange={(e) => {
+                const v = e.target.value as typeof range;
+                setRange(v);
+                if (v === "all") { setFromDate(""); setToDate(""); }
+                else if (v !== "custom") {
+                  const d = new Date(Date.now() - (v === "7" ? 7 : 30) * 86400000);
+                  setFromDate(d.toISOString().slice(0, 10));
+                  setToDate("");
+                }
+              }}
+              className="h-8 rounded-md border bg-background px-2 text-xs"
+            >
+              <option value="all">Maximum (all time)</option>
+              <option value="7">Last 7 days</option>
+              <option value="30">Last 30 days</option>
+              <option value="custom">Custom range</option>
+            </select>
+            {range === "custom" && (
+              <>
+                <Input type="date" aria-label="From date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="h-8 w-36 text-xs" />
+                <span className="text-xs text-muted-foreground">to</span>
+                <Input type="date" aria-label="To date" value={toDate} min={fromDate || undefined} onChange={(e) => setToDate(e.target.value)} className="h-8 w-36 text-xs" />
+              </>
+            )}
+            {(fromDate || toDate || platformFilter !== "all" || range !== "all") && (
+              <Button size="sm" variant="ghost" onClick={() => { setFromDate(""); setToDate(""); setRange("all"); setPlatformFilter("all"); }}>Clear</Button>
             )}
           </div>
         }
