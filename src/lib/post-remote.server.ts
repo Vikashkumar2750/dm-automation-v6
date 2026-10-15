@@ -138,7 +138,7 @@ export async function fetchPostStats(admin: AdminClient, row: RemotePostRow): Pr
   }
 }
 
-export type LiveComment = { id: string; text: string; author: string | null; createdAt: string | null; replies: { id: string; text: string; author: string | null; createdAt: string | null }[] };
+export type LiveComment = { id: string; text: string; author: string | null; createdAt: string | null; hidden?: boolean; replies: { id: string; text: string; author: string | null; createdAt: string | null; hidden?: boolean }[] };
 
 /** Read-only: comments straight from Instagram / Facebook for one post (display only). */
 export async function fetchPostComments(admin: AdminClient, row: RemotePostRow): Promise<{ comments: LiveComment[]; error: string | null }> {
@@ -147,9 +147,9 @@ export async function fetchPostComments(admin: AdminClient, row: RemotePostRow):
   if (!token) return { comments: [], error: "Reconnect this account to load older comments." };
   const t = encodeURIComponent(token);
   let url: string | null = row.platform === "instagram"
-    ? `${GRAPH}/${row.external_post_id}/comments?fields=id,text,username,timestamp,replies{id,text,username,timestamp}&limit=100&access_token=${t}`
+    ? `${GRAPH}/${row.external_post_id}/comments?fields=id,text,username,timestamp,hidden,replies{id,text,username,timestamp,hidden}&limit=100&access_token=${t}`
     : `${GRAPH}/${row.external_post_id}/comments?fields=id,message,from,created_time,comments{id,message,from,created_time}&filter=toplevel&limit=100&access_token=${t}`;
-  const map = (c: any) => ({ id: String(c.id), text: c.text ?? c.message ?? "", author: c.username ?? c.from?.name ?? null, createdAt: c.timestamp ?? c.created_time ?? null });
+  const map = (c: any) => ({ id: String(c.id), text: c.text ?? c.message ?? "", author: c.username ?? c.from?.name ?? null, createdAt: c.timestamp ?? c.created_time ?? null, hidden: c.hidden === true });
   const out: LiveComment[] = [];
   try {
     for (let page = 0; url && page < 10; page++) {
