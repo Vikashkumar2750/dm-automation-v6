@@ -352,7 +352,7 @@ function InboxPage() {
               placeholder="Search name or message…"
               className="h-8 w-full rounded-md border bg-background px-2.5 text-xs outline-none focus:ring-2 focus:ring-ring"
             />
-            <AccountSelect orgId={orgId} platform={platform} value={accountId} onChange={setAccountId} />
+            <AccountSelect orgId={orgId ?? null} platform={platform} value={accountId} onChange={setAccountId} />
             <FilterChips
               value={platform}
               onChange={(p) => { setPlatform(p); setAccountId("all"); }}
