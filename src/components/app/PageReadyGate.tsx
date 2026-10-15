@@ -25,8 +25,12 @@ export function PageReadyGate({ ready = true, children }: { ready?: boolean; chi
   );
   const [skeletonPath, setSkeletonPath] = useState<string | null>(null);
 
-  const revealed = revealedPath === pathname || (ready && shownPaths.has(pathname));
+  // After the first page of this tab is shown, moving to another section opens it
+  // straight away; each page then shows its own loading state for slow data.
+  const revealed =
+    revealedPath === pathname || (ready && (shownPaths.has(pathname) || shownPaths.size > 0));
   const settled = ready && pendingFirstLoads === 0;
+
 
   useEffect(() => {
     if (revealed) {
