@@ -15,6 +15,8 @@ export const Route = createFileRoute("/_authenticated/invite/$token")({
       { name: "description", content: "Join a workspace you were invited to." },
       { property: "og:title", content: "Workspace invitation — AutoDM by Techaasvik" },
       { property: "og:description", content: "Join a workspace you were invited to." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: InvitePage,

@@ -38,6 +38,8 @@ export const Route = createFileRoute("/_authenticated/team")({
         property: "og:description",
         content: "Invite teammates and control what each role can do.",
       },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: TeamPage,

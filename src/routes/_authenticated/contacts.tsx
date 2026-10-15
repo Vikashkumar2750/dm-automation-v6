@@ -116,7 +116,7 @@ function ContactsPage() {
         description="Your CRM: tag people, store email/phone and custom fields, and save segments."
         actions={
           <div className="flex min-w-0 flex-wrap gap-2">
-            <PlatformAccountFilter orgId={orgId ?? null} platform={platform} onPlatformChange={setPlatform} accountId={accountId} onAccountChange={setAccountId} />
+            <PlatformAccountFilter orgId={orgId ?? null} platform={platform} onPlatformChange={(p) => { setPlatform(p); setFilter((f) => ({ ...f, platform: undefined })); }} accountId={accountId} onAccountChange={setAccountId} />
             <GuideButton guide="contacts" />
             <Button variant="outline" onClick={exportCsv} disabled={visible.length === 0}><Download className="size-4" /> Export CSV</Button>
             <Button asChild variant="outline"><Link to="/inbox">Open inbox</Link></Button>
@@ -129,7 +129,7 @@ function ContactsPage() {
           <span className="text-xs text-muted-foreground">Saved segments:</span>
           {crm.data!.segments.map((s) => (
             <span key={s.id} className="inline-flex items-center rounded-full border border-border text-sm">
-              <button className="px-3 py-1 hover:text-primary" onClick={() => setFilter(s.filter as SegmentFilter)}>{s.name}</button>
+              <button className="px-3 py-1 hover:text-primary" onClick={() => { const saved = s.filter as SegmentFilter; setFilter(saved); setPlatform(saved.platform ?? "all"); setAccountId("all"); }}>{s.name}</button>
               <button aria-label={`Delete ${s.name}`} className="pr-2 text-muted-foreground hover:text-destructive"
                 onClick={() => delSeg({ data: { organizationId: orgId!, id: s.id } }).then(refresh)}><X className="size-3.5" /></button>
             </span>

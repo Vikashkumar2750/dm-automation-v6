@@ -64,6 +64,8 @@ export const Route = createFileRoute("/_authenticated/automations")({
         property: "og:description",
         content: "Keyword rules that auto-reply to DMs and comments with safety limits.",
       },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   validateSearch: (s: Record<string, unknown>): { template?: string; new?: boolean } => ({
