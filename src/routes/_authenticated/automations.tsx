@@ -4,6 +4,7 @@ import { getPlanUsage } from "@/lib/plan-limits.functions";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { MESSAGE_TEMPLATES } from "@/lib/rule-templates";
 import { DASH_TEMPLATES } from "@/lib/dashboard-templates";
+import { uploadPostMedia } from "@/lib/media-upload";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { checkPolicy } from "@/lib/trust-safety";
 import { useServerFn } from "@tanstack/react-start";
@@ -267,6 +268,7 @@ function toDraft(rule: AutomationRule): Draft {
 function AutomationsPage() {
   const { activeOrg } = useTenant();
   const orgId = activeOrg?.id;
+  const [uploadingAttachment, setUploadingAttachment] = useState(false);
   const queryClient = useQueryClient();
 
   const fetchRules = useServerFn(listAutomationRules);
@@ -939,15 +941,42 @@ function AutomationsPage() {
                       </Select>
                     </div>
                     <div className="grid gap-2">
-                      <Label>Attachment URL</Label>
+                      <Label>Attachment URL or upload</Label>
                       <Input
-                        value={draft.dmAttachmentUrl}
-                        disabled={draft.dmAttachmentType === "none"}
+                        value={draft.dmAttachmentUrl.startsWith("storage:") ? "Uploaded file ✓" : draft.dmAttachmentUrl}
+                        disabled={draft.dmAttachmentType === "none" || draft.dmAttachmentUrl.startsWith("storage:")}
                         placeholder="https://your-site.com/catalogue.pdf"
                         onChange={(e) =>
                           setDraft({ ...draft, dmAttachmentUrl: e.target.value })
                         }
                       />
+                      <div className="flex items-center gap-2">
+                        <label className={`inline-flex cursor-pointer items-center gap-1 rounded-md border px-2 py-1 text-xs ${draft.dmAttachmentType === "none" || uploadingAttachment ? "pointer-events-none opacity-50" : "hover:bg-muted"}`}>
+                          {uploadingAttachment && <Loader2 className="size-3 animate-spin" />}Upload file
+                          <input
+                            type="file"
+                            className="hidden"
+                            accept={draft.dmAttachmentType === "image" ? "image/*" : draft.dmAttachmentType === "video" ? "video/mp4,video/*" : undefined}
+                            onChange={async (e) => {
+                              const file = e.target.files?.[0];
+                              e.target.value = "";
+                              if (!file || !orgId) return;
+                              if (file.size > 25 * 1024 * 1024) { toast.error("File must be under 25 MB (Instagram limit)."); return; }
+                              setUploadingAttachment(true);
+                              try {
+                                const ref = await uploadPostMedia(orgId, file);
+                                setDraft((d) => ({ ...d, dmAttachmentUrl: ref }));
+                                toast.success("File uploaded");
+                              } catch (err) {
+                                toast.error(err instanceof Error ? err.message : "Upload failed");
+                              } finally { setUploadingAttachment(false); }
+                            }}
+                          />
+                        </label>
+                        {draft.dmAttachmentUrl.startsWith("storage:") && (
+                          <button type="button" className="text-xs text-muted-foreground hover:text-foreground" onClick={() => setDraft({ ...draft, dmAttachmentUrl: "" })}>Remove</button>
+                        )}
+                      </div>
                     </div>
                   </div>
                   <p className="text-xs text-muted-foreground">
