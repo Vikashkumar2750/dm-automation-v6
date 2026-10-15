@@ -65,6 +65,15 @@ function planLabel(plan: string) {
 }
 
 async function ensureBootstrap(user: User) {
+  // Returning users already have a profile and workspace: one quick check, no writes.
+  const { data: existing } = await supabase.from("profiles").select("id").eq("id", user.id).maybeSingle();
+  if (existing) {
+    const { count: memberCount } = await supabase
+      .from("organization_members")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id);
+    if ((memberCount ?? 0) > 0) return;
+  }
   const fullName =
     (user.user_metadata?.["full_name"] as string | undefined) ??
     (user.user_metadata?.["name"] as string | undefined) ??
@@ -125,13 +134,15 @@ export function useTenant() {
         .select("id, email, full_name, avatar_url")
         .eq("id", user!.id)
         .maybeSingle();
+      // A brand-new workspace may have been created just now; refresh the list.
+      void queryClient.invalidateQueries({ queryKey: ["organizations", user!.id] });
       return data;
     },
   });
 
   const orgs = useQuery({
     queryKey: ["organizations", user?.id],
-    enabled: !!user && profile.isSuccess,
+    enabled: !!user,
     staleTime: 60_000,
     queryFn: async (): Promise<Organization[]> => {
       const { data } = await supabase
