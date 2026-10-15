@@ -3,6 +3,7 @@ import { PostPicker } from "@/components/app/PostPicker";
 import { getPlanUsage } from "@/lib/plan-limits.functions";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { MESSAGE_TEMPLATES } from "@/lib/rule-templates";
+import { DASH_TEMPLATES } from "@/lib/dashboard-templates";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { checkPolicy } from "@/lib/trust-safety";
 import { useServerFn } from "@tanstack/react-start";
@@ -285,8 +286,24 @@ function AutomationsPage() {
   const navigateSelf = Route.useNavigate();
   useEffect(() => {
     if (!search.new && !search.template) return;
+    const d = DASH_TEMPLATES.find((x) => x.key === search.template);
     const t = MESSAGE_TEMPLATES.find((x) => x.label === search.template);
-    setDraft(t ? { ...emptyDraft, name: t.label, responseText: t.text, responseVariations: t.variations.join("\n"), commentReplyText: t.comment, commentReplyVariations: t.commentVariations.join("\n") } : { ...emptyDraft });
+    if (d) {
+      setDraft({
+        ...emptyDraft,
+        name: d.title,
+        trigger: d.trigger,
+        matchType: d.matchType,
+        keywords: d.keywords,
+        action: d.trigger === "comment_received" ? "comment_private_reply" : "reply_dm",
+        responseText: d.dmText,
+        commentReplyText: d.comment ?? "",
+        dmButtonLabel: d.button.replace(/\s*→$/, ""),
+        requireFollow: Boolean(d.requireFollow),
+      });
+    } else {
+      setDraft(t ? { ...emptyDraft, name: t.label, responseText: t.text, responseVariations: t.variations.join("\n"), commentReplyText: t.comment, commentReplyVariations: t.commentVariations.join("\n") } : { ...emptyDraft });
+    }
     void navigateSelf({ search: {}, replace: true });
   }, [search.new, search.template, navigateSelf]);
   const editing = Boolean(draft);
