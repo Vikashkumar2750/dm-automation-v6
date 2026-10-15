@@ -54,7 +54,7 @@ export type AutomationRun = {
   detail: string | null;
   created_at: string;
   run_key?: string | null;
-  contact?: { name: string | null; platform: string; channel: string } | null;
+  contact?: { name: string | null; platform: string; channel: string; socialAccountId?: string | null } | null;
 };
 
 const SELECT =

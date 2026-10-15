@@ -3,6 +3,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { ArrowLeft, ChevronRight, Zap } from "lucide-react";
 
+import { useState } from "react";
+import { PlatformAccountFilter, matchesPlatformAccount } from "@/components/app/PlatformAccountFilter";
 import { AppShell } from "@/components/app/AppShell";
 import { EmptyState, PageHeader, Panel, StatusBadge } from "@/components/app/primitives";
 import { Button } from "@/components/ui/button";
@@ -46,6 +48,8 @@ function ActivityPage() {
   const fetchRules = useServerFn(listAutomationRules);
   const { source, filter } = Route.useSearch();
   const navigate = Route.useNavigate();
+  const [platform, setPlatform] = useState("all");
+  const [accountId, setAccountId] = useState("all");
 
   const runsQuery = useQuery({
     queryKey: ["automation-runs-all", orgId, source],
@@ -67,7 +71,7 @@ function ActivityPage() {
   const rules = rulesQuery.data ?? [];
   const ruleName = (id: string | null) =>
     !id ? "Safety settings" : (rules.find((r) => r.id === id)?.name ?? "Deleted rule");
-  const journeys = filterActivityJourneys(activityJourneys(runsQuery.data ?? []), filter);
+  const journeys = filterActivityJourneys(activityJourneys((runsQuery.data ?? []).filter((r) => matchesPlatformAccount({ platform: r.contact?.platform, social_account_id: r.contact?.socialAccountId }, platform, accountId))), filter);
   const entries = journeys.flatMap((journey) => journey.groups.map((group) => ({ group, journey })));
   const stepCount = entries.reduce((count, { group }) => count + group.steps.length, 0);
 
@@ -81,7 +85,7 @@ function ActivityPage() {
           title="Automation activity"
           description="Comment triggers, button taps, follow checks and link opens."
         />
-        <div className="flex gap-2">{(["flows", "rules", "system"] as const).map((s) => <Button key={s} variant={source === s ? "default" : "outline"} onClick={() => navigate({ search: { source: s, filter } })}>{s === "flows" ? "FLOW" : s === "rules" ? "Rule" : "System / safety"}</Button>)}</div>
+        <div className="flex flex-wrap items-center justify-between gap-2"><div className="flex gap-2">{(["flows", "rules", "system"] as const).map((s) => <Button key={s} variant={source === s ? "default" : "outline"} onClick={() => navigate({ search: { source: s, filter } })}>{s === "flows" ? "FLOW" : s === "rules" ? "Rule" : "System / safety"}</Button>)}</div><PlatformAccountFilter orgId={orgId ?? null} platforms={["instagram", "facebook"]} platform={platform} onPlatformChange={setPlatform} accountId={accountId} onAccountChange={setAccountId} /></div>
         <Panel
           title={`${journeys.length} automations · ${entries.length} entries · ${stepCount} steps`}
           bodyClassName="p-0"
