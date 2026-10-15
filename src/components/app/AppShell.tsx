@@ -145,7 +145,7 @@ function Sidebar({ pathname }: { pathname: string }) {
 
       <nav className="flex-1 overflow-y-auto px-3 py-4">
         <div className="space-y-1">
-          {primaryNav.map((item) => (
+          {primaryNav.filter((item) => item.to !== "/workflows" || workflowsOn).map((item) => (
             <NavLink key={item.to} item={item} active={pathname.startsWith(item.to)} />
           ))}
         </div>

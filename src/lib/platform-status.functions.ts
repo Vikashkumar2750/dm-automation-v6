@@ -13,8 +13,9 @@ export const getPlatformStatus = createServerFn({ method: "GET" }).handler(async
     return {
       registrationBlocked: flags["registration_blocked"] === true,
       maintenanceMode: flags["maintenance_mode"] === true,
+      workflowsEnabled: flags["workflows_enabled"] === true,
     };
   } catch {
-    return { registrationBlocked: false, maintenanceMode: false };
+    return { registrationBlocked: false, maintenanceMode: false, workflowsEnabled: false };
   }
 });

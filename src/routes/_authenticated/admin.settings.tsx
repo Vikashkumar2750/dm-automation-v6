@@ -33,6 +33,7 @@ export const Route = createFileRoute("/_authenticated/admin/settings")({
 const FLAGS: { key: string; label: string; description: string }[] = [
   { key: "maintenance_mode", label: "Maintenance mode", description: "Everyone except super admins sees a maintenance page." },
   { key: "registration_blocked", label: "Block new registrations", description: "Sign-up form is closed for new users." },
+  { key: "workflows_enabled", label: "Workflows section", description: "Show the post-wise Workflows page to all workspaces. Off by default." },
   { key: "ai_assistant", label: "AI assistant", description: "Caption and reply generation." },
   { key: "white_label", label: "White-label branding", description: "Agency plan branding." },
   { key: "self_serve_billing", label: "Self-serve billing", description: "Online plan upgrades." },
