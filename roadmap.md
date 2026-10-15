@@ -130,3 +130,7 @@ Real Meta + YouTube credentials are available when we reach OAuth phases.
 - [x] Account picker: Inbox, Comments, Workflows, Calendar, Contacts, Analytics
 - [x] Account picker: Sales & Revenue, Team Desk, Growth (AI Assistant not account-based)
 - [x] Trial Reel option removed from Create Post
+
+- [x] Platform + account filters across pages, dashboard templates/new automation, guide cleanup
+- [x] Per-account safety limits with Super Admin max values; per-account usage table
+- [ ] Verify per-account limits and filters with real connected accounts (needs live data)
