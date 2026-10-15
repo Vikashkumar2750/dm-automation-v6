@@ -1,3 +1,4 @@
+import { AccountSelect } from "@/components/app/AccountSelect";
 import { csvCell } from "@/lib/csv-safe";
 import { contactLabel } from "@/lib/contact-name";
 import { createFileRoute } from "@tanstack/react-router";
@@ -51,7 +52,8 @@ function TeamDeskPage() {
   const orgId = activeOrg?.id ?? null;
   const fetchDesk = useServerFn(getTeamDesk);
   const fetchTeam = useServerFn(listTeam);
-  const desk = useQuery({ queryKey: ["team-desk", orgId], enabled: !!orgId, refetchInterval: 30_000, queryFn: () => fetchDesk({ data: { organizationId: orgId! } }) });
+  const [accountId, setAccountId] = useState("all");
+  const desk = useQuery({ queryKey: ["team-desk", orgId, accountId], enabled: !!orgId, refetchInterval: 30_000, queryFn: () => fetchDesk({ data: { organizationId: orgId!, ...(accountId !== "all" ? { socialAccountId: accountId } : {}) } }) });
   const team = useQuery({ queryKey: ["team", orgId], enabled: !!orgId, queryFn: () => fetchTeam({ data: { organizationId: orgId! } }) });
   const names = useMemo(() => Object.fromEntries((team.data ?? []).map((m) => [m.user_id, m.name || m.email])), [team.data]);
   const reviewer = canReview(desk.data?.role);
@@ -59,7 +61,7 @@ function TeamDeskPage() {
 
   return (
     <AppShell>
-      <PageHeader title="Team desk" description="Shared inbox, approvals, client reports and integrations for teams and agencies." actions={<GuideButton guide="team-desk" />} />
+      <PageHeader title="Team desk" description="Shared inbox, approvals, client reports and integrations for teams and agencies." actions={<div className="flex flex-wrap items-center gap-2"><AccountSelect orgId={orgId ?? null} value={accountId} onChange={setAccountId} className="h-9 w-auto max-w-[240px]" /><GuideButton guide="team-desk" /></div>} />
       {!orgId || !desk.data ? (
         <p className="text-sm text-muted-foreground">Loading…</p>
       ) : (

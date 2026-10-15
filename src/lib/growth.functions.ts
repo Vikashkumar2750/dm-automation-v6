@@ -19,17 +19,18 @@ const DAY = 86_400_000;
 /** All growth insights for one workspace (read-only, RLS as the user). */
 export const getGrowthOverview = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => orgInput.parse(d))
+  .inputValidator((d: unknown) => orgInput.extend({ socialAccountId: z.string().uuid().optional() }).parse(d))
   .handler(async ({ data, context }) => {
     const sb = context.supabase;
     const org = data.organizationId;
     const now = Date.now();
     const since = (ms: number) => new Date(now - ms).toISOString();
+    const accFilter = data.socialAccountId ? `social_account_id.eq.${data.socialAccountId}` : "id.not.is.null";
     const [convs, runs, rev, posts, competitors, accounts] = await Promise.all([
-      sb.from("conversations").select("id").eq("organization_id", org).limit(5000),
+      sb.from("conversations").select("id").eq("organization_id", org).or(accFilter).limit(5000),
       sb.from("automation_runs").select("status, created_at").eq("organization_id", org).gte("created_at", since(30 * DAY)).limit(10000),
       sb.from("revenue_events").select("kind, created_at").eq("organization_id", org).gte("created_at", since(30 * DAY)).limit(10000),
-      sb.from("posts").select("published_at, status").eq("organization_id", org).eq("status", "published").gte("published_at", since(28 * DAY)).limit(2000),
+      sb.from("posts").select("published_at, status").eq("organization_id", org).or(accFilter).eq("status", "published").gte("published_at", since(28 * DAY)).limit(2000),
       sb.from("growth_competitors").select("*").eq("organization_id", org).order("created_at"),
       sb.from("social_accounts").select("id").eq("organization_id", org),
     ]);

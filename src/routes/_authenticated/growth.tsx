@@ -1,3 +1,4 @@
+import { AccountSelect } from "@/components/app/AccountSelect";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -36,13 +37,14 @@ function GrowthPage() {
   const { activeOrg } = useTenant();
   const orgId = activeOrg?.id ?? null;
   const fetchOverview = useServerFn(getGrowthOverview);
-  const q = useQuery({ queryKey: ["growth", orgId], enabled: !!orgId, refetchInterval: 300_000, queryFn: () => fetchOverview({ data: { organizationId: orgId! } }) });
+  const [accountId, setAccountId] = useState("all");
+  const q = useQuery({ queryKey: ["growth", orgId, accountId], enabled: !!orgId, refetchInterval: 300_000, queryFn: () => fetchOverview({ data: { organizationId: orgId!, ...(accountId !== "all" ? { socialAccountId: accountId } : {}) } }) });
   const role = activeOrg?.role;
   const manager = role === "owner" || role === "admin" || role === "manager";
 
   return (
     <AppShell>
-      <PageHeader title="Growth insights" description="When to post, what to post, and where your DM funnel leaks." actions={<GuideButton guide="growth" />} />
+      <PageHeader title="Growth insights" description="When to post, what to post, and where your DM funnel leaks." actions={<div className="flex flex-wrap items-center gap-2"><AccountSelect orgId={orgId ?? null} value={accountId} onChange={setAccountId} className="h-9 w-auto max-w-[240px]" /><GuideButton guide="growth" /></div>} />
       {!orgId || !q.data ? (
         <p className="text-sm text-muted-foreground">{q.error ? (q.error as Error).message : "Loading…"}</p>
       ) : (

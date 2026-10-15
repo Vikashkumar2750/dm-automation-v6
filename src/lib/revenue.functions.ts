@@ -24,7 +24,7 @@ async function assertPaymentAdmin(ctx: Ctx, organizationId: string) {
 /** Everything the Revenue page shows. Keys are never returned, only whether they exist. */
 export const getRevenue = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ organizationId: org }).parse(d))
+  .inputValidator((d: unknown) => z.object({ organizationId: org, socialAccountId: z.string().uuid().optional() }).parse(d))
   .handler(async ({ data, context }) => {
     const ctx = context as Ctx;
     const sb = ctx.supabase;
@@ -36,7 +36,7 @@ export const getRevenue = createServerFn({ method: "GET" })
       sb.from("coupon_campaigns").select("*").eq("organization_id", o).order("created_at"),
       sb.from("revenue_settings").select("*").eq("organization_id", o).maybeSingle(),
       sb.from("payment_links").select("id, product_id, platform, external_user_id, provider, url, amount_paise, status, nudged_at, paid_at, created_at")
-        .eq("organization_id", o).order("created_at", { ascending: false }).limit(100),
+        .eq("organization_id", o).or(data.socialAccountId ? `social_account_id.eq.${data.socialAccountId}` : "id.not.is.null").order("created_at", { ascending: false }).limit(100),
       sb.from("revenue_events").select("kind, amount_paise, ref_id").eq("organization_id", o).gte("created_at", since).limit(10000),
       sb.from("automation_runs").select("id", { count: "exact", head: true }).eq("organization_id", o).eq("status", "sent").gte("created_at", since),
       sb.from("delivery_page_leads").select("id, delivery_page_id, answers, created_at").eq("organization_id", o).order("created_at", { ascending: false }).limit(200),

@@ -128,5 +128,5 @@ Real Meta + YouTube credentials are available when we reach OAuth phases.
 - [ ] Shared "Account" selector (All / one connected account) persisted per workspace, reused by Inbox, Comments, Calendar, Contacts, Sales & Revenue, Team desk, Analytics, AI Assistant, Account Health, Growth insights.
 - [ ] Account badge on every inbox row/comment/post + "Replying as @handle" on reply boxes.
 - [x] Account picker: Inbox, Comments, Workflows, Calendar, Contacts, Analytics
-- [ ] Account picker: Sales & Revenue, Team Desk, AI Assistant, Growth (needs per-page data review)
+- [x] Account picker: Sales & Revenue, Team Desk, Growth (AI Assistant not account-based)
 - [x] Trial Reel option removed from Create Post
