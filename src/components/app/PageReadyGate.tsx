@@ -19,7 +19,7 @@ const shownPaths = new Set<string>();
 export function PageReadyGate({ ready = true, children }: { ready?: boolean; children: ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   // Only first loads count: queries that already have data refresh silently.
-  const pendingFirstLoads = useIsFetching({ predicate: (q) => q.state.data === undefined });
+  const pendingFirstLoads = useIsFetching({ predicate: (q) => q.state.data === undefined && !q.meta?.["background"] });
   const [revealedPath, setRevealedPath] = useState<string | null>(() =>
     ready && shownPaths.has(pathname) ? pathname : null,
   );

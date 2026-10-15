@@ -91,9 +91,11 @@ function CalendarPage() {
 
   const remoteQuery = useQuery({
     queryKey: ["remote-posts", orgId],
+    meta: { background: true },
+    gcTime: 30 * 60_000,
     queryFn: () => fetchRemote({ data: { organizationId: orgId } }),
     enabled: Boolean(orgId),
-    staleTime: 60_000,
+    staleTime: 10 * 60_000,
   });
 
   // Flush anything whose scheduled time has already passed whenever the page opens.
@@ -188,7 +190,7 @@ function CalendarPage() {
           </div>
         }
       >
-        {postsQuery.isLoading || remoteQuery.isLoading ? (
+        {postsQuery.isLoading ? (
           <div className="flex items-center justify-center py-16">
             <Loader2 className="size-5 animate-spin text-muted-foreground" />
           </div>
