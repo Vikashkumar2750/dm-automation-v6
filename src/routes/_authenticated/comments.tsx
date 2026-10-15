@@ -8,7 +8,6 @@ import { AppShell } from "@/components/app/AppShell";
 import { EmptyState, PageHeader, PlatformBadge } from "@/components/app/primitives";
 import { PostThumbnail } from "@/components/app/PostThumbnail";
 import { PostSidebar, type SidebarPost } from "@/components/app/PostSidebar";
-import { GuideButton } from "@/components/app/GuideButton";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useTenant } from "@/hooks/useTenant";
