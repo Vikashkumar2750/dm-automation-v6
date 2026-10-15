@@ -253,6 +253,7 @@ export async function runAutomations(admin: AdminClient, ctx: AutomationContext)
       .from("webhook_events")
       .select("id", { count: "exact", head: true })
       .eq("organization_id", ctx.organizationId)
+      .or(ctx.socialAccountId ? `social_account_id.eq.${ctx.socialAccountId}` : "id.not.is.null")
       .gte("received_at", minuteAgo);
     if ((burst ?? 0) >= settings.viral_threshold_per_minute) {
       const until = new Date(
@@ -271,28 +272,23 @@ export async function runAutomations(admin: AdminClient, ctx: AutomationContext)
     }
   }
 
-  // Quota: org-wide hourly and daily send caps.
+  // Quota: hourly and daily send caps, counted per connected account (clamped to Super Admin max values).
   const hourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
   const dayStart = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-  const [{ count: sentHour }, { count: sentDay }] = await Promise.all([
-    admin
-      .from("automation_runs")
-      .select("id", { count: "exact", head: true })
-      .eq("organization_id", ctx.organizationId)
-      .eq("status", "sent")
-      .gte("created_at", hourAgo),
-    admin
-      .from("automation_runs")
-      .select("id", { count: "exact", head: true })
-      .eq("organization_id", ctx.organizationId)
-      .eq("status", "sent")
-      .gte("created_at", dayStart),
+  const acctSafety = await import("@/lib/account-safety.server");
+  const limits = await acctSafety.accountSafetyLimits(admin, ctx.organizationId, ctx.socialAccountId, {
+    hourly: settings.hourly_send_limit, daily: settings.daily_send_limit, perContact: settings.per_contact_daily_limit,
+  });
+  settings.per_contact_daily_limit = limits.perContact;
+  const [sentHour, sentDay] = await Promise.all([
+    acctSafety.countSentForAccount(admin, ctx.organizationId, ctx.socialAccountId, hourAgo),
+    acctSafety.countSentForAccount(admin, ctx.organizationId, ctx.socialAccountId, dayStart),
   ]);
-  if ((sentHour ?? 0) >= settings.hourly_send_limit) {
+  if (sentHour >= limits.hourly) {
     await log(admin, ctx, null, "skipped", "org_hourly_limit");
     return;
   }
-  if ((sentDay ?? 0) >= settings.daily_send_limit) {
+  if (sentDay >= limits.daily) {
     await log(admin, ctx, null, "skipped", "org_daily_limit");
     return;
   }
