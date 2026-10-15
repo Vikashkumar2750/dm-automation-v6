@@ -1,0 +1,1 @@
+ALTER TABLE public.trust_settings ADD COLUMN IF NOT EXISTS account_limits jsonb NOT NULL DEFAULT '{}'::jsonb;

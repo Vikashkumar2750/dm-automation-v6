@@ -2425,18 +2425,21 @@ export type Database = {
       }
       trust_settings: {
         Row: {
+          account_limits: Json
           last_guard_action_at: string | null
           organization_id: string
           predictive_guard: boolean
           updated_at: string
         }
         Insert: {
+          account_limits?: Json
           last_guard_action_at?: string | null
           organization_id: string
           predictive_guard?: boolean
           updated_at?: string
         }
         Update: {
+          account_limits?: Json
           last_guard_action_at?: string | null
           organization_id?: string
           predictive_guard?: boolean
