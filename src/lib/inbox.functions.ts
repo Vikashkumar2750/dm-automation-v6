@@ -501,11 +501,9 @@ export const setCommentHidden = createServerFn({ method: "POST" })
 
     const { hiddenField, hideConfirmed } = await import("@/lib/comment-moderation");
     const commentUrl = `https://graph.facebook.com/v21.0/${encodeURIComponent(lastComment.external_id)}`;
-    const response = await fetch(commentUrl, {
-      method: "POST",
-      // Instagram's write parameter is `hide` (read-back field is `hidden`); Facebook uses `is_hidden` for both.
-      body: new URLSearchParams({ [conversation.platform === "facebook" ? "is_hidden" : "hide"]: String(data.hidden), access_token: tokenRow.access_token }),
-    });
+    // Instagram's write parameter is `hide` (read-back field is `hidden`); Facebook uses `is_hidden` for both.
+    const hideParam = conversation.platform === "facebook" ? "is_hidden" : "hide";
+    const response = await fetch(`${commentUrl}?${hideParam}=${data.hidden}&access_token=${encodeURIComponent(tokenRow.access_token)}`, { method: "POST" });
     const result = (await response.json().catch(() => ({}))) as { error?: { message?: string } };
     if (!response.ok || result.error) {
       throw new Error(result.error?.message ?? "Meta rejected the request");
