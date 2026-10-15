@@ -107,7 +107,7 @@ function CommentActions({ m, convId, platform, onDone, onDeleted }: { m: Journey
   );
 }
 
-function LiveActions({ orgId, post, commentId, canReply = true, onDeleted }: { orgId: string; post: SidebarPost; commentId: string; canReply?: boolean; onDeleted?: (id: string) => void }) {
+function LiveActions({ orgId, post, commentId, canReply = true, initialHidden = false, onDeleted }: { orgId: string; post: SidebarPost; commentId: string; canReply?: boolean; initialHidden?: boolean; onDeleted?: (id: string) => void }) {
   const qc = useQueryClient();
   const act = useServerFn(moderateLiveComment);
   const replyFn = useServerFn(replyLiveComment);
@@ -121,7 +121,7 @@ function LiveActions({ orgId, post, commentId, canReply = true, onDeleted }: { o
     } catch (e) { toast.error(e instanceof Error && e.message ? e.message : "Reply failed"); } finally { setBusy(null); }
   };
   const [busy, setBusy] = useState<string | null>(null);
-  const [hidden, setHidden] = useState(false);
+  const [hidden, setHidden] = useState(initialHidden);
   const run = async (action: "delete" | "hide" | "unhide", ok: string) => {
     setBusy(action);
     try {
@@ -133,6 +133,7 @@ function LiveActions({ orgId, post, commentId, canReply = true, onDeleted }: { o
   };
   return (
     <div className="mt-1 flex flex-wrap items-center gap-3 text-[11px]">
+      {hidden && <span className="rounded bg-muted px-1.5 py-0.5 font-medium text-muted-foreground">Hidden</span>}
       {canReply && <button type="button" onClick={() => setText(text === null ? "" : null)} className="font-medium text-primary hover:underline">Reply</button>}
       {post.platform === "instagram" && (
         <button type="button" disabled={!!busy} className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground disabled:opacity-50" onClick={() => void run(hidden ? "unhide" : "hide", hidden ? "Comment visible again" : "Comment hidden")}>
@@ -248,7 +249,7 @@ function PostView({ orgId, post }: { orgId: string; post: SidebarPost }) {
             <div key={c.id} className={`px-4 py-2.5 text-sm ${c.reply ? "pl-9" : ""}`}>
               <p className="flex flex-wrap items-center gap-1.5 text-xs"><span className="font-semibold">{c.author ?? "Commenter"}</span>{c.createdAt && <span className="text-muted-foreground">{new Date(c.createdAt).toLocaleDateString()} · {new Date(c.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>}</p>
               <p className="mt-0.5 whitespace-pre-wrap break-words">{c.text}</p>
-              {post.socialAccountId && post.platform !== "youtube" && <LiveActions orgId={orgId} post={post} commentId={c.id} canReply={!c.reply} onDeleted={markRemoved} />}
+              {post.socialAccountId && post.platform !== "youtube" && <LiveActions orgId={orgId} post={post} commentId={c.id} canReply={!c.reply} initialHidden={!!c.hidden} onDeleted={markRemoved} />}
             </div>
           ))}
           {live.data?.error && <p className="bg-warning/10 px-4 py-2 text-xs text-warning">Older comments could not be loaded: {live.data.error}</p>}
@@ -269,7 +270,7 @@ function PostView({ orgId, post }: { orgId: string; post: SidebarPost }) {
               <div key={r.id} className="px-4 py-2.5 pl-9 text-sm">
                 <p className="flex flex-wrap items-center gap-1.5 text-xs"><span className="font-semibold">{r.author ?? "Reply"}</span>{r.createdAt && <span className="text-muted-foreground">{new Date(r.createdAt).toLocaleDateString()} · {new Date(r.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>}</p>
                 <p className="mt-0.5 whitespace-pre-wrap break-words">{r.text}</p>
-                {post.socialAccountId && <LiveActions orgId={orgId} post={post} commentId={r.id} canReply={false} onDeleted={markRemoved} />}
+                {post.socialAccountId && <LiveActions orgId={orgId} post={post} commentId={r.id} canReply={false} initialHidden={!!r.hidden} onDeleted={markRemoved} />}
               </div>
             ))]))}
         </div>

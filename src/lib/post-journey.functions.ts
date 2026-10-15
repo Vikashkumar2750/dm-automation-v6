@@ -147,11 +147,20 @@ export const moderateLiveComment = createServerFn({ method: "POST" })
     const token = tokenRow?.access_token ? await readToken(tokenRow.access_token) : null;
     if (!token) throw new Error("Reconnect this account and try again.");
     const url = `https://graph.facebook.com/v21.0/${encodeURIComponent(data.commentId)}`;
+    const wantHidden = data.action === "hide";
+    const t = encodeURIComponent(token);
     const res = data.action === "delete"
-      ? await fetch(`${url}?access_token=${encodeURIComponent(token)}`, { method: "DELETE" })
-      : await fetch(url, { method: "POST", body: new URLSearchParams({ hide: String(data.action === "hide"), access_token: token }) });
+      ? await fetch(`${url}?access_token=${t}`, { method: "DELETE" })
+      : await fetch(`${url}?hide=${wantHidden}&access_token=${t}`, { method: "POST" });
     const body = (await res.json().catch(() => ({}))) as { success?: boolean; error?: { message?: string } };
     if (!res.ok || body.error || body.success === false) throw new Error(body.error?.message ?? "Meta could not complete this action.");
+    if (data.action !== "delete") {
+      // Meta sometimes says "success" without changing anything — confirm on Instagram itself.
+      const check = (await fetch(`${url}?fields=id,hidden&access_token=${t}`).then((r) => r.json()).catch(() => null)) as { hidden?: boolean; error?: unknown } | null;
+      if (!check || check.error || check.hidden !== wantHidden) {
+        throw new Error(`Instagram did not ${wantHidden ? "hide" : "unhide"} this comment. Reconnect the account (comment-management permission) and try again.`);
+      }
+    }
     return { ok: true };
   });
 

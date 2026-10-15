@@ -91,6 +91,8 @@ const ruleInput = z.object({
     .url()
     .max(500)
     .nullable()
+    // Uploaded file: storage:<workspaceId>/<uuid>.<ext> (checked against the workspace at send time).
+    .or(z.string().regex(/^storage:[0-9a-f-]{36}\/[\w-]+\.[a-z0-9]{1,8}$/i))
     .or(z.literal("").transform(() => null)),
   dmAttachmentType: z.enum(["none", "image", "video", "file"]),
   followerCondition: z.enum(["any", "followers_only", "non_followers"]),
