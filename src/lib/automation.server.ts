@@ -888,12 +888,16 @@ async function deliverDm(
       });
       if (media.error) {
         // Some file types are refused as native media — send the link instead.
-        await callMessaging(ctx.platform, accountId, {
+        const fallbackText = track("attachment", attachment.url) ?? attachment.url;
+        const fb = await callMessaging(ctx.platform, accountId, {
           recipient: { id: ctx.externalUserId },
-          message: { text: track("attachment", attachment.url) ?? attachment.url },
+          message: { text: fallbackText },
           access_token: token,
         });
+        if (!fb.error) await recordOutbound(admin, ctx, rule, attachment.url, fb.id ?? null);
         await log(admin, ctx, rule.id, "failed", `attachment:${media.error.slice(0, 200)}`);
+      } else {
+        await recordOutbound(admin, ctx, rule, `[${attachment.type}] ${attachment.url}`, media.id ?? null);
       }
     }
   }
