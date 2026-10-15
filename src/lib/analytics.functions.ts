@@ -55,6 +55,7 @@ export const getAnalytics = createServerFn({ method: "GET" })
         organizationId: z.string().uuid(),
         rangeDays: z.number().int().min(7).max(90).default(30),
         socialAccountId: z.string().uuid().optional(),
+        platform: z.enum(["instagram", "facebook", "youtube"]).optional(),
       })
       .parse(data),
   )
@@ -69,11 +70,13 @@ export const getAnalytics = createServerFn({ method: "GET" })
       .select("id, platform, channel, status, unread_count, created_at")
       .eq("organization_id", data.organizationId);
     if (acc) convQ = convQ.eq("social_account_id", acc);
+    if (data.platform) convQ = convQ.eq("platform", data.platform);
     let postQ = supabase
       .from("posts")
       .select("id, status, created_at")
       .eq("organization_id", data.organizationId);
     if (acc) postQ = postQ.eq("social_account_id", acc);
+    if (data.platform) postQ = postQ.eq("platform", data.platform);
     const [convRes, postRes, runRes0, ruleRes] = await Promise.all([
       convQ,
       postQ,
@@ -89,7 +92,7 @@ export const getAnalytics = createServerFn({ method: "GET" })
     ]);
 
     const accConvIds = new Set((convRes.data ?? []).map((c) => c.id));
-    const runRes = acc
+    const runRes = acc || data.platform
       ? { ...runRes0, data: (runRes0.data ?? []).filter((r) => r.conversation_id && accConvIds.has(r.conversation_id)) }
       : runRes0;
     for (const res of [convRes, postRes, runRes, ruleRes]) {

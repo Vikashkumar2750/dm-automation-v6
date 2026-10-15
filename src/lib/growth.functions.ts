@@ -19,13 +19,13 @@ const DAY = 86_400_000;
 /** All growth insights for one workspace (read-only, RLS as the user). */
 export const getGrowthOverview = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => orgInput.extend({ socialAccountId: z.string().uuid().optional() }).parse(d))
+  .inputValidator((d: unknown) => orgInput.extend({ socialAccountId: z.string().uuid().optional(), platform: z.enum(["instagram", "facebook", "youtube"]).optional() }).parse(d))
   .handler(async ({ data, context }) => {
     const sb = context.supabase;
     const org = data.organizationId;
     const now = Date.now();
     const since = (ms: number) => new Date(now - ms).toISOString();
-    const accFilter = data.socialAccountId ? `social_account_id.eq.${data.socialAccountId}` : "id.not.is.null";
+    const accFilter = data.socialAccountId ? `social_account_id.eq.${data.socialAccountId}` : data.platform ? `platform.eq.${data.platform}` : "id.not.is.null";
     const [convs, runs, rev, posts, competitors, accounts] = await Promise.all([
       sb.from("conversations").select("id").eq("organization_id", org).or(accFilter).limit(5000),
       sb.from("automation_runs").select("status, created_at").eq("organization_id", org).gte("created_at", since(30 * DAY)).limit(10000),
