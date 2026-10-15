@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
+import { useWorkflowsEnabled } from "@/hooks/useWorkflowsEnabled";
 import {
   ArrowRight,
   CalendarCheck,
@@ -76,6 +77,7 @@ function greeting() {
 
 function Dashboard() {
   const { profile, activeOrg } = useTenant();
+  const workflowsOn = useWorkflowsEnabled();
   const orgId = activeOrg?.id ?? null;
   const firstName = profile.name.split(" ")[0] || "there";
 
