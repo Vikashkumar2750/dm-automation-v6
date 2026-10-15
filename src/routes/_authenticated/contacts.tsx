@@ -61,7 +61,7 @@ function ContactsPage() {
 
   const contacts = useMemo(() => {
     const map = new Map<string, Row>();
-    for (const c of (conversations.data ?? []).filter((c) => platform === "all" || c.platform === platform)) {
+    for (const c of (conversations.data ?? []).filter((c) => (platform === "all" || c.platform === platform) && (accountId === "all" || c.social_account_id === accountId))) {
       const key = `${c.platform}:${c.external_user_id}`;
       const e = map.get(key);
       if (e) {

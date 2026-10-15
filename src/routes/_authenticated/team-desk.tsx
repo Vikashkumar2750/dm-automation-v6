@@ -54,7 +54,7 @@ function TeamDeskPage() {
   const fetchTeam = useServerFn(listTeam);
   const [accountId, setAccountId] = useState("all");
   const [platform, setPlatform] = useState<"all" | "instagram" | "facebook" | "youtube">("all");
-  const desk = useQuery({ queryKey: ["team-desk", orgId, accountId], enabled: !!orgId, refetchInterval: 30_000, queryFn: () => fetchDesk({ data: { organizationId: orgId!, ...(accountId !== "all" ? { socialAccountId: accountId } : {}) } }) });
+  const desk = useQuery({ queryKey: ["team-desk", orgId, accountId, platform], enabled: !!orgId, refetchInterval: 30_000, queryFn: () => fetchDesk({ data: { organizationId: orgId!, ...(accountId !== "all" ? { socialAccountId: accountId } : {}), ...(platform !== "all" ? { platform } : {}) } }) });
   const team = useQuery({ queryKey: ["team", orgId], enabled: !!orgId, queryFn: () => fetchTeam({ data: { organizationId: orgId! } }) });
   const names = useMemo(() => Object.fromEntries((team.data ?? []).map((m) => [m.user_id, m.name || m.email])), [team.data]);
   const reviewer = canReview(desk.data?.role);
