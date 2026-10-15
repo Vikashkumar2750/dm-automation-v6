@@ -1,5 +1,9 @@
 # DM FB-IG-YT by Techaasvik — Build Roadmap
 
+## Oct 15 filter repairs
+- [ ] Repair and verify Calendar, Inbox and Contacts platform/account filtering.
+- [ ] Make dashboard template replies grey by default and blue on card hover.
+
 Source of truth: `DM_FB_IG_YT_Techaasvik_Master_PRD_Phasewise.md` (uploaded PRD).
 Decisions: build on Lovable, keep code portable for a later Railway export.
 Real Meta + YouTube credentials are available when we reach OAuth phases.
