@@ -999,7 +999,7 @@ function AllFlowsMenu({ flows, selected, onSelect }: { flows: Flow[]; selected: 
   const [filter, setFilter] = useState<(typeof FLOW_FILTERS)[number]["key"]>("all");
   const current = flows.find((f) => f.id === selected);
   const [plat, setPlat] = useState("all");
-  const list = flows.filter((f) => (filter === "all" || (filter === "active" ? f.active : !f.active)) && (plat === "all" || !f.platform || f.platform === "all" || f.platform === plat));
+  const list = flows.filter((f) => (filter === "all" || (filter === "active" ? f.active : !f.active)) && (plat === "all" || !f.platform || f.platform === "both" || f.platform === plat));
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
