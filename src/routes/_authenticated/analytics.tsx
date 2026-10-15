@@ -1,3 +1,4 @@
+import { AccountSelect } from "@/components/app/AccountSelect";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -53,14 +54,15 @@ const RANGES = [7, 30, 90] as const;
 function AnalyticsPage() {
   const { activeOrg } = useTenant();
   const [rangeDays, setRangeDays] = useState<number>(30);
+  const [accountId, setAccountId] = useState("all");
   const fetchAnalytics = useServerFn(getAnalytics);
 
   const { data, isLoading } = useQuery({
-    queryKey: ["analytics", activeOrg?.id, rangeDays],
+    queryKey: ["analytics", activeOrg?.id, rangeDays, accountId],
     enabled: Boolean(activeOrg?.id),
     refetchInterval: 60_000,
     queryFn: () =>
-      fetchAnalytics({ data: { organizationId: activeOrg!.id, rangeDays } }),
+      fetchAnalytics({ data: { organizationId: activeOrg!.id, rangeDays, ...(accountId !== "all" ? { socialAccountId: accountId } : {}) } }),
   });
 
   const t = data?.totals;
@@ -71,6 +73,8 @@ function AnalyticsPage() {
         title="Analytics"
         description="Conversations, reply speed, automation share and publishing results."
         actions={
+          <div className="flex flex-wrap items-center gap-2">
+          <AccountSelect orgId={activeOrg?.id ?? null} value={accountId} onChange={setAccountId} className="h-9 w-auto max-w-[240px]" />
           <div className="flex items-center gap-1 rounded-lg border border-border p-1">
             {RANGES.map((r) => (
               <Button
@@ -82,6 +86,7 @@ function AnalyticsPage() {
                 {r}d
               </Button>
             ))}
+          </div>
           </div>
         }
       />

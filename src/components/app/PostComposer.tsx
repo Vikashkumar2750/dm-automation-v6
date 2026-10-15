@@ -44,7 +44,6 @@ const formats: { value: PostFormat; label: string; hint: string }[] = [
   { value: "carousel", label: "Carousel", hint: "2–10 photos swiped side to side" },
   { value: "reel", label: "Reel", hint: "Vertical video, also shared to the feed" },
   { value: "story", label: "Story", hint: "Story that disappears in 24h (no caption shown)" },
-  { value: "trial_reel", label: "Trial reel (Instagram)", hint: "Shown to non-followers first, not on your profile grid. Share it to followers later from the Instagram app if it performs well." },
 ];
 
 /** Convert an ISO string to the value a datetime-local input expects (local time). */
@@ -192,7 +191,7 @@ export function PostComposerForm({
   const ratioRuleNow = combinedRule(selectedPlatforms, format);
   const hasYouTube = selectedPlatforms.includes("youtube");
   const hasMeta = selectedPlatforms.includes("instagram") || selectedPlatforms.includes("facebook");
-  const trialEligible = !editing && selectedPlatforms.includes("instagram") && mediaType === "video" && (format === "feed" || format === "reel");
+  const trialEligible = false; // Meta does not let tools publish Trial Reels.
   const badMedia = mediaType === "image"
     ? media.filter((ref) => sizes[ref] && !ratioFits(sizes[ref]!.width / sizes[ref]!.height, ratioRuleNow))
     : [];
