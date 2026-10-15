@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { AccountSafetyPanel } from "@/components/app/AccountSafetyPanel";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Gauge, PauseCircle, Send, ShieldAlert, SkipForward } from "lucide-react";
@@ -173,6 +174,7 @@ function UsagePage() {
           </Panel>
         </div>
       )}
+      {orgId && <div className="mt-6"><AccountSafetyPanel orgId={orgId} planLimit={planUsage.data?.monthlyDms ?? null} /></div>}
     </AppShell>
   );
 }

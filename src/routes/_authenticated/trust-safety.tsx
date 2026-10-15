@@ -1,4 +1,5 @@
 import { csvCell } from "@/lib/csv-safe";
+import { AccountSafetyPanel } from "@/components/app/AccountSafetyPanel";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -56,7 +57,7 @@ function TrustSafetyPage() {
             {manager && <TabsTrigger value="audit">Audit trail</TabsTrigger>}
           </TabsList>
           <TabsContent value="health"><Health data={q.data} /></TabsContent>
-          <TabsContent value="guard"><Guard orgId={orgId} data={q.data} manager={manager} /></TabsContent>
+          <TabsContent value="guard"><div className="space-y-6"><Guard orgId={orgId} data={q.data} manager={manager} /><AccountSafetyPanel orgId={orgId} editable={manager} /></div></TabsContent>
           <TabsContent value="policy"><Policy data={q.data} /></TabsContent>
           {manager && <TabsContent value="audit"><Audit orgId={orgId} /></TabsContent>}
         </Tabs>

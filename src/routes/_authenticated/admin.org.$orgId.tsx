@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { AdminSafetyCapsPanel } from "@/components/app/AdminSafetyCapsPanel";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Input } from "@/components/ui/input";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -213,6 +214,7 @@ function OrgDetailPage() {
       </Panel>
 
       <AdminPlanLimitsPanel orgId={orgId} />
+      <AdminSafetyCapsPanel orgId={orgId} />
       <AdminSafetyPanel orgId={orgId} />
 
       <Panel title="Automation test console">

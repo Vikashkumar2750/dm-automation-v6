@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { AdminSafetyCapsPanel } from "@/components/app/AdminSafetyCapsPanel";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
@@ -125,6 +126,8 @@ function SystemSettingsPage() {
           </Button>
         </div>
       </Panel>
+
+      <AdminSafetyCapsPanel orgId={null} />
 
       <Panel title="Feature flags">
         <div className="space-y-4">
