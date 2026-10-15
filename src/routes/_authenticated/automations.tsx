@@ -965,7 +965,7 @@ function AutomationsPage() {
                               setUploadingAttachment(true);
                               try {
                                 const ref = await uploadPostMedia(orgId, file);
-                                setDraft((d) => ({ ...d, dmAttachmentUrl: ref }));
+                                setDraft((d) => (d ? { ...d, dmAttachmentUrl: ref } : d));
                                 toast.success("File uploaded");
                               } catch (err) {
                                 toast.error(err instanceof Error ? err.message : "Upload failed");
