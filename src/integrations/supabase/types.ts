@@ -2553,6 +2553,7 @@ export type Database = {
         Args: { p_conversation_id: string }
         Returns: undefined
       }
+      relink_conversation_accounts: { Args: { _org?: string }; Returns: number }
     }
     Enums: {
       automation_action:
