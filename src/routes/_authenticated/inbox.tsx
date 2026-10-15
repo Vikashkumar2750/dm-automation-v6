@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useRef, useState } from "react";
 import { AccountSelect } from "@/components/app/AccountSelect";
+import { matchesPlatformAccount } from "@/components/app/PlatformAccountFilter";
 import {
   CheckCheck,
   ArrowLeft,
@@ -197,9 +198,13 @@ function InboxPage() {
     },
   });
 
-  const conversations = conversationsQuery.data ?? [];
+  const conversations = (conversationsQuery.data ?? []).filter((c) => matchesPlatformAccount(c, platform, accountId));
+  useEffect(() => {
+    setSelectedId(null);
+    setDraft("");
+  }, [orgId, platform, accountId]);
   const selected: ConversationRow | undefined =
-    conversations.find((c) => c.id === selectedId) ?? conversations[0];
+    selectedId ? conversations.find((c) => c.id === selectedId) : conversations[0];
 
   const messagesQuery = useQuery({
     queryKey: ["messages", selected?.id],

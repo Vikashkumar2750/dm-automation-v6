@@ -1,4 +1,4 @@
-import { PlatformAccountFilter } from "@/components/app/PlatformAccountFilter";
+import { PlatformAccountFilter, matchesPlatformAccount } from "@/components/app/PlatformAccountFilter";
 import { contactLabel } from "@/lib/contact-name";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -51,17 +51,20 @@ function ContactsPage() {
   const [accountId, setAccountId] = useState("all");
   const [platform, setPlatform] = useState<"all" | "instagram" | "facebook" | "youtube">("all");
   const conversations = useQuery({
-    queryKey: ["conversations", orgId, "contacts", accountId],
+    queryKey: ["conversations", orgId, "contacts", platform, accountId],
     enabled: !!orgId,
     refetchInterval: 60_000,
-    queryFn: () => fetchConversations({ data: { organizationId: orgId!, ...(accountId !== "all" ? { socialAccountId: accountId } : {}) } }),
+    queryFn: () => {
+      if (!orgId) throw new Error("No workspace selected");
+      return fetchConversations({ data: { organizationId: orgId, ...(platform !== "all" ? { platform } : {}), ...(accountId !== "all" ? { socialAccountId: accountId } : {}) } });
+    },
   });
   const crm = useQuery({ queryKey: ["crm", orgId], enabled: !!orgId, queryFn: () => fetchCrm({ data: { organizationId: orgId! } }) });
   const refresh = () => qc.invalidateQueries({ queryKey: ["crm", orgId] });
 
   const contacts = useMemo(() => {
     const map = new Map<string, Row>();
-    for (const c of (conversations.data ?? []).filter((c) => (platform === "all" || c.platform === platform) && (accountId === "all" || c.social_account_id === accountId))) {
+    for (const c of (conversations.data ?? []).filter((c) => matchesPlatformAccount(c, platform, accountId))) {
       const key = `${c.platform}:${c.external_user_id}`;
       const e = map.get(key);
       if (e) {
@@ -84,13 +87,13 @@ function ContactsPage() {
       if (r) { r.email = p.email; r.phone = p.phone; }
     }
     return [...map.values()].sort((a, b) => (a.lastAt < b.lastAt ? 1 : -1));
-  }, [conversations.data, crm.data, platform]);
+  }, [conversations.data, crm.data, platform, accountId]);
 
   const allTags = useMemo(() => [...new Set(contacts.flatMap((c) => c.tags))].sort(), [contacts]);
   const visible = contacts.filter((c) => matchesSegment(c, filter));
   const [page, setPage] = useState(1);
   const filterKey = JSON.stringify(filter);
-  useEffect(() => setPage(1), [filterKey]);
+  useEffect(() => { setPage(1); setOpenKey(null); }, [filterKey, orgId, platform, accountId]);
   const open = contacts.find((c) => c.key === openKey) ?? null;
 
   const saveSeg = useMutation({
@@ -142,12 +145,6 @@ function ContactsPage() {
             <select className={sel} value={filter.tag ?? ""} onChange={(e) => setFilter({ ...filter, tag: e.target.value || undefined })}>
               <option value="">All tags</option>
               {allTags.map((t) => <option key={t} value={t}>{t}</option>)}
-            </select>
-            <select className={sel} value={filter.platform ?? ""} onChange={(e) => setFilter({ ...filter, platform: (e.target.value || undefined) as SegmentFilter["platform"] })}>
-              <option value="">All platforms</option>
-              <option value="instagram">Instagram</option>
-              <option value="facebook">Facebook</option>
-              <option value="youtube">YouTube</option>
             </select>
             <select className={sel} value={filter.hasEmail ? "email" : filter.hasPhone ? "phone" : ""}
               onChange={(e) => setFilter({ ...filter, hasEmail: e.target.value === "email" || undefined, hasPhone: e.target.value === "phone" || undefined })}>
