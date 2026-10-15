@@ -32,3 +32,4 @@
 - Workflows page shows only when feature_flags.workflows_enabled is true (getPlatformStatus) — why: Super Admin controls rollout.
 - Subdirectories (e.g. src/lib) have their own AGENTS.md — read before changing files there.
 - Safety send caps (hourly/daily/journeys-per-contact) are per connected account via account-safety.server, clamped to Super Admin max values in feature_flags (safety_caps / safety_caps_<orgId>); plan quota stays workspace-wide — Meta flags accounts individually, billing is per workspace.
+- Chats that lose their account link (disconnect/reconnect) are re-linked by public.relink_conversation_accounts (webhook evidence, else the only account on that platform), run on deploy and after each account connect — keeps Inbox/Contacts account filters complete without touching Meta delivery.
