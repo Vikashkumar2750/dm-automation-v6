@@ -3,6 +3,7 @@
 ## Oct 15 filter repairs
 - [x] Repair Calendar, Inbox and Contacts filtering; tests and signed-in controlled-data browser checks pass for switching between two accounts.
 - [x] Make dashboard template replies grey by default and blue on card hover; browser verified.
+- [x] Re-link chats whose account link was lost (cause of "All shows many, one account shows 1-2"); runs on deploy + after account connect.
 - [ ] Verify these three filters against the owner's Railway account data (preview session has no connected accounts or messages).
 
 Source of truth: `DM_FB_IG_YT_Techaasvik_Master_PRD_Phasewise.md` (uploaded PRD).
