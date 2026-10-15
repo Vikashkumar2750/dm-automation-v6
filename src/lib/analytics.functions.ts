@@ -54,6 +54,7 @@ export const getAnalytics = createServerFn({ method: "GET" })
       .object({
         organizationId: z.string().uuid(),
         rangeDays: z.number().int().min(7).max(90).default(30),
+        socialAccountId: z.string().uuid().optional(),
       })
       .parse(data),
   )
@@ -62,18 +63,23 @@ export const getAnalytics = createServerFn({ method: "GET" })
     const since = new Date(Date.now() - data.rangeDays * 24 * 60 * 60 * 1000);
     const sinceIso = since.toISOString();
 
-    const [convRes, postRes, runRes, ruleRes] = await Promise.all([
-      supabase
-        .from("conversations")
-        .select("id, platform, channel, status, unread_count, created_at")
-        .eq("organization_id", data.organizationId),
-      supabase
-        .from("posts")
-        .select("id, status, created_at")
-        .eq("organization_id", data.organizationId),
+    const acc = data.socialAccountId;
+    let convQ = supabase
+      .from("conversations")
+      .select("id, platform, channel, status, unread_count, created_at")
+      .eq("organization_id", data.organizationId);
+    if (acc) convQ = convQ.eq("social_account_id", acc);
+    let postQ = supabase
+      .from("posts")
+      .select("id, status, created_at")
+      .eq("organization_id", data.organizationId);
+    if (acc) postQ = postQ.eq("social_account_id", acc);
+    const [convRes, postRes, runRes0, ruleRes] = await Promise.all([
+      convQ,
+      postQ,
       supabase
         .from("automation_runs")
-        .select("id, rule_id, status, message_id, created_at, run_key")
+        .select("id, rule_id, status, message_id, created_at, run_key, conversation_id")
         .eq("organization_id", data.organizationId)
         .gte("created_at", sinceIso),
       supabase
@@ -82,6 +88,10 @@ export const getAnalytics = createServerFn({ method: "GET" })
         .eq("organization_id", data.organizationId),
     ]);
 
+    const accConvIds = new Set((convRes.data ?? []).map((c) => c.id));
+    const runRes = acc
+      ? { ...runRes0, data: (runRes0.data ?? []).filter((r) => r.conversation_id && accConvIds.has(r.conversation_id)) }
+      : runRes0;
     for (const res of [convRes, postRes, runRes, ruleRes]) {
       if (res.error) throw new Error(res.error.message);
     }
