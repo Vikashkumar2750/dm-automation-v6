@@ -123,3 +123,7 @@ Real Meta + YouTube credentials are available when we reach OAuth phases.
 ## Activity journey borders (Oct 14)
 - [x] Trace rule callbacks and group outer activity borders across one contact's multi-event journey, with regression tests.
 - [ ] Verify activity borders in the signed-in preview without sending messages (blocked: requesting user has no matching preview account; sign-in required).
+
+## Multi-account selector (planned, awaiting go-ahead)
+- [ ] Shared "Account" selector (All / one connected account) persisted per workspace, reused by Inbox, Comments, Calendar, Contacts, Sales & Revenue, Team desk, Analytics, AI Assistant, Account Health, Growth insights.
+- [ ] Account badge on every inbox row/comment/post + "Replying as @handle" on reply boxes.

@@ -33,3 +33,4 @@
 - Constrain mobile shells/panels/dialogs; tables/canvases scroll locally. Inbox chat spans heading/list grid rows for full height without page scroll.
 - Notifications reuse workspace-scoped run reads in one AppShell provider; read IDs are local per user/workspace — consistent bell/banner without delivery changes.
 - PostPicker shares poster resolution/error fallback — prevents broken media.
+- The Workflows section is hidden for every workspace unless platform_settings.feature_flags.workflows_enabled is true (exposed via getPlatformStatus, toggled in Admin → System Settings) — why: Super Admin controls rollout without schema change.
