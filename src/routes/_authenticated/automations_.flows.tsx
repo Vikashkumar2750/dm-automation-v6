@@ -998,7 +998,8 @@ function AllFlowsMenu({ flows, selected, onSelect }: { flows: Flow[]; selected: 
   const [open, setOpen] = useState(false);
   const [filter, setFilter] = useState<(typeof FLOW_FILTERS)[number]["key"]>("all");
   const current = flows.find((f) => f.id === selected);
-  const list = flows.filter((f) => filter === "all" || (filter === "active" ? f.active : !f.active));
+  const [plat, setPlat] = useState("all");
+  const list = flows.filter((f) => (filter === "all" || (filter === "active" ? f.active : !f.active)) && (plat === "all" || !f.platform || f.platform === "all" || f.platform === plat));
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
@@ -1018,6 +1019,9 @@ function AllFlowsMenu({ flows, selected, onSelect }: { flows: Flow[]; selected: 
             );
           })}
         </div>
+        <select aria-label="Platform" value={plat} onChange={(e) => setPlat(e.target.value)} className="mb-2 h-8 w-full rounded-md border bg-background px-2 text-xs">
+          <option value="all">All platforms</option><option value="instagram">Instagram</option><option value="facebook">Facebook</option>
+        </select>
         {list.length === 0 ? (
           <p className="px-2 py-3 text-sm text-muted-foreground">No flows here yet.</p>
         ) : (
