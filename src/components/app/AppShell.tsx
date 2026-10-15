@@ -42,6 +42,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { useTenant } from "@/hooks/useTenant";
+import { useWorkflowsEnabled } from "@/hooks/useWorkflowsEnabled";
 import { supabase } from "@/integrations/supabase/client";
 import { PageReadyGate } from "@/components/app/PageReadyGate";
 import { AutomationNotificationsProvider, AutomationNotificationBell } from "@/components/app/AutomationNotifications";
@@ -99,6 +100,7 @@ function NavLink({ item, active }: { item: NavItem; active: boolean }) {
 
 function Sidebar({ pathname }: { pathname: string }) {
   const { activeOrg, loading } = useTenant();
+  const workflowsOn = useWorkflowsEnabled();
   const brand = activeOrg?.brandName?.trim() || "AutoDM";
   const logo = activeOrg?.logoUrl?.trim() || "/logo.webp";
   const color = activeOrg?.brandColor?.trim() || null;
@@ -145,7 +147,7 @@ function Sidebar({ pathname }: { pathname: string }) {
 
       <nav className="flex-1 overflow-y-auto px-3 py-4">
         <div className="space-y-1">
-          {primaryNav.map((item) => (
+          {primaryNav.filter((item) => item.to !== "/workflows" || workflowsOn).map((item) => (
             <NavLink key={item.to} item={item} active={pathname.startsWith(item.to)} />
           ))}
         </div>

@@ -8,6 +8,7 @@ import { EmptyState, PageHeader, PlatformBadge } from "@/components/app/primitiv
 import { PostSidebar, type SidebarPost } from "@/components/app/PostSidebar";
 import { PostThumbnail } from "@/components/app/PostThumbnail";
 import { useTenant } from "@/hooks/useTenant";
+import { useWorkflowsEnabled } from "@/hooks/useWorkflowsEnabled";
 import { listAutomationRules } from "@/lib/automations.functions";
 import { getPostJourney } from "@/lib/post-journey.functions";
 import { activityName, activitySource, explainReason, stepLabel } from "@/lib/activity-explain";
@@ -51,6 +52,15 @@ function WorkflowsPage() {
   const { activeOrg } = useTenant();
   const orgId = activeOrg?.id ?? null;
   const [post, setPost] = useState<SidebarPost | null>(null);
+  const workflowsOn = useWorkflowsEnabled();
+  if (!workflowsOn) {
+    return (
+      <AppShell>
+        <PageHeader title="Automation workflows" description="This section is not available yet." />
+        <EmptyState icon={Workflow} title="Workflows are switched off" description="This section is currently disabled for your workspace. Check your automation journeys under Automations → Recent activity." />
+      </AppShell>
+    );
+  }
   return (
     <AppShell>
       <PageHeader title="Automation workflows" description="Choose a post to see every automation journey on it — comment, rule, bot or manual reply, taps — from left to right." />
