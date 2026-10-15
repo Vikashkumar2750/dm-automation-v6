@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { ImageOff, Image as ImageIcon, Film } from "lucide-react";
 
 import { previewUrl } from "@/lib/media-upload";
+import { fastImage } from "@/lib/fast-image";
 
 const VIDEO_RE = /\.(mp4|mov|webm|m4v)(?:[?#]|$)|#video$/i;
 
@@ -37,7 +38,18 @@ export function PostThumbnail({ src: rawSrc }: { src: string | null }) {
           onError={() => setFailedSrc(src)}
         />
       ) : (
-        <img src={src} alt="" className="h-full w-full object-cover" onError={() => setFailedSrc(src)} />
+        <img
+          src={fastImage(src, 40) ?? src}
+          alt=""
+          loading="lazy"
+          decoding="async"
+          className="h-full w-full object-cover"
+          onError={(e) => {
+            const img = e.currentTarget;
+            if (img.dataset.fallback !== "1" && img.src !== src) { img.dataset.fallback = "1"; img.src = src; }
+            else setFailedSrc(src);
+          }}
+        />
       )}
     </span>
   );
