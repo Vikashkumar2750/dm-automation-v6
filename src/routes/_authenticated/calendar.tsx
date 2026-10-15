@@ -1,4 +1,4 @@
-import { AccountSelect } from "@/components/app/AccountSelect";
+import { PlatformAccountFilter, matchesPlatformAccount } from "@/components/app/PlatformAccountFilter";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -69,6 +69,7 @@ function CalendarPage() {
     return new Date(now.getFullYear(), now.getMonth(), 1);
   });
   const [accountId, setAccountId] = useState("all");
+  const [platform, setPlatform] = useState("all");
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<ComposerDraft | null>(null);
 
@@ -101,7 +102,7 @@ function CalendarPage() {
     };
   }, [orgId, flushDue, queryClient]);
 
-  const posts = (postsQuery.data ?? []).filter((p) => accountId === "all" || p.social_account_id === accountId);
+  const posts = (postsQuery.data ?? []).filter((p) => matchesPlatformAccount(p, platform, accountId));
 
   const byDay = useMemo(() => {
     const map = new Map<string, Post[]>();
@@ -141,8 +142,8 @@ function CalendarPage() {
         title="Content Calendar"
         description="Plan and schedule your content across every connected platform."
         actions={
-          <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <AccountSelect orgId={orgId || null} value={accountId} onChange={setAccountId} className="h-9 w-auto max-w-[240px]" />
+          <div className="flex min-w-0 flex-nowrap items-center gap-2 overflow-x-auto">
+            <PlatformAccountFilter orgId={orgId || null} platform={platform} onPlatformChange={setPlatform} accountId={accountId} onAccountChange={setAccountId} />
             <Button asChild>
               <Link to="/create-post/new">
                 <Plus className="mr-2 size-4" /> New post

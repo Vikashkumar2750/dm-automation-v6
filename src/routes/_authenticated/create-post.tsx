@@ -1,3 +1,4 @@
+import { PlatformAccountFilter, matchesPlatformAccount } from "@/components/app/PlatformAccountFilter";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -88,6 +89,7 @@ function CreatePostPage() {
   const [ytEdit, setYtEdit] = useState<{ post: Post; title: string; description: string; tags: string } | null>(null);
   const editYt = useServerFn(editYouTubeDetails);
   const [platformFilter, setPlatformFilter] = useState<"all" | "instagram" | "facebook" | "youtube">("all");
+  const [accountFilter, setAccountFilter] = useState("all");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [range, setRange] = useState<"all" | "7" | "30" | "custom">("all");
@@ -197,7 +199,7 @@ function CreatePostPage() {
       created_at: r.publishedAt ?? "",
     }));
   const allPosts = [...(postsQuery.data ?? []), ...livePosts].filter((p) =>
-    (platformFilter === "all" || p.platform === platformFilter) &&
+    matchesPlatformAccount(p, platformFilter, accountFilter) &&
     (!fromDate || postDate(p) >= fromDate) &&
     (!toDate || postDate(p) <= toDate),
   );
@@ -248,17 +250,7 @@ function CreatePostPage() {
         bodyClassName="p-0"
         action={
           <div className="flex flex-wrap items-center gap-2">
-            <select
-              aria-label="Platform"
-              value={platformFilter}
-              onChange={(e) => setPlatformFilter(e.target.value as typeof platformFilter)}
-              className="h-8 rounded-md border bg-background px-2 text-xs"
-            >
-              <option value="all">All platforms</option>
-              <option value="instagram">Instagram</option>
-              <option value="facebook">Facebook</option>
-              <option value="youtube">YouTube</option>
-            </select>
+            <PlatformAccountFilter orgId={orgId || null} platform={platformFilter} onPlatformChange={setPlatformFilter} accountId={accountFilter} onAccountChange={setAccountFilter} />
             <select
               aria-label="Date range"
               value={range}
@@ -286,8 +278,8 @@ function CreatePostPage() {
                 <Input type="date" aria-label="To date" value={toDate} min={fromDate || undefined} onChange={(e) => setToDate(e.target.value)} className="h-8 w-36 text-xs" />
               </>
             )}
-            {(fromDate || toDate || platformFilter !== "all" || range !== "all") && (
-              <Button size="sm" variant="ghost" onClick={() => { setFromDate(""); setToDate(""); setRange("all"); setPlatformFilter("all"); }}>Clear</Button>
+            {(fromDate || toDate || platformFilter !== "all" || accountFilter !== "all" || range !== "all") && (
+              <Button size="sm" variant="ghost" onClick={() => { setFromDate(""); setToDate(""); setRange("all"); setPlatformFilter("all"); setAccountFilter("all"); }}>Clear</Button>
             )}
           </div>
         }
