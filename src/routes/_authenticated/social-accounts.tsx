@@ -71,6 +71,7 @@ function SocialAccountsPage() {
 
   const eventsQuery = useQuery({
     queryKey: ["webhook-events", orgId],
+    meta: { background: true },
     enabled: Boolean(orgId),
     refetchInterval: 30_000,
     queryFn: () => fetchEvents({ data: { organizationId: orgId! } }),
@@ -95,6 +96,7 @@ function SocialAccountsPage() {
 
   const webhookConfigQuery = useQuery({
     queryKey: ["webhook-config"],
+    meta: { background: true },
     queryFn: () => fetchWebhookConfig(),
   });
 
