@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
+import { useEffect } from "react";
 import { listSocialAccounts } from "@/lib/social-accounts.functions";
 
 const LABEL: Record<string, string> = { instagram: "Instagram", facebook: "Facebook", youtube: "YouTube" };
@@ -13,14 +14,20 @@ export function AccountSelect({ orgId, platform, value, onChange, className = ""
   className?: string;
 }) {
   const fetchAccounts = useServerFn(listSocialAccounts);
-  const { data = [] } = useQuery({
+  const { data = [], isSuccess } = useQuery({
     queryKey: ["social-accounts", orgId],
     enabled: !!orgId,
     staleTime: 60_000,
-    queryFn: () => fetchAccounts({ data: { organizationId: orgId! } }),
+    queryFn: () => {
+      if (!orgId) throw new Error("No workspace selected");
+      return fetchAccounts({ data: { organizationId: orgId } });
+    },
   });
   const accounts = data.filter((a) => !platform || platform === "all" || a.platform === platform);
-  if (data.length < 2) return null;
+  useEffect(() => {
+    if (isSuccess && value !== "all" && !accounts.some((a) => a.id === value)) onChange("all");
+  }, [isSuccess, data, platform, value, onChange]);
+  if (data.length === 0) return null;
   return (
     <select
       aria-label="Connected account"
