@@ -1,2 +1,7 @@
 - Flow steps carry an optional `disabled` flag and all conditions go through the pure `conditionPasses` in flows.ts (shared by dry run and live runner); the AI flow suggestion is Agency-only, once per 24h via feature_flags `flow_ai_last_<orgId>` — why: one rule set for test and live, no schema change, locked rule engine untouched.
 - Flow canvas card positions (step.pos, triggerPos, addPos) are layout-only and ignored by the runner; follow_gate waits via a flow_runs "awaiting_reply" row with state.gate — why: visual changes never alter delivery, and the locked rule follow-gate code stays untouched.
+
+- Scheduler (cron) endpoints authenticate only via cronAuthFailure in src/lib/cron-secret.server.ts (constant-time, CRON_SECRET + optional CRON_SECRET_PREVIOUS) — one timing-safe check with rotation, no copy-pasted compares.
+- OAuth tokens and Razorpay secrets are read via readToken and written via storeToken (token-crypto.server); TOKEN_ENCRYPTION_KEY turns on AES-GCM and /api/public/cron/encrypt-tokens seals legacy rows — one switch encrypts at rest without breaking existing connections.
+- human-takeover.* sets bot_paused_until after manual replies using takeover_minutes; all automated paths check conversationInTakeover before sending — a human-owned chat never gets a bot reply, and expiry sends nothing by itself.
+- YouTube quota backoff and scheduler heartbeat stay standalone — reliability never changes Meta delivery.

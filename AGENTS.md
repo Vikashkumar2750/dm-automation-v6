@@ -21,10 +21,6 @@
 - Buyer offers resolve unguessable tokens server-side; private delivery images require active page references — public sales pages must not expose customer identity, payment credentials, or unrelated workspace media.
 - Phase G team tools live in team-desk.* modules; API keys (hashed) and outgoing webhooks sit in server-only tables, the public API is read-only under /api/public/v1/* with X-API-Key, and webhooks are delivered by cron from stored messages — integrations never hook into the locked Meta delivery flow.
 - Phase H trust & safety lives in trust-safety.* modules; the audit trail is written only by DB triggers (field names, never values), and the predictive guard only sets the existing auto-pause via /api/public/cron/trust-guard — no change to the locked Meta delivery code.
-- Scheduler (cron) endpoints authenticate only via cronAuthFailure in src/lib/cron-secret.server.ts (constant-time, CRON_SECRET + optional CRON_SECRET_PREVIOUS) — one timing-safe check with rotation, no copy-pasted compares.
-- OAuth tokens and Razorpay secrets are read via readToken and written via storeToken (token-crypto.server); TOKEN_ENCRYPTION_KEY turns on AES-GCM and /api/public/cron/encrypt-tokens seals legacy rows — one switch encrypts at rest without breaking existing connections.
-- human-takeover.* sets bot_paused_until after manual replies using takeover_minutes; all automated paths check conversationInTakeover before sending — a human-owned chat never gets a bot reply, and expiry sends nothing by itself.
-- YouTube quota backoff and scheduler heartbeat stay standalone — reliability never changes Meta delivery.
 - PageReadyGate waits for first data; sessions share one store, guards cache admin answers and links preload on hover — no placeholders or re-hidden cached pages.
 - Usage counts distinct run_key via count_org_runs. Activity retains run_key entries; activity-journeys groups rule/conversation callbacks between fresh triggers before filtering — why: one journey border pair without delivery changes or mixing contacts.
 - Flow post targeting lives on Flow.targetPostIds (empty = all posts), checked by flowTargetsPost in runLiveFlows; the post picker is shared in components/app/PostPicker — same matching rule as keyword rules, no change to the rule engine.
@@ -33,4 +29,5 @@
 - Constrain mobile shells/panels/dialogs; tables/canvases scroll locally. Inbox chat spans heading/list grid rows for full height without page scroll.
 - Notifications reuse workspace-scoped run reads in one AppShell provider; read IDs are local per user/workspace — consistent bell/banner without delivery changes.
 - PostPicker shares poster resolution/error fallback — prevents broken media.
-- The Workflows section is hidden for every workspace unless platform_settings.feature_flags.workflows_enabled is true (exposed via getPlatformStatus, toggled in Admin → System Settings) — why: Super Admin controls rollout without schema change.
+- Workflows page shows only when feature_flags.workflows_enabled is true (getPlatformStatus) — why: Super Admin controls rollout.
+- Subdirectories (e.g. src/lib) have their own AGENTS.md — read before changing files there.
