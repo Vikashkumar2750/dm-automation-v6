@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { Loader2, MessageSquare } from "lucide-react";
 import { PostThumbnail } from "@/components/app/PostThumbnail";
 import { PlatformBadge } from "@/components/app/primitives";
+import { AccountSelect } from "@/components/app/AccountSelect";
 import { Pager, pageSlice } from "@/components/app/Pager";
 import { listRecentRemotePosts, type RemotePostItem } from "@/lib/automations.functions";
 import { listPostCommentCounts } from "@/lib/post-journey.functions";
@@ -35,24 +36,27 @@ export function PostSidebar({ orgId, selectedId, onSelect, onPlatformChange, cou
 }) {
   const { posts, counts, loading } = usePosts(orgId);
   const [platform, setPlatform] = useState<Platform>("all");
+  const [accountId, setAccountId] = useState("all");
   const [page, setPage] = useState(1);
   const filtered = useMemo(() => {
-    const list = platform === "all" ? posts : posts.filter((p) => p.platform === platform);
+    let list = platform === "all" ? posts : posts.filter((p) => p.platform === platform);
+    if (accountId !== "all") list = list.filter((p) => p.socialAccountId === accountId);
     // Newest posts first.
     return [...list].sort((a, b) => (b.publishedAt ?? "").localeCompare(a.publishedAt ?? ""));
-  }, [posts, platform]);
+  }, [posts, platform, accountId]);
   const rows = pageSlice(filtered, page, 10);
 
   return (
     <div className="flex min-w-0 flex-col gap-2 lg:h-full lg:min-h-0">
       <div className="flex shrink-0 flex-wrap gap-1">
         {(["all", "instagram", "facebook", "youtube"] as const).map((p) => (
-          <button key={p} type="button" onClick={() => { if (p !== platform) onPlatformChange?.(); setPlatform(p); setPage(1); }}
+          <button key={p} type="button" onClick={() => { if (p !== platform) onPlatformChange?.(); setPlatform(p); setAccountId("all"); setPage(1); }}
             className={`rounded-full border px-3 py-1 text-xs font-medium capitalize transition-colors ${platform === p ? "border-primary bg-primary text-primary-foreground" : "hover:bg-muted"}`}>
             {p === "all" ? "All" : p === "youtube" ? "YouTube" : p}
           </button>
         ))}
       </div>
+      <AccountSelect orgId={orgId} platform={platform} value={accountId} onChange={(id) => { onPlatformChange?.(); setAccountId(id); setPage(1); }} className="shrink-0" />
       <div className="min-h-0 space-y-2 lg:flex-1 lg:overflow-y-auto lg:pr-1">
       {loading ? <Loader2 className="mx-auto my-8 size-5 animate-spin text-muted-foreground" /> : rows.length === 0 ? (
         <p className="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">No posts found.</p>

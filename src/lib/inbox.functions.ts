@@ -41,6 +41,7 @@ export const listConversations = createServerFn({ method: "GET" })
         organizationId: z.string().uuid(),
         platform: z.enum(["instagram", "facebook", "youtube"]).optional(),
         channel: z.enum(["dm", "comment"]).optional(),
+        socialAccountId: z.string().uuid().optional(),
         status: z.enum(["open", "pending", "resolved"]).optional(),
         unreadOnly: z.boolean().optional(),
         search: z.string().trim().max(120).optional(),
@@ -57,6 +58,7 @@ export const listConversations = createServerFn({ method: "GET" })
       .order("last_message_at", { ascending: false })
       .limit(100);
     if (data.platform) query = query.eq("platform", data.platform);
+    if (data.socialAccountId) query = query.eq("social_account_id", data.socialAccountId);
     if (data.channel) query = query.eq("channel", data.channel);
     if (data.status) query = query.eq("status", data.status);
     if (data.unreadOnly) query = query.gt("unread_count", 0);

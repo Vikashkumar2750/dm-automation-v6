@@ -3,6 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useRef, useState } from "react";
+import { AccountSelect } from "@/components/app/AccountSelect";
 import {
   CheckCheck,
   ArrowLeft,
@@ -138,6 +139,7 @@ function InboxPage() {
   const [draft, setDraft] = useState("");
   const [commentMode, setCommentMode] = useState<"public" | "private">("public");
   const [platform, setPlatform] = useState<Platform | "all">("all");
+  const [accountId, setAccountId] = useState("all");
   const [channel, setChannel] = useState<Channel | "all">("all");
   const [status, setStatus] = useState<Status | "all">("all");
   const [unreadOnly, setUnreadOnly] = useState(false);
@@ -178,6 +180,7 @@ function InboxPage() {
 
   const filters = {
     ...(platform !== "all" ? { platform } : {}),
+    ...(accountId !== "all" ? { socialAccountId: accountId } : {}),
     channel: "dm" as const,
     ...(status !== "all" ? { status } : {}),
     ...(unreadOnly ? { unreadOnly: true } : {}),
@@ -349,9 +352,10 @@ function InboxPage() {
               placeholder="Search name or message…"
               className="h-8 w-full rounded-md border bg-background px-2.5 text-xs outline-none focus:ring-2 focus:ring-ring"
             />
+            <AccountSelect orgId={orgId ?? null} platform={platform} value={accountId} onChange={setAccountId} />
             <FilterChips
               value={platform}
-              onChange={setPlatform}
+              onChange={(p) => { setPlatform(p); setAccountId("all"); }}
               options={[
                 { value: "all", label: "All platforms" },
                 { value: "instagram", label: "Instagram" },
