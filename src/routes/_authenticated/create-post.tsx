@@ -106,9 +106,11 @@ function CreatePostPage() {
   const fetchRemote = useServerFn(listRecentRemotePosts);
   const remoteQuery = useQuery({
     queryKey: ["remote-posts", orgId],
+    meta: { background: true },
+    gcTime: 30 * 60_000,
     queryFn: () => fetchRemote({ data: { organizationId: orgId } }),
     enabled: Boolean(orgId),
-    staleTime: 60_000,
+    staleTime: 10 * 60_000,
   });
 
   const accountsQuery = useQuery({
