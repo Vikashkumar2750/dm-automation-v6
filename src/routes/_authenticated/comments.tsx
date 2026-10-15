@@ -175,7 +175,7 @@ function PostCard({ orgId, post }: { orgId: string; post: SidebarPost }) {
       <div className={`mx-auto flex justify-center bg-muted ${post.platform === "youtube" ? "aspect-video w-full" : isVideo ? "aspect-[9/16] h-[min(46vh,420px)] max-w-full" : "aspect-square max-h-[360px] w-full"}`}>
         {ytId ? <iframe src={`https://www.youtube.com/embed/${ytId}`} title="YouTube video" allow="accelerometer; autoplay; encrypted-media; picture-in-picture" allowFullScreen className="h-full w-full" /> : post.mediaUrl || videoSrc ? (isVideo && videoSrc
           ? <video src={videoSrc} poster={post.mediaUrl && post.mediaUrl !== videoSrc ? post.mediaUrl : undefined} controls playsInline preload="metadata" className="h-full w-full object-contain" />
-          : <img src={fastImage(post.mediaUrl, 480) ?? ""} alt="" decoding="async" className="h-full w-full object-contain" onError={(e) => { const img = e.currentTarget as HTMLImageElement; if (img.dataset.fallback !== "1" && post.mediaUrl) { img.dataset.fallback = "1"; img.src = post.mediaUrl; } else img.style.display = "none"; }} />)
+          : <img src={fastImage(post.mediaUrl, 480) ?? ""} alt="" decoding="async" className="h-full w-full object-contain" onError={(e) => { const img = e.currentTarget as HTMLImageElement; if (img.dataset["fallback"] !== "1" && post.mediaUrl) { img.dataset["fallback"] = "1"; img.src = post.mediaUrl; } else img.style.display = "none"; }} />)
           : <div className="grid place-items-center"><PostThumbnail src={null} /></div>}
       </div>
       <div className="space-y-1 px-3 py-2">

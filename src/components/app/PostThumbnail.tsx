@@ -46,7 +46,7 @@ export function PostThumbnail({ src: rawSrc }: { src: string | null }) {
           className="h-full w-full object-cover"
           onError={(e) => {
             const img = e.currentTarget;
-            if (img.dataset.fallback !== "1" && img.src !== src) { img.dataset.fallback = "1"; img.src = src; }
+            if (img.dataset["fallback"] !== "1" && img.src !== src) { img.dataset["fallback"] = "1"; img.src = src; }
             else setFailedSrc(src);
           }}
         />
