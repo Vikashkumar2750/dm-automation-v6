@@ -326,9 +326,9 @@ function Dashboard() {
             title="Live automation activity"
             action={
               <span className="flex items-center gap-3">
-                <Link to="/workflows" className="inline-flex items-center gap-1 text-sm font-medium text-primary">
+                {workflowsOn && <Link to="/workflows" className="inline-flex items-center gap-1 text-sm font-medium text-primary">
                   Post workflows <ArrowRight className="size-4" />
-                </Link>
+                </Link>}
                 <Link to="/automations" className="inline-flex items-center gap-1 text-sm font-medium text-primary">
                   Automations <ArrowRight className="size-4" />
                 </Link>
