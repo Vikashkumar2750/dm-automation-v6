@@ -84,7 +84,7 @@ function ContactsPage() {
       if (r) { r.email = p.email; r.phone = p.phone; }
     }
     return [...map.values()].sort((a, b) => (a.lastAt < b.lastAt ? 1 : -1));
-  }, [conversations.data, crm.data]);
+  }, [conversations.data, crm.data, platform]);
 
   const allTags = useMemo(() => [...new Set(contacts.flatMap((c) => c.tags))].sort(), [contacts]);
   const visible = contacts.filter((c) => matchesSegment(c, filter));
