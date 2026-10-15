@@ -8,7 +8,7 @@ import { DASH_CATEGORIES, templatesFor, type DashCategory, type DashTemplate } f
 
 function Card({ t }: { t: DashTemplate }) {
   return (
-    <div className={cn("flex h-full flex-col rounded-2xl border-2 bg-card p-4 text-left transition hover:border-foreground/40", t.highlight ? "border-foreground/30" : "border-border")}>
+    <div className="group flex h-full flex-col rounded-2xl border-2 border-border bg-card p-4 text-left transition hover:border-foreground/40">
       <div className="text-base font-bold leading-tight">{t.title}</div>
       <p className="mt-1 text-sm text-muted-foreground">{t.description}</p>
       <div className="mt-3 flex-1 px-2">
@@ -21,7 +21,7 @@ function Card({ t }: { t: DashTemplate }) {
         </div>
         <div className="mt-1 flex items-start gap-1">
           <CornerDownRight className="mt-1 size-4 shrink-0 text-muted-foreground" />
-          <div className={cn("rounded-xl p-2.5 text-xs", t.highlight ? "bg-primary text-primary-foreground" : "bg-muted-foreground text-background")}>
+          <div className="rounded-xl bg-muted-foreground p-2.5 text-xs text-background transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
             <div className="font-medium">{t.reply}</div>
             <div className="mt-1.5 rounded-md bg-background/25 px-2 py-1 text-center font-semibold">{t.button}</div>
           </div>
@@ -35,7 +35,7 @@ export function TemplateSlider({ canCreate, onNeedAccount }: { canCreate: boolea
   const ref = useRef<HTMLDivElement>(null);
   const [cat, setCat] = useState<DashCategory | "all">("all");
   const list = templatesFor(cat);
-  const meta = DASH_CATEGORIES.find((c) => c.key === cat)!;
+  const meta = DASH_CATEGORIES.find((c) => c.key === cat) ?? DASH_CATEGORIES[0];
   const many = list.length > 4;
   const scroll = (dir: number) => ref.current?.scrollBy({ left: dir * ref.current.clientWidth * 0.8, behavior: "smooth" });
   const wrap = (t: DashTemplate, card: ReactNode) =>
@@ -57,8 +57,8 @@ export function TemplateSlider({ canCreate, onNeedAccount }: { canCreate: boolea
       </div>
       <div className="mt-5 flex items-end justify-between gap-2">
         <div>
-          <div className="text-lg font-bold">{meta.title}</div>
-          <div className="text-sm text-muted-foreground">{meta.sub} · {list.length} templates</div>
+           <div className="text-lg font-bold">{meta?.title}</div>
+           <div className="text-sm text-muted-foreground">{meta?.sub} · {list.length} templates</div>
         </div>
         {many && (
           <div className="flex gap-1">
