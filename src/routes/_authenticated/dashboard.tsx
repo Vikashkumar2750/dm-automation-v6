@@ -27,7 +27,10 @@ import {
   YAxis,
 } from "recharts";
 
+import { useState } from "react";
 import { AppShell } from "@/components/app/AppShell";
+import { TemplateSlider } from "@/components/app/TemplateSlider";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AutomationNotificationBanner } from "@/components/app/AutomationNotifications";
 import {
   EmptyState,
@@ -124,6 +127,8 @@ function Dashboard() {
   const activityItems = activity.data ?? [];
 
   const a = analytics.data;
+  const [needAccount, setNeedAccount] = useState(false);
+  const hasAccount = (accounts.data ?? []).length > 0;
   const accountRows = accounts.data ?? [];
   const upcoming = (posts.data ?? [])
     .filter((p) => p.status === "scheduled" && p.scheduled_at)
@@ -137,16 +142,37 @@ function Dashboard() {
         title={`${greeting()}, ${firstName}`}
         description="Last 7 days across your connected accounts."
         actions={
-          <Button asChild>
-            <Link to="/create-post">
+          hasAccount ? (
+            <Button asChild>
+              <Link to="/automations" search={{ new: true }}>
+                <Plus className="size-4" />
+                Create new automation
+              </Link>
+            </Button>
+          ) : (
+            <Button onClick={() => setNeedAccount(true)}>
               <Plus className="size-4" />
-              Create Post
-            </Link>
-          </Button>
+              Create new automation
+            </Button>
+          )
         }
       />
 
       <AutomationNotificationBanner />
+      <Panel title="Automation templates" className="mb-6">
+        <TemplateSlider canCreate={hasAccount} onNeedAccount={() => setNeedAccount(true)} />
+      </Panel>
+      <Dialog open={needAccount} onOpenChange={setNeedAccount}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Connect an account first</DialogTitle>
+            <DialogDescription>Automations run on a connected Instagram, Facebook or YouTube account. Connect one to create your first automation.</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button asChild><Link to="/social-accounts">Connect account</Link></Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard info="All chat threads (DMs and comments) and how many are open." icon={MessagesSquare} label="Conversations" value={String(a?.totals.conversations ?? 0)} sub={`${a?.totals.openThreads ?? 0} open`} />
         <StatCard info="Messages and comments people sent you in the last 7 days." icon={MessageSquare} label="Messages received" value={String(a?.totals.inbound ?? 0)} sub={`${a?.totals.unread ?? 0} unread`} />

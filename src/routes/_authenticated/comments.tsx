@@ -8,7 +8,6 @@ import { AppShell } from "@/components/app/AppShell";
 import { EmptyState, PageHeader, PlatformBadge } from "@/components/app/primitives";
 import { PostThumbnail } from "@/components/app/PostThumbnail";
 import { PostSidebar, type SidebarPost } from "@/components/app/PostSidebar";
-import { GuideButton } from "@/components/app/GuideButton";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useTenant } from "@/hooks/useTenant";
@@ -40,7 +39,7 @@ function CommentsPage() {
       <PageHeader
         title="Comments"
         description="Pick a post on the left to see it like on Instagram, Facebook or YouTube, with all comments and replies."
-        actions={<><RefreshButton /><GuideButton guide="meta-review" /><Button asChild variant="outline"><Link to="/inbox">Open inbox</Link></Button></>}
+        actions={<><RefreshButton /><Button asChild variant="outline"><Link to="/inbox">Open inbox</Link></Button></>}
       />
       <div className="grid gap-4 lg:h-[calc(100vh-15rem)] lg:min-h-[480px] lg:grid-cols-[320px_minmax(0,1fr)] [&>*]:lg:min-h-0">
         <PostSidebar orgId={orgId} selectedId={post?.externalPostId ?? null} onSelect={setPost} onPlatformChange={() => setPost(null)} />

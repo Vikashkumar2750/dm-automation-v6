@@ -1,4 +1,4 @@
-import { AccountSelect } from "@/components/app/AccountSelect";
+import { PlatformAccountFilter } from "@/components/app/PlatformAccountFilter";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -55,14 +55,15 @@ function AnalyticsPage() {
   const { activeOrg } = useTenant();
   const [rangeDays, setRangeDays] = useState<number>(30);
   const [accountId, setAccountId] = useState("all");
+  const [platform, setPlatform] = useState<"all" | "instagram" | "facebook" | "youtube">("all");
   const fetchAnalytics = useServerFn(getAnalytics);
 
   const { data, isLoading } = useQuery({
-    queryKey: ["analytics", activeOrg?.id, rangeDays, accountId],
+    queryKey: ["analytics", activeOrg?.id, rangeDays, accountId, platform],
     enabled: Boolean(activeOrg?.id),
     refetchInterval: 60_000,
     queryFn: () =>
-      fetchAnalytics({ data: { organizationId: activeOrg!.id, rangeDays, ...(accountId !== "all" ? { socialAccountId: accountId } : {}) } }),
+      fetchAnalytics({ data: { organizationId: activeOrg!.id, rangeDays, ...(accountId !== "all" ? { socialAccountId: accountId } : {}), ...(platform !== "all" ? { platform } : {}) } }),
   });
 
   const t = data?.totals;
@@ -74,7 +75,7 @@ function AnalyticsPage() {
         description="Conversations, reply speed, automation share and publishing results."
         actions={
           <div className="flex flex-wrap items-center gap-2">
-          <AccountSelect orgId={activeOrg?.id ?? null} value={accountId} onChange={setAccountId} className="h-9 w-auto max-w-[240px]" />
+          <PlatformAccountFilter orgId={activeOrg?.id ?? null} platform={platform} onPlatformChange={setPlatform} accountId={accountId} onAccountChange={setAccountId} />
           <div className="flex items-center gap-1 rounded-lg border border-border p-1">
             {RANGES.map((r) => (
               <Button

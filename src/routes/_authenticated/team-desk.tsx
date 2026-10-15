@@ -1,4 +1,4 @@
-import { AccountSelect } from "@/components/app/AccountSelect";
+import { PlatformAccountFilter } from "@/components/app/PlatformAccountFilter";
 import { csvCell } from "@/lib/csv-safe";
 import { contactLabel } from "@/lib/contact-name";
 import { createFileRoute } from "@tanstack/react-router";
@@ -53,6 +53,7 @@ function TeamDeskPage() {
   const fetchDesk = useServerFn(getTeamDesk);
   const fetchTeam = useServerFn(listTeam);
   const [accountId, setAccountId] = useState("all");
+  const [platform, setPlatform] = useState<"all" | "instagram" | "facebook" | "youtube">("all");
   const desk = useQuery({ queryKey: ["team-desk", orgId, accountId], enabled: !!orgId, refetchInterval: 30_000, queryFn: () => fetchDesk({ data: { organizationId: orgId!, ...(accountId !== "all" ? { socialAccountId: accountId } : {}) } }) });
   const team = useQuery({ queryKey: ["team", orgId], enabled: !!orgId, queryFn: () => fetchTeam({ data: { organizationId: orgId! } }) });
   const names = useMemo(() => Object.fromEntries((team.data ?? []).map((m) => [m.user_id, m.name || m.email])), [team.data]);
@@ -61,7 +62,7 @@ function TeamDeskPage() {
 
   return (
     <AppShell>
-      <PageHeader title="Team desk" description="Shared inbox, approvals, client reports and integrations for teams and agencies." actions={<div className="flex flex-wrap items-center gap-2"><AccountSelect orgId={orgId ?? null} value={accountId} onChange={setAccountId} className="h-9 w-auto max-w-[240px]" /><GuideButton guide="team-desk" /></div>} />
+      <PageHeader title="Team desk" description="Shared inbox, approvals, client reports and integrations for teams and agencies." actions={<div className="flex flex-wrap items-center gap-2"><PlatformAccountFilter orgId={orgId ?? null} platform={platform} onPlatformChange={setPlatform} accountId={accountId} onAccountChange={setAccountId} /><GuideButton guide="team-desk" /></div>} />
       {!orgId || !desk.data ? (
         <p className="text-sm text-muted-foreground">Loading…</p>
       ) : (
@@ -72,7 +73,7 @@ function TeamDeskPage() {
             <TabsTrigger value="reports">Client reports</TabsTrigger>
             {reviewer && <TabsTrigger value="api">API & webhooks</TabsTrigger>}
           </TabsList>
-          <TabsContent value="inbox"><SharedInbox orgId={orgId} desk={desk.data} names={names} members={team.data ?? []} /></TabsContent>
+          <TabsContent value="inbox"><SharedInbox orgId={orgId} desk={{ ...desk.data, conversations: desk.data.conversations.filter((c) => platform === "all" || c.platform === platform) }} names={names} members={team.data ?? []} /></TabsContent>
           <TabsContent value="approvals"><Approvals orgId={orgId} desk={desk.data} names={names} reviewer={reviewer} /></TabsContent>
           <TabsContent value="reports"><Reports />{reviewer && <ClientBilling orgId={orgId} />}</TabsContent>
           {reviewer && <TabsContent value="api"><Integrations orgId={orgId} /></TabsContent>}

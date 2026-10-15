@@ -26,7 +26,6 @@ import {
   StatusBadge,
 } from "@/components/app/primitives";
 import { Button } from "@/components/ui/button";
-import { GuideButton } from "@/components/app/GuideButton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { canEditComment } from "@/lib/comment-moderation";
 import { useTenant } from "@/hooks/useTenant";
@@ -334,7 +333,6 @@ function InboxPage() {
             Facebook and YouTube in one place.
           </p>
         </div>
-        <GuideButton guide="meta-review" />
       </div>
 
         {/* Conversation list */}

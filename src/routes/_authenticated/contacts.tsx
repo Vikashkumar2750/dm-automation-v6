@@ -1,4 +1,4 @@
-import { AccountSelect } from "@/components/app/AccountSelect";
+import { PlatformAccountFilter } from "@/components/app/PlatformAccountFilter";
 import { contactLabel } from "@/lib/contact-name";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -49,6 +49,7 @@ function ContactsPage() {
   const addSeg = useServerFn(saveSegment);
   const delSeg = useServerFn(deleteSegment);
   const [accountId, setAccountId] = useState("all");
+  const [platform, setPlatform] = useState<"all" | "instagram" | "facebook" | "youtube">("all");
   const conversations = useQuery({
     queryKey: ["conversations", orgId, "contacts", accountId],
     enabled: !!orgId,
@@ -60,7 +61,7 @@ function ContactsPage() {
 
   const contacts = useMemo(() => {
     const map = new Map<string, Row>();
-    for (const c of conversations.data ?? []) {
+    for (const c of (conversations.data ?? []).filter((c) => platform === "all" || c.platform === platform)) {
       const key = `${c.platform}:${c.external_user_id}`;
       const e = map.get(key);
       if (e) {
@@ -83,7 +84,7 @@ function ContactsPage() {
       if (r) { r.email = p.email; r.phone = p.phone; }
     }
     return [...map.values()].sort((a, b) => (a.lastAt < b.lastAt ? 1 : -1));
-  }, [conversations.data, crm.data]);
+  }, [conversations.data, crm.data, platform]);
 
   const allTags = useMemo(() => [...new Set(contacts.flatMap((c) => c.tags))].sort(), [contacts]);
   const visible = contacts.filter((c) => matchesSegment(c, filter));
@@ -112,7 +113,7 @@ function ContactsPage() {
         description="Your CRM: tag people, store email/phone and custom fields, and save segments."
         actions={
           <div className="flex min-w-0 flex-wrap gap-2">
-            <AccountSelect orgId={orgId ?? null} value={accountId} onChange={setAccountId} className="h-9 w-auto max-w-[240px]" />
+            <PlatformAccountFilter orgId={orgId ?? null} platform={platform} onPlatformChange={setPlatform} accountId={accountId} onAccountChange={setAccountId} />
             <GuideButton guide="contacts" />
             <Button variant="outline" onClick={exportCsv} disabled={visible.length === 0}><Download className="size-4" /> Export CSV</Button>
             <Button asChild variant="outline"><Link to="/inbox">Open inbox</Link></Button>

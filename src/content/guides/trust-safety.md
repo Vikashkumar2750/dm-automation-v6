@@ -54,4 +54,4 @@ Open **Trust & safety** in the left menu (below Account Health). It keeps your I
 1. Open **Trust & safety → Audit trail** (visible to owners, admins and managers only).
 2. Use the filter dropdown (for example only "Automation" changes) to find what you are looking for.
 3. Each row shows: when it happened, who did it, what was created/changed/deleted, and which fields changed.
-4. Press **Download CSV** to keep a record for your team or for a Meta/security review.
+4. Press **Download CSV** to keep a record for your team or a security review.
