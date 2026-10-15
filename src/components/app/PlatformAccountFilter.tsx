@@ -4,7 +4,7 @@ export type PlatformValue = "all" | "instagram" | "facebook" | "youtube";
 
 /** True when a row passes the shared platform + account filter. Rows without an account match every account. */
 export function matchesPlatformAccount(
-  row: { platform?: string | null; social_account_id?: string | null },
+  row: { platform?: string | null | undefined; social_account_id?: string | null | undefined },
   platform: string,
   accountId: string,
 ) {
