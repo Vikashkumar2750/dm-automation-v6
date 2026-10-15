@@ -40,7 +40,7 @@ function CommentsPage() {
       <PageHeader
         title="Comments"
         description="Pick a post on the left to see it like on Instagram, Facebook or YouTube, with all comments and replies."
-        actions={<><RefreshButton /><GuideButton guide="meta-review" /><Button asChild variant="outline"><Link to="/inbox">Open inbox</Link></Button></>}
+        actions={<><RefreshButton /><Button asChild variant="outline"><Link to="/inbox">Open inbox</Link></Button></>}
       />
       <div className="grid gap-4 lg:h-[calc(100vh-15rem)] lg:min-h-[480px] lg:grid-cols-[320px_minmax(0,1fr)] [&>*]:lg:min-h-0">
         <PostSidebar orgId={orgId} selectedId={post?.externalPostId ?? null} onSelect={setPost} onPlatformChange={() => setPost(null)} />

@@ -334,7 +334,6 @@ function InboxPage() {
             Facebook and YouTube in one place.
           </p>
         </div>
-        <GuideButton guide="meta-review" />
       </div>
 
         {/* Conversation list */}

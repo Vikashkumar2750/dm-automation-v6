@@ -167,7 +167,6 @@ function SettingsPage() {
       <PageHeader
         title="Settings"
         description="Workspace profile, white-label branding and client workspaces."
-        actions={<GuideButton guide="meta-review" />}
       />
 
       <Panel title="Branding" >
