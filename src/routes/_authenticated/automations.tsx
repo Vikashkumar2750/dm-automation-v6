@@ -281,6 +281,14 @@ function AutomationsPage() {
   const entryPointsOn = entryQuery.data?.enabled === true;
 
   const [draft, setDraft] = useState<Draft | null>(null);
+  const search = Route.useSearch();
+  const navigateSelf = Route.useNavigate();
+  useEffect(() => {
+    if (!search.new && !search.template) return;
+    const t = MESSAGE_TEMPLATES.find((x) => x.label === search.template);
+    setDraft(t ? { ...emptyDraft, name: t.label, responseText: t.text, responseVariations: t.variations.join("\n"), commentReplyText: t.comment, commentReplyVariations: t.commentVariations.join("\n") } : { ...emptyDraft });
+    void navigateSelf({ search: {}, replace: true });
+  }, [search.new, search.template, navigateSelf]);
   const editing = Boolean(draft);
   useEffect(() => { if (typeof window !== "undefined") window.scrollTo({ top: 0 }); }, [editing]);
 
