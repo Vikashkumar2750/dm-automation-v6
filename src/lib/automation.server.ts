@@ -764,6 +764,17 @@ function attachmentOf(rule: Rule) {
   return { url, type };
 }
 
+/** Uploaded files (storage:<orgId>/...) become a 24h signed link Meta can fetch; only this workspace's files. */
+async function resolveAttachmentUrl(admin: AdminClient, orgId: string, att: { url: string }) {
+  if (!att.url.startsWith("storage:")) return true;
+  const path = att.url.slice("storage:".length);
+  if (!path.startsWith(`${orgId}/`)) return false;
+  const { data } = await admin.storage.from("post-media").createSignedUrl(path, 86400);
+  if (!data?.signedUrl) return false;
+  att.url = data.signedUrl;
+  return true;
+}
+
 function actionRecipient(ctx: AutomationContext, action: string) {
   if (action === "comment_private_reply" && ctx.externalId) {
     return { comment_id: ctx.externalId };
@@ -862,6 +873,8 @@ async function deliverDm(
   if (attachment) {
     if ("comment_id" in recipient) {
       await log(admin, ctx, rule.id, "skipped", "attachment_needs_tap");
+    } else if (!(await resolveAttachmentUrl(admin, ctx.organizationId, attachment))) {
+      await log(admin, ctx, rule.id, "failed", "attachment:uploaded file missing");
     } else {
       const media = await callMessaging(ctx.platform, accountId, {
         recipient: { id: ctx.externalUserId },
