@@ -189,6 +189,10 @@ grant execute on function public.increment_unread(uuid) to service_role;
       console.log("[migrate] ensuring inbox core (conversations, messages)");
       await sql.unsafe(INBOX_BOOTSTRAP);
     }
+    if (file.startsWith("0001_")) {
+      console.log("[migrate] ensuring trust_settings base table");
+      await sql.unsafe(TRUST_SETTINGS_BOOTSTRAP);
+    }
     const body = await readFile(path.join(MIGRATIONS_DIR, file), "utf8");
     if (!body.trim()) continue;
     console.log(`[migrate] applying ${file}`);
