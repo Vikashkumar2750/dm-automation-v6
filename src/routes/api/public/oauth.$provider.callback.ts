@@ -179,6 +179,13 @@ async function saveAccount(
     expires_at: account.expires_at ?? null,
   });
   if (tokenError) throw new Error(tokenError.message);
+  // Re-attach chats that lost their account link (e.g. disconnect + reconnect) so
+  // the Inbox/Contacts account filter finds them. Best effort; never blocks connecting.
+  try {
+    await supabaseAdmin.rpc("relink_conversation_accounts" as never, { _org: stateRow.organization_id } as never);
+  } catch {
+    /* older databases without the helper — ignore */
+  }
   return true;
 }
 
