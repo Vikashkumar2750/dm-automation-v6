@@ -16,10 +16,20 @@ Applied to:
 - Replace "Create post" with **Create new automation**, which opens the new automation page. If no social account is connected, a popup says "Connect an account first", with a button that goes to Social Accounts.
 - New first card: **Automation templates**. Up to 4 cards are visible at a time. If there are more, they show in a slider you can move with the mouse wheel, arrow buttons, or touch swipe. Clicking a template opens the new automation page with that template filled in.
 
-## 3. Your questions
-- **Safety rules** (hourly/daily limits, quiet hours): one set per workspace, shared by all connected accounts. That stays the recommendation, because Meta judges each account, but your plan limit counts the whole workspace.
-- **Plan limits**: also apply to the whole workspace.
-- **Usage & Limits**: by default it shows overall plan usage against the plan limit, with no filter. Below that, a per-account breakdown table shows each account's share of runs this month. This is information only and does not change the limits.
+## 3. Limits: safety per account, plan quota for the whole workspace
+This is the same split competitors use. ManyChat, Inrō and LinkDM price by contacts or DMs for the whole workspace, while safety caps follow Meta, which rate-limits and flags each account separately.
+
+- **Safety limits move to each account.** Today one hourly/daily cap and one set of quiet hours is shared by all accounts, so a busy account can use up a quiet account's allowance. New setup:
+  - Workspace defaults stay as they are (60/hour, 500/day, quiet hours).
+  - Each connected account gets its own counters, plus an optional override in Trust & Safety: "Use workspace default" or custom hourly/daily caps.
+  - The highest value allowed is capped near Meta's per-account messaging ceiling (roughly 200 automated DMs/hour per Instagram account), so users can't set limits that risk a ban.
+  - Burst protection and the 3-journeys-per-contact rule also count per account.
+- **Plan quota stays shared across the workspace** (monthly automation runs and active rules). Splitting the plan per account would punish users whose traffic sits on one account, and it's not how the market sells. The plan's account count (for example 5 per platform on Pro) stays as the separate per-account control.
+- **Optional, decide later:** Super Admin can set a per-account monthly cap for a workspace, for agencies reselling to clients.
+- **Usage & Limits page:**
+  - Top: overall plan usage against the plan limit (no filter, the default).
+  - Below: one row per account with runs this month, share of the plan, and today's safety usage against that account's hourly/daily cap. Accounts near their cap are colored amber or red.
+- Mid-flow contacts are never cut off. Limits only block new journeys, same as today.
 
 ## 4. Guides
 - Remove the ".md download" button from every guide.
