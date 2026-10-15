@@ -174,6 +174,32 @@ revoke all on function public.increment_unread(uuid) from public;
 grant execute on function public.increment_unread(uuid) to service_role;
 `;
 
+  // trust_settings was created outside the .sql files; 0001 alters it, so
+  // bootstrap the base table just before that migration runs. Idempotent.
+  const TRUST_SETTINGS_BOOTSTRAP = `
+create table if not exists public.trust_settings (
+  organization_id uuid primary key references public.organizations(id) on delete cascade,
+  predictive_guard boolean not null default false,
+  last_guard_action_at timestamptz,
+  updated_at timestamptz not null default now()
+);
+
+grant select, insert, update on public.trust_settings to authenticated;
+grant all on public.trust_settings to service_role;
+alter table public.trust_settings enable row level security;
+
+drop policy if exists "trust_settings select member" on public.trust_settings;
+create policy "trust_settings select member" on public.trust_settings
+  for select to authenticated
+  using (public.is_org_member(organization_id, auth.uid()));
+
+drop policy if exists "trust_settings update member" on public.trust_settings;
+create policy "trust_settings update member" on public.trust_settings
+  for update to authenticated
+  using (public.is_org_member(organization_id, auth.uid()))
+  with check (public.is_org_member(organization_id, auth.uid()));
+`;
+
   const applied = new Set(
     (await sql`select name from public._app_migrations`).map((r) => r.name),
   );
