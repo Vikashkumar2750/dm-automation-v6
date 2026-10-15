@@ -16,20 +16,48 @@ Applied to:
 - Replace "Create post" with **Create new automation**, which opens the new automation page. If no social account is connected, a popup says "Connect an account first", with a button that goes to Social Accounts.
 - New first card: **Automation templates**. Up to 4 cards are visible at a time. If there are more, they show in a slider you can move with the mouse wheel, arrow buttons, or touch swipe. Clicking a template opens the new automation page with that template filled in.
 
-## 3. Limits: safety per account, plan quota for the whole workspace
-This is the same split competitors use. ManyChat, Inrō and LinkDM price by contacts or DMs for the whole workspace, while safety caps follow Meta, which rate-limits and flags each account separately.
+## 3. Limits: what counts per account, what counts for the whole workspace
 
-- **Safety limits move to each account.** Today one hourly/daily cap and one set of quiet hours is shared by all accounts, so a busy account can use up a quiet account's allowance. New setup:
-  - Workspace defaults stay as they are (60/hour, 500/day, quiet hours).
-  - Each connected account gets its own counters, plus an optional override in Trust & Safety: "Use workspace default" or custom hourly/daily caps.
-  - The highest value allowed is capped near Meta's per-account messaging ceiling (roughly 200 automated DMs/hour per Instagram account), so users can't set limits that risk a ban.
-  - Burst protection and the 3-journeys-per-contact rule also count per account.
-- **Plan quota stays shared across the workspace** (monthly automation runs and active rules). Splitting the plan per account would punish users whose traffic sits on one account, and it's not how the market sells. The plan's account count (for example 5 per platform on Pro) stays as the separate per-account control.
-- **Optional, decide later:** Super Admin can set a per-account monthly cap for a workspace, for agencies reselling to clients.
-- **Usage & Limits page:**
-  - Top: overall plan usage against the plan limit (no filter, the default).
-  - Below: one row per account with runs this month, share of the plan, and today's safety usage against that account's hourly/daily cap. Accounts near their cap are colored amber or red.
-- Mid-flow contacts are never cut off. Limits only block new journeys, same as today.
+### Final recommendation
+| Limit | Applies to | Who sets it |
+|---|---|---|
+| Monthly automation runs (plan quota) | Whole workspace, shared by all accounts | Plan (Super Admin can override) |
+| Active rules / flows | Whole workspace | Plan (Super Admin can override) |
+| Number of connected accounts | Whole workspace (Pro: 5 per platform) | Plan |
+| DMs per hour | Each account separately | User, up to the Super Admin max |
+| DMs per day | Each account separately | User, up to the Super Admin max |
+| Burst (DMs per minute) + cooldown | Each account separately | Fixed by the system |
+| Journeys per contact per day | Each account separately | User, up to the Super Admin max |
+| Quiet hours | Each account (copied from the workspace default) | User |
+
+Why: Meta counts and flags each account on its own, so safety limits should be per account. Billing is per workspace, which is also how ManyChat and LinkDM sell, so the plan quota stays shared.
+
+### Calculations (Pro: 10,000 runs/month, up to 15 accounts)
+- **Per-account default:** 60/hour and 500/day.
+  - One account could reach 500 × 30 = 15,000/month, which is more than the whole Pro quota. So the plan quota is the real ceiling, and nobody gets more than they paid for.
+- **Today (one shared cap):** 3 accounts share 60/hour. If one viral post uses all 60, the other two send 0 that hour.
+  - With per-account caps, each account gets 60, so up to 3 × 60 = 180/hour and no account blocks another.
+- **Average need:** 10,000 / 30 ≈ 333 runs/day for the whole workspace, so 500/day per account leaves plenty of headroom.
+- **Starter (300 runs/month):** about 10/day. The plan quota does all the limiting.
+
+### Safety settings on the user dashboard + Super Admin max values (new)
+Keeping safety settings on the user dashboard is right, because users need quiet hours and a way to slow down a new account. But they can only choose values up to a max that Super Admin sets:
+
+| Setting | Default | Max a user can set |
+|---|---|---|
+| DMs/hour per account | 60 | 150 (below Meta's ~200/hour) |
+| DMs/day per account | 500 | 1,500 |
+| Journeys/contact/day | 3 | 5 |
+
+- **Admin → System Settings:** the max values for all workspaces.
+- **Admin → Workspace detail → Safety (new):** override for one tenant. Lower it for a new or flagged tenant, raise it for a trusted agency. Even then, 200/hour is a hard stop.
+- The user sees "Max allowed: 150" next to each field. The server also rejects higher values, so the max can't be bypassed from the screen.
+- Optional, later: a per-account monthly cap for agencies reselling to clients.
+
+### Usage & Limits page
+- **Top (default, no filter):** overall plan usage, for example 4,200 / 10,000 runs (42%).
+- **Below:** one row per account with runs this month, its share of the plan, and today's usage against that account's caps (for example 38/60 this hour, 210/500 today). Rows turn amber at 80% and red at 100%.
+- Contacts already in the middle of a journey are never cut off. Limits only block new journeys, same as today.
 
 ## 4. Guides
 - Remove the ".md download" button from every guide.
@@ -41,4 +69,7 @@ This is the same split competitors use. ManyChat, Inrō and LinkDM price by cont
 - Calendar fix: the filter currently compares `post.social_account_id`. Posts are grouped across accounts, so the filter will match on the post's account or group targets. This will be verified with real data.
 - Per-account usage reuses `automation_runs` grouped by `social_account_id` (read-only), counted by run_key like `count_org_runs`.
 - Templates come from existing `flow-templates` / rule templates and pass to `/automations/new` through a search param.
-- No database changes.
+- Per-account safety: the safety gate scopes its counters by `social_account_id`. It only reads that account's limit, and the locked delivery order stays the same.
+- Per-account overrides: a JSON map on the workspace trust settings (one small column addition).
+- Super Admin max values: stored in `platform_settings.feature_flags` (global `safety_caps` plus `safety_caps_<orgId>`), the same pattern as `plan_limits_<orgId>`. Values are clamped on save and again in the safety gate.
+- Tests: two accounts keep separate counters, a user value above the max is clamped, and the per-tenant override wins over the global value.
