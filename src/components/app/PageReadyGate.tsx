@@ -10,7 +10,7 @@ import { useEffect, useState, type ReactNode } from "react";
  */
 const SETTLE_MS = 40; // lets dependent queries start before we decide the page is ready
 const SKELETON_AFTER_MS = 180; // fast (cached) pages never show a skeleton at all
-const MAX_WAIT_MS = 8000; // never hide a page forever if a request hangs
+const MAX_WAIT_MS = 1200; // slow requests show their own loading state instead of hiding the page
 
 // Pages already shown in this tab have their data cached, so going back to them
 // opens instantly instead of waiting again.
