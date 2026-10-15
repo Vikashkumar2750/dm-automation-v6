@@ -138,11 +138,7 @@ export function AutomationPreview({
               </Bubble>
               {draft.dmAttachmentType !== "none" && (
                 <div className="ml-8 flex h-28 w-44 items-center justify-center gap-2 overflow-hidden rounded-2xl bg-muted text-xs text-muted-foreground">
-                  {draft.dmAttachmentType === "image" && draft.dmAttachmentUrl.startsWith("http") ? (
-                    <img src={draft.dmAttachmentUrl} alt="" className="h-full w-full object-cover" />
-                  ) : (
-                    <>{draft.dmAttachmentType === "file" ? <FileText className="size-5" /> : <ImageIcon className="size-5" />}{draft.dmAttachmentType}</>
-                  )}
+                  <AttachmentThumb url={draft.dmAttachmentUrl} type={draft.dmAttachmentType} />
                 </div>
               )}
             </div>
