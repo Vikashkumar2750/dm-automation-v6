@@ -502,6 +502,8 @@ function AutomationsPage() {
   });
 
   const rules = rulesQuery.data ?? [];
+  const [rulePlatform, setRulePlatform] = useState("all");
+  const shownRules = rules.filter((r) => rulePlatform === "all" || !r.platform || r.platform === rulePlatform);
   const fetchPlanUsage = useServerFn(getPlanUsage);
   const planUsage = useQuery({
     queryKey: ["plan-usage", orgId],
@@ -606,7 +608,7 @@ function AutomationsPage() {
 
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
-        <Panel title="Rules" bodyClassName="p-0">
+        <Panel title="Rules" bodyClassName="p-0" action={<select aria-label="Platform" value={rulePlatform} onChange={(e) => setRulePlatform(e.target.value)} className="h-8 rounded-md border bg-background px-2 text-xs"><option value="all">All platforms</option><option value="instagram">Instagram</option><option value="facebook">Facebook</option></select>}>
           {rulesQuery.isLoading ? (
             <div className="flex items-center justify-center py-16 text-muted-foreground">
               <Loader2 className="size-5 animate-spin" />
@@ -626,7 +628,7 @@ function AutomationsPage() {
             </div>
           ) : (
             <ul className="divide-y">
-              {rules.map((rule) => (
+              {shownRules.map((rule) => (
                 <li key={rule.id} className="flex flex-wrap items-start gap-3 px-5 py-4">
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
