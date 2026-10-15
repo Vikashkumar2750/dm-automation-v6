@@ -1,10 +1,41 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { ChevronLeft, ChevronRight, FileText, Image as ImageIcon, Mic, Phone, Video, Camera, Heart, Send } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { isStorageRef, previewUrl } from "@/lib/media-upload";
 import { listRecentRemotePosts, listTargetablePosts } from "@/lib/automations.functions";
+
+const ATTACHMENT_VIDEO_RE = /\.(mp4|mov|webm|m4v)(?:[?#]|$)|#video$/i;
+
+/** Attachment bubble in the DM preview: resolves uploaded storage refs so the real media shows. */
+function AttachmentThumb({ url, type }: { url: string; type: "image" | "video" | "file" }) {
+  const [resolved, setResolved] = useState<string | null>(url && !isStorageRef(url) ? url : null);
+  useEffect(() => {
+    let live = true;
+    if (url && isStorageRef(url)) {
+      void previewUrl(url).then((u) => live && setResolved(u || null)).catch(() => undefined);
+    } else setResolved(url || null);
+    return () => {
+      live = false;
+    };
+  }, [url]);
+  const isVideo = type === "video" || ATTACHMENT_VIDEO_RE.test(url) || ATTACHMENT_VIDEO_RE.test(resolved ?? "");
+  if (resolved && type !== "file") {
+    return isVideo ? (
+      <video src={`${resolved.replace(/#video$/i, "")}#t=0.1`} muted playsInline preload="metadata" className="h-full w-full object-cover" />
+    ) : (
+      <img src={resolved} alt="" className="h-full w-full object-cover" />
+    );
+  }
+  return (
+    <>
+      {type === "file" ? <FileText className="size-5" /> : <ImageIcon className="size-5" />}
+      {type}
+    </>
+  );
+}
 
 export type PreviewDraft = {
   trigger: string;
@@ -107,11 +138,7 @@ export function AutomationPreview({
               </Bubble>
               {draft.dmAttachmentType !== "none" && (
                 <div className="ml-8 flex h-28 w-44 items-center justify-center gap-2 overflow-hidden rounded-2xl bg-muted text-xs text-muted-foreground">
-                  {draft.dmAttachmentType === "image" && draft.dmAttachmentUrl.startsWith("http") ? (
-                    <img src={draft.dmAttachmentUrl} alt="" className="h-full w-full object-cover" />
-                  ) : (
-                    <>{draft.dmAttachmentType === "file" ? <FileText className="size-5" /> : <ImageIcon className="size-5" />}{draft.dmAttachmentType}</>
-                  )}
+                  <AttachmentThumb url={draft.dmAttachmentUrl} type={draft.dmAttachmentType} />
                 </div>
               )}
             </div>
