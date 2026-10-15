@@ -2,14 +2,14 @@ import { AccountSelect } from "@/components/app/AccountSelect";
 
 export type PlatformValue = "all" | "instagram" | "facebook" | "youtube";
 
-/** True when a row passes the shared platform + account filter. Rows without an account match every account. */
+/** True when a row passes the shared platform + account filter. Exact match: a chosen platform/account hides rows of any other (or unknown) platform/account. */
 export function matchesPlatformAccount(
   row: { platform?: string | null | undefined; social_account_id?: string | null | undefined },
   platform: string,
   accountId: string,
 ) {
-  if (platform !== "all" && row.platform && row.platform !== platform) return false;
-  if (accountId !== "all" && row.social_account_id && row.social_account_id !== accountId) return false;
+  if (platform !== "all" && row.platform !== platform) return false;
+  if (accountId !== "all" && row.social_account_id !== accountId) return false;
   return true;
 }
 

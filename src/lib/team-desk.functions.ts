@@ -27,7 +27,7 @@ async function requireReviewer(ctx: Ctx, organizationId: string) {
 
 export const getTeamDesk = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => orgInput.extend({ socialAccountId: z.string().uuid().optional() }).parse(d))
+  .inputValidator((d: unknown) => orgInput.extend({ socialAccountId: z.string().uuid().optional(), platform: z.enum(["instagram", "facebook", "youtube"]).optional() }).parse(d))
   .handler(async ({ data, context }) => {
     const sb = context.supabase;
     const [role, convs, assigns, settings, approvals] = await Promise.all([
@@ -35,7 +35,7 @@ export const getTeamDesk = createServerFn({ method: "GET" })
       sb.from("conversations")
         .select("id, platform, channel, status, external_user_name, external_user_id, last_message_at, last_message_preview, unread_count")
         .eq("organization_id", data.organizationId)
-        .or(data.socialAccountId ? `social_account_id.eq.${data.socialAccountId}` : "id.not.is.null")
+        .or(data.socialAccountId ? `social_account_id.eq.${data.socialAccountId}` : data.platform ? `platform.eq.${data.platform}` : "id.not.is.null")
         .order("last_message_at", { ascending: false })
         .limit(150),
       sb.from("conversation_assignments").select("conversation_id, assigned_to").eq("organization_id", data.organizationId),
