@@ -5,3 +5,4 @@
 - OAuth tokens and Razorpay secrets are read via readToken and written via storeToken (token-crypto.server); TOKEN_ENCRYPTION_KEY turns on AES-GCM and /api/public/cron/encrypt-tokens seals legacy rows — one switch encrypts at rest without breaking existing connections.
 - human-takeover.* sets bot_paused_until after manual replies using takeover_minutes; all automated paths check conversationInTakeover before sending — a human-owned chat never gets a bot reply, and expiry sends nothing by itself.
 - YouTube quota backoff and scheduler heartbeat stay standalone — reliability never changes Meta delivery.
+- Calendar display merges stored and remote posts through calendar-posts, deduplicating by account plus provider post ID — connected accounts must keep independent publishing history without inserting remote rows.

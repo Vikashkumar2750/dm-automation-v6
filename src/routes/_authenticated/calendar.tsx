@@ -13,6 +13,8 @@ import { cn } from "@/lib/utils";
 import { useTenant } from "@/hooks/useTenant";
 import { listSocialAccounts } from "@/lib/social-accounts.functions";
 import { listPosts, runDuePosts, type Post } from "@/lib/publishing.functions";
+import { listRecentRemotePosts } from "@/lib/automations.functions";
+import { calendarPosts } from "@/lib/calendar-posts";
 import { statusTone } from "./create-post";
 import { formatLabel } from "@/components/app/PostListExtras";
 
@@ -61,6 +63,7 @@ function CalendarPage() {
   const orgId = activeOrg?.id ?? "";
 
   const fetchPosts = useServerFn(listPosts);
+  const fetchRemote = useServerFn(listRecentRemotePosts);
   const fetchAccounts = useServerFn(listSocialAccounts);
   const flushDue = useServerFn(runDuePosts);
 
@@ -86,6 +89,13 @@ function CalendarPage() {
     enabled: Boolean(orgId),
   });
 
+  const remoteQuery = useQuery({
+    queryKey: ["remote-posts", orgId],
+    queryFn: () => fetchRemote({ data: { organizationId: orgId } }),
+    enabled: Boolean(orgId),
+    staleTime: 60_000,
+  });
+
   // Flush anything whose scheduled time has already passed whenever the page opens.
   useEffect(() => {
     if (!orgId) return;
@@ -102,7 +112,8 @@ function CalendarPage() {
     };
   }, [orgId, flushDue, queryClient]);
 
-  const posts = (postsQuery.data ?? []).filter((p) => matchesPlatformAccount(p, platform, accountId));
+  const posts = useMemo(() => calendarPosts(postsQuery.data ?? [], remoteQuery.data?.posts ?? [], orgId)
+    .filter((p) => matchesPlatformAccount(p, platform, accountId)), [postsQuery.data, remoteQuery.data, orgId, platform, accountId]);
 
   const byDay = useMemo(() => {
     const map = new Map<string, Post[]>();
@@ -177,7 +188,7 @@ function CalendarPage() {
           </div>
         }
       >
-        {postsQuery.isLoading ? (
+        {postsQuery.isLoading || remoteQuery.isLoading ? (
           <div className="flex items-center justify-center py-16">
             <Loader2 className="size-5 animate-spin text-muted-foreground" />
           </div>
@@ -223,6 +234,10 @@ function CalendarPage() {
                             key={post.id}
                             onClick={(event) => {
                               event.stopPropagation();
+                              if (post.id.startsWith("remote:")) {
+                                if (post.permalink) window.open(post.permalink, "_blank", "noopener,noreferrer");
+                                return;
+                              }
                               setDraft({ post });
                               setOpen(true);
                             }}

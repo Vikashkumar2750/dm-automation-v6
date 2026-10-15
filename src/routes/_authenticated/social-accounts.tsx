@@ -33,6 +33,8 @@ export const Route = createFileRoute("/_authenticated/social-accounts")({
         property: "og:description",
         content: "Connect and manage Instagram, Facebook and YouTube accounts.",
       },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: SocialAccountsPage,

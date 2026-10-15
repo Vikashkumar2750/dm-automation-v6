@@ -1,5 +1,10 @@
 # DM FB-IG-YT by Techaasvik — Build Roadmap
 
+## Oct 15 filter repairs
+- [x] Repair Calendar, Inbox and Contacts filtering; tests and signed-in controlled-data browser checks pass for switching between two accounts.
+- [x] Make dashboard template replies grey by default and blue on card hover; browser verified.
+- [ ] Verify these three filters against the owner's Railway account data (preview session has no connected accounts or messages).
+
 Source of truth: `DM_FB_IG_YT_Techaasvik_Master_PRD_Phasewise.md` (uploaded PRD).
 Decisions: build on Lovable, keep code portable for a later Railway export.
 Real Meta + YouTube credentials are available when we reach OAuth phases.
