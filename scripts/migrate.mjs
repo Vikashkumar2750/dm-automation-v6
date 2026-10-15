@@ -101,19 +101,19 @@ alter table public.conversations enable row level security;
 drop policy if exists "conversations select member" on public.conversations;
 create policy "conversations select member" on public.conversations
   for select to authenticated
-  using (public.is_org_member(organization_id, auth.uid())
-         or public.has_platform_role(auth.uid(), 'super_admin'));
+  using (public.current_user_is_org_member(organization_id)
+         or public.current_user_has_platform_role('super_admin'));
 
 drop policy if exists "conversations insert member" on public.conversations;
 create policy "conversations insert member" on public.conversations
   for insert to authenticated
-  with check (public.is_org_member(organization_id, auth.uid()));
+  with check (public.current_user_is_org_member(organization_id));
 
 drop policy if exists "conversations update member" on public.conversations;
 create policy "conversations update member" on public.conversations
   for update to authenticated
-  using (public.is_org_member(organization_id, auth.uid()))
-  with check (public.is_org_member(organization_id, auth.uid()));
+  using (public.current_user_is_org_member(organization_id))
+  with check (public.current_user_is_org_member(organization_id));
 
 drop trigger if exists conversations_updated_at on public.conversations;
 create trigger conversations_updated_at before update on public.conversations
@@ -146,8 +146,8 @@ create policy "messages select member" on public.messages
   using (exists (
     select 1 from public.conversations c
     where c.id = messages.conversation_id
-      and (public.is_org_member(c.organization_id, auth.uid())
-           or public.has_platform_role(auth.uid(), 'super_admin'))
+      and (public.current_user_is_org_member(c.organization_id)
+           or public.current_user_has_platform_role('super_admin'))
   ));
 
 drop policy if exists "messages insert member" on public.messages;
@@ -156,7 +156,7 @@ create policy "messages insert member" on public.messages
   with check (exists (
     select 1 from public.conversations c
     where c.id = messages.conversation_id
-      and public.is_org_member(c.organization_id, auth.uid())
+      and public.current_user_is_org_member(c.organization_id)
   ));
 
 create or replace function public.increment_unread(p_conversation_id uuid)
@@ -191,13 +191,13 @@ alter table public.trust_settings enable row level security;
 drop policy if exists "trust_settings select member" on public.trust_settings;
 create policy "trust_settings select member" on public.trust_settings
   for select to authenticated
-  using (public.is_org_member(organization_id, auth.uid()));
+  using (public.current_user_is_org_member(organization_id));
 
 drop policy if exists "trust_settings update member" on public.trust_settings;
 create policy "trust_settings update member" on public.trust_settings
   for update to authenticated
-  using (public.is_org_member(organization_id, auth.uid()))
-  with check (public.is_org_member(organization_id, auth.uid()));
+  using (public.current_user_is_org_member(organization_id))
+  with check (public.current_user_is_org_member(organization_id));
 `;
 
   const applied = new Set(
