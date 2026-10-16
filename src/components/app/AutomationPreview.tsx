@@ -46,6 +46,7 @@ export type PreviewDraft = {
   commentReplyText: string;
   dmLinkUrl: string;
   dmButtonLabel: string;
+  dmExtraButtons?: { url: string; label: string }[];
   dmAttachmentUrl: string;
   dmAttachmentType: "none" | "image" | "video" | "file";
   requireFollow: boolean;
@@ -135,6 +136,7 @@ export function AutomationPreview({
               <Bubble fb={isFb}>
                 <p className="whitespace-pre-wrap break-words">{message}</p>
                 {draft.dmLinkUrl.trim() && <Btn>{label}</Btn>}
+                {(draft.dmExtraButtons ?? []).filter((b) => b.url.trim()).map((b, i) => <Btn key={i}>{b.label.trim() || "Open link"}</Btn>)}
               </Bubble>
               {draft.dmAttachmentType !== "none" && (
                 <div className="ml-8 flex h-28 w-44 items-center justify-center gap-2 overflow-hidden rounded-2xl bg-muted text-xs text-muted-foreground">
