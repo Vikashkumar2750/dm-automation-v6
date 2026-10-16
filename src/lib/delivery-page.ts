@@ -225,8 +225,8 @@ export function validateLeadValue(field: Pick<LeadField, "type" | "required" | "
 
 /** Optional trust & compliance details shown on a delivery page (stored inside form_config.extras). */
 export type PageExtras = {
-  creatorName?: string; supportEmail?: string;
-  deliverables?: { count?: string; format?: string; size?: string };
+  creatorName?: string | undefined; supportEmail?: string | undefined;
+  deliverables?: { count?: string | undefined; format?: string | undefined; size?: string | undefined };
   policies?: { refund?: string; fulfilment?: string; privacy?: string; terms?: string };
   disclaimer?: string;
 };
