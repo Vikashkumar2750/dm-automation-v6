@@ -2,6 +2,7 @@ import { CheckCircle2, Clock3, Copy, ShieldCheck, Tag } from "lucide-react";
 import { Fragment, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { BuyerSignIn, BuyerSignInButton } from "@/components/app/BuyerSignIn";
 import { LeadFields, useLeadForm, type LeadFormSource } from "@/components/app/DeliveryLeadForm";
 import { inlineParts, parseBody, priceDisplay, type Block } from "@/lib/delivery-page";
 
@@ -35,10 +36,11 @@ function Inline({ text }: { text: string }) {
 }
 
 /** Landing-page style rendering of a delivery page (used publicly and as a live preview). */
-export function DeliveryPageView({ title, body, buttonLabel, buttonHref, imageUrl, imageAlt, countdownAt, expiryAction = "disable_cta", expiryMessage, price, leadForm }: {
+export function DeliveryPageView({ title, body, buttonLabel, buttonHref, imageUrl, imageAlt, countdownAt, expiryAction = "disable_cta", expiryMessage, price, leadForm, buyerSlug }: {
   title: string; body: string; buttonLabel?: string | null; buttonHref?: string | null; imageUrl?: string | null; imageAlt?: string | null;
-  countdownAt?: string | null; expiryAction?: "disable_cta" | "hide_cta"; expiryMessage?: string | null; price?: PagePrice | null; leadForm?: LeadFormSource | null;
+  countdownAt?: string | null; expiryAction?: "disable_cta" | "hide_cta"; expiryMessage?: string | null; price?: PagePrice | null; leadForm?: LeadFormSource | null; buyerSlug?: string | null;
 }) {
+  const [signIn, setSignIn] = useState(false);
   const form = useLeadForm(leadForm);
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -72,6 +74,10 @@ export function DeliveryPageView({ title, body, buttonLabel, buttonHref, imageUr
   const toCheckout = () => document.getElementById("checkout")?.scrollIntoView({ behavior: "smooth", block: "center" });
   return (
     <div className="min-h-full bg-background pb-24 lg:pb-0">
+      {buyerSlug && <>
+        <header className="sticky top-0 z-20 border-b border-border bg-background/90 backdrop-blur"><div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-2.5 sm:px-6"><span className="truncate text-sm font-semibold text-foreground">{heading.replace(/\*\*/g, "")}</span><BuyerSignInButton onClick={() => setSignIn(true)} /></div></header>
+        <BuyerSignIn slug={buyerSlug} open={signIn} onOpenChange={setSignIn} />
+      </>}
       <div className="mx-auto grid max-w-6xl gap-8 px-4 py-8 sm:px-6 lg:grid-cols-[minmax(0,1fr)_380px] lg:py-12">
         <article className="min-w-0 space-y-5">
           <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/5 px-3 py-1 text-xs font-medium text-primary"><CheckCircle2 className="size-3.5" /> Ready for you</span>
@@ -101,7 +107,7 @@ export function DeliveryPageView({ title, body, buttonLabel, buttonHref, imageUr
               ))}
             </div>
           )}
-          <p className="rounded-lg border-l-4 border-primary bg-muted px-4 py-3 text-sm text-muted-foreground">Already got access? Your link was sent in your DM — open the chat to find it again.</p>
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border-l-4 border-primary bg-muted px-4 py-3 text-sm text-muted-foreground"><span>Already got access? {buyerSlug ? "Sign in with your email to open it again." : "Your link was sent in your DM."}</span>{buyerSlug && <Button size="sm" variant="outline" onClick={() => setSignIn(true)}>Access your purchase</Button>}</div>
           <p className="flex items-center gap-1.5 pt-2 text-xs text-muted-foreground"><ShieldCheck className="size-3.5" /> Secure delivery</p>
         </article>
 
