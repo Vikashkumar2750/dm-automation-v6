@@ -40,6 +40,7 @@ export type AutomationRule = {
   dm_link_url: string | null;
   dm_button_label: string | null;
   dm_link_in_text: boolean | null;
+  dm_extra_buttons: Array<{ url: string; label: string }> | null;
   dm_attachment_url: string | null;
   dm_attachment_type: "none" | "image" | "video" | "file";
   follower_condition: "any" | "followers_only" | "non_followers";
@@ -59,7 +60,7 @@ export type AutomationRun = {
 };
 
 const SELECT =
-  "id, organization_id, name, is_active, priority, platform, trigger, match_type, keywords, action, response_text, response_variations, set_status, cooldown_seconds, daily_limit, created_at, target_post_ids, comment_reply_text, comment_reply_variations, dm_link_url, dm_button_label, dm_link_in_text, dm_attachment_url, dm_attachment_type, follower_condition, require_follow, follow_prompt_text";
+  "id, organization_id, name, is_active, priority, platform, trigger, match_type, keywords, action, response_text, response_variations, set_status, cooldown_seconds, daily_limit, created_at, target_post_ids, comment_reply_text, comment_reply_variations, dm_link_url, dm_button_label, dm_link_in_text, dm_extra_buttons, dm_attachment_url, dm_attachment_type, follower_condition, require_follow, follow_prompt_text";
 
 const ruleInput = z.object({
   name: z.string().trim().min(1).max(80),
@@ -87,6 +88,7 @@ const ruleInput = z.object({
   dmLinkUrl: z.string().trim().url().max(500).nullable().or(z.literal("").transform(() => null)),
   dmButtonLabel: z.string().trim().max(20).nullable(),
   dmLinkInText: z.boolean().default(false),
+  dmExtraButtons: z.array(z.object({ url: z.string().trim().url().max(500), label: z.string().trim().max(20) })).max(2).default([]),
   dmAttachmentUrl: z
     .string()
     .trim()
@@ -123,6 +125,7 @@ function toRow(input: z.infer<typeof ruleInput>) {
     dm_link_url: input.dmLinkUrl,
     dm_button_label: input.dmButtonLabel,
     dm_link_in_text: input.dmLinkInText,
+    dm_extra_buttons: input.dmExtraButtons,
     dm_attachment_url: input.dmAttachmentUrl,
     dm_attachment_type: input.dmAttachmentType,
     follower_condition: input.followerCondition,

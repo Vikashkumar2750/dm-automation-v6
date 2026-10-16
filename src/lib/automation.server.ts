@@ -64,6 +64,7 @@ type Rule = {
   dm_link_url: string | null;
   dm_button_label: string | null;
   dm_link_in_text?: boolean | null;
+  dm_extra_buttons?: Array<{ url: string; label: string }> | null;
   dm_attachment_url: string | null;
   dm_attachment_type: string;
   follower_condition: string;
@@ -72,7 +73,7 @@ type Rule = {
 };
 
 const RULE_SELECT =
-  "id, name, platform, trigger, match_type, keywords, action, response_text, response_variations, set_status, cooldown_seconds, daily_limit, target_post_ids, comment_reply_text, comment_reply_variations, dm_link_url, dm_button_label, dm_link_in_text, dm_attachment_url, dm_attachment_type, follower_condition, require_follow, follow_prompt_text";
+  "id, name, platform, trigger, match_type, keywords, action, response_text, response_variations, set_status, cooldown_seconds, daily_limit, target_post_ids, comment_reply_text, comment_reply_variations, dm_link_url, dm_button_label, dm_link_in_text, dm_extra_buttons, dm_attachment_url, dm_attachment_type, follower_condition, require_follow, follow_prompt_text";
 
 type Settings = {
   is_paused: boolean;
@@ -862,14 +863,32 @@ async function deliverDm(
   // tracking problem can never block delivery.
   // Optional: also put the link inside the text so Instagram/Facebook web
   // (which hides buttons) still shows a clickable link. The button stays.
-  const withText = (u: string) =>
-    rule.dm_link_in_text ? linkInText(text, u) : text;
+  // Up to 2 extra link buttons (Meta allows 3 buttons per template).
+  const extras = (Array.isArray(rule.dm_extra_buttons) ? rule.dm_extra_buttons : [])
+    .filter((b) => b && typeof b.url === "string" && /^https?:\/\//.test(b.url.trim()))
+    .slice(0, 2)
+    .map((b) => ({ url: b.url.trim(), label: (b.label ?? "").trim() || "Open link" }));
+  const withText = (urls: string[]) => {
+    if (!rule.dm_link_in_text) return text;
+    return urls.reduce((t, u) => linkInText(t, u), text);
+  };
+  const trackedExtras = extras.map((b) => ({ ...b, tracked: track("link", b.url) }));
+  const allTracked = trackedLink && trackedExtras.every((b) => b.tracked);
+  const plainButtons: Button[] = [
+    { type: "web_url", url: link, title: buttonLabel },
+    ...extras.map((b) => ({ type: "web_url" as const, url: b.url, title: b.label })),
+  ];
+  const trackedButtons: Button[] = allTracked
+    ? [
+        { type: "web_url", url: trackedLink!, title: buttonLabel },
+        ...trackedExtras.map((b) => ({ type: "web_url" as const, url: b.tracked!, title: b.label })),
+      ]
+    : [];
+  const urlsOf = (bs: Button[]) => bs.map((b) => (b.type === "web_url" ? b.url : "")).filter(Boolean);
   const shapes = link
     ? [
-        ...(trackedLink
-          ? buttonMessages(withText(trackedLink), [{ type: "web_url", url: trackedLink, title: buttonLabel }])
-          : []),
-        ...buttonMessages(withText(link), [{ type: "web_url", url: link, title: buttonLabel }]),
+        ...(trackedButtons.length ? buttonMessages(withText(urlsOf(trackedButtons)), trackedButtons) : []),
+        ...buttonMessages(withText(urlsOf(plainButtons)), plainButtons),
       ]
     : [{ text }];
 
