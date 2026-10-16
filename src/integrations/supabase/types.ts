@@ -224,6 +224,7 @@ export type Database = {
           dm_attachment_type: string
           dm_attachment_url: string | null
           dm_button_label: string | null
+          dm_link_in_text: boolean
           dm_link_url: string | null
           follow_prompt_text: string | null
           follower_condition: string
@@ -254,6 +255,7 @@ export type Database = {
           dm_attachment_type?: string
           dm_attachment_url?: string | null
           dm_button_label?: string | null
+          dm_link_in_text?: boolean
           dm_link_url?: string | null
           follow_prompt_text?: string | null
           follower_condition?: string
@@ -284,6 +286,7 @@ export type Database = {
           dm_attachment_type?: string
           dm_attachment_url?: string | null
           dm_button_label?: string | null
+          dm_link_in_text?: boolean
           dm_link_url?: string | null
           follow_prompt_text?: string | null
           follower_condition?: string
