@@ -665,6 +665,14 @@ type Button =
  * and Instagram messaging), then quick replies for postback buttons, then
  * plain text with any links appended so the contact always gets something.
  */
+/** Appends the link to the message text, keeping the total within Meta's 640 chars. */
+export function linkInText(text: string, url: string): string {
+  const suffix = `\n\n👉 ${url}`;
+  const room = 640 - suffix.length;
+  if (room < 1) return text;
+  return text.slice(0, room) + suffix;
+}
+
 function buttonMessages(text: string, buttons: Button[]): Record<string, unknown>[] {
   const body = text.slice(0, 640);
   const links = buttons
@@ -852,12 +860,16 @@ async function deliverDm(
   const trackedLink = link ? track("link", link) : null;
   // Tracked button first; the original link shapes stay as a fallback so a
   // tracking problem can never block delivery.
+  // Optional: also put the link inside the text so Instagram/Facebook web
+  // (which hides buttons) still shows a clickable link. The button stays.
+  const withText = (u: string) =>
+    rule.dm_link_in_text ? linkInText(text, u) : text;
   const shapes = link
     ? [
         ...(trackedLink
-          ? buttonMessages(text, [{ type: "web_url", url: trackedLink, title: buttonLabel }])
+          ? buttonMessages(withText(trackedLink), [{ type: "web_url", url: trackedLink, title: buttonLabel }])
           : []),
-        ...buttonMessages(text, [{ type: "web_url", url: link, title: buttonLabel }]),
+        ...buttonMessages(withText(link), [{ type: "web_url", url: link, title: buttonLabel }]),
       ]
     : [{ text }];
 
