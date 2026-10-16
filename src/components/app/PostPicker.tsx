@@ -64,13 +64,28 @@ export function PostPicker({
   const postsQuery = useQuery({
     queryKey: ["targetable-posts", orgId],
     enabled: Boolean(orgId),
+    staleTime: 5 * 60_000,
+    gcTime: 30 * 60_000,
+    meta: { background: true },
     queryFn: () => fetchPosts({ data: { organizationId: orgId! } }),
   });
+  // Cached posts show instantly; a fresh check always runs quietly on open
+  // (and on window focus) so newly published reels appear without a manual refresh.
   const remoteQuery = useQuery({
     queryKey: ["remote-posts", orgId],
     enabled: Boolean(orgId),
-    staleTime: 60_000,
-    queryFn: () => fetchRemote({ data: { organizationId: orgId! } }),
+    staleTime: 0,
+    gcTime: 30 * 60_000,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
+    meta: { background: true },
+    initialData: () => readPostCache(orgId),
+    initialDataUpdatedAt: 0,
+    queryFn: async () => {
+      const result = await fetchRemote({ data: { organizationId: orgId! } });
+      writePostCache(orgId, result);
+      return result;
+    },
   });
 
   const posts = useMemo(() => {
@@ -200,7 +215,10 @@ export function PostPicker({
         </p>
       )}
 
-      {postsQuery.isLoading || remoteQuery.isLoading ? (
+      {remoteQuery.isFetching && visiblePosts.length > 0 && (
+        <p className="text-xs text-muted-foreground">Syncing latest posts…</p>
+      )}
+      {visiblePosts.length === 0 && (postsQuery.isLoading || remoteQuery.isFetching) ? (
         <p className="text-sm text-muted-foreground">Loading your latest posts…</p>
       ) : visiblePosts.length === 0 ? (
         <p className="text-sm text-muted-foreground">
@@ -285,4 +303,26 @@ export function PostPicker({
       )}
     </div>
   );
+}
+
+const POST_CACHE_PREFIX = "autodm:remote-posts:";
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function readPostCache(orgId: string | null | undefined): any {
+  if (!orgId || typeof window === "undefined") return undefined;
+  try {
+    const raw = window.localStorage.getItem(POST_CACHE_PREFIX + orgId);
+    return raw ? JSON.parse(raw) : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function writePostCache(orgId: string | null | undefined, value: unknown) {
+  if (!orgId || typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(POST_CACHE_PREFIX + orgId, JSON.stringify(value));
+  } catch {
+    /* storage full — ignore */
+  }
 }
