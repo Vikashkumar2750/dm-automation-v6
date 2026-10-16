@@ -1,0 +1,1 @@
+ALTER TABLE public.automation_rules ADD COLUMN IF NOT EXISTS dm_extra_buttons jsonb NOT NULL DEFAULT '[]'::jsonb;
