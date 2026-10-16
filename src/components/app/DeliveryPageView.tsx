@@ -1,4 +1,4 @@
-import { CheckCircle2, Clock3, Copy, ShieldCheck, Tag } from "lucide-react";
+import { ImageIcon, CheckCircle2, Clock3, Copy, ShieldCheck, Tag } from "lucide-react";
 import { Fragment, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -36,9 +36,9 @@ function Inline({ text }: { text: string }) {
 }
 
 /** Landing-page style rendering of a delivery page (used publicly and as a live preview). */
-export function DeliveryPageView({ title, body, buttonLabel, buttonHref, imageUrl, imageAlt, countdownAt, expiryAction = "disable_cta", expiryMessage, price, leadForm, buyerSlug }: {
+export function DeliveryPageView({ title, body, buttonLabel, buttonHref, imageUrl, imageAlt, countdownAt, expiryAction = "disable_cta", expiryMessage, price, leadForm, buyerSlug, imagePlaceholder }: {
   title: string; body: string; buttonLabel?: string | null; buttonHref?: string | null; imageUrl?: string | null; imageAlt?: string | null;
-  countdownAt?: string | null; expiryAction?: "disable_cta" | "hide_cta"; expiryMessage?: string | null; price?: PagePrice | null; leadForm?: LeadFormSource | null; buyerSlug?: string | null;
+  countdownAt?: string | null; expiryAction?: "disable_cta" | "hide_cta"; expiryMessage?: string | null; price?: PagePrice | null; leadForm?: LeadFormSource | null; buyerSlug?: string | null; imagePlaceholder?: boolean;
 }) {
   const [signIn, setSignIn] = useState(false);
   const form = useLeadForm(leadForm);
@@ -82,6 +82,7 @@ export function DeliveryPageView({ title, body, buttonLabel, buttonHref, imageUr
         <article className="min-w-0 space-y-5">
           <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/5 px-3 py-1 text-xs font-medium text-primary"><CheckCircle2 className="size-3.5" /> Ready for you</span>
           <h1 className="text-balance text-2xl font-bold tracking-tight text-foreground sm:text-4xl"><Inline text={heading} /></h1>
+          {!imageUrl && imagePlaceholder && <div className="flex aspect-video w-full flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-gradient-to-br from-primary/15 via-muted to-primary/5 text-muted-foreground"><ImageIcon className="size-8" /><span className="text-xs">Your 16:9 banner image (1920×1080)</span></div>}
           {imageUrl && <div className="aspect-video w-full overflow-hidden rounded-xl border border-border bg-muted"><img src={imageUrl} alt={imageAlt || title} className="size-full object-cover" /></div>}
           {intro && <p className="text-pretty text-base text-muted-foreground"><Inline text={intro} /></p>}
           {content.map((b, i) => {
