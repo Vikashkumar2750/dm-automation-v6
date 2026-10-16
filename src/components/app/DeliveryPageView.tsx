@@ -83,7 +83,7 @@ export function DeliveryPageView({ title, body, buttonLabel, buttonHref, imageUr
       <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-72 bg-gradient-to-b from-primary/15 via-primary/5 to-transparent" />
       {buyerSlug && <>
         <header className="sticky top-0 z-20 border-b border-border bg-background/90 backdrop-blur"><div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-2.5 @xl:px-6"><span className="truncate text-sm font-semibold text-foreground">{heading.replace(/\*\*/g, "")}</span><BuyerSignInButton onClick={() => setSignIn(true)} /></div></header>
-        <BuyerSignIn slug={buyerSlug} open={signIn} onOpenChange={setSignIn} />
+        <BuyerSignIn slug={buyerSlug} open={signIn} onOpenChange={setSignIn} creatorName={extras.creatorName} />
       </>}
       <div className="relative mx-auto grid max-w-6xl gap-8 px-4 py-8 @xl:px-6 @3xl:grid-cols-[minmax(0,1fr)_380px] @3xl:py-12">
         <article className="min-w-0 space-y-5">
@@ -137,7 +137,7 @@ export function DeliveryPageView({ title, body, buttonLabel, buttonHref, imageUr
               ))}
             </div>
           )}
-          {extras.disclaimer && <p className="whitespace-pre-line text-xs text-muted-foreground">{extras.disclaimer}</p>}
+          {extras.disclaimer && <p className="whitespace-pre-line border-t border-border pt-4 text-xs text-muted-foreground"><span className="font-semibold text-foreground">Disclaimer</span><br />{extras.disclaimer.replace(/\s*Learn more\.?\s*$/i, "")} <a href="/disclaimer" className="underline">Learn more</a>.</p>}
           <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border-l-4 border-primary bg-muted px-4 py-3 text-sm text-muted-foreground"><span>Already got access? {buyerSlug ? "Sign in with your email to open it again." : "Your link was sent in your DM."}</span>{buyerSlug && <Button size="sm" variant="outline" onClick={() => setSignIn(true)}>Access your purchase</Button>}</div>
           <p className="flex items-center gap-1.5 pt-2 text-xs text-muted-foreground"><ShieldCheck className="size-3.5" /> Secure delivery</p>
         </article>

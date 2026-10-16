@@ -18,7 +18,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useTenant } from "@/hooks/useTenant";
 import { buildFunnel, formatInr, rupeesToPaise, slugify } from "@/lib/revenue";
 import { DeliveryPageView } from "@/components/app/DeliveryPageView";
-import { DELIVERY_TEMPLATES, SAMPLE_BODY, EMAIL_ONLY_FIELDS, STANDARD_LEAD_FIELDS, priceDisplay, DEFAULT_POLICIES, DEFAULT_DISCLAIMER, type LeadField, type PageExtras } from "@/lib/delivery-page";
+import { DELIVERY_TEMPLATES, SAMPLE_BODY, EMAIL_ONLY_FIELDS, STANDARD_LEAD_FIELDS, priceDisplay, DEFAULT_POLICIES, DEFAULT_DISCLAIMER, DEFAULT_EXTRAS, type LeadField, type PageExtras } from "@/lib/delivery-page";
 import { previewDeliveryImage, uploadDeliveryImage } from "@/lib/delivery-media";
 import {
   deleteRevenueItem, getRevenue, removeRazorpayKeys, saveCampaign, savePage, saveProduct, saveRazorpayKeys, saveRevenueSettings,
@@ -204,7 +204,7 @@ type PageForm = {
 const EMPTY_PAGE: PageForm = {
   id: null, title: "", slug: "", originalSlug: "", body: "", buttonLabel: "", buttonUrl: "", imagePath: "", imageAlt: "", showImage: false, countdown: "", expiryAction: "disable_cta",
   expiryMessage: "This offer has ended.", formType: "none", formMode: "optional", fields: STANDARD_LEAD_FIELDS,
-  showPrice: false, priceOriginal: "", priceOffer: "", discountLabel: "", couponCode: "", couponNote: "", extras: {},
+  showPrice: false, priceOriginal: "", priceOffer: "", discountLabel: "", couponCode: "", couponNote: "", extras: DEFAULT_EXTRAS,
 };
 const CONSENT = "I agree that my details may be used to fulfil this request and follow up about this offer.";
 const toLocalInput = (iso: string | null) => { if (!iso) return ""; const d = new Date(iso); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16); };

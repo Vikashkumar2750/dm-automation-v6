@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { LogIn, LogOut, Package } from "lucide-react";
+import { ArrowRight, LogIn, LogOut, Mail, Package, Receipt, ShoppingBag } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -10,13 +10,16 @@ import { getBuyerLibrary, requestBuyerCode, signOutBuyer, verifyBuyerCode } from
 type Library = { email: string; items: { title: string; slug: string; at: string; hasFile: boolean; imageUrl: string | null }[] };
 const key = (slug: string) => `autodm:buyer:${slug}`;
 
-/** "Sign in" for buyers: email → 6-digit code → list of everything they got from this creator. */
-export function BuyerSignIn({ slug, open, onOpenChange }: { slug: string; open: boolean; onOpenChange: (v: boolean) => void }) {
-  const [step, setStep] = useState<"email" | "code" | "library">("email");
+/** Buyer sign-in: store card → email → 6-digit code → purchases portal (Purchases / Transactions). */
+export function BuyerSignIn({ slug, open, onOpenChange, creatorName }: { slug: string; open: boolean; onOpenChange: (v: boolean) => void; creatorName?: string | undefined }) {
+  const [step, setStep] = useState<"intro" | "email" | "code" | "library">("intro");
+  const [tab, setTab] = useState<"purchases" | "transactions">("purchases");
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [lib, setLib] = useState<Library | null>(null);
+  const store = creatorName?.trim() ? `${creatorName.trim()}'s Store` : "the Store";
+  const initial = (creatorName?.trim()[0] ?? "S").toUpperCase();
 
   useEffect(() => {
     if (!open) return;
@@ -36,46 +39,84 @@ export function BuyerSignIn({ slug, open, onOpenChange }: { slug: string; open: 
   const signOut = () => run(async () => {
     const token = localStorage.getItem(key(slug));
     if (token) await signOutBuyer({ data: { token } });
-    localStorage.removeItem(key(slug)); setLib(null); setCode(""); setStep("email");
+    localStorage.removeItem(key(slug)); setLib(null); setCode(""); setStep("intro");
   });
+
+  const avatar = <div className="grid size-14 place-items-center rounded-full bg-primary text-xl font-bold text-primary-foreground shadow-lg ring-4 ring-background">{initial}</div>;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>{step === "library" ? "Your purchases" : "Sign in to access your purchases"}</DialogTitle>
-          <DialogDescription>
-            {step === "email" && "Use the email you entered when you got this."}
-            {step === "code" && `Enter the 6-digit code we sent to ${email}.`}
-            {step === "library" && lib && `Signed in as ${lib.email}`}
-          </DialogDescription>
-        </DialogHeader>
-        {step === "email" && (
-          <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); void sendCode(); }}>
-            <Input type="email" required placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
-            <Button type="submit" className="w-full" disabled={busy}>{busy ? "Sending…" : "Send code"}</Button>
-          </form>
+      <DialogContent className={step === "library" ? "max-w-2xl overflow-hidden p-0" : "max-w-md overflow-hidden p-0"}>
+        {step === "intro" && (
+          <div>
+            <div className="h-24 bg-gradient-to-br from-primary/30 via-primary/10 to-accent" />
+            <div className="-mt-7 space-y-3 px-6 pb-6">
+              {avatar}
+              <DialogHeader className="text-left">
+                <DialogTitle>Sign in to {store}</DialogTitle>
+                <DialogDescription>Access all your previous purchases, manage your account details, and more.</DialogDescription>
+              </DialogHeader>
+              <Button className="h-11 w-full" onClick={() => setStep("email")}><LogIn className="size-4" /> Sign in</Button>
+            </div>
+          </div>
         )}
-        {step === "code" && (
-          <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); void verify(); }}>
-            <Input inputMode="numeric" maxLength={6} placeholder="123456" value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))} className="text-center text-lg tracking-[0.4em]" />
-            <Button type="submit" className="w-full" disabled={busy || code.length !== 6}>{busy ? "Checking…" : "Sign in"}</Button>
-            <button type="button" className="w-full text-xs text-muted-foreground underline" onClick={() => setStep("email")}>Use a different email</button>
-          </form>
+        {(step === "email" || step === "code") && (
+          <div className="space-y-4 bg-gradient-to-b from-primary/10 to-background p-6">
+            <div className="flex justify-center">{avatar}</div>
+            <DialogHeader className="text-center sm:text-center">
+              <DialogTitle>{step === "email" ? "Welcome" : "Check your email"}</DialogTitle>
+              <DialogDescription>{step === "email" ? "Sign in to access your purchased content" : `Enter the 6-digit code we sent to ${email}.`}</DialogDescription>
+            </DialogHeader>
+            {step === "email" ? (
+              <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); void sendCode(); }}>
+                <Input type="email" required placeholder="Enter your email" value={email} onChange={(e) => setEmail(e.target.value)} className="h-11" />
+                <Button type="submit" className="h-11 w-full" disabled={busy}><Mail className="size-4" /> {busy ? "Sending…" : "Continue with Email"}</Button>
+                <p className="text-center text-xs text-muted-foreground">Use the email you entered when you bought or registered.</p>
+              </form>
+            ) : (
+              <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); void verify(); }}>
+                <Input inputMode="numeric" maxLength={6} placeholder="123456" value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))} className="h-11 text-center text-lg tracking-[0.4em]" />
+                <Button type="submit" className="h-11 w-full" disabled={busy || code.length !== 6}>{busy ? "Checking…" : "Sign in"} <ArrowRight className="size-4" /></Button>
+                <button type="button" className="w-full text-xs text-muted-foreground underline" onClick={() => setStep("email")}>Use a different email</button>
+              </form>
+            )}
+          </div>
         )}
         {step === "library" && lib && (
-          <div className="space-y-3">
-            {lib.items.length === 0 && <p className="text-sm text-muted-foreground">Nothing here yet.</p>}
-            <ul className="max-h-80 space-y-2 overflow-y-auto">
-              {lib.items.map((it) => (
-                <li key={it.slug} className="flex items-center gap-3 rounded-lg border border-border p-2">
-                  <div className="aspect-video w-20 shrink-0 overflow-hidden rounded bg-muted">{it.imageUrl ? <img src={it.imageUrl} alt="" className="size-full object-cover" /> : <Package className="m-auto mt-2 size-5 text-muted-foreground" />}</div>
-                  <div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{it.title}</p><p className="text-xs text-muted-foreground">{new Date(it.at).toLocaleDateString()}</p></div>
-                  <Button asChild size="sm"><a href={it.hasFile ? `/api/public/pg/${it.slug}` : `/p/${it.slug}`} rel="nofollow">Open</a></Button>
-                </li>
+          <div className="grid min-h-[420px] sm:grid-cols-[180px_1fr]">
+            <aside className="flex flex-col gap-1 border-b border-border bg-muted/50 p-4 sm:border-b-0 sm:border-r">
+              <div className="mb-3 flex items-center gap-2"><div className="grid size-9 place-items-center rounded-full bg-primary text-sm font-bold text-primary-foreground">{initial}</div><span className="truncate text-sm font-semibold">{creatorName || "Store"}</span></div>
+              {([["purchases", "Purchases", ShoppingBag], ["transactions", "Transactions", Receipt]] as const).map(([k, label, Icon]) => (
+                <button key={k} type="button" onClick={() => setTab(k)} className={`flex items-center gap-2 rounded-md px-3 py-2 text-left text-sm ${tab === k ? "bg-background font-medium text-foreground shadow-sm" : "text-muted-foreground hover:bg-background/60"}`}><Icon className="size-4" /> {label}</button>
               ))}
-            </ul>
-            <Button variant="outline" className="w-full" onClick={() => void signOut()} disabled={busy}><LogOut className="size-4" /> Sign out</Button>
+              <div className="mt-auto space-y-2 pt-4">
+                <p className="truncate text-xs text-muted-foreground">{lib.email}</p>
+                <Button variant="outline" size="sm" className="w-full" onClick={() => void signOut()} disabled={busy}><LogOut className="size-4" /> Sign out</Button>
+                <p className="text-center text-[10px] text-muted-foreground">Powered by AutoDM</p>
+              </div>
+            </aside>
+            <section className="p-5">
+              <DialogHeader className="mb-4 text-left"><DialogTitle>{tab === "purchases" ? "Your purchases" : "Transactions"}</DialogTitle><DialogDescription>Signed in as {lib.email}</DialogDescription></DialogHeader>
+              {lib.items.length === 0 ? (
+                <div className="grid place-items-center gap-2 py-12 text-center text-muted-foreground"><Package className="size-10" /><p className="font-medium text-foreground">No products found!</p><p className="text-xs">Items you get from this creator will show up here.</p></div>
+              ) : tab === "purchases" ? (
+                <ul className="max-h-80 space-y-2 overflow-y-auto">
+                  {lib.items.map((it) => (
+                    <li key={it.slug} className="flex items-center gap-3 rounded-lg border border-border p-2">
+                      <div className="aspect-video w-20 shrink-0 overflow-hidden rounded bg-muted">{it.imageUrl ? <img src={it.imageUrl} alt="" className="size-full object-cover" /> : <Package className="m-auto mt-2 size-5 text-muted-foreground" />}</div>
+                      <div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{it.title}</p><p className="text-xs text-muted-foreground">{new Date(it.at).toLocaleDateString()}</p></div>
+                      <Button asChild size="sm"><a href={it.hasFile ? `/api/public/pg/${it.slug}` : `/p/${it.slug}`} rel="nofollow">Open</a></Button>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <ul className="divide-y divide-border rounded-lg border border-border text-sm">
+                  {lib.items.map((it) => (
+                    <li key={it.slug} className="flex items-center justify-between gap-3 px-3 py-2"><span className="truncate">{it.title}</span><span className="shrink-0 text-xs text-muted-foreground">{new Date(it.at).toLocaleString()}</span></li>
+                  ))}
+                </ul>
+              )}
+            </section>
           </div>
         )}
       </DialogContent>
