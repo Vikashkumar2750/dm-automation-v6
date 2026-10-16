@@ -83,3 +83,8 @@ export async function sendTestEmail(recipient: string, senderName: string) {
   if (res.status !== "sent") return { ok: false, error: res.error ?? "Failed" };
   return { ok: true, error: null };
 }
+
+/** Plain transactional email (e.g. buyer sign-in codes). */
+export async function sendPlainEmail(to: string, subject: string, text: string, senderName = "AutoDM") {
+  return sendViaResend({ from: fromAddress(senderName), to: [to], subject, text });
+}

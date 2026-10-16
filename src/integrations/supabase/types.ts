@@ -593,6 +593,60 @@ export type Database = {
           },
         ]
       }
+      buyer_login_codes: {
+        Row: {
+          attempts: number
+          code_hash: string
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          organization_id: string
+        }
+        Insert: {
+          attempts?: number
+          code_hash: string
+          created_at?: string
+          email: string
+          expires_at: string
+          id?: string
+          organization_id: string
+        }
+        Update: {
+          attempts?: number
+          code_hash?: string
+          created_at?: string
+          email?: string
+          expires_at?: string
+          id?: string
+          organization_id?: string
+        }
+        Relationships: []
+      }
+      buyer_sessions: {
+        Row: {
+          created_at: string
+          email: string
+          expires_at: string
+          organization_id: string
+          token_hash: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          expires_at: string
+          organization_id: string
+          token_hash: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          expires_at?: string
+          organization_id?: string
+          token_hash?: string
+        }
+        Relationships: []
+      }
       client_invoices: {
         Row: {
           amount_inr: number
