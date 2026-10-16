@@ -923,7 +923,13 @@ function AutomationsPage() {
               {needsDm && (
                 <div className="grid gap-4 rounded-lg border bg-muted/30 p-4">
                   <p className="text-sm font-semibold">What you want to send / attach</p>
-                  {(deliveryPagesQuery.data?.length ?? 0) > 0 && (
+                  {(deliveryPagesQuery.data?.length ?? 0) === 0 ? (
+                    <p className="rounded-md border border-dashed p-3 text-xs text-muted-foreground">
+                      Fill from a delivery page: you have no delivery pages yet.{" "}
+                      <Link to="/revenue" className="font-medium text-primary underline">Create one in Sales & Revenue</Link>{" "}
+                      and it will show here as a dropdown.
+                    </p>
+                  ) : (
                     <div className="grid gap-2">
                       <Label>Fill from a delivery page (optional)</Label>
                       <Select
@@ -968,7 +974,7 @@ function AutomationsPage() {
                       />
                     </div>
                   </div>
-                  {draft.dmLinkUrl.trim() && (
+                  {(
                     <div className="grid gap-3">
                       {draft.dmExtraButtons.map((b, i) => (
                         <div key={i} className="grid gap-2 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
@@ -997,6 +1003,8 @@ function AutomationsPage() {
                       ))}
                       {draft.dmExtraButtons.length < 2 && (
                         <Button type="button" variant="outline" size="sm" className="w-fit"
+                          disabled={!draft.dmLinkUrl.trim()}
+                          title={draft.dmLinkUrl.trim() ? undefined : "Add the first link above first"}
                           onClick={() => setDraft({ ...draft, dmExtraButtons: [...draft.dmExtraButtons, { url: "", label: "" }] })}>
                           <Plus className="size-4" /> Add another button ({draft.dmExtraButtons.length + 1}/3)
                         </Button>
