@@ -51,87 +51,126 @@ export function inlineParts(text: string): { bold: boolean; text: string }[] {
     p.startsWith("**") && p.endsWith("**") ? { bold: true, text: p.slice(2, -2) } : { bold: false, text: p });
 }
 
-export type DeliveryTemplate = { key: string; name: string; hint: string; title: string; slug: string; buttonLabel: string; body: string };
+export type DeliveryTemplate = { key: string; name: string; hint: string; title: string; slug: string; buttonLabel: string; body: string; priceOriginal?: string; priceOffer?: string };
+
+/** Placeholder content shown in the live preview while the body is still empty. */
+export const SAMPLE_BODY = `# Your page headline goes here
+A short line that tells visitors what they get and why it matters.
+
+## What you'll get
+- **Main benefit** in a few words
+- A second reason people love it
+- Instant access after you tap the button
+
+## About the creator
+Write 2–3 lines about yourself and why people trust you.
+
+> "Customer review appears here." — Happy customer
+
+## Frequently asked questions
+? How do I get access? | Tap the button — you get it instantly.
+? Who is this for? | Describe your ideal buyer here.`;
 
 export const DELIVERY_TEMPLATES: DeliveryTemplate[] = [
   {
-    key: "ebook", name: "Free guide / Ebook", hint: "Lead magnet download", title: "Your free guide is ready", slug: "free-guide", buttonLabel: "Download the guide",
-    body: `# Your free guide is ready 🎉
-Thanks for joining! Everything you asked for is one tap away.
+    key: "ebook", name: "Free guide / Ebook", hint: "Lead magnet download", title: "The Instagram Growth Playbook", slug: "free-guide", buttonLabel: "Get it free",
+    body: `# The Instagram Growth Playbook 📘
+A practical, no-fluff guide to grow your audience with content that actually converts.
 
 ## What's inside
-- **Step-by-step plan** you can start today
-- Real examples and ready-to-use checklists
-- Bonus tips we share only with our community
+- **30 proven content ideas** you can post this week
+- Caption and hook templates that drive comments
+- A simple weekly posting checklist
+- Bonus: DM scripts that turn followers into customers
 
-> Tip: save this page so you can come back anytime.
+## Who is this for
+- Creators and coaches starting from zero
+- Small businesses that want more enquiries
 
-## How to get it
-Tap the button below. The guide opens instantly — no sign-up needed.
+## About the creator
+Hi, I'm the creator behind this page. I share what has worked for my own account and my clients — simple steps, no shortcuts.
 
-## Questions
-? Is it really free? | Yes, 100% free. No card needed.
-? Can I share it? | Please share the page link with a friend instead.`,
+> "Clear, simple and actually useful. I used three ideas the same day." — A reader
+
+## Frequently asked questions
+? Is it really free? | Yes. Enter your email and the guide opens instantly.
+? What format is it? | A PDF you can read on phone or laptop.
+? Can I share it? | Please share this page link instead so your friend gets their own copy.`,
   },
   {
-    key: "course", name: "Course / Masterclass", hint: "Access to videos", title: "Welcome to the masterclass", slug: "masterclass", buttonLabel: "Start watching",
-    body: `# Welcome to the masterclass 🚀
-Your access is confirmed. Here's how to get the most out of it.
+    key: "course", name: "Course / Masterclass", hint: "Paid video course", title: "Content Creation Masterclass", slug: "masterclass", buttonLabel: "Enroll now", priceOriginal: "2999", priceOffer: "999",
+    body: `# Content Creation Masterclass 🎬
+Learn to plan, shoot and edit reels that grow your brand — step by step, at your own pace.
 
 ## What you'll learn
-- Module 1 — **The foundations**
-- Module 2 — Building your system
-- Module 3 — Growing faster with automation
+- Module 1 — **Finding your content niche**
+- Module 2 — Hooks, scripts and storytelling
+- Module 3 — Shooting and editing on your phone
+- Module 4 — Turning views into sales with automation
 
-## Before you start
-- Use headphones for the best experience
-- Keep a notebook handy for the action steps
+## What you get
+- 4+ hours of recorded lessons
+- Templates and worksheets for every module
+- Lifetime access, including future updates
 
-> Join our private community to ask questions and get feedback.
+## About the creator
+I've helped hundreds of creators build a consistent content system. This masterclass is everything I teach my 1-on-1 clients.
 
-## FAQ
-? How long do I have access? | Lifetime access, including future updates.
-? I can't open the videos | Reply to our DM and we'll fix it fast.`,
+> "The hooks module alone doubled my reel views." — Student
+
+## Frequently asked questions
+? How long do I have access? | Lifetime access, including updates.
+? Do I need a camera? | No, a phone is enough.
+? How do I get access after paying? | The access link opens on this page and is also sent to your DM and email.`,
   },
   {
-    key: "consult", name: "Booking / Consultation", hint: "Book a call", title: "Book your consultation", slug: "book-a-call", buttonLabel: "Pick a time",
-    body: `# Let's talk about your goals 📅
-Your spot is reserved. Choose a time that works for you.
+    key: "consult", name: "Booking / Consultation", hint: "1-on-1 call", title: "1-on-1 Strategy Call", slug: "book-a-call", buttonLabel: "Book your call", priceOriginal: "1999", priceOffer: "1499",
+    body: `# 1-on-1 Strategy Call 📅
+A focused 30-minute video call to review your account and leave with a clear plan.
 
 ## What happens on the call
-- We understand your current situation
-- You get a **clear action plan**
-- No pressure — just honest advice
+- We review your profile and current results
+- You get a **personalised action plan**
+- Honest answers to your biggest questions
 
 ## Please prepare
 - Your website or social handle
 - One main goal for the next 90 days
 
-> Can't find a slot? Reply to our DM and we'll make one for you.`,
+## About the creator
+I work with creators and small brands every week on growth and sales strategy.
+
+> "Got more clarity in 30 minutes than in months of trying alone." — Client
+
+## Frequently asked questions
+? How do I pick a time? | After booking you choose a slot that suits you.
+? Can I reschedule? | Yes, reply to our DM at least 24 hours before your slot.`,
   },
   {
-    key: "product", name: "Product purchase", hint: "Thank-you after payment", title: "Thank you for your purchase", slug: "thank-you", buttonLabel: "Get your files",
-    body: `# Thank you for your order 💛
-Your payment was successful. Your product is ready below.
+    key: "product", name: "Product purchase", hint: "Digital product / bundle", title: "Creator Template Bundle", slug: "template-bundle", buttonLabel: "Buy now", priceOriginal: "1499", priceOffer: "499",
+    body: `# Creator Template Bundle 🎁
+Ready-made templates to save hours every week — edit, post and done.
 
-## Your order includes
-- **Instant download** of all files
-- Free updates
-- Priority support by DM
+## Your bundle includes
+- **50 editable post templates**
+- 20 story and reel cover designs
+- Content calendar sheet
+- Free updates whenever new templates are added
 
-## Next steps
-1. Tap the button to download
-2. Unzip and follow the quick-start file
+## How it works
+- Pay securely on this page
+- Get instant download access
+- Edit in your favourite free design app
 
-> Keep this link private — it's just for you.
+> "Saved me at least 5 hours a week." — Customer
 
-## Need help?
-? I didn't get my files | Tap the button again or reply to our DM.
-? Can I get a refund? | Please check our refund policy or message us.`,
+## Frequently asked questions
+? How do I receive the files? | Instantly after payment, plus a copy in your DM.
+? Can I get a refund? | Please read our refund policy or message us before buying.`,
   },
   {
-    key: "coupon", name: "Discount offer", hint: "Coupon / sale page", title: "Your exclusive discount", slug: "special-offer", buttonLabel: "Shop now",
-    body: `# Your exclusive discount 🎁
+    key: "coupon", name: "Discount offer", hint: "Coupon / sale page", title: "Your exclusive discount", slug: "special-offer", buttonLabel: "Claim offer", priceOriginal: "999", priceOffer: "599",
+    body: `# Your exclusive discount 🎉
 Because you commented, you unlocked a **special price** — just for you.
 
 ## Why people love it
@@ -139,7 +178,11 @@ Because you commented, you unlocked a **special price** — just for you.
 - Fast delivery and easy returns
 - Secure payment
 
-> Offer ends soon. Use your code at checkout.`,
+> "Great quality and super quick delivery." — Customer
+
+## Frequently asked questions
+? How do I use the code? | Copy the code above and apply it at checkout.
+? When does the offer end? | The timer on this page shows the exact deadline.`,
   },
 ];
 

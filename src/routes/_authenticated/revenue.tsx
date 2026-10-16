@@ -18,7 +18,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useTenant } from "@/hooks/useTenant";
 import { buildFunnel, formatInr, rupeesToPaise, slugify } from "@/lib/revenue";
 import { DeliveryPageView } from "@/components/app/DeliveryPageView";
-import { DELIVERY_TEMPLATES, EMAIL_ONLY_FIELDS, STANDARD_LEAD_FIELDS, priceDisplay, type LeadField } from "@/lib/delivery-page";
+import { DELIVERY_TEMPLATES, SAMPLE_BODY, EMAIL_ONLY_FIELDS, STANDARD_LEAD_FIELDS, priceDisplay, type LeadField } from "@/lib/delivery-page";
 import { previewDeliveryImage, uploadDeliveryImage } from "@/lib/delivery-media";
 import {
   deleteRevenueItem, getRevenue, removeRazorpayKeys, saveCampaign, savePage, saveProduct, saveRazorpayKeys, saveRevenueSettings,
@@ -312,7 +312,7 @@ function Pages({ orgId, items, leads }: { orgId: string; items: any[]; leads: Ar
             <div className="mt-1 flex flex-wrap gap-1.5">
               {DELIVERY_TEMPLATES.map((t) => (
                 <Button key={t.key} type="button" size="sm" variant="outline" title={t.hint}
-                  onClick={() => setF({ ...f, title: t.title, slug: f.slug || t.slug, body: t.body, buttonLabel: f.buttonLabel || t.buttonLabel })}>
+                  onClick={() => setF({ ...f, title: t.title, slug: f.slug || t.slug, body: t.body, buttonLabel: t.buttonLabel, ...(t.priceOffer ? { showPrice: true, priceOriginal: t.priceOriginal ?? "", priceOffer: t.priceOffer } : {}) })}>
                   {t.name}
                 </Button>
               ))}
@@ -327,8 +327,9 @@ function Pages({ orgId, items, leads }: { orgId: string; items: any[]; leads: Ar
           </p>
           <div className="space-y-2 rounded-lg border border-border p-3">
             <div className="flex items-center justify-between"><Label>Product image</Label><Switch checked={f.showImage} disabled={!f.imagePath} onCheckedChange={(v) => setF({ ...f, showImage: v })} /></div>
-            <input ref={imageInput} type="file" accept="image/*" className="hidden" onChange={(e) => void uploadImage(e.target.files?.[0])} />
+            <input ref={imageInput} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={(e) => void uploadImage(e.target.files?.[0])} />
             <div className="flex flex-wrap gap-2"><Button type="button" size="sm" variant="outline" disabled={uploading} onClick={() => imageInput.current?.click()}>{uploading ? <Loader2 className="size-4 animate-spin" /> : <Upload className="size-4" />} {f.imagePath ? "Replace image" : "Upload image"}</Button>{f.imagePath && <Button type="button" size="sm" variant="ghost" onClick={() => { setF({ ...f, imagePath: "", showImage: false, imageAlt: "" }); setImagePreview(""); }}>Remove</Button>}</div>
+            <p className="text-xs text-muted-foreground">Any photo works — it is auto-fitted to 16:9 (best: 1920×1080).</p>
             {f.imagePath && <Input placeholder="Image description for accessibility" value={f.imageAlt} onChange={(e) => setF({ ...f, imageAlt: e.target.value })} />}
           </div>
           <div className="space-y-2 rounded-lg border border-border p-3">
@@ -414,8 +415,8 @@ function Pages({ orgId, items, leads }: { orgId: string; items: any[]; leads: Ar
     </div>
       <Panel title="Live preview">
         <div className="max-h-[640px] overflow-auto rounded-xl border border-border">
-          <DeliveryPageView title={f.title || "Your page title"} body={f.body} buttonLabel={f.buttonLabel} buttonHref={f.buttonUrl ? "#" : null}
-            imageUrl={f.showImage ? imagePreview : null} imageAlt={f.imageAlt} countdownAt={f.countdown ? new Date(f.countdown).toISOString() : null} expiryAction={f.expiryAction} expiryMessage={f.expiryMessage} price={price} key={JSON.stringify(fields)} leadForm={{ preview: true, config: formConfig }} />
+          <DeliveryPageView title={f.title || "Your page title"} body={f.body.trim() ? f.body : SAMPLE_BODY} buttonLabel={f.buttonLabel || "Get access"} buttonHref="#"
+            imageUrl={f.showImage ? imagePreview : null} imagePlaceholder={!(f.showImage && imagePreview)} imageAlt={f.imageAlt} countdownAt={f.countdown ? new Date(f.countdown).toISOString() : null} expiryAction={f.expiryAction} expiryMessage={f.expiryMessage} price={price} key={JSON.stringify(fields)} leadForm={{ preview: true, config: formConfig }} />
         </div>
       </Panel>
     </div>
