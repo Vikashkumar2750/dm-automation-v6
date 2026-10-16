@@ -227,7 +227,7 @@ export function validateLeadValue(field: Pick<LeadField, "type" | "required" | "
 export type PageExtras = {
   creatorName?: string | undefined; supportEmail?: string | undefined;
   deliverables?: { count?: string | undefined; format?: string | undefined; size?: string | undefined };
-  policies?: { refund?: string; fulfilment?: string; privacy?: string; terms?: string };
+  policies?: { refund?: string | undefined; fulfilment?: string | undefined; privacy?: string | undefined; terms?: string | undefined };
   disclaimer?: string;
 };
 
