@@ -222,3 +222,20 @@ export function validateLeadValue(field: Pick<LeadField, "type" | "required" | "
   if (field.type === "choice" && !field.options.includes(value)) return "Choose one of the available options";
   return null;
 }
+
+/** Optional trust & compliance details shown on a delivery page (stored inside form_config.extras). */
+export type PageExtras = {
+  creatorName?: string | undefined; supportEmail?: string | undefined;
+  deliverables?: { count?: string | undefined; format?: string | undefined; size?: string | undefined };
+  policies?: { refund?: string | undefined; fulfilment?: string | undefined; privacy?: string | undefined; terms?: string | undefined };
+  disclaimer?: string | undefined;
+};
+
+export const DEFAULT_POLICIES = {
+  refund: "All sales of digital products are final. If you did not receive access or the file is broken, contact us within 7 days and we will fix it or refund you.",
+  fulfilment: "Access is delivered instantly after purchase — on this page, in your DM and by email. You can open it again anytime by signing in with the same email.",
+  privacy: "We collect only the details you enter here to deliver your purchase and support you. We never sell your data. You can ask us to delete it anytime.",
+  terms: "This product is for your personal use. Sharing, reselling or redistributing it is not allowed. Results depend on your own effort and are not guaranteed.",
+};
+
+export const DEFAULT_DISCLAIMER = "The creator is solely responsible for this product and its content. Payments are processed securely by the creator's payment provider.";

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import type { PageExtras } from "@/lib/delivery-page";
 import { useServerFn } from "@tanstack/react-start";
 import { CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -7,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { submitOfferForm, submitPageForm } from "@/lib/revenue.functions";
 import { validateLeadValue, type LeadField } from "@/lib/delivery-page";
 
-export type LeadFormConfig = { mode: "none" | "optional" | "required"; consent?: string; fields?: LeadField[] };
+export type LeadFormConfig = { mode: "none" | "optional" | "required"; consent?: string; fields?: LeadField[]; extras?: PageExtras };
 export type LeadFormSource = { token?: string; slug?: string; preview?: boolean; config: LeadFormConfig };
 
 /**

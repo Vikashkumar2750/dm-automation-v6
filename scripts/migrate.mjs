@@ -62,6 +62,20 @@ try {
     on conflict (id) do nothing
   `.catch((e) => console.warn("[migrate] could not ensure delivery-page-images bucket:", e.message));
 
+  // Delivery-page image upload policies (owners/admins/managers of the folder's workspace). Idempotent.
+  for (const [name, cmd, clause] of [
+    ["delivery page image members read", "select", "using"],
+    ["delivery page image writers upload", "insert", "with check"],
+    ["delivery page image writers update", "update", "using"],
+    ["delivery page image writers delete", "delete", "using"],
+  ]) {
+    const roles = cmd === "select" ? "" : " and m.role::text in ('owner','admin','manager')";
+    const cond = `bucket_id = 'delivery-page-images' and exists (select 1 from public.organization_members m where m.organization_id::text = (storage.foldername(name))[1] and m.user_id = auth.uid()${roles})`;
+    await sql.unsafe(`drop policy if exists "${name}" on storage.objects`).catch(() => {});
+    await sql.unsafe(`create policy "${name}" on storage.objects for ${cmd} to authenticated ${clause} (${cond})${cmd === "update" ? ` with check (${cond})` : ""}`)
+      .catch((e) => console.warn(`[migrate] could not ensure policy ${name}:`, e.message));
+  }
+
   // Inbox core (conversations + messages) was created outside the .sql files.
   // 0004 depends on it, so bootstrap it just before that migration runs.
   const INBOX_BOOTSTRAP = `
