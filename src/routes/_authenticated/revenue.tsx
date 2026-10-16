@@ -49,7 +49,7 @@ function RevenuePage() {
   const d = q.data;
   return (
     <AppShell>
-      <PageHeader title="Sales & Revenue" description="Sell inside DMs with payment links, coupons and delivery pages." actions={<div className="flex flex-wrap items-center gap-2"><AccountSelect orgId={orgId ?? null} value={accountId} onChange={setAccountId} className="h-9 w-auto max-w-[240px]" /><GuideButton guide="revenue" /></div>} />
+      <PageHeader title="Sales & Revenue" description="Sell inside DMs with payment links, coupons and delivery pages." actions={<div className="flex flex-nowrap items-center gap-2"><AccountSelect orgId={orgId ?? null} value={accountId} onChange={setAccountId} className="h-9 w-auto max-w-[240px]" /><GuideButton guide="revenue" /></div>} />
       {!d ? (
         <p className="text-sm text-muted-foreground">Loading…</p>
       ) : (
