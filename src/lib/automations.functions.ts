@@ -164,7 +164,7 @@ export const createAutomationRule = createServerFn({ method: "POST" })
       organization_id: organizationId,
       created_by: context.userId,
       ...toRow(rest),
-    });
+    }) as never);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
