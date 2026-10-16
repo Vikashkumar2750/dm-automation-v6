@@ -919,6 +919,21 @@ function AutomationsPage() {
                       />
                     </div>
                   </div>
+                  {draft.dmLinkUrl.trim() && (
+                    <div className="flex items-center justify-between gap-4 rounded-md border p-3">
+                      <div>
+                        <p className="text-sm font-medium">Also add the link in the message text</p>
+                        <p className="text-xs text-muted-foreground">
+                          Instagram/Facebook on a computer hides buttons. With this on, the link
+                          also shows in the message. The button stays on mobile.
+                        </p>
+                      </div>
+                      <Switch
+                        checked={draft.dmLinkInText}
+                        onCheckedChange={(checked) => setDraft({ ...draft, dmLinkInText: checked })}
+                      />
+                    </div>
+                  )}
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div className="grid gap-2">
                       <Label>Attachment type</Label>
