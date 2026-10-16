@@ -203,6 +203,7 @@ export const updateAutomationRule = createServerFn({ method: "POST" })
     if (rest.dmLinkUrl !== undefined) patch.dm_link_url = rest.dmLinkUrl;
     if (rest.dmButtonLabel !== undefined) patch.dm_button_label = rest.dmButtonLabel;
     if (rest.dmLinkInText !== undefined) patch.dm_link_in_text = rest.dmLinkInText;
+    if (rest.dmExtraButtons !== undefined) patch.dm_extra_buttons = rest.dmExtraButtons;
     if (rest.dmAttachmentUrl !== undefined) patch.dm_attachment_url = rest.dmAttachmentUrl;
     if (rest.dmAttachmentType !== undefined)
       patch.dm_attachment_type = rest.dmAttachmentType;
