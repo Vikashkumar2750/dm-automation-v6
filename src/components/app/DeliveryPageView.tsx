@@ -12,7 +12,7 @@ function PriceBox({ price }: { price: PagePrice }) {
   const d = priceDisplay(price.originalPaise, price.offerPaise, price.label);
   if (!d.offer && !price.couponCode) return null;
   return (
-    <div className="mx-auto mt-6 max-w-md rounded-2xl border border-primary/30 bg-card p-5 text-card-foreground shadow-sm">
+    <div className="rounded-xl border border-primary/30 bg-background p-4">
       {d.offer && <div className="flex flex-wrap items-baseline justify-center gap-3">
         <span className="text-4xl font-bold tracking-tight text-foreground">{d.offer}</span>
         {d.original && <span className="text-lg text-muted-foreground line-through">{d.original}</span>}
@@ -68,61 +68,62 @@ export function DeliveryPageView({ title, body, buttonLabel, buttonHref, imageUr
     </Button>
   ) : null;
 
+  const d = price ? priceDisplay(price.originalPaise, price.offerPaise, price.label) : null;
+  const toCheckout = () => document.getElementById("checkout")?.scrollIntoView({ behavior: "smooth", block: "center" });
   return (
-    <div className="min-h-full bg-background">
-      <section className="relative overflow-hidden border-b border-border bg-gradient-to-b from-primary/15 via-primary/5 to-background px-6 pb-14 pt-16 text-center">
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-background/70 px-3 py-1 text-xs font-medium text-primary">
-          <CheckCircle2 className="size-3.5" /> Ready for you
-        </span>
-        <h1 className="mx-auto mt-5 max-w-2xl text-balance text-3xl font-bold tracking-tight text-foreground sm:text-5xl"><Inline text={heading} /></h1>
-        {intro && <p className="mx-auto mt-4 max-w-xl text-pretty text-base text-muted-foreground sm:text-lg"><Inline text={intro} /></p>}
-        {imageUrl && <div className="mx-auto mt-7 aspect-[4/3] w-full max-w-xl overflow-hidden rounded-xl border border-border bg-muted"><img src={imageUrl} alt={imageAlt || title} className="size-full object-cover" /></div>}
-        {countdownAt && !expired && <div className="mx-auto mt-6 max-w-md rounded-lg border border-border bg-card p-3 text-card-foreground"><p className="mb-2 flex items-center justify-center gap-2 text-sm font-medium"><Clock3 className="size-4 text-primary" /> Offer ends in</p><div className="grid grid-cols-4 gap-2">{countdown.map((n, i) => <div key={i} className="rounded-md bg-muted px-2 py-2"><strong className="block text-lg">{String(n).padStart(2, "0")}</strong><span className="text-[10px] text-muted-foreground">{["Days", "Hours", "Mins", "Secs"][i]}</span></div>)}</div></div>}
-        {expired && <p className="mx-auto mt-6 max-w-md rounded-lg border border-border bg-muted p-3 text-sm text-muted-foreground">{expiryMessage || "This offer has ended."}</p>}
-        {price && <PriceBox price={price} />}
-        <LeadFields form={form} standalone={!cta} />
-        {cta && <div className="mt-8">{cta}</div>}
-      </section>
-
-      <article className="mx-auto max-w-2xl space-y-5 px-6 py-12">
-        {content.map((b, i) => {
-          if (b.t === "faq") return null;
-          if (b.t === "h1" || b.t === "h2") return <h2 key={i} className="pt-4 text-2xl font-semibold tracking-tight text-foreground"><Inline text={b.text} /></h2>;
-          if (b.t === "h3") return <h3 key={i} className="pt-2 text-lg font-semibold text-foreground"><Inline text={b.text} /></h3>;
-          if (b.t === "quote") return <blockquote key={i} className="rounded-xl border-l-4 border-primary bg-primary/5 px-5 py-4 text-foreground"><Inline text={b.text} /></blockquote>;
-          if (b.t === "list") return (
-            <ul key={i} className="grid gap-3">
-              {b.items.map((it, j) => (
-                <li key={j} className="flex items-start gap-3 rounded-xl border border-border bg-card p-4 text-card-foreground shadow-sm">
-                  <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-primary" /><span><Inline text={it} /></span>
-                </li>
+    <div className="min-h-full bg-background pb-24 lg:pb-0">
+      <div className="mx-auto grid max-w-6xl gap-8 px-4 py-8 sm:px-6 lg:grid-cols-[minmax(0,1fr)_380px] lg:py-12">
+        <article className="min-w-0 space-y-5">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/5 px-3 py-1 text-xs font-medium text-primary"><CheckCircle2 className="size-3.5" /> Ready for you</span>
+          <h1 className="text-balance text-2xl font-bold tracking-tight text-foreground sm:text-4xl"><Inline text={heading} /></h1>
+          {imageUrl && <div className="aspect-video w-full overflow-hidden rounded-xl border border-border bg-muted"><img src={imageUrl} alt={imageAlt || title} className="size-full object-cover" /></div>}
+          {intro && <p className="text-pretty text-base text-muted-foreground"><Inline text={intro} /></p>}
+          {content.map((b, i) => {
+            if (b.t === "faq") return null;
+            if (b.t === "h1" || b.t === "h2") return <h2 key={i} className="pt-3 text-xl font-semibold tracking-tight text-foreground"><Inline text={b.text} /></h2>;
+            if (b.t === "h3") return <h3 key={i} className="pt-2 text-lg font-semibold text-foreground"><Inline text={b.text} /></h3>;
+            if (b.t === "quote") return <blockquote key={i} className="rounded-xl border-l-4 border-primary bg-primary/5 px-5 py-4 text-foreground"><Inline text={b.text} /></blockquote>;
+            if (b.t === "list") return (
+              <ul key={i} className="grid gap-2">
+                {b.items.map((it, j) => <li key={j} className="flex items-start gap-3 text-muted-foreground"><CheckCircle2 className="mt-0.5 size-4 shrink-0 text-primary" /><span><Inline text={it} /></span></li>)}
+              </ul>
+            );
+            return <p key={i} className="leading-relaxed text-muted-foreground"><Inline text={b.text} /></p>;
+          })}
+          {faqs.length > 0 && (
+            <div className="space-y-3 pt-4">
+              <h2 className="text-xl font-semibold tracking-tight text-foreground">Frequently asked questions</h2>
+              {faqs.map((f, i) => (
+                <details key={i} className="rounded-xl border border-border bg-card p-4 text-card-foreground">
+                  <summary className="cursor-pointer list-none font-medium">{f.q}</summary>
+                  {f.a && <p className="mt-2 text-sm text-muted-foreground">{f.a}</p>}
+                </details>
               ))}
-            </ul>
-          );
-          return <p key={i} className="leading-relaxed text-muted-foreground"><Inline text={b.text} /></p>;
-        })}
+            </div>
+          )}
+          <p className="rounded-lg border-l-4 border-primary bg-muted px-4 py-3 text-sm text-muted-foreground">Already got access? Your link was sent in your DM — open the chat to find it again.</p>
+          <p className="flex items-center gap-1.5 pt-2 text-xs text-muted-foreground"><ShieldCheck className="size-3.5" /> Secure delivery</p>
+        </article>
 
-        {faqs.length > 0 && (
-          <div className="space-y-3 pt-4">
-            <h2 className="text-2xl font-semibold tracking-tight text-foreground">Frequently asked questions</h2>
-            {faqs.map((f, i) => (
-              <details key={i} className="group rounded-xl border border-border bg-card p-4 text-card-foreground">
-                <summary className="cursor-pointer list-none font-medium">{f.q}</summary>
-                {f.a && <p className="mt-2 text-sm text-muted-foreground">{f.a}</p>}
-              </details>
-            ))}
+        <aside id="checkout" className="lg:sticky lg:top-6 lg:self-start">
+          <div className="space-y-4 rounded-2xl border border-border bg-card p-5 text-card-foreground shadow-sm">
+            {countdownAt && !expired && <div><p className="mb-2 flex items-center justify-center gap-2 text-sm font-medium"><Clock3 className="size-4 text-primary" /> Offer ends in</p><div className="grid grid-cols-4 gap-2">{countdown.map((n, i) => <div key={i} className="rounded-md bg-muted px-2 py-2 text-center"><strong className="block text-lg">{String(n).padStart(2, "0")}</strong><span className="text-[10px] text-muted-foreground">{["Days", "Hours", "Mins", "Secs"][i]}</span></div>)}</div></div>}
+            {expired && <p className="rounded-lg bg-muted p-3 text-sm text-muted-foreground">{expiryMessage || "This offer has ended."}</p>}
+            {price && <PriceBox price={price} />}
+            <LeadFields form={form} standalone={!cta} />
+            {cta && <div className="[&_a]:w-full">{cta}</div>}
           </div>
-        )}
+        </aside>
+      </div>
 
-        {cta && (
-          <div className="mt-6 rounded-2xl border border-border bg-card p-8 text-center shadow-sm">
-            <p className="mb-4 text-lg font-semibold text-foreground">{heading}</p>
-            {price && (() => { const d = priceDisplay(price.originalPaise, price.offerPaise, price.label); return d.offer ? <p className="mb-4 flex items-baseline justify-center gap-2"><span className="text-2xl font-bold text-foreground">{d.offer}</span>{d.original && <span className="text-sm text-muted-foreground line-through">{d.original}</span>}{d.badge && <span className="text-xs font-semibold text-primary">{d.badge}</span>}</p> : null; })()}
-            {form.active && form.state !== "done" ? <Button size="lg" className="h-12 rounded-xl px-10" onClick={() => document.getElementById("lead-form")?.scrollIntoView({ behavior: "smooth", block: "center" })}>Fill your details above</Button> : cta}
+      {cta && (
+        <div className="fixed inset-x-0 bottom-0 z-30 flex items-center justify-between gap-3 border-t border-border bg-background/95 px-4 py-3 backdrop-blur lg:hidden">
+          <div className="min-w-0">
+            {d?.offer ? <p className="flex items-baseline gap-2"><span className="text-lg font-bold text-foreground">{d.offer}</span>{d.original && <span className="text-xs text-muted-foreground line-through">{d.original}</span>}</p> : <p className="truncate text-sm font-medium text-foreground">{heading}</p>}
           </div>
-        )}
-        <p className="flex items-center justify-center gap-1.5 pt-6 text-xs text-muted-foreground"><ShieldCheck className="size-3.5" /> Secure delivery</p>
-      </article>
+          <Button size="lg" className="rounded-xl" onClick={toCheckout}>{expired ? (expiryMessage || "Offer ended") : (buttonLabel || "Open")}</Button>
+        </div>
+      )}
     </div>
   );
 }
