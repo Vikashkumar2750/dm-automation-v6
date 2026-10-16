@@ -144,7 +144,7 @@ export const listAutomationRules = createServerFn({ method: "GET" })
       .order("priority", { ascending: true })
       .limit(100);
     if (error) throw new Error(error.message);
-    return (rows ?? []) as AutomationRule[];
+    return (rows ?? []) as unknown as AutomationRule[];
   });
 
 export const createAutomationRule = createServerFn({ method: "POST" })
@@ -160,7 +160,7 @@ export const createAutomationRule = createServerFn({ method: "POST" })
       const { assertRuleSlot } = await import("@/lib/plan-limits.server");
       await assertRuleSlot(supabaseAdmin, organizationId);
     }
-    const { error } = await context.supabase.from("automation_rules").insert({
+    const { error } = await context.supabase.from("automation_rules").insert(({
       organization_id: organizationId,
       created_by: context.userId,
       ...toRow(rest),
@@ -223,7 +223,7 @@ export const updateAutomationRule = createServerFn({ method: "POST" })
     }
     const { error } = await context.supabase
       .from("automation_rules")
-      .update(patch)
+      .update(patch as never)
       .eq("id", id);
     if (error) throw new Error(error.message);
     return { ok: true };
