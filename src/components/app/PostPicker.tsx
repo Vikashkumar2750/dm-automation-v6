@@ -304,3 +304,25 @@ export function PostPicker({
     </div>
   );
 }
+
+const POST_CACHE_PREFIX = "autodm:remote-posts:";
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function readPostCache(orgId: string | null | undefined): any {
+  if (!orgId || typeof window === "undefined") return undefined;
+  try {
+    const raw = window.localStorage.getItem(POST_CACHE_PREFIX + orgId);
+    return raw ? JSON.parse(raw) : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function writePostCache(orgId: string | null | undefined, value: unknown) {
+  if (!orgId || typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(POST_CACHE_PREFIX + orgId, JSON.stringify(value));
+  } catch {
+    /* storage full — ignore */
+  }
+}
