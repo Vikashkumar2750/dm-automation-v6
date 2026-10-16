@@ -1,3 +1,4 @@
+import { supabase } from "@/integrations/supabase/client";
 import { GuideButton } from "@/components/app/GuideButton";
 import { PostPicker } from "@/components/app/PostPicker";
 import { getPlanUsage } from "@/lib/plan-limits.functions";
@@ -106,6 +107,7 @@ type Draft = {
   dmLinkUrl: string;
   dmButtonLabel: string;
   dmLinkInText: boolean;
+  dmExtraButtons: Array<{ url: string; label: string }>;
   dmAttachmentUrl: string;
   dmAttachmentType: "none" | "image" | "video" | "file";
   followerCondition: "any" | "followers_only" | "non_followers";
@@ -134,9 +136,10 @@ const emptyDraft: Draft = {
   dmButtonLabel: "",
   dmAttachmentUrl: "",
   dmLinkInText: false,
+  dmExtraButtons: [],
   dmAttachmentType: "none",
   followerCondition: "any",
-  requireFollow: false,
+  requireFollow: true,
   followPromptText: "",
 };
 
@@ -261,6 +264,7 @@ function toDraft(rule: AutomationRule): Draft {
     dmButtonLabel: rule.dm_button_label ?? "",
     dmAttachmentUrl: rule.dm_attachment_url ?? "",
     dmLinkInText: rule.dm_link_in_text ?? false,
+    dmExtraButtons: Array.isArray(rule.dm_extra_buttons) ? rule.dm_extra_buttons : [],
     dmAttachmentType: rule.dm_attachment_type ?? "none",
     followerCondition: rule.follower_condition ?? "any",
     requireFollow: rule.require_follow ?? false,
@@ -316,6 +320,20 @@ function AutomationsPage() {
   const editing = Boolean(draft);
   useEffect(() => { if (typeof window !== "undefined") window.scrollTo({ top: 0 }); }, [editing]);
 
+  const deliveryPagesQuery = useQuery({
+    queryKey: ["delivery-pages-pick", orgId],
+    enabled: !!orgId,
+    staleTime: 5 * 60_000,
+    meta: { background: true },
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("delivery_pages")
+        .select("id, title, slug, button_label, active")
+        .eq("organization_id", orgId!)
+        .order("created_at");
+      return (data ?? []) as Array<{ id: string; title: string; slug: string; button_label: string | null; active: boolean }>;
+    },
+  });
   const rulesQuery = useQuery({
     queryKey: ["automation-rules", orgId],
     enabled: Boolean(orgId),
@@ -382,6 +400,9 @@ function AutomationsPage() {
         dmButtonLabel: value.dmButtonLabel.trim() || null,
         dmAttachmentUrl: value.dmAttachmentUrl.trim() || null,
         dmLinkInText: value.dmLinkInText,
+        dmExtraButtons: value.dmLinkUrl.trim()
+          ? value.dmExtraButtons.filter((b) => b.url.trim()).map((b) => ({ url: b.url.trim(), label: b.label.trim() }))
+          : [],
         dmAttachmentType: value.dmAttachmentType,
         followerCondition: value.followerCondition,
         requireFollow: value.requireFollow,
@@ -902,6 +923,30 @@ function AutomationsPage() {
               {needsDm && (
                 <div className="grid gap-4 rounded-lg border bg-muted/30 p-4">
                   <p className="text-sm font-semibold">What you want to send / attach</p>
+                  {(deliveryPagesQuery.data?.length ?? 0) > 0 && (
+                    <div className="grid gap-2">
+                      <Label>Fill from a delivery page (optional)</Label>
+                      <Select
+                        value=""
+                        onValueChange={(id) => {
+                          const pg = deliveryPagesQuery.data?.find((x) => x.id === id);
+                          if (!pg) return;
+                          setDraft({
+                            ...draft,
+                            dmLinkUrl: `${window.location.origin}/p/${pg.slug}`,
+                            dmButtonLabel: draft.dmButtonLabel.trim() || (pg.button_label ?? "View offer").slice(0, 20),
+                          });
+                        }}
+                      >
+                        <SelectTrigger><SelectValue placeholder="Choose a delivery page…" /></SelectTrigger>
+                        <SelectContent>
+                          {deliveryPagesQuery.data!.map((pg) => (
+                            <SelectItem key={pg.id} value={pg.id}>{pg.title}{pg.active ? "" : " (inactive)"}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div className="grid gap-2">
                       <Label>Link URL</Label>
@@ -923,6 +968,41 @@ function AutomationsPage() {
                       />
                     </div>
                   </div>
+                  {draft.dmLinkUrl.trim() && (
+                    <div className="grid gap-3">
+                      {draft.dmExtraButtons.map((b, i) => (
+                        <div key={i} className="grid gap-2 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+                          <div className="grid gap-2">
+                            <Label>Button {i + 2} link</Label>
+                            <Input
+                              value={b.url}
+                              placeholder="https://chat.whatsapp.com/…"
+                              onChange={(e) => setDraft({ ...draft, dmExtraButtons: draft.dmExtraButtons.map((x, j) => j === i ? { ...x, url: e.target.value } : x) })}
+                            />
+                          </div>
+                          <div className="grid gap-2">
+                            <Label>Button {i + 2} text</Label>
+                            <Input
+                              value={b.label}
+                              maxLength={20}
+                              placeholder="Join group"
+                              onChange={(e) => setDraft({ ...draft, dmExtraButtons: draft.dmExtraButtons.map((x, j) => j === i ? { ...x, label: e.target.value } : x) })}
+                            />
+                          </div>
+                          <Button type="button" variant="ghost" size="icon" aria-label="Remove button"
+                            onClick={() => setDraft({ ...draft, dmExtraButtons: draft.dmExtraButtons.filter((_, j) => j !== i) })}>
+                            <Trash2 className="size-4" />
+                          </Button>
+                        </div>
+                      ))}
+                      {draft.dmExtraButtons.length < 2 && (
+                        <Button type="button" variant="outline" size="sm" className="w-fit"
+                          onClick={() => setDraft({ ...draft, dmExtraButtons: [...draft.dmExtraButtons, { url: "", label: "" }] })}>
+                          <Plus className="size-4" /> Add another button ({draft.dmExtraButtons.length + 1}/3)
+                        </Button>
+                      )}
+                    </div>
+                  )}
                   {draft.dmLinkUrl.trim() && (
                     <div className="flex items-center justify-between gap-4 rounded-md border p-3">
                       <div>
