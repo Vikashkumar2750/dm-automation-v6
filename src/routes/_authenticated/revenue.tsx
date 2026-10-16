@@ -18,7 +18,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useTenant } from "@/hooks/useTenant";
 import { buildFunnel, formatInr, rupeesToPaise, slugify } from "@/lib/revenue";
 import { DeliveryPageView } from "@/components/app/DeliveryPageView";
-import { DELIVERY_TEMPLATES, SAMPLE_BODY, EMAIL_ONLY_FIELDS, STANDARD_LEAD_FIELDS, priceDisplay, type LeadField } from "@/lib/delivery-page";
+import { DELIVERY_TEMPLATES, SAMPLE_BODY, EMAIL_ONLY_FIELDS, STANDARD_LEAD_FIELDS, priceDisplay, DEFAULT_POLICIES, DEFAULT_DISCLAIMER, type LeadField, type PageExtras } from "@/lib/delivery-page";
 import { previewDeliveryImage, uploadDeliveryImage } from "@/lib/delivery-media";
 import {
   deleteRevenueItem, getRevenue, removeRazorpayKeys, saveCampaign, savePage, saveProduct, saveRazorpayKeys, saveRevenueSettings,
@@ -199,18 +199,19 @@ type PageForm = {
   countdown: string; expiryAction: "disable_cta" | "hide_cta"; expiryMessage: string;
   formType: "none" | "email" | "full"; formMode: "optional" | "required"; fields: LeadField[];
   showPrice: boolean; priceOriginal: string; priceOffer: string; discountLabel: string; couponCode: string; couponNote: string;
+  extras: PageExtras;
 };
 const EMPTY_PAGE: PageForm = {
   id: null, title: "", slug: "", originalSlug: "", body: "", buttonLabel: "", buttonUrl: "", imagePath: "", imageAlt: "", showImage: false, countdown: "", expiryAction: "disable_cta",
   expiryMessage: "This offer has ended.", formType: "none", formMode: "optional", fields: STANDARD_LEAD_FIELDS,
-  showPrice: false, priceOriginal: "", priceOffer: "", discountLabel: "", couponCode: "", couponNote: "",
+  showPrice: false, priceOriginal: "", priceOffer: "", discountLabel: "", couponCode: "", couponNote: "", extras: {},
 };
 const CONSENT = "I agree that my details may be used to fulfil this request and follow up about this offer.";
 const toLocalInput = (iso: string | null) => { if (!iso) return ""; const d = new Date(iso); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16); };
 const paiseToRupees = (p: number | null) => (p ? String(p / 100) : "");
 
 function pageToForm(p: any): PageForm {
-  const cfg = (p.form_config ?? { mode: "none", fields: [] }) as { mode: string; fields?: LeadField[] };
+  const cfg = (p.form_config ?? { mode: "none", fields: [] }) as { mode: string; fields?: LeadField[]; extras?: PageExtras };
   const fields = cfg.fields ?? [];
   const emailOnly = fields.length === 1 && fields[0]?.type === "email";
   return {
@@ -220,7 +221,7 @@ function pageToForm(p: any): PageForm {
     formType: cfg.mode === "none" || fields.length === 0 ? "none" : emailOnly ? "email" : "full", formMode: cfg.mode === "required" ? "required" : "optional",
     fields: emailOnly || fields.length === 0 ? STANDARD_LEAD_FIELDS : fields,
     showPrice: !!p.show_price, priceOriginal: paiseToRupees(p.price_original_paise), priceOffer: paiseToRupees(p.price_offer_paise),
-    discountLabel: p.discount_label ?? "", couponCode: p.coupon_code ?? "", couponNote: p.coupon_note ?? "",
+    discountLabel: p.discount_label ?? "", couponCode: p.coupon_code ?? "", couponNote: p.coupon_note ?? "", extras: cfg.extras ?? {},
   };
 }
 
@@ -284,7 +285,7 @@ function Pages({ orgId, items, leads }: { orgId: string; items: any[]; leads: Ar
     if (p.image_path) { try { setImagePreview(await previewDeliveryImage(p.image_path)); } catch { /* preview only */ } }
   };
   const fields = formFields(f);
-  const formConfig = { mode: f.formType === "none" ? "none" as const : f.formMode, consent: f.formType === "none" ? "" : CONSENT, fields };
+  const formConfig = { mode: f.formType === "none" ? "none" as const : f.formMode, consent: f.formType === "none" ? "" : CONSENT, fields, extras: cleanExtras(f.extras) };
   const price = f.showPrice ? { originalPaise: f.priceOriginal ? rupeesToPaise(f.priceOriginal) : null, offerPaise: f.priceOffer ? rupeesToPaise(f.priceOffer) : null, label: f.discountLabel || null, couponCode: f.couponCode.trim().toUpperCase() || null, couponNote: f.couponNote || null } : null;
   const badLead = f.formType === "full" && (fields.length === 0 || fields.some((x) => !x.label.trim() || (x.type === "choice" && x.options.length === 0)));
   const submit = () => save.mutate({
@@ -355,6 +356,7 @@ function Pages({ orgId, items, leads }: { orgId: string; items: any[]; leads: Ar
             {f.countdown && <><select className={area} value={f.expiryAction} onChange={(e) => setF({ ...f, expiryAction: e.target.value as typeof f.expiryAction })}><option value="disable_cta">Disable button when ended</option><option value="hide_cta">Hide button when ended</option></select><Input placeholder="Message after expiry" value={f.expiryMessage} onChange={(e) => setF({ ...f, expiryMessage: e.target.value })} /></>}
             <p className="text-xs text-muted-foreground">Uses one fixed deadline. It never restarts for each visitor.</p>
           </div>
+          <ExtrasEditor value={f.extras} onChange={(extras) => setF({ ...f, extras })} />
           <div className="space-y-2 rounded-lg border border-border p-3">
             <Label>Lead form</Label>
             <div className="grid grid-cols-2 gap-2">
@@ -498,5 +500,54 @@ function FieldInfo({ title, how, why, example }: { title: string; how: string; w
         </div>
       </PopoverContent>
     </Popover>
+  );
+}
+
+function cleanExtras(x: PageExtras): PageExtras {
+  const t = (v?: string) => (v ?? "").trim() || undefined;
+  return {
+    creatorName: t(x.creatorName), supportEmail: t(x.supportEmail), disclaimer: t(x.disclaimer),
+    deliverables: { count: t(x.deliverables?.count), format: t(x.deliverables?.format), size: t(x.deliverables?.size) },
+    policies: { refund: t(x.policies?.refund), fulfilment: t(x.policies?.fulfilment), privacy: t(x.policies?.privacy), terms: t(x.policies?.terms) },
+  };
+}
+
+const POLICY_LABELS = [["refund", "Refund policy"], ["fulfilment", "Fulfilment policy"], ["privacy", "Privacy policy"], ["terms", "Terms & conditions"]] as const;
+
+function ExtrasEditor({ value, onChange }: { value: PageExtras; onChange: (v: PageExtras) => void }) {
+  const d = value.deliverables ?? {}; const pol = value.policies ?? {};
+  return (
+    <div className="space-y-4 rounded-lg border border-border p-3">
+      <div className="space-y-2">
+        <Label>Creator & support (optional)</Label>
+        <div className="grid gap-2 sm:grid-cols-2">
+          <Input placeholder="Creator name (e.g. Techaasvik)" maxLength={80} value={value.creatorName ?? ""} onChange={(e) => onChange({ ...value, creatorName: e.target.value })} />
+          <Input type="email" placeholder="Support email" maxLength={120} value={value.supportEmail ?? ""} onChange={(e) => onChange({ ...value, supportEmail: e.target.value })} />
+        </div>
+      </div>
+      <div className="space-y-2">
+        <Label>"What you'll get" box (optional)</Label>
+        <div className="grid gap-2 sm:grid-cols-3">
+          <Input placeholder="Items (e.g. 2 resources)" maxLength={40} value={d.count ?? ""} onChange={(e) => onChange({ ...value, deliverables: { ...d, count: e.target.value } })} />
+          <Input placeholder="Format (e.g. PDF, Video)" maxLength={40} value={d.format ?? ""} onChange={(e) => onChange({ ...value, deliverables: { ...d, format: e.target.value } })} />
+          <Input placeholder="Size (e.g. 21 MB)" maxLength={40} value={d.size ?? ""} onChange={(e) => onChange({ ...value, deliverables: { ...d, size: e.target.value } })} />
+        </div>
+      </div>
+      <div className="space-y-2">
+        <div className="flex items-center justify-between gap-2">
+          <Label>Policies & compliance (optional)</Label>
+          <Button type="button" size="sm" variant="outline" onClick={() => onChange({ ...value, policies: { ...DEFAULT_POLICIES, ...Object.fromEntries(Object.entries(pol).filter(([, v]) => v)) }, disclaimer: value.disclaimer || DEFAULT_DISCLAIMER })}>Fill standard text</Button>
+        </div>
+        {POLICY_LABELS.map(([k, label]) => (
+          <div key={k} className="space-y-1">
+            <p className="text-xs text-muted-foreground">{label}</p>
+            <textarea className="min-h-16 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" maxLength={1500} value={pol[k] ?? ""} onChange={(e) => onChange({ ...value, policies: { ...pol, [k]: e.target.value } })} />
+          </div>
+        ))}
+        <p className="text-xs text-muted-foreground">Disclaimer (shown at the bottom)</p>
+        <textarea className="min-h-16 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" maxLength={1500} value={value.disclaimer ?? ""} onChange={(e) => onChange({ ...value, disclaimer: e.target.value })} />
+        <p className="text-xs text-muted-foreground">Blank items are hidden on the page. Review the standard text so it matches how you really sell.</p>
+      </div>
+    </div>
   );
 }

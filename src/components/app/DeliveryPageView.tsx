@@ -1,4 +1,4 @@
-import { ImageIcon, CheckCircle2, Clock3, Copy, ShieldCheck, Tag } from "lucide-react";
+import { ImageIcon, CheckCircle2, Clock3, Copy, Mail, Package, ShieldCheck, Tag } from "lucide-react";
 import { Fragment, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -57,6 +57,11 @@ export function DeliveryPageView({ title, body, buttonLabel, buttonHref, imageUr
   const rest = hasH1 ? blocks.slice(1) : blocks;
   const intro = rest[0]?.t === "p" ? (rest[0] as { text: string }).text : null;
   const content = intro ? rest.slice(1) : rest;
+  const extras = leadForm?.config?.extras ?? {};
+  const del = extras.deliverables ?? {};
+  const delItems = [del.count, del.format, del.size].filter(Boolean) as string[];
+  const policyItems = ([["refund", "Refund policy"], ["fulfilment", "Fulfilment policy"], ["privacy", "Privacy policy"], ["terms", "Terms & conditions"]] as const)
+    .map(([k, label]) => ({ label, text: extras.policies?.[k] })).filter((x) => x.text);
   const faqs = content.filter((b): b is Extract<Block, { t: "faq" }> => b.t === "faq");
   const onCta = async (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
@@ -110,6 +115,29 @@ export function DeliveryPageView({ title, body, buttonLabel, buttonHref, imageUr
               ))}
             </div>
           )}
+          {delItems.length > 0 && (
+            <div className="rounded-xl border border-border bg-card p-4 text-card-foreground">
+              <p className="mb-3 flex items-center gap-2 font-semibold"><Package className="size-4 text-primary" /> What you'll get</p>
+              <div className="flex flex-wrap gap-2">{delItems.map((x, i) => <span key={i} className="rounded-full bg-muted px-3 py-1 text-sm text-muted-foreground">{x}</span>)}</div>
+            </div>
+          )}
+          {(extras.creatorName || extras.supportEmail) && (
+            <div className="rounded-xl border border-border bg-card p-4 text-card-foreground">
+              <p className="font-semibold">Contact {extras.creatorName || "the creator"}</p>
+              {extras.supportEmail && <a href={`mailto:${extras.supportEmail}`} className="mt-1 inline-flex items-center gap-2 text-sm text-primary"><Mail className="size-4" /> {extras.supportEmail}</a>}
+            </div>
+          )}
+          {policyItems.length > 0 && (
+            <div className="space-y-2">
+              {policyItems.map((p) => (
+                <details key={p.label} className="rounded-xl border border-border bg-card p-4 text-card-foreground">
+                  <summary className="cursor-pointer list-none font-medium">{p.label}</summary>
+                  <p className="mt-2 whitespace-pre-line text-sm text-muted-foreground">{p.text}</p>
+                </details>
+              ))}
+            </div>
+          )}
+          {extras.disclaimer && <p className="whitespace-pre-line text-xs text-muted-foreground">{extras.disclaimer}</p>}
           <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border-l-4 border-primary bg-muted px-4 py-3 text-sm text-muted-foreground"><span>Already got access? {buyerSlug ? "Sign in with your email to open it again." : "Your link was sent in your DM."}</span>{buyerSlug && <Button size="sm" variant="outline" onClick={() => setSignIn(true)}>Access your purchase</Button>}</div>
           <p className="flex items-center gap-1.5 pt-2 text-xs text-muted-foreground"><ShieldCheck className="size-3.5" /> Secure delivery</p>
         </article>
