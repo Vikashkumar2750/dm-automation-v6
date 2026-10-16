@@ -39,6 +39,7 @@ export type AutomationRule = {
   comment_reply_variations: string[];
   dm_link_url: string | null;
   dm_button_label: string | null;
+  dm_link_in_text: boolean | null;
   dm_attachment_url: string | null;
   dm_attachment_type: "none" | "image" | "video" | "file";
   follower_condition: "any" | "followers_only" | "non_followers";
@@ -58,7 +59,7 @@ export type AutomationRun = {
 };
 
 const SELECT =
-  "id, organization_id, name, is_active, priority, platform, trigger, match_type, keywords, action, response_text, response_variations, set_status, cooldown_seconds, daily_limit, created_at, target_post_ids, comment_reply_text, comment_reply_variations, dm_link_url, dm_button_label, dm_attachment_url, dm_attachment_type, follower_condition, require_follow, follow_prompt_text";
+  "id, organization_id, name, is_active, priority, platform, trigger, match_type, keywords, action, response_text, response_variations, set_status, cooldown_seconds, daily_limit, created_at, target_post_ids, comment_reply_text, comment_reply_variations, dm_link_url, dm_button_label, dm_link_in_text, dm_attachment_url, dm_attachment_type, follower_condition, require_follow, follow_prompt_text";
 
 const ruleInput = z.object({
   name: z.string().trim().min(1).max(80),
@@ -85,6 +86,7 @@ const ruleInput = z.object({
   commentReplyVariations: z.array(z.string().trim().min(1).max(1000)).max(10),
   dmLinkUrl: z.string().trim().url().max(500).nullable().or(z.literal("").transform(() => null)),
   dmButtonLabel: z.string().trim().max(20).nullable(),
+  dmLinkInText: z.boolean().default(false),
   dmAttachmentUrl: z
     .string()
     .trim()
@@ -120,6 +122,7 @@ function toRow(input: z.infer<typeof ruleInput>) {
     comment_reply_variations: input.commentReplyVariations,
     dm_link_url: input.dmLinkUrl,
     dm_button_label: input.dmButtonLabel,
+    dm_link_in_text: input.dmLinkInText,
     dm_attachment_url: input.dmAttachmentUrl,
     dm_attachment_type: input.dmAttachmentType,
     follower_condition: input.followerCondition,
@@ -141,7 +144,7 @@ export const listAutomationRules = createServerFn({ method: "GET" })
       .order("priority", { ascending: true })
       .limit(100);
     if (error) throw new Error(error.message);
-    return (rows ?? []) as AutomationRule[];
+    return (rows ?? []) as unknown as AutomationRule[];
   });
 
 export const createAutomationRule = createServerFn({ method: "POST" })
@@ -157,11 +160,11 @@ export const createAutomationRule = createServerFn({ method: "POST" })
       const { assertRuleSlot } = await import("@/lib/plan-limits.server");
       await assertRuleSlot(supabaseAdmin, organizationId);
     }
-    const { error } = await context.supabase.from("automation_rules").insert({
+    const { error } = await context.supabase.from("automation_rules").insert(({
       organization_id: organizationId,
       created_by: context.userId,
       ...toRow(rest),
-    });
+    }) as never);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -196,6 +199,7 @@ export const updateAutomationRule = createServerFn({ method: "POST" })
       patch.comment_reply_variations = rest.commentReplyVariations;
     if (rest.dmLinkUrl !== undefined) patch.dm_link_url = rest.dmLinkUrl;
     if (rest.dmButtonLabel !== undefined) patch.dm_button_label = rest.dmButtonLabel;
+    if (rest.dmLinkInText !== undefined) patch.dm_link_in_text = rest.dmLinkInText;
     if (rest.dmAttachmentUrl !== undefined) patch.dm_attachment_url = rest.dmAttachmentUrl;
     if (rest.dmAttachmentType !== undefined)
       patch.dm_attachment_type = rest.dmAttachmentType;
@@ -219,7 +223,7 @@ export const updateAutomationRule = createServerFn({ method: "POST" })
     }
     const { error } = await context.supabase
       .from("automation_rules")
-      .update(patch)
+      .update(patch as never)
       .eq("id", id);
     if (error) throw new Error(error.message);
     return { ok: true };

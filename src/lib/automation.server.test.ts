@@ -137,3 +137,11 @@ describe("locked: opener and non-follower follow prompt shapes", () => {
     expect(messages[0]).toHaveProperty("attachment.payload.buttons.1.title", "I followed ✅");
   });
 });
+
+import { linkInText } from "./automation.server";
+describe("linkInText", () => {
+  it("appends the link and stays within 640 chars", () => {
+    expect(linkInText("Hi", "https://x.com")).toBe("Hi\n\n👉 https://x.com");
+    expect(linkInText("a".repeat(700), "https://x.com").length).toBeLessThanOrEqual(640);
+  });
+});

@@ -63,6 +63,7 @@ type Rule = {
   comment_reply_variations: string[] | null;
   dm_link_url: string | null;
   dm_button_label: string | null;
+  dm_link_in_text?: boolean | null;
   dm_attachment_url: string | null;
   dm_attachment_type: string;
   follower_condition: string;
@@ -71,7 +72,7 @@ type Rule = {
 };
 
 const RULE_SELECT =
-  "id, name, platform, trigger, match_type, keywords, action, response_text, response_variations, set_status, cooldown_seconds, daily_limit, target_post_ids, comment_reply_text, comment_reply_variations, dm_link_url, dm_button_label, dm_attachment_url, dm_attachment_type, follower_condition, require_follow, follow_prompt_text";
+  "id, name, platform, trigger, match_type, keywords, action, response_text, response_variations, set_status, cooldown_seconds, daily_limit, target_post_ids, comment_reply_text, comment_reply_variations, dm_link_url, dm_button_label, dm_link_in_text, dm_attachment_url, dm_attachment_type, follower_condition, require_follow, follow_prompt_text";
 
 type Settings = {
   is_paused: boolean;
@@ -664,6 +665,14 @@ type Button =
  * and Instagram messaging), then quick replies for postback buttons, then
  * plain text with any links appended so the contact always gets something.
  */
+/** Appends the link to the message text, keeping the total within Meta's 640 chars. */
+export function linkInText(text: string, url: string): string {
+  const suffix = `\n\n👉 ${url}`;
+  const room = 640 - suffix.length;
+  if (room < 1) return text;
+  return text.slice(0, room) + suffix;
+}
+
 function buttonMessages(text: string, buttons: Button[]): Record<string, unknown>[] {
   const body = text.slice(0, 640);
   const links = buttons
@@ -851,12 +860,16 @@ async function deliverDm(
   const trackedLink = link ? track("link", link) : null;
   // Tracked button first; the original link shapes stay as a fallback so a
   // tracking problem can never block delivery.
+  // Optional: also put the link inside the text so Instagram/Facebook web
+  // (which hides buttons) still shows a clickable link. The button stays.
+  const withText = (u: string) =>
+    rule.dm_link_in_text ? linkInText(text, u) : text;
   const shapes = link
     ? [
         ...(trackedLink
-          ? buttonMessages(text, [{ type: "web_url", url: trackedLink, title: buttonLabel }])
+          ? buttonMessages(withText(trackedLink), [{ type: "web_url", url: trackedLink, title: buttonLabel }])
           : []),
-        ...buttonMessages(text, [{ type: "web_url", url: link, title: buttonLabel }]),
+        ...buttonMessages(withText(link), [{ type: "web_url", url: link, title: buttonLabel }]),
       ]
     : [{ text }];
 

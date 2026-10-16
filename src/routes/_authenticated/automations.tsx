@@ -105,6 +105,7 @@ type Draft = {
   commentReplyVariations: string;
   dmLinkUrl: string;
   dmButtonLabel: string;
+  dmLinkInText: boolean;
   dmAttachmentUrl: string;
   dmAttachmentType: "none" | "image" | "video" | "file";
   followerCondition: "any" | "followers_only" | "non_followers";
@@ -132,6 +133,7 @@ const emptyDraft: Draft = {
   dmLinkUrl: "",
   dmButtonLabel: "",
   dmAttachmentUrl: "",
+  dmLinkInText: false,
   dmAttachmentType: "none",
   followerCondition: "any",
   requireFollow: false,
@@ -258,6 +260,7 @@ function toDraft(rule: AutomationRule): Draft {
     dmLinkUrl: rule.dm_link_url ?? "",
     dmButtonLabel: rule.dm_button_label ?? "",
     dmAttachmentUrl: rule.dm_attachment_url ?? "",
+    dmLinkInText: rule.dm_link_in_text ?? false,
     dmAttachmentType: rule.dm_attachment_type ?? "none",
     followerCondition: rule.follower_condition ?? "any",
     requireFollow: rule.require_follow ?? false,
@@ -378,6 +381,7 @@ function AutomationsPage() {
         dmLinkUrl: value.dmLinkUrl.trim() || null,
         dmButtonLabel: value.dmButtonLabel.trim() || null,
         dmAttachmentUrl: value.dmAttachmentUrl.trim() || null,
+        dmLinkInText: value.dmLinkInText,
         dmAttachmentType: value.dmAttachmentType,
         followerCondition: value.followerCondition,
         requireFollow: value.requireFollow,
@@ -919,6 +923,21 @@ function AutomationsPage() {
                       />
                     </div>
                   </div>
+                  {draft.dmLinkUrl.trim() && (
+                    <div className="flex items-center justify-between gap-4 rounded-md border p-3">
+                      <div>
+                        <p className="text-sm font-medium">Also add the link in the message text</p>
+                        <p className="text-xs text-muted-foreground">
+                          Instagram/Facebook on a computer hides buttons. With this on, the link
+                          also shows in the message. The button stays on mobile.
+                        </p>
+                      </div>
+                      <Switch
+                        checked={draft.dmLinkInText}
+                        onCheckedChange={(checked) => setDraft({ ...draft, dmLinkInText: checked })}
+                      />
+                    </div>
+                  )}
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div className="grid gap-2">
                       <Label>Attachment type</Label>
