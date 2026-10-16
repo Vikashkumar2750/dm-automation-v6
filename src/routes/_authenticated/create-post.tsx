@@ -1,3 +1,4 @@
+import { Pager, pageSlice } from "@/components/app/Pager";
 import { PlatformAccountFilter, matchesPlatformAccount } from "@/components/app/PlatformAccountFilter";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -84,6 +85,7 @@ function CreatePostPage() {
   const editLive = useServerFn(editPublishedCaption);
   const fetchStats = useServerFn(getPostStats);
   const [tab, setTab] = useState<FormatTab>("all");
+  const [page, setPage] = useState(1);
   const [toDelete, setToDelete] = useState<Post | null>(null);
   const [liveEdit, setLiveEdit] = useState<{ post: Post; caption: string } | null>(null);
   const [ytEdit, setYtEdit] = useState<{ post: Post; title: string; description: string; tags: string } | null>(null);
@@ -317,7 +319,7 @@ function CreatePostPage() {
           </div>
         ) : (
           <ul className="divide-y">
-            {posts.map((post) => (
+            {pageSlice(posts, page, 10).map((post) => (
               <li
                 key={post.id}
                 className="flex flex-wrap items-start gap-3 px-5 py-4"
@@ -396,6 +398,7 @@ function CreatePostPage() {
             ))}
           </ul>
         )}
+        <div className="border-t px-5 pb-3"><Pager page={page} total={posts.length} perPage={10} onPage={setPage} /></div>
       </Panel>
 
       <Dialog open={Boolean(toDelete)} onOpenChange={(o) => !o && setToDelete(null)}>
