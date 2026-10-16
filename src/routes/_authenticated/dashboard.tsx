@@ -134,7 +134,7 @@ function Dashboard() {
     .filter((p) => p.status === "scheduled" && p.scheduled_at)
     .sort((x, y) => (x.scheduled_at! < y.scheduled_at! ? -1 : 1))
     .slice(0, 5);
-  const recentThreads = (conversations.data ?? []).slice(0, 5);
+  const recentThreads = (conversations.data ?? []).slice(0, 9);
 
   return (
     <AppShell>
@@ -286,6 +286,9 @@ function Dashboard() {
                   {c.unread_count > 0 && <StatusBadge tone="info">{c.unread_count}</StatusBadge>}
                 </div>
               ))}
+              <Link to="/inbox" className="inline-flex items-center gap-1 pt-1 text-sm font-medium text-primary">
+                View more <ArrowRight className="size-4" />
+              </Link>
             </div>
           )}
         </Panel>
@@ -371,7 +374,7 @@ function Dashboard() {
               />
             ) : (
               <ul className="space-y-3">
-                {activityItems.slice(0, 10).map((item) => (
+                {activityItems.slice(0, 5).map((item) => (
                   <li key={item.id} className="flex items-start gap-3">
                     <StatusBadge tone={item.tone}>{item.kind === "run" ? "rule" : "event"}</StatusBadge>
                     <div className="min-w-0 flex-1">
@@ -386,6 +389,11 @@ function Dashboard() {
                   </li>
                 ))}
               </ul>
+            )}
+            {activityItems.length > 5 && (
+              <Link to="/automations" className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-primary">
+                View more <ArrowRight className="size-4" />
+              </Link>
             )}
           </Panel>
         </div>

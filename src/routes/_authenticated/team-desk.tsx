@@ -1,3 +1,4 @@
+import { Pager, pageSlice } from "@/components/app/Pager";
 import { PlatformAccountFilter } from "@/components/app/PlatformAccountFilter";
 import { csvCell } from "@/lib/csv-safe";
 import { contactLabel } from "@/lib/contact-name";
@@ -89,6 +90,7 @@ function SharedInbox({ orgId, desk, names, members }: { orgId: string; desk: Des
   const qc = useQueryClient();
   const [filter, setFilter] = useState<AssignmentFilter>("all");
   const [openId, setOpenId] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
   const [text, setText] = useState("");
   const assign = useServerFn(assignConversation);
   const send = useServerFn(sendReply);
@@ -129,7 +131,7 @@ function SharedInbox({ orgId, desk, names, members }: { orgId: string; desk: Des
           <EmptyState icon={Inbox} title="No conversations here" description="Change the filter or wait for new messages." />
         ) : (
           <ul className="divide-y divide-border">
-            {rows.map((c) => (
+            {pageSlice(rows, page, 10).map((c) => (
               <li key={c.id} className="p-3">
                 <div className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-3 sm:flex">
                   <PlatformBadge platform={c.platform as SocialPlatform} size="sm" />
@@ -163,6 +165,7 @@ function SharedInbox({ orgId, desk, names, members }: { orgId: string; desk: Des
             ))}
           </ul>
         )}
+        <div className="border-t px-3 pb-3"><Pager page={page} total={rows.length} perPage={10} onPage={setPage} /></div>
       </Panel>
     </div>
   );
