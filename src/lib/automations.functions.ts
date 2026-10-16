@@ -628,7 +628,7 @@ export const listRecentRemotePosts = createServerFn({ method: "POST" })
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { fetchRemotePosts } = await import("@/lib/remote-posts.server");
-    const result = await fetchRemotePosts(supabaseAdmin, data.organizationId, 5000);
+    const result = await fetchRemotePosts(supabaseAdmin, data.organizationId, 100);
     // Fix B: refresh expired stored image links with the fresh ones Meta just returned.
     try {
       const fresh = new Map(result.posts.filter((p) => p.mediaUrl && p.platform !== "youtube").map((p) => [p.externalPostId, p.mediaUrl!]));
