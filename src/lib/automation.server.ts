@@ -63,6 +63,7 @@ type Rule = {
   comment_reply_variations: string[] | null;
   dm_link_url: string | null;
   dm_button_label: string | null;
+  dm_link_in_text?: boolean | null;
   dm_attachment_url: string | null;
   dm_attachment_type: string;
   follower_condition: string;
@@ -71,7 +72,7 @@ type Rule = {
 };
 
 const RULE_SELECT =
-  "id, name, platform, trigger, match_type, keywords, action, response_text, response_variations, set_status, cooldown_seconds, daily_limit, target_post_ids, comment_reply_text, comment_reply_variations, dm_link_url, dm_button_label, dm_attachment_url, dm_attachment_type, follower_condition, require_follow, follow_prompt_text";
+  "id, name, platform, trigger, match_type, keywords, action, response_text, response_variations, set_status, cooldown_seconds, daily_limit, target_post_ids, comment_reply_text, comment_reply_variations, dm_link_url, dm_button_label, dm_link_in_text, dm_attachment_url, dm_attachment_type, follower_condition, require_follow, follow_prompt_text";
 
 type Settings = {
   is_paused: boolean;
