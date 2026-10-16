@@ -105,6 +105,7 @@ type Draft = {
   commentReplyVariations: string;
   dmLinkUrl: string;
   dmButtonLabel: string;
+  dmLinkInText: boolean;
   dmAttachmentUrl: string;
   dmAttachmentType: "none" | "image" | "video" | "file";
   followerCondition: "any" | "followers_only" | "non_followers";
