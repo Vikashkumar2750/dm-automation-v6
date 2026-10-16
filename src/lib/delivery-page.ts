@@ -184,6 +184,92 @@ Because you commented, you unlocked a **special price** — just for you.
 ? How do I use the code? | Copy the code above and apply it at checkout.
 ? When does the offer end? | The timer on this page shows the exact deadline.`,
   },
+  {
+    key: "ai-pack", name: "AI prompts / skills pack", hint: "Prompts, skills, workflows", title: "The AI Creator Pack", slug: "ai-creator-pack", buttonLabel: "Get the pack", priceOriginal: "299", priceOffer: "199",
+    body: `# The AI Creator Pack: 12 ready-to-use AI skills
+The exact prompts and workflows I use to plan, write and grow my content — copy, paste, done.
+
+## What you get
+- 12 tested AI skills with step-by-step instructions
+- Content calendar, caption and hook generators
+- Bonus: my reel script template
+
+## Who it's for
+- Creators who want to post more in less time
+- Beginners who don't know where to start with AI
+
+> "Cut my content time in half." — Creator
+
+## Frequently asked questions
+? Do I need a paid AI plan? | No, everything works with free AI tools.
+? How do I get it? | Instantly after payment, plus a copy in your DM.`,
+  },
+  {
+    key: "presets", name: "Presets / templates bundle", hint: "Lightroom, LUTs, Canva", title: "Signature Presets Bundle", slug: "presets-bundle", buttonLabel: "Download bundle", priceOriginal: "1499", priceOffer: "499",
+    body: `# Signature Presets Bundle
+Get the exact look of my photos and reels in one click.
+
+## What's inside
+- 20 mobile + desktop Lightroom presets
+- 10 video LUTs for reels
+- 15 editable Canva templates
+- Install guide (PDF + video)
+
+> "My feed finally looks consistent." — Customer
+
+## Frequently asked questions
+? Does it work on mobile? | Yes, with the free Lightroom mobile app.
+? Will it look the same on my photos? | Results depend on lighting; small tweaks may be needed.`,
+  },
+  {
+    key: "webinar", name: "Live workshop / webinar", hint: "Ticket for a live session", title: "Live Workshop Pass", slug: "live-workshop", buttonLabel: "Book my seat", priceOriginal: "999", priceOffer: "299",
+    body: `# Live Workshop: Grow on Instagram in 30 days
+A 90-minute live session with a Q&A at the end.
+
+## What you will learn
+- The posting plan I use every week
+- How to write hooks that stop the scroll
+- Turning followers into customers with DMs
+
+## Details
+- Date & time: shared in your DM after booking
+- Joining link sent by email and DM
+- Recording included
+
+## Frequently asked questions
+? What if I miss it live? | You get the recording.
+? Is there a limit on seats? | Yes, seats are limited to keep the Q&A personal.`,
+  },
+  {
+    key: "community", name: "VIP community access", hint: "Paid Telegram / WhatsApp group", title: "VIP Community Access", slug: "vip-community", buttonLabel: "Join now", priceOriginal: "999", priceOffer: "499",
+    body: `# Join my VIP community
+Daily tips, early access and direct answers from me.
+
+## What members get
+- Private group with weekly live Q&A
+- Early access to new launches
+- Members-only resources
+
+> "Best money I spent this year." — Member
+
+## Frequently asked questions
+? How do I join? | You get the private invite link right after payment.
+? Can I leave anytime? | Yes, you can leave the group whenever you want.`,
+  },
+  {
+    key: "agency", name: "Client onboarding / service", hint: "Deposit + intake for a service", title: "Start Your Project", slug: "start-project", buttonLabel: "Pay deposit", priceOriginal: "", priceOffer: "4999",
+    body: `# Let's start your project
+Pay the booking deposit and share a few details — we'll reach out within 24 hours.
+
+## What happens next
+- Kick-off call to understand your goals
+- Clear plan, timeline and deliverables
+- Regular updates until delivery
+
+## Frequently asked questions
+? Is the deposit adjusted in the final price? | Yes, it is deducted from your final invoice.
+? How fast will you contact me? | Within 24 working hours.`,
+  },
 ];
 
 /** Price box values for a delivery page (display only; charging uses the product price). */
@@ -238,4 +324,7 @@ export const DEFAULT_POLICIES = {
   terms: "This product is for your personal use. Sharing, reselling or redistributing it is not allowed. Results depend on your own effort and are not guaranteed.",
 };
 
-export const DEFAULT_DISCLAIMER = "The creator is solely responsible for this product and its content. Payments are processed securely by the creator's payment provider.";
+export const DEFAULT_DISCLAIMER = "Techaasvik shall not be held liable for any content or materials published, sold, or distributed by content creators on our associated apps or websites.";
+
+/** New pages start with standard policies and the platform disclaimer filled in (all editable). */
+export const DEFAULT_EXTRAS: PageExtras = { policies: { ...DEFAULT_POLICIES }, disclaimer: DEFAULT_DISCLAIMER };
