@@ -65,7 +65,7 @@ export function DeliveryPageView({ title, body, buttonLabel, buttonHref, imageUr
     if (buttonHref !== "#") window.location.href = buttonHref;
   };
   const cta = buttonHref && !(expired && expiryAction === "hide_cta") ? (
-    <Button asChild size="lg" className="h-12 w-full rounded-xl text-base shadow-lg sm:w-auto sm:px-10">
+    <Button asChild size="lg" className="h-12 w-full rounded-xl text-base shadow-lg @xl:w-auto @xl:px-10">
       <a href={expired ? undefined : buttonHref} aria-disabled={expired || form.state === "saving"} onClick={onCta} rel="nofollow">{expired ? (expiryMessage || "Offer ended") : form.state === "saving" ? "Please wait…" : (buttonLabel || "Open")}</a>
     </Button>
   ) : null;
@@ -73,15 +73,17 @@ export function DeliveryPageView({ title, body, buttonLabel, buttonHref, imageUr
   const d = price ? priceDisplay(price.originalPaise, price.offerPaise, price.label) : null;
   const toCheckout = () => document.getElementById("checkout")?.scrollIntoView({ behavior: "smooth", block: "center" });
   return (
-    <div className="min-h-full bg-background pb-24 lg:pb-0">
+    <div className="@container min-h-full bg-background">
+    <div className="relative">
+      <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-72 bg-gradient-to-b from-primary/15 via-primary/5 to-transparent" />
       {buyerSlug && <>
-        <header className="sticky top-0 z-20 border-b border-border bg-background/90 backdrop-blur"><div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-2.5 sm:px-6"><span className="truncate text-sm font-semibold text-foreground">{heading.replace(/\*\*/g, "")}</span><BuyerSignInButton onClick={() => setSignIn(true)} /></div></header>
+        <header className="sticky top-0 z-20 border-b border-border bg-background/90 backdrop-blur"><div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-2.5 @xl:px-6"><span className="truncate text-sm font-semibold text-foreground">{heading.replace(/\*\*/g, "")}</span><BuyerSignInButton onClick={() => setSignIn(true)} /></div></header>
         <BuyerSignIn slug={buyerSlug} open={signIn} onOpenChange={setSignIn} />
       </>}
-      <div className="mx-auto grid max-w-6xl gap-8 px-4 py-8 sm:px-6 lg:grid-cols-[minmax(0,1fr)_380px] lg:py-12">
+      <div className="relative mx-auto grid max-w-6xl gap-8 px-4 py-8 @xl:px-6 @3xl:grid-cols-[minmax(0,1fr)_380px] @3xl:py-12">
         <article className="min-w-0 space-y-5">
           <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/5 px-3 py-1 text-xs font-medium text-primary"><CheckCircle2 className="size-3.5" /> Ready for you</span>
-          <h1 className="text-balance text-2xl font-bold tracking-tight text-foreground sm:text-4xl"><Inline text={heading} /></h1>
+          <h1 className="text-balance text-2xl font-bold tracking-tight text-foreground @xl:text-4xl"><Inline text={heading} /></h1>
           {!imageUrl && imagePlaceholder && <div className="flex aspect-video w-full flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-gradient-to-br from-primary/15 via-muted to-primary/5 text-muted-foreground"><ImageIcon className="size-8" /><span className="text-xs">Your 16:9 banner image (1920×1080)</span></div>}
           {imageUrl && <div className="aspect-video w-full overflow-hidden rounded-xl border border-border bg-muted"><img src={imageUrl} alt={imageAlt || title} className="size-full object-cover" /></div>}
           {intro && <p className="text-pretty text-base text-muted-foreground"><Inline text={intro} /></p>}
@@ -112,25 +114,31 @@ export function DeliveryPageView({ title, body, buttonLabel, buttonHref, imageUr
           <p className="flex items-center gap-1.5 pt-2 text-xs text-muted-foreground"><ShieldCheck className="size-3.5" /> Secure delivery</p>
         </article>
 
-        <aside id="checkout" className="lg:sticky lg:top-6 lg:self-start">
-          <div className="space-y-4 rounded-2xl border border-border bg-card p-5 text-card-foreground shadow-sm">
+        <aside id="checkout" className="@3xl:sticky @3xl:top-6 @3xl:self-start">
+          <div className="space-y-4 rounded-2xl border border-primary/20 bg-card p-5 ring-1 ring-primary/5 text-card-foreground shadow-sm">
             {countdownAt && !expired && <div><p className="mb-2 flex items-center justify-center gap-2 text-sm font-medium"><Clock3 className="size-4 text-primary" /> Offer ends in</p><div className="grid grid-cols-4 gap-2">{countdown.map((n, i) => <div key={i} className="rounded-md bg-muted px-2 py-2 text-center"><strong className="block text-lg">{String(n).padStart(2, "0")}</strong><span className="text-[10px] text-muted-foreground">{["Days", "Hours", "Mins", "Secs"][i]}</span></div>)}</div></div>}
             {expired && <p className="rounded-lg bg-muted p-3 text-sm text-muted-foreground">{expiryMessage || "This offer has ended."}</p>}
             {price && <PriceBox price={price} />}
             <LeadFields form={form} standalone={!cta} />
             {cta && <div className="[&_a]:w-full">{cta}</div>}
+            <ul className="grid gap-1.5 border-t border-border pt-3 text-xs text-muted-foreground">
+              <li className="flex items-center gap-2"><ShieldCheck className="size-3.5 text-primary" /> Secure checkout & delivery</li>
+              <li className="flex items-center gap-2"><CheckCircle2 className="size-3.5 text-primary" /> Instant access after you continue</li>
+              <li className="flex items-center gap-2"><Clock3 className="size-3.5 text-primary" /> Access again anytime with your email</li>
+            </ul>
           </div>
         </aside>
       </div>
 
       {cta && (
-        <div className="fixed inset-x-0 bottom-0 z-30 flex items-center justify-between gap-3 border-t border-border bg-background/95 px-4 py-3 backdrop-blur lg:hidden">
+        <div className="sticky bottom-0 z-30 flex items-center justify-between gap-3 border-t border-border bg-background/95 px-4 py-3 backdrop-blur @3xl:hidden">
           <div className="min-w-0">
             {d?.offer ? <p className="flex items-baseline gap-2"><span className="text-lg font-bold text-foreground">{d.offer}</span>{d.original && <span className="text-xs text-muted-foreground line-through">{d.original}</span>}</p> : <p className="truncate text-sm font-medium text-foreground">{heading}</p>}
           </div>
           <Button size="lg" className="rounded-xl" onClick={toCheckout}>{expired ? (expiryMessage || "Offer ended") : (buttonLabel || "Open")}</Button>
         </div>
       )}
+    </div>
     </div>
   );
 }

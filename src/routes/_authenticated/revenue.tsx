@@ -271,6 +271,7 @@ function Pages({ orgId, items, leads }: { orgId: string; items: any[]; leads: Ar
   const del = useSave(useServerFn(deleteRevenueItem), "Deleted");
   const [f, setF] = useState<PageForm>(EMPTY_PAGE);
   const [imagePreview, setImagePreview] = useState("");
+  const [previewDevice, setPreviewDevice] = useState<"desktop" | "mobile">("desktop");
   const [uploading, setUploading] = useState(false);
   const [leadsFor, setLeadsFor] = useState<string | null>(null);
   const imageInput = useRef<HTMLInputElement>(null);
@@ -414,7 +415,8 @@ function Pages({ orgId, items, leads }: { orgId: string; items: any[]; leads: Ar
       </Panel>
     </div>
       <Panel title="Live preview">
-        <div className="max-h-[640px] overflow-auto rounded-xl border border-border">
+        <div className="mb-3 inline-flex rounded-lg border border-border p-1">{(["desktop", "mobile"] as const).map((v) => <Button key={v} type="button" size="sm" variant={previewDevice === v ? "default" : "ghost"} onClick={() => setPreviewDevice(v)}>{v === "desktop" ? "Computer" : "Mobile"}</Button>)}</div>
+        <div className={`mx-auto max-h-[720px] overflow-auto rounded-xl border border-border ${previewDevice === "mobile" ? "max-w-[390px] rounded-[2rem] border-4" : "w-full"}`}>
           <DeliveryPageView title={f.title || "Your page title"} body={f.body.trim() ? f.body : SAMPLE_BODY} buttonLabel={f.buttonLabel || "Get access"} buttonHref="#"
             imageUrl={f.showImage ? imagePreview : null} imagePlaceholder={!(f.showImage && imagePreview)} imageAlt={f.imageAlt} countdownAt={f.countdown ? new Date(f.countdown).toISOString() : null} expiryAction={f.expiryAction} expiryMessage={f.expiryMessage} price={price} key={JSON.stringify(fields)} leadForm={{ preview: true, config: formConfig }} />
         </div>
