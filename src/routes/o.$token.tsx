@@ -21,5 +21,5 @@ export const Route = createFileRoute("/o/$token")({
 function OfferPage() {
   const page = Route.useLoaderData();
   const { token } = Route.useParams();
-  return <main className="min-h-screen"><DeliveryPageView {...page} buttonHref={`/api/public/offer/${token}`} leadForm={{ token, config: page.formConfig }} /></main>;
+  return <main className="min-h-screen"><DeliveryPageView {...page} buttonHref={`/api/public/offer/${token}`} leadForm={{ token, config: { ...page.formConfig, otpRequired: page.otpRequired } }} /></main>;
 }
