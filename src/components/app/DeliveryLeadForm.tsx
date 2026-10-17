@@ -43,7 +43,11 @@ export function useLeadForm(src: LeadFormSource | null | undefined) {
       if (src.token) await submitOffer({ data: { token: src.token, answers } });
       else if (src.slug) await submitPage({ data: { slug: src.slug, answers } });
       setState("done");
-    } catch { setState("idle"); }
+    } catch (e) {
+      setState("idle");
+      const msg = e instanceof Error ? e.message : "";
+      if (/email|phone|pincode|valid/i.test(msg)) { setNote(msg); return false; }
+    }
     return true;
   };
 
