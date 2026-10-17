@@ -48,7 +48,7 @@ describe("lead form checks", () => {
     expect(validateLeadValue({ type: "pincode", required: true, options: [] }, "11001")).not.toBeNull();
   });
   it("requires 10 to 15 phone digits", () => {
-    expect(validateLeadValue({ type: "phone", required: true, options: [] }, "98765 43210")).toBeNull();
+    expect(validateLeadValue({ type: "phone", required: true, options: [] }, "98123 45670")).toBeNull();
     expect(validateLeadValue({ type: "phone", required: true, options: [] }, "12345")).not.toBeNull();
   });
 });
