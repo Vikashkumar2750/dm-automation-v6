@@ -216,12 +216,12 @@ type PageForm = {
   countdown: string; expiryAction: "disable_cta" | "hide_cta"; expiryMessage: string;
   formType: "none" | "email" | "full"; formMode: "optional" | "required"; fields: LeadField[];
   showPrice: boolean; priceOriginal: string; priceOffer: string; discountLabel: string; couponCode: string; couponNote: string;
-  extras: PageExtras; productId: string;
+  extras: PageExtras; productId: string; couponCampaignId: string; otpRequired: boolean;
 };
 const EMPTY_PAGE: PageForm = {
   id: null, title: "", slug: "", originalSlug: "", body: "", buttonLabel: "", buttonUrl: "", imagePath: "", imageAlt: "", showImage: false, countdown: "", expiryAction: "disable_cta",
   expiryMessage: "This offer has ended.", formType: "none", formMode: "optional", fields: STANDARD_LEAD_FIELDS,
-  showPrice: false, priceOriginal: "", priceOffer: "", discountLabel: "", couponCode: "", couponNote: "", extras: DEFAULT_EXTRAS, productId: "",
+  showPrice: false, priceOriginal: "", priceOffer: "", discountLabel: "", couponCode: "", couponNote: "", extras: DEFAULT_EXTRAS, productId: "", couponCampaignId: "", otpRequired: false,
 };
 const CONSENT = "I agree that my details may be used to fulfil this request and follow up about this offer.";
 const toLocalInput = (iso: string | null) => { if (!iso) return ""; const d = new Date(iso); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16); };
@@ -239,6 +239,7 @@ function pageToForm(p: any): PageForm {
     fields: emailOnly || fields.length === 0 ? STANDARD_LEAD_FIELDS : fields,
     showPrice: !!p.show_price, priceOriginal: paiseToRupees(p.price_original_paise), priceOffer: paiseToRupees(p.price_offer_paise),
     discountLabel: p.discount_label ?? "", couponCode: p.coupon_code ?? "", couponNote: p.coupon_note ?? "", extras: cfg.extras ?? {}, productId: p.product_id ?? "",
+    couponCampaignId: p.coupon_campaign_id ?? "", otpRequired: !!p.otp_required,
   };
 }
 
@@ -284,7 +285,7 @@ function LeadFieldsEditor({ fields, onChange }: { fields: LeadField[]; onChange:
   );
 }
 
-function Pages({ orgId, items, leads, products }: { orgId: string; items: any[]; products: any[]; leads: Array<{ id: string; delivery_page_id: string; answers: Record<string, string>; created_at: string }> }) {
+function Pages({ orgId, items, leads, products, campaigns, whatsappOtp }: { orgId: string; items: any[]; products: any[]; campaigns: any[]; whatsappOtp: Data["whatsappOtp"]; leads: Array<{ id: string; delivery_page_id: string; answers: Record<string, string>; created_at: string }> }) {
   const save = useSave(useServerFn(savePage), "Page saved");
   const del = useSave(useServerFn(deleteRevenueItem), "Deleted");
   const [f, setF] = useState<PageForm>(EMPTY_PAGE);
@@ -303,9 +304,16 @@ function Pages({ orgId, items, leads, products }: { orgId: string; items: any[];
   const pickProduct = (id: string) => {
     const pr = products.find((x) => x.id === id);
     if (!pr) { setF({ ...f, productId: "" }); return; }
-    setF({ ...f, productId: id, showPrice: true, priceOffer: String(pr.price_paise / 100), title: f.title || pr.name,
-      buttonUrl: pr.manual_url || f.buttonUrl, buttonLabel: f.buttonLabel || "Buy now" });
+    setF({ ...f, productId: id, showPrice: true, priceOffer: String(pr.price_paise / 100),
+      priceOriginal: pr.original_price_paise ? String(pr.original_price_paise / 100) : f.priceOriginal,
+      title: f.title || pr.name, buttonUrl: pr.manual_url || f.buttonUrl, buttonLabel: f.buttonLabel || "Buy now" });
   };
+  const pickCampaign = (id: string) => {
+    const c = campaigns.find((x) => x.id === id);
+    if (!c) { setF({ ...f, couponCampaignId: "" }); return; }
+    setF({ ...f, couponCampaignId: id, showPrice: true, couponCode: c.store_code ?? f.couponCode, couponNote: c.discount_label || f.couponNote });
+  };
+  const storeCampaigns = campaigns.filter((c) => c.kind === "store_code" && c.active && (!c.expires_at || new Date(c.expires_at) > new Date()));
   const startEdit = async (p: any) => {
     setF(pageToForm(p)); setImagePreview("");
     formTop.current?.scrollIntoView({ behavior: "smooth", block: "start" });
