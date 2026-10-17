@@ -32,7 +32,7 @@ function DeliveryPage() {
   return (
     <main className="min-h-screen">
       <DeliveryPageView title={page.title} body={page.body} buttonLabel={page.buttonLabel} buttonHref={page.hasButton ? `/api/public/pg/${slug}` : null}
-        imageUrl={page.imageUrl} imageAlt={page.imageAlt} countdownAt={page.countdownAt} expiryAction={page.expiryAction} expiryMessage={page.expiryMessage} price={page.price} leadForm={{ slug, config: page.formConfig }} buyerSlug={slug} />
+        imageUrl={page.imageUrl} imageAlt={page.imageAlt} countdownAt={page.countdownAt} expiryAction={page.expiryAction} expiryMessage={page.expiryMessage} price={page.price} leadForm={{ slug, config: { ...page.formConfig, otpRequired: page.otpRequired } }} buyerSlug={slug} />
     </main>
   );
 }

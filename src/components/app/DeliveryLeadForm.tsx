@@ -1,15 +1,17 @@
 import { useState } from "react";
 import type { PageExtras } from "@/lib/delivery-page";
 import { useServerFn } from "@tanstack/react-start";
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { submitOfferForm, submitPageForm } from "@/lib/revenue.functions";
+import { sendLeadOtp, submitOfferForm, submitPageForm, verifyLeadOtpCode } from "@/lib/revenue.functions";
 import { validateLeadValue, type LeadField } from "@/lib/delivery-page";
 
-export type LeadFormConfig = { mode: "none" | "optional" | "required"; consent?: string; fields?: LeadField[]; extras?: PageExtras };
+export type LeadFormConfig = { mode: "none" | "optional" | "required"; consent?: string; fields?: LeadField[]; extras?: PageExtras; otpRequired?: boolean };
 export type LeadFormSource = { token?: string; slug?: string; preview?: boolean; config: LeadFormConfig };
+
+type OtpState = { id: string | null; verified: boolean; busy: boolean; error: string; code: string };
 
 /**
  * Lead form state. `run()` validates and saves; returns false only when the visitor must fix a field.
@@ -18,12 +20,44 @@ export type LeadFormSource = { token?: string; slug?: string; preview?: boolean;
 export function useLeadForm(src: LeadFormSource | null | undefined) {
   const submitOffer = useServerFn(submitOfferForm);
   const submitPage = useServerFn(submitPageForm);
+  const sendOtpFn = useServerFn(sendLeadOtp);
+  const verifyOtpFn = useServerFn(verifyLeadOtpCode);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [state, setState] = useState<"idle" | "saving" | "done">("idle");
   const [note, setNote] = useState("");
+  const [otp, setOtp] = useState<OtpState>({ id: null, verified: false, busy: false, error: "", code: "" });
   const fields = src && src.config.mode !== "none" ? src.config.fields ?? [] : [];
   const active = fields.length > 0;
+  const phoneField = fields.find((f) => f.type === "phone");
+  const otpNeeded = !!src?.config.otpRequired && !!phoneField && !src.preview;
+
+  const sendOtp = async () => {
+    if (!src || !phoneField) return;
+    const phone = (answers[phoneField.key] ?? "").trim();
+    const problem = validateLeadValue(phoneField, phone);
+    if (problem) { setErrors({ ...errors, [phoneField.key]: problem }); return; }
+    setOtp({ ...otp, busy: true, error: "" });
+    try {
+      const r = await sendOtpFn({ data: { ...(src.slug ? { slug: src.slug } : { token: src.token! }), phone } });
+      setOtp({ id: r.verificationId, verified: false, busy: false, error: "", code: "" });
+      setNote("Code sent on WhatsApp — check your messages.");
+    } catch (e) {
+      setOtp({ ...otp, busy: false, error: e instanceof Error ? e.message : "Could not send the code" });
+    }
+  };
+
+  const verifyOtp = async () => {
+    if (!otp.id) return;
+    setOtp({ ...otp, busy: true, error: "" });
+    try {
+      await verifyOtpFn({ data: { verificationId: otp.id, code: otp.code } });
+      setOtp({ ...otp, verified: true, busy: false, error: "" });
+      setNote("Phone number verified ✓");
+    } catch (e) {
+      setOtp({ ...otp, busy: false, error: e instanceof Error ? e.message : "Wrong code" });
+    }
+  };
 
   const run = async (): Promise<boolean> => {
     if (!active || !src || state === "done") return true;
@@ -38,6 +72,7 @@ export function useLeadForm(src: LeadFormSource | null | undefined) {
     const filled = Object.values(answers).some((v) => v.trim());
     if (!filled) return true;
     if (src.preview) { setNote("Preview only — the real page saves the details."); return false; }
+    if (otpNeeded && !otp.verified) { setNote("Please verify your phone number with the WhatsApp code first."); return false; }
     setState("saving");
     try {
       if (src.token) await submitOffer({ data: { token: src.token, answers } });
@@ -46,12 +81,12 @@ export function useLeadForm(src: LeadFormSource | null | undefined) {
     } catch (e) {
       setState("idle");
       const msg = e instanceof Error ? e.message : "";
-      if (/email|phone|pincode|valid/i.test(msg)) { setNote(msg); return false; }
+      if (/email|phone|pincode|valid|verif/i.test(msg)) { setNote(msg); return false; }
     }
     return true;
   };
 
-  return { active, answers, setAnswers, errors, state, note, run, fields, consent: src?.config.consent };
+  return { active, answers, setAnswers, errors, state, note, run, fields, consent: src?.config.consent, otpNeeded, otp, setOtp, sendOtp, verifyOtp, phoneKey: phoneField?.key };
 }
 
 /** Form fields only — the page's main button submits. With `standalone`, shows its own Submit button. */
@@ -68,6 +103,28 @@ export function LeadFields({ form, standalone }: { form: ReturnType<typeof useLe
         : <Input id={`lead-${field.key}`} type={field.type === "phone" ? "tel" : field.type === "email" ? "email" : "text"} inputMode={field.type === "pincode" || field.type === "phone" ? "numeric" : undefined}
             maxLength={field.type === "pincode" ? 6 : 200} value={answers[field.key] ?? ""} onChange={(e) => setAnswers({ ...answers, [field.key]: e.target.value })} />}
       {errors[field.key] && <p className="text-xs text-destructive">{errors[field.key]}</p>}
+      {form.otpNeeded && field.key === form.phoneKey && !form.otp.verified && (
+        <div className="space-y-2 rounded-lg border border-primary/30 bg-primary/5 p-3">
+          {!form.otp.id ? (
+            <Button type="button" size="sm" variant="outline" className="w-full" disabled={form.otp.busy} onClick={() => void form.sendOtp()}>
+              <ShieldCheck className="size-4" /> {form.otp.busy ? "Sending…" : "Verify this number on WhatsApp"}
+            </Button>
+          ) : (
+            <div className="flex gap-2">
+              <Input inputMode="numeric" maxLength={6} placeholder="6-digit code" value={form.otp.code}
+                onChange={(e) => form.setOtp({ ...form.otp, code: e.target.value.replace(/\D/g, "").slice(0, 6) })} />
+              <Button type="button" size="sm" disabled={form.otp.busy || form.otp.code.length !== 6} onClick={() => void form.verifyOtp()}>
+                {form.otp.busy ? "Checking…" : "Verify"}
+              </Button>
+            </div>
+          )}
+          {form.otp.id && !form.otp.verified && <button type="button" className="text-xs text-primary underline" onClick={() => void form.sendOtp()}>Resend code</button>}
+          {form.otp.error && <p className="text-xs text-destructive">{form.otp.error}</p>}
+        </div>
+      )}
+      {form.otpNeeded && field.key === form.phoneKey && form.otp.verified && (
+        <p className="flex items-center gap-1.5 text-xs font-medium text-success"><CheckCircle2 className="size-3.5" /> Phone number verified on WhatsApp</p>
+      )}
     </div>)}
     {form.consent && <p className="text-xs text-muted-foreground">{form.consent}</p>}
     {form.note && <p className="text-sm text-muted-foreground">{form.note}</p>}

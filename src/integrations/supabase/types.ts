@@ -1038,10 +1038,12 @@ export type Database = {
           discount_label: string
           expires_at: string | null
           id: string
+          kind: string
           max_codes: number
           name: string
           organization_id: string
           prefix: string
+          store_code: string | null
         }
         Insert: {
           active?: boolean
@@ -1049,10 +1051,12 @@ export type Database = {
           discount_label: string
           expires_at?: string | null
           id?: string
+          kind?: string
           max_codes?: number
           name: string
           organization_id: string
           prefix: string
+          store_code?: string | null
         }
         Update: {
           active?: boolean
@@ -1060,10 +1064,12 @@ export type Database = {
           discount_label?: string
           expires_at?: string | null
           id?: string
+          kind?: string
           max_codes?: number
           name?: string
           organization_id?: string
           prefix?: string
+          store_code?: string | null
         }
         Relationships: [
           {
@@ -1195,6 +1201,7 @@ export type Database = {
           button_label: string | null
           button_url: string | null
           countdown_at: string | null
+          coupon_campaign_id: string | null
           coupon_code: string | null
           coupon_note: string | null
           created_at: string
@@ -1206,6 +1213,7 @@ export type Database = {
           image_alt: string | null
           image_path: string | null
           organization_id: string
+          otp_required: boolean
           price_offer_paise: number | null
           price_original_paise: number | null
           product_id: string | null
@@ -1221,6 +1229,7 @@ export type Database = {
           button_label?: string | null
           button_url?: string | null
           countdown_at?: string | null
+          coupon_campaign_id?: string | null
           coupon_code?: string | null
           coupon_note?: string | null
           created_at?: string
@@ -1232,6 +1241,7 @@ export type Database = {
           image_alt?: string | null
           image_path?: string | null
           organization_id: string
+          otp_required?: boolean
           price_offer_paise?: number | null
           price_original_paise?: number | null
           product_id?: string | null
@@ -1247,6 +1257,7 @@ export type Database = {
           button_label?: string | null
           button_url?: string | null
           countdown_at?: string | null
+          coupon_campaign_id?: string | null
           coupon_code?: string | null
           coupon_note?: string | null
           created_at?: string
@@ -1258,6 +1269,7 @@ export type Database = {
           image_alt?: string | null
           image_path?: string | null
           organization_id?: string
+          otp_required?: boolean
           price_offer_paise?: number | null
           price_original_paise?: number | null
           product_id?: string | null
@@ -1390,6 +1402,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      lead_otp_codes: {
+        Row: {
+          attempts: number
+          code_hash: string
+          created_at: string
+          expires_at: string
+          id: string
+          organization_id: string
+          page_ref: string
+          phone: string
+          verified_at: string | null
+        }
+        Insert: {
+          attempts?: number
+          code_hash: string
+          created_at?: string
+          expires_at: string
+          id?: string
+          organization_id: string
+          page_ref: string
+          phone: string
+          verified_at?: string | null
+        }
+        Update: {
+          attempts?: number
+          code_hash?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          organization_id?: string
+          page_ref?: string
+          phone?: string
+          verified_at?: string | null
+        }
+        Relationships: []
       }
       messages: {
         Row: {
@@ -2210,9 +2258,11 @@ export type Database = {
           currency: string
           description: string | null
           id: string
+          image_path: string | null
           manual_url: string | null
           name: string
           organization_id: string
+          original_price_paise: number | null
           price_paise: number
         }
         Insert: {
@@ -2221,9 +2271,11 @@ export type Database = {
           currency?: string
           description?: string | null
           id?: string
+          image_path?: string | null
           manual_url?: string | null
           name: string
           organization_id: string
+          original_price_paise?: number | null
           price_paise: number
         }
         Update: {
@@ -2232,9 +2284,11 @@ export type Database = {
           currency?: string
           description?: string | null
           id?: string
+          image_path?: string | null
           manual_url?: string | null
           name?: string
           organization_id?: string
+          original_price_paise?: number | null
           price_paise?: number
         }
         Relationships: [
@@ -2577,6 +2631,41 @@ export type Database = {
             columns: ["social_account_id"]
             isOneToOne: false
             referencedRelation: "social_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whatsapp_otp_settings: {
+        Row: {
+          access_token: string
+          organization_id: string
+          phone_number_id: string
+          template_language: string
+          template_name: string
+          updated_at: string
+        }
+        Insert: {
+          access_token: string
+          organization_id: string
+          phone_number_id: string
+          template_language?: string
+          template_name: string
+          updated_at?: string
+        }
+        Update: {
+          access_token?: string
+          organization_id?: string
+          phone_number_id?: string
+          template_language?: string
+          template_name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_otp_settings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]

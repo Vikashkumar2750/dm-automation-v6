@@ -21,7 +21,7 @@ import { DeliveryPageView } from "@/components/app/DeliveryPageView";
 import { DELIVERY_TEMPLATES, SAMPLE_BODY, EMAIL_ONLY_FIELDS, STANDARD_LEAD_FIELDS, priceDisplay, DEFAULT_POLICIES, DEFAULT_DISCLAIMER, DEFAULT_EXTRAS, type LeadField, type PageExtras } from "@/lib/delivery-page";
 import { previewDeliveryImage, uploadDeliveryImage } from "@/lib/delivery-media";
 import {
-  deleteRevenueItem, getRevenue, removeRazorpayKeys, saveCampaign, savePage, saveProduct, saveRazorpayKeys, saveRevenueSettings,
+  deleteRevenueItem, getRevenue, removeRazorpayKeys, removeWhatsappOtpSettings, saveCampaign, savePage, saveProduct, saveRazorpayKeys, saveRevenueSettings, saveWhatsappOtpSettings,
 } from "@/lib/revenue.functions";
 
 export const Route = createFileRoute("/_authenticated/revenue")({
@@ -64,7 +64,7 @@ function RevenuePage() {
           <TabsContent value="report"><Report d={d} /></TabsContent>
           <TabsContent value="products"><Products orgId={orgId!} items={d.products} /></TabsContent>
           <TabsContent value="coupons"><Coupons orgId={orgId!} items={d.campaigns} /></TabsContent>
-          <TabsContent value="pages"><Pages orgId={orgId!} items={d.pages} leads={d.leads} products={d.products} /></TabsContent>
+          <TabsContent value="pages"><Pages orgId={orgId!} items={d.pages} leads={d.leads} products={d.products} campaigns={d.campaigns} whatsappOtp={d.whatsappOtp} /></TabsContent>
           <TabsContent value="payments"><Payments orgId={orgId!} d={d} /></TabsContent>
         </Tabs>
       )}
@@ -122,22 +122,26 @@ function Report({ d }: { d: Data }) {
 function Products({ orgId, items }: { orgId: string; items: any[] }) {
   const save = useSave(useServerFn(saveProduct), "Product saved");
   const del = useSave(useServerFn(deleteRevenueItem), "Deleted");
-  const [f, setF] = useState({ name: "", price: "", description: "", manualUrl: "" });
+  const [f, setF] = useState({ name: "", price: "", originalPrice: "", description: "", manualUrl: "" });
   const submit = () => {
     const p = rupeesToPaise(f.price);
     if (!f.name || !p) { toast.error("Name and price (at least ₹1) are needed"); return; }
-    save.mutate({ organizationId: orgId, name: f.name, pricePaise: p, description: f.description || null, manualUrl: f.manualUrl || null, active: true },
-      { onSuccess: () => setF({ name: "", price: "", description: "", manualUrl: "" }) });
+    save.mutate({ organizationId: orgId, name: f.name, pricePaise: p, originalPricePaise: f.originalPrice ? rupeesToPaise(f.originalPrice) : null, description: f.description || null, manualUrl: f.manualUrl || null, active: true },
+      { onSuccess: () => setF({ name: "", price: "", originalPrice: "", description: "", manualUrl: "" }) });
   };
   return (
     <div className="grid gap-4 lg:grid-cols-2">
       <Panel title="Add product">
         <div className="space-y-2">
           <Input placeholder="Name (e.g. Recipe e-book)" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />
-          <Input placeholder="Price in ₹" inputMode="decimal" value={f.price} onChange={(e) => setF({ ...f, price: e.target.value })} />
+          <div className="grid grid-cols-2 gap-2">
+            <div><Label className="text-xs">Selling price ₹</Label><Input placeholder="999" inputMode="decimal" value={f.price} onChange={(e) => setF({ ...f, price: e.target.value })} /></div>
+            <div><Label className="text-xs">MRP ₹ (optional, crossed out)</Label><Input placeholder="1999" inputMode="decimal" value={f.originalPrice} onChange={(e) => setF({ ...f, originalPrice: e.target.value })} /></div>
+          </div>
           <Input placeholder="Short description (optional)" value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} />
           <Input placeholder="Own payment link, used if Razorpay is not connected (optional)" value={f.manualUrl} onChange={(e) => setF({ ...f, manualUrl: e.target.value })} />
           <Button onClick={submit} disabled={save.isPending}>Save product</Button>
+          <p className="text-xs text-muted-foreground">Products are the single source of truth — delivery pages and payment links pick price and payment link from here.</p>
         </div>
       </Panel>
       <Panel title="Your products">
@@ -145,9 +149,9 @@ function Products({ orgId, items }: { orgId: string; items: any[] }) {
           <div className="space-y-2">
             {items.map((p) => (
               <div key={p.id} className="flex items-center justify-between gap-2 rounded-lg border border-border p-3 text-sm">
-                <div><p className="font-medium">{p.name}</p><p className="text-muted-foreground">{formatInr(p.price_paise)}{p.manual_url ? " · own link" : ""}</p></div>
+                <div><p className="font-medium">{p.name}</p><p className="text-muted-foreground">{formatInr(p.price_paise)}{p.original_price_paise > p.price_paise ? <s className="ml-1">{formatInr(p.original_price_paise)}</s> : null}{p.manual_url ? " · own link" : ""}</p></div>
                 <div className="flex items-center gap-2">
-                  <Switch checked={p.active} aria-label="Active" onCheckedChange={(v) => save.mutate({ organizationId: orgId, id: p.id, name: p.name, pricePaise: p.price_paise, description: p.description, manualUrl: p.manual_url, active: v })} />
+                  <Switch checked={p.active} aria-label="Active" onCheckedChange={(v) => save.mutate({ organizationId: orgId, id: p.id, name: p.name, pricePaise: p.price_paise, originalPricePaise: p.original_price_paise ?? null, description: p.description, manualUrl: p.manual_url, active: v })} />
                   <Button size="icon" variant="ghost" aria-label="Delete" onClick={() => del.mutate({ organizationId: orgId, id: p.id, table: "revenue_products" })}><Trash2 className="size-4" /></Button>
                 </div>
               </div>
@@ -162,30 +166,43 @@ function Products({ orgId, items }: { orgId: string; items: any[] }) {
 function Coupons({ orgId, items }: { orgId: string; items: any[] }) {
   const save = useSave(useServerFn(saveCampaign), "Coupon campaign saved");
   const del = useSave(useServerFn(deleteRevenueItem), "Deleted");
-  const [f, setF] = useState({ name: "", prefix: "", discount: "", max: "500", expires: "" });
+  const [f, setF] = useState({ name: "", prefix: "", discount: "", max: "500", expires: "", kind: "dm_unique" as "dm_unique" | "store_code", storeCode: "" });
   const submit = () => save.mutate({
     organizationId: orgId, name: f.name, prefix: f.prefix.toUpperCase(), discountLabel: f.discount, maxCodes: Number(f.max) || 500,
     expiresAt: f.expires ? new Date(f.expires).toISOString() : null, active: true,
-  }, { onSuccess: () => setF({ name: "", prefix: "", discount: "", max: "500", expires: "" }) });
+    kind: f.kind, storeCode: f.kind === "store_code" ? (f.storeCode || f.prefix).toUpperCase() : null,
+  }, { onSuccess: () => setF({ name: "", prefix: "", discount: "", max: "500", expires: "", kind: "dm_unique", storeCode: "" }) });
   return (
     <div className="grid gap-4 lg:grid-cols-2">
       <Panel title="New coupon campaign">
         <div className="space-y-2">
+          <div>
+            <Label className="text-xs">Coupon type</Label>
+            <select className={area} value={f.kind} onChange={(e) => setF({ ...f, kind: e.target.value as typeof f.kind })}>
+              <option value="dm_unique">Unique code per person — sent in DM automation</option>
+              <option value="store_code">One shared code — shown on a delivery page</option>
+            </select>
+          </div>
           <Input placeholder="Name (e.g. Diwali sale)" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />
-          <Input placeholder="Code start, 2–12 letters/numbers (e.g. DIWALI)" value={f.prefix} onChange={(e) => setF({ ...f, prefix: e.target.value })} />
+          {f.kind === "store_code"
+            ? <Input placeholder="Store code (e.g. DIWALI50)" value={f.storeCode} onChange={(e) => setF({ ...f, storeCode: e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, "").slice(0, 30) })} />
+            : <Input placeholder="Code start, 2–12 letters/numbers (e.g. DIWALI)" value={f.prefix} onChange={(e) => setF({ ...f, prefix: e.target.value })} />}
+          {f.kind === "store_code" && <Input placeholder="Code start for reference, 2–12 letters (e.g. DIWALI)" value={f.prefix} onChange={(e) => setF({ ...f, prefix: e.target.value })} />}
           <Input placeholder="Discount (e.g. 20% off)" value={f.discount} onChange={(e) => setF({ ...f, discount: e.target.value })} />
           <div className="grid grid-cols-2 gap-2">
             <div><Label className="text-xs">Max codes</Label><Input type="number" min={1} value={f.max} onChange={(e) => setF({ ...f, max: e.target.value })} /></div>
             <div><Label className="text-xs">Ends on (optional)</Label><Input type="date" value={f.expires} onChange={(e) => setF({ ...f, expires: e.target.value })} /></div>
           </div>
-          <Button onClick={submit} disabled={save.isPending}>Save campaign</Button>
-          <p className="text-xs text-muted-foreground">Each person gets one unique code like DIWALI-7KQ2MX. Use the “Send coupon” step in Flow builder with {"{code}"} in the message.</p>
+          <Button onClick={submit} disabled={save.isPending || !f.name || !f.prefix || !f.discount || (f.kind === "store_code" && !f.storeCode && !f.prefix)}>Save campaign</Button>
+          <p className="text-xs text-muted-foreground">{f.kind === "dm_unique"
+            ? <>Each person gets one unique code like DIWALI-7KQ2MX. Use the “Send coupon” step in Flow builder with {"{code}"} in the message.</>
+            : "One code for everyone (e.g. DIWALI50). Pick it in a delivery page's Price & offer card — it shows in the coupon box automatically while the campaign is active."}</p>
         </div>
       </Panel>
       <Panel title="Campaigns">
         {items.length === 0 ? <p className="text-sm text-muted-foreground">No campaigns yet.</p> : items.map((c) => (
           <div key={c.id} className="mb-2 flex items-center justify-between rounded-lg border border-border p-3 text-sm">
-            <div><p className="font-medium">{c.name}</p><p className="text-muted-foreground">{c.prefix}-XXXXXX · {c.discount_label} · max {c.max_codes}{c.expires_at ? ` · ends ${new Date(c.expires_at).toLocaleDateString()}` : ""}</p></div>
+            <div><p className="font-medium">{c.name} {c.kind === "store_code" && <span className="ml-1 rounded-full bg-muted px-2 py-0.5 text-[10px]">Store code</span>}</p><p className="text-muted-foreground">{c.kind === "store_code" ? c.store_code : `${c.prefix}-XXXXXX`} · {c.discount_label} · max {c.max_codes}{c.expires_at ? ` · ends ${new Date(c.expires_at).toLocaleDateString()}` : ""}</p></div>
             <Button size="icon" variant="ghost" aria-label="Delete" onClick={() => del.mutate({ organizationId: orgId, id: c.id, table: "coupon_campaigns" })}><Trash2 className="size-4" /></Button>
           </div>
         ))}
@@ -199,12 +216,12 @@ type PageForm = {
   countdown: string; expiryAction: "disable_cta" | "hide_cta"; expiryMessage: string;
   formType: "none" | "email" | "full"; formMode: "optional" | "required"; fields: LeadField[];
   showPrice: boolean; priceOriginal: string; priceOffer: string; discountLabel: string; couponCode: string; couponNote: string;
-  extras: PageExtras; productId: string;
+  extras: PageExtras; productId: string; couponCampaignId: string; otpRequired: boolean;
 };
 const EMPTY_PAGE: PageForm = {
   id: null, title: "", slug: "", originalSlug: "", body: "", buttonLabel: "", buttonUrl: "", imagePath: "", imageAlt: "", showImage: false, countdown: "", expiryAction: "disable_cta",
   expiryMessage: "This offer has ended.", formType: "none", formMode: "optional", fields: STANDARD_LEAD_FIELDS,
-  showPrice: false, priceOriginal: "", priceOffer: "", discountLabel: "", couponCode: "", couponNote: "", extras: DEFAULT_EXTRAS, productId: "",
+  showPrice: false, priceOriginal: "", priceOffer: "", discountLabel: "", couponCode: "", couponNote: "", extras: DEFAULT_EXTRAS, productId: "", couponCampaignId: "", otpRequired: false,
 };
 const CONSENT = "I agree that my details may be used to fulfil this request and follow up about this offer.";
 const toLocalInput = (iso: string | null) => { if (!iso) return ""; const d = new Date(iso); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16); };
@@ -222,6 +239,7 @@ function pageToForm(p: any): PageForm {
     fields: emailOnly || fields.length === 0 ? STANDARD_LEAD_FIELDS : fields,
     showPrice: !!p.show_price, priceOriginal: paiseToRupees(p.price_original_paise), priceOffer: paiseToRupees(p.price_offer_paise),
     discountLabel: p.discount_label ?? "", couponCode: p.coupon_code ?? "", couponNote: p.coupon_note ?? "", extras: cfg.extras ?? {}, productId: p.product_id ?? "",
+    couponCampaignId: p.coupon_campaign_id ?? "", otpRequired: !!p.otp_required,
   };
 }
 
@@ -267,7 +285,7 @@ function LeadFieldsEditor({ fields, onChange }: { fields: LeadField[]; onChange:
   );
 }
 
-function Pages({ orgId, items, leads, products }: { orgId: string; items: any[]; products: any[]; leads: Array<{ id: string; delivery_page_id: string; answers: Record<string, string>; created_at: string }> }) {
+function Pages({ orgId, items, leads, products, campaigns, whatsappOtp }: { orgId: string; items: any[]; products: any[]; campaigns: any[]; whatsappOtp: Data["whatsappOtp"]; leads: Array<{ id: string; delivery_page_id: string; answers: Record<string, string>; created_at: string }> }) {
   const save = useSave(useServerFn(savePage), "Page saved");
   const del = useSave(useServerFn(deleteRevenueItem), "Deleted");
   const [f, setF] = useState<PageForm>(EMPTY_PAGE);
@@ -286,9 +304,16 @@ function Pages({ orgId, items, leads, products }: { orgId: string; items: any[];
   const pickProduct = (id: string) => {
     const pr = products.find((x) => x.id === id);
     if (!pr) { setF({ ...f, productId: "" }); return; }
-    setF({ ...f, productId: id, showPrice: true, priceOffer: String(pr.price_paise / 100), title: f.title || pr.name,
-      buttonUrl: pr.manual_url || f.buttonUrl, buttonLabel: f.buttonLabel || "Buy now" });
+    setF({ ...f, productId: id, showPrice: true, priceOffer: String(pr.price_paise / 100),
+      priceOriginal: pr.original_price_paise ? String(pr.original_price_paise / 100) : f.priceOriginal,
+      title: f.title || pr.name, buttonUrl: pr.manual_url || f.buttonUrl, buttonLabel: f.buttonLabel || "Buy now" });
   };
+  const pickCampaign = (id: string) => {
+    const c = campaigns.find((x) => x.id === id);
+    if (!c) { setF({ ...f, couponCampaignId: "" }); return; }
+    setF({ ...f, couponCampaignId: id, showPrice: true, couponCode: c.store_code ?? f.couponCode, couponNote: c.discount_label || f.couponNote });
+  };
+  const storeCampaigns = campaigns.filter((c) => c.kind === "store_code" && c.active && (!c.expires_at || new Date(c.expires_at) > new Date()));
   const startEdit = async (p: any) => {
     setF(pageToForm(p)); setImagePreview("");
     formTop.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -305,6 +330,7 @@ function Pages({ orgId, items, leads, products }: { orgId: string; items: any[];
     formConfig: { ...formConfig, fields: fields.map((x) => ({ ...x, label: x.label.trim() })) },
     showPrice: f.showPrice, priceOriginalPaise: price?.originalPaise ?? null, priceOfferPaise: price?.offerPaise ?? null,
     discountLabel: f.discountLabel || null, couponCode: f.couponCode.trim() || null, couponNote: f.couponNote || null, productId: f.productId || null,
+    couponCampaignId: f.couponCampaignId || null, otpRequired: f.otpRequired,
   }, { onSuccess: reset });
   const uploadImage = async (file: File | undefined) => {
     if (!file) return;
@@ -363,6 +389,15 @@ function Pages({ orgId, items, leads, products }: { orgId: string; items: any[];
               </div>
               {(() => { const d = priceDisplay(price?.originalPaise, price?.offerPaise); return d.original ? <p className="text-xs text-muted-foreground">Shows: <strong>{d.offer}</strong> <s>{d.original}</s> · {d.percent}% OFF</p> : f.priceOriginal && f.priceOffer ? <p className="text-xs text-destructive">Offer price must be lower than the original price to show a discount.</p> : null; })()}
               <Input placeholder="Discount label (optional, e.g. Diwali deal) — blank shows % OFF" value={f.discountLabel} onChange={(e) => setF({ ...f, discountLabel: e.target.value.slice(0, 40) })} />
+              <div>
+                <Label className="text-xs">Coupon from a campaign (Coupons tab)</Label>
+                <select className={area} value={f.couponCampaignId} onChange={(e) => pickCampaign(e.target.value)}>
+                  <option value="">No campaign — use the static code below</option>
+                  {storeCampaigns.map((c) => <option key={c.id} value={c.id}>{c.name} · {c.store_code} · {c.discount_label}</option>)}
+                </select>
+                {storeCampaigns.length === 0 && <p className="mt-1 text-xs text-muted-foreground">No shared store-code campaigns yet — create one in the Coupons tab (type: “One shared code”).</p>}
+                {f.couponCampaignId && <p className="mt-1 text-xs text-muted-foreground">The campaign code and discount show on the page automatically and stop when the campaign ends.</p>}
+              </div>
               <div className="grid grid-cols-2 gap-2">
                 <Input placeholder="Coupon code (e.g. SAVE50)" value={f.couponCode} onChange={(e) => setF({ ...f, couponCode: e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, "").slice(0, 30) })} />
                 <Input placeholder="Coupon note (e.g. Use at checkout)" value={f.couponNote} onChange={(e) => setF({ ...f, couponNote: e.target.value.slice(0, 120) })} />
@@ -388,6 +423,15 @@ function Pages({ orgId, items, leads, products }: { orgId: string; items: any[];
               </select>}
             </div>
             {f.formType === "full" && <LeadFieldsEditor fields={f.fields} onChange={(fields) => setF({ ...f, fields })} />}
+            {f.formType !== "none" && fields.some((x) => x.type === "phone") && (
+              <div className="flex items-center justify-between gap-2 rounded-md border border-border px-2 py-1.5">
+                <Label className="text-xs">Verify phone by WhatsApp OTP</Label>
+                <Switch checked={f.otpRequired} disabled={!whatsappOtp} onCheckedChange={(v) => setF({ ...f, otpRequired: v })} />
+              </div>
+            )}
+            {f.formType !== "none" && fields.some((x) => x.type === "phone") && !whatsappOtp && (
+              <p className="text-xs text-muted-foreground">WhatsApp OTP verification ke liye pehle Payments setup tab mein apna WhatsApp (Meta API) connect karo.</p>
+            )}
             {badLead && <p className="text-xs text-destructive">Give every field a question, and every dropdown at least one option.</p>}
             <p className="text-xs text-muted-foreground">Best default: two quick questions in DM, then an optional detailed form after the offer.</p>
           </div>
@@ -492,7 +536,37 @@ function Payments({ orgId, d }: { orgId: string; d: Data }) {
           <Button onClick={() => saveSet.mutate({ organizationId: orgId, nudgeEnabled: s.enabled, nudgeDelayMinutes: s.delay, nudgeText: s.text })}>Save</Button>
         </div>
       </Panel>
+      <WhatsappOtpPanel orgId={orgId} d={d} />
     </div>
+  );
+}
+
+function WhatsappOtpPanel({ orgId, d }: { orgId: string; d: Data }) {
+  const saveOtp = useSave(useServerFn(saveWhatsappOtpSettings), "WhatsApp OTP connected");
+  const removeOtp = useSave(useServerFn(removeWhatsappOtpSettings), "WhatsApp OTP removed");
+  const [w, setW] = useState({ phoneNumberId: "", accessToken: "", templateName: "", templateLanguage: "en" });
+  return (
+    <Panel title="WhatsApp OTP (phone verification)">
+      {d.whatsappOtp ? (
+        <div className="space-y-3 text-sm">
+          <p>Connected — template <span className="font-mono">{d.whatsappOtp.templateName}</span>. Delivery pages can now verify lead phone numbers with a WhatsApp code.</p>
+          <Button variant="outline" onClick={() => removeOtp.mutate({ organizationId: orgId })}>Disconnect</Button>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          <p className="text-sm text-muted-foreground">Apne WhatsApp Business (Meta Cloud API) se delivery page ke phone numbers verify karo. Meta Business Suite → WhatsApp → API setup se ye details milengi. Token sirf server par encrypted rehta hai — kabhi browser mein nahi aata.</p>
+          <Input placeholder="Phone number ID (digits only)" inputMode="numeric" value={w.phoneNumberId} onChange={(e) => setW({ ...w, phoneNumberId: e.target.value.replace(/\D/g, "") })} />
+          <Input type="password" placeholder="Permanent access token" value={w.accessToken} onChange={(e) => setW({ ...w, accessToken: e.target.value })} />
+          <div className="grid grid-cols-2 gap-2">
+            <Input placeholder="Authentication template name" value={w.templateName} onChange={(e) => setW({ ...w, templateName: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "") })} />
+            <Input placeholder="Language (e.g. en or en_US)" value={w.templateLanguage} onChange={(e) => setW({ ...w, templateLanguage: e.target.value })} />
+          </div>
+          <Button disabled={saveOtp.isPending || !w.phoneNumberId || !w.accessToken || !w.templateName}
+            onClick={() => saveOtp.mutate({ organizationId: orgId, ...w }, { onSuccess: () => setW({ phoneNumberId: "", accessToken: "", templateName: "", templateLanguage: "en" }) })}>Connect WhatsApp OTP</Button>
+          <p className="text-xs text-muted-foreground">Template ka body variable {"{{1}}"} Meta apne aap OTP se badal deta hai — code kabhi browser tak nahi pahunchta. Ek number par 1 ghante mein max 3 codes, har code 5 minute valid.</p>
+        </div>
+      )}
+    </Panel>
   );
 }
 
