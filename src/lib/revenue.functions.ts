@@ -208,17 +208,27 @@ export const getPublicPage = createServerFn({ method: "GET" })
   .inputValidator((d: unknown) => z.object({ slug: z.string().regex(/^[a-z0-9-]{3,60}$/) }).parse(d))
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: p } = await supabaseAdmin.from("delivery_pages").select("id, organization_id, title, body, button_label, button_url, views, image_path, show_image, image_alt, countdown_at, expiry_action, expiry_message, form_config, show_price, price_original_paise, price_offer_paise, discount_label, coupon_code, coupon_note")
+    const { data: p } = await supabaseAdmin.from("delivery_pages").select("id, organization_id, title, body, button_label, button_url, views, image_path, show_image, image_alt, countdown_at, expiry_action, expiry_message, form_config, show_price, price_original_paise, price_offer_paise, discount_label, coupon_code, coupon_note, coupon_campaign_id, otp_required")
       .eq("slug", data.slug).eq("active", true).maybeSingle();
     if (!p) return null;
     await supabaseAdmin.from("delivery_pages").update({ views: (p.views ?? 0) + 1 }).eq("id", p.id);
     await supabaseAdmin.from("revenue_events").insert({ organization_id: p.organization_id, kind: "page_view", ref_id: p.id });
+    const coupon = await campaignCoupon(supabaseAdmin, p);
     return { title: p.title as string, body: (p.body as string | null) ?? "", buttonLabel: p.button_label as string | null, hasButton: !!p.button_url,
       imageUrl: p.show_image && p.image_path ? `/api/public/delivery-image/${p.image_path as string}` : null, imageAlt: p.image_alt as string | null,
       countdownAt: p.countdown_at as string | null, expiryAction: p.expiry_action as "disable_cta" | "hide_cta", expiryMessage: p.expiry_message as string | null,
-      price: p.show_price ? { originalPaise: p.price_original_paise as number | null, offerPaise: p.price_offer_paise as number | null, label: p.discount_label as string | null, couponCode: p.coupon_code as string | null, couponNote: p.coupon_note as string | null } : null,
-      formConfig: p.form_config as FormConfig, };
+      price: p.show_price ? { originalPaise: p.price_original_paise as number | null, offerPaise: p.price_offer_paise as number | null, label: p.discount_label as string | null, couponCode: coupon.code ?? (p.coupon_code as string | null), couponNote: coupon.note ?? (p.coupon_note as string | null) } : null,
+      formConfig: p.form_config as FormConfig, otpRequired: !!p.otp_required };
   });
+
+/** Store-code campaign linked to a page overrides the static coupon box. */
+async function campaignCoupon(admin: any, p: { coupon_campaign_id?: string | null }): Promise<{ code: string | null; note: string | null }> {
+  if (!p.coupon_campaign_id) return { code: null, note: null };
+  const { data: c } = await admin.from("coupon_campaigns").select("kind, store_code, discount_label, expires_at, active").eq("id", p.coupon_campaign_id).maybeSingle();
+  if (!c || !c.active || c.kind !== "store_code" || !c.store_code) return { code: null, note: null };
+  if (c.expires_at && new Date(c.expires_at) < new Date()) return { code: null, note: null };
+  return { code: c.store_code as string, note: c.discount_label as string };
+}
 
 /** Public buyer-bound offer. The token identifies only one stored payment link. */
 export const getOfferPage = createServerFn({ method: "GET" })
