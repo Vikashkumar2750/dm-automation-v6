@@ -61,11 +61,11 @@ function RevenuePage() {
             <TabsTrigger value="pages">Delivery pages</TabsTrigger>
             <TabsTrigger value="payments">Payments setup</TabsTrigger>
           </TabsList>
-          <TabsContent value="report"><Report d={d} /></TabsContent>
-          <TabsContent value="products"><Products orgId={orgId!} items={d.products} /></TabsContent>
-          <TabsContent value="coupons"><Coupons orgId={orgId!} items={d.campaigns} /></TabsContent>
-          <TabsContent value="pages"><Pages orgId={orgId!} items={d.pages} leads={d.leads} products={d.products} campaigns={d.campaigns} whatsappOtp={d.whatsappOtp} /></TabsContent>
-          <TabsContent value="payments"><Payments orgId={orgId!} d={d} /></TabsContent>
+          <TabsContent forceMount className="data-[state=inactive]:hidden" value="report"><Report d={d} /></TabsContent>
+          <TabsContent forceMount className="data-[state=inactive]:hidden" value="products"><Products orgId={orgId!} items={d.products} /></TabsContent>
+          <TabsContent forceMount className="data-[state=inactive]:hidden" value="coupons"><Coupons orgId={orgId!} items={d.campaigns} /></TabsContent>
+          <TabsContent forceMount className="data-[state=inactive]:hidden" value="pages"><Pages orgId={orgId!} items={d.pages} leads={d.leads} products={d.products} campaigns={d.campaigns} whatsappOtp={d.whatsappOtp} /></TabsContent>
+          <TabsContent forceMount className="data-[state=inactive]:hidden" value="payments"><Payments orgId={orgId!} d={d} /></TabsContent>
         </Tabs>
       )}
     </AppShell>
@@ -122,16 +122,17 @@ function Report({ d }: { d: Data }) {
 function Products({ orgId, items }: { orgId: string; items: any[] }) {
   const save = useSave(useServerFn(saveProduct), "Product saved");
   const del = useSave(useServerFn(deleteRevenueItem), "Deleted");
-  const [f, setF] = useState({ name: "", price: "", originalPrice: "", description: "", manualUrl: "" });
+  const blankP = { id: "", name: "", price: "", originalPrice: "", description: "", manualUrl: "" };
+  const [f, setF] = useState(blankP);
   const submit = () => {
     const p = rupeesToPaise(f.price);
     if (!f.name || !p) { toast.error("Name and price (at least ₹1) are needed"); return; }
-    save.mutate({ organizationId: orgId, name: f.name, pricePaise: p, originalPricePaise: f.originalPrice ? rupeesToPaise(f.originalPrice) : null, description: f.description || null, manualUrl: f.manualUrl || null, active: true },
-      { onSuccess: () => setF({ name: "", price: "", originalPrice: "", description: "", manualUrl: "" }) });
+    save.mutate({ organizationId: orgId, ...(f.id ? { id: f.id } : {}), name: f.name, pricePaise: p, originalPricePaise: f.originalPrice ? rupeesToPaise(f.originalPrice) : null, description: f.description || null, manualUrl: f.manualUrl || null, active: true },
+      { onSuccess: () => setF(blankP) });
   };
   return (
     <div className="grid gap-4 lg:grid-cols-2">
-      <Panel title="Add product">
+      <Panel title={f.id ? `Edit product: ${f.name}` : "Add product"}>
         <div className="space-y-2">
           <Chips label="Quick fill" items={PRODUCT_PRESETS.map((p) => p.name)} onPick={(v) => { const p = PRODUCT_PRESETS.find((x) => x.name === v)!; setF({ ...f, name: p.name, price: p.price, originalPrice: p.mrp, description: p.desc }); }} />
           <Input placeholder="Name (e.g. Recipe e-book)" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />
@@ -141,7 +142,7 @@ function Products({ orgId, items }: { orgId: string; items: any[] }) {
           </div>
           <Input placeholder="Short description (optional)" value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} />
           <Input placeholder="Own payment link, used if Razorpay is not connected (optional)" value={f.manualUrl} onChange={(e) => setF({ ...f, manualUrl: e.target.value })} />
-          <Button onClick={submit} disabled={save.isPending}>Save product</Button>
+          <div className="flex gap-2"><Button onClick={submit} disabled={save.isPending}>{f.id ? "Update product" : "Save product"}</Button>{f.id && <Button variant="outline" onClick={() => setF(blankP)}>Cancel</Button>}</div>
           <p className="text-xs text-muted-foreground">Products are the single source of truth — delivery pages and payment links pick price and payment link from here.</p>
         </div>
       </Panel>
@@ -153,6 +154,7 @@ function Products({ orgId, items }: { orgId: string; items: any[] }) {
                 <div><p className="font-medium">{p.name}</p><p className="text-muted-foreground">{formatInr(p.price_paise)}{p.original_price_paise > p.price_paise ? <s className="ml-1">{formatInr(p.original_price_paise)}</s> : null}{p.manual_url ? " · own link" : ""}</p></div>
                 <div className="flex items-center gap-2">
                   <Switch checked={p.active} aria-label="Active" onCheckedChange={(v) => save.mutate({ organizationId: orgId, id: p.id, name: p.name, pricePaise: p.price_paise, originalPricePaise: p.original_price_paise ?? null, description: p.description, manualUrl: p.manual_url, active: v })} />
+                  <Button size="icon" variant="ghost" aria-label="Edit" onClick={() => setF({ id: p.id, name: p.name, price: String(p.price_paise / 100), originalPrice: p.original_price_paise ? String(p.original_price_paise / 100) : "", description: p.description ?? "", manualUrl: p.manual_url ?? "" })}><Pencil className="size-4" /></Button>
                   <Button size="icon" variant="ghost" aria-label="Delete" onClick={() => del.mutate({ organizationId: orgId, id: p.id, table: "revenue_products" })}><Trash2 className="size-4" /></Button>
                 </div>
               </div>
@@ -167,15 +169,16 @@ function Products({ orgId, items }: { orgId: string; items: any[] }) {
 function Coupons({ orgId, items }: { orgId: string; items: any[] }) {
   const save = useSave(useServerFn(saveCampaign), "Coupon campaign saved");
   const del = useSave(useServerFn(deleteRevenueItem), "Deleted");
-  const [f, setF] = useState({ name: "", prefix: "", discount: "", max: "500", expires: "", kind: "dm_unique" as "dm_unique" | "store_code", storeCode: "" });
+  const blankC = { id: "", name: "", prefix: "", discount: "", max: "500", expires: "", kind: "dm_unique" as "dm_unique" | "store_code", storeCode: "", active: true };
+  const [f, setF] = useState(blankC);
   const submit = () => save.mutate({
-    organizationId: orgId, name: f.name, prefix: f.prefix.toUpperCase(), discountLabel: f.discount, maxCodes: Number(f.max) || 500,
-    expiresAt: f.expires ? new Date(f.expires).toISOString() : null, active: true,
+    organizationId: orgId, ...(f.id ? { id: f.id } : {}), name: f.name, prefix: f.prefix.toUpperCase(), discountLabel: f.discount, maxCodes: Number(f.max) || 500,
+    expiresAt: f.expires ? new Date(f.expires).toISOString() : null, active: f.active,
     kind: f.kind, storeCode: f.kind === "store_code" ? (f.storeCode || f.prefix).toUpperCase() : null,
-  }, { onSuccess: () => setF({ name: "", prefix: "", discount: "", max: "500", expires: "", kind: "dm_unique", storeCode: "" }) });
+  }, { onSuccess: () => setF(blankC) });
   return (
     <div className="grid gap-4 lg:grid-cols-2">
-      <Panel title="New coupon campaign">
+      <Panel title={f.id ? `Edit campaign: ${f.name}` : "New coupon campaign"}>
         <div className="space-y-2">
           <div>
             <Label className="text-xs">Coupon type</Label>
@@ -197,7 +200,8 @@ function Coupons({ orgId, items }: { orgId: string; items: any[] }) {
             <div><Label className="text-xs">Max codes</Label><Input type="number" min={1} value={f.max} onChange={(e) => setF({ ...f, max: e.target.value })} /></div>
             <div><Label className="text-xs">Ends on (optional)</Label><Input type="date" value={f.expires} onChange={(e) => setF({ ...f, expires: e.target.value })} /></div>
           </div>
-          <Button onClick={submit} disabled={save.isPending || !f.name || !f.prefix || !f.discount || (f.kind === "store_code" && !f.storeCode && !f.prefix)}>Save campaign</Button>
+          <Button onClick={submit} disabled={save.isPending || !f.name || !f.prefix || !f.discount || (f.kind === "store_code" && !f.storeCode && !f.prefix)}>{f.id ? "Update campaign" : "Save campaign"}</Button>
+          {f.id && <Button variant="outline" className="ml-2" onClick={() => setF(blankC)}>Cancel</Button>}
           <p className="text-xs text-muted-foreground">{f.kind === "dm_unique"
             ? <>Each person gets one unique code like DIWALI-7KQ2MX. Use the “Send coupon” step in Flow builder with {"{code}"} in the message.</>
             : "One code for everyone (e.g. DIWALI50). Pick it in a delivery page's Price & offer card — it shows in the coupon box automatically while the campaign is active."}</p>
@@ -207,7 +211,8 @@ function Coupons({ orgId, items }: { orgId: string; items: any[] }) {
         {items.length === 0 ? <p className="text-sm text-muted-foreground">No campaigns yet.</p> : items.map((c) => (
           <div key={c.id} className="mb-2 flex items-center justify-between rounded-lg border border-border p-3 text-sm">
             <div><p className="font-medium">{c.name} {c.kind === "store_code" && <span className="ml-1 rounded-full bg-muted px-2 py-0.5 text-[10px]">Store code</span>}</p><p className="text-muted-foreground">{c.kind === "store_code" ? c.store_code : `${c.prefix}-XXXXXX`} · {c.discount_label} · max {c.max_codes}{c.expires_at ? ` · ends ${new Date(c.expires_at).toLocaleDateString()}` : ""}</p></div>
-            <Button size="icon" variant="ghost" aria-label="Delete" onClick={() => del.mutate({ organizationId: orgId, id: c.id, table: "coupon_campaigns" })}><Trash2 className="size-4" /></Button>
+            <div className="flex"><Button size="icon" variant="ghost" aria-label="Edit" onClick={() => setF({ id: c.id, name: c.name, prefix: c.prefix ?? "", discount: c.discount_label ?? "", max: String(c.max_codes ?? 500), expires: c.expires_at ? String(c.expires_at).slice(0, 10) : "", kind: c.kind === "store_code" ? "store_code" : "dm_unique", storeCode: c.store_code ?? "", active: c.active !== false })}><Pencil className="size-4" /></Button>
+            <Button size="icon" variant="ghost" aria-label="Delete" onClick={() => del.mutate({ organizationId: orgId, id: c.id, table: "coupon_campaigns" })}><Trash2 className="size-4" /></Button></div>
           </div>
         ))}
       </Panel>
@@ -315,9 +320,9 @@ function Pages({ orgId, items, leads, products, campaigns, whatsappOtp }: { orgI
   const pickCampaign = (id: string) => {
     const c = campaigns.find((x) => x.id === id);
     if (!c) { setF({ ...f, couponCampaignId: "" }); return; }
-    setF({ ...f, couponCampaignId: id, showPrice: true, couponCode: c.store_code ?? f.couponCode, couponNote: c.discount_label || f.couponNote });
+    setF({ ...f, couponCampaignId: id, showPrice: true, couponCode: c.store_code || c.prefix || f.couponCode, couponNote: c.discount_label || f.couponNote });
   };
-  const storeCampaigns = campaigns.filter((c) => c.kind === "store_code" && c.active && (!c.expires_at || new Date(c.expires_at) > new Date()));
+  const storeCampaigns = campaigns.filter((c) => c.active && (!c.expires_at || new Date(c.expires_at) > new Date()));
   const startEdit = async (p: any) => {
     setF(pageToForm(p)); setImagePreview("");
     formTop.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -398,9 +403,9 @@ function Pages({ orgId, items, leads, products, campaigns, whatsappOtp }: { orgI
                 <Label className="text-xs">Coupon from a campaign (Coupons tab)</Label>
                 <select className={area} value={f.couponCampaignId} onChange={(e) => pickCampaign(e.target.value)}>
                   <option value="">No campaign — use the static code below</option>
-                  {storeCampaigns.map((c) => <option key={c.id} value={c.id}>{c.name} · {c.store_code} · {c.discount_label}</option>)}
+                  {storeCampaigns.map((c) => <option key={c.id} value={c.id}>{c.name} · {c.store_code || `${c.prefix}-…`} · {c.discount_label}</option>)}
                 </select>
-                {storeCampaigns.length === 0 && <p className="mt-1 text-xs text-muted-foreground">No shared store-code campaigns yet — create one in the Coupons tab (type: “One shared code”).</p>}
+                {storeCampaigns.length === 0 && <p className="mt-1 text-xs text-muted-foreground">No active coupon campaigns yet — create one in the Coupons tab.</p>}
                 {f.couponCampaignId && <p className="mt-1 text-xs text-muted-foreground">The campaign code and discount show on the page automatically and stop when the campaign ends.</p>}
               </div>
               <div className="grid grid-cols-2 gap-2">
@@ -631,11 +636,15 @@ function ExtrasEditor({ value, onChange, onSaveCreator }: { value: PageExtras; o
       </div>
       <div className="space-y-2">
         <Label>"What you'll get" box (optional)</Label>
+        <Chips label="Quick fill" items={DELIVERABLE_PRESETS.map((x) => x[0])} onPick={(v) => { const x = DELIVERABLE_PRESETS.find((y) => y[0] === v)!; onChange({ ...value, deliverables: { count: x[1], format: x[2], size: x[3] } }); }} />
         <div className="grid gap-2 sm:grid-cols-3">
           <Input placeholder="Items (e.g. 2 resources)" maxLength={40} value={d.count ?? ""} onChange={(e) => onChange({ ...value, deliverables: { ...d, count: e.target.value } })} />
           <Input placeholder="Format (e.g. PDF, Video)" maxLength={40} value={d.format ?? ""} onChange={(e) => onChange({ ...value, deliverables: { ...d, format: e.target.value } })} />
           <Input placeholder="Size (e.g. 21 MB)" maxLength={40} value={d.size ?? ""} onChange={(e) => onChange({ ...value, deliverables: { ...d, size: e.target.value } })} />
         </div>
+        <Chips label="Items" items={["1 resource", "2 resources", "5 resources", "12 lessons", "50+ templates"]} onPick={(v) => onChange({ ...value, deliverables: { ...d, count: v } })} />
+        <Chips label="Format" items={["PDF", "MP4 Video", "Canva link", "Audio", "ZIP file", "Google Meet"]} onPick={(v) => onChange({ ...value, deliverables: { ...d, format: v } })} />
+        <Chips label="Size" items={["Instant access", "5 MB", "15 MB", "250 MB", "1.5 GB", "30 mins"]} onPick={(v) => onChange({ ...value, deliverables: { ...d, size: v } })} />
       </div>
       <div className="space-y-2">
         <div className="flex items-center justify-between gap-2">
@@ -655,6 +664,14 @@ function ExtrasEditor({ value, onChange, onSaveCreator }: { value: PageExtras; o
     </div>
   );
 }
+
+const DELIVERABLE_PRESETS: [string, string, string, string][] = [
+  ["E-book & checklist", "2 resources", "PDF", "15 MB"],
+  ["Video masterclass", "12 HD lessons", "MP4 Video", "2.4 GB"],
+  ["Canva templates", "50+ templates", "Canva link", "Instant access"],
+  ["1:1 consultation", "1 session", "Google Meet", "30 mins"],
+  ["Prompts pack", "100+ prompts", "PDF / Notion", "5 MB"],
+];
 
 const PRODUCT_PRESETS = [
   { name: "E-book / PDF guide", price: "199", mrp: "499", desc: "Instant PDF download" },
