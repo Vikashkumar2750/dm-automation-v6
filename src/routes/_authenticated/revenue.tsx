@@ -166,30 +166,43 @@ function Products({ orgId, items }: { orgId: string; items: any[] }) {
 function Coupons({ orgId, items }: { orgId: string; items: any[] }) {
   const save = useSave(useServerFn(saveCampaign), "Coupon campaign saved");
   const del = useSave(useServerFn(deleteRevenueItem), "Deleted");
-  const [f, setF] = useState({ name: "", prefix: "", discount: "", max: "500", expires: "" });
+  const [f, setF] = useState({ name: "", prefix: "", discount: "", max: "500", expires: "", kind: "dm_unique" as "dm_unique" | "store_code", storeCode: "" });
   const submit = () => save.mutate({
     organizationId: orgId, name: f.name, prefix: f.prefix.toUpperCase(), discountLabel: f.discount, maxCodes: Number(f.max) || 500,
     expiresAt: f.expires ? new Date(f.expires).toISOString() : null, active: true,
-  }, { onSuccess: () => setF({ name: "", prefix: "", discount: "", max: "500", expires: "" }) });
+    kind: f.kind, storeCode: f.kind === "store_code" ? (f.storeCode || f.prefix).toUpperCase() : null,
+  }, { onSuccess: () => setF({ name: "", prefix: "", discount: "", max: "500", expires: "", kind: "dm_unique", storeCode: "" }) });
   return (
     <div className="grid gap-4 lg:grid-cols-2">
       <Panel title="New coupon campaign">
         <div className="space-y-2">
+          <div>
+            <Label className="text-xs">Coupon type</Label>
+            <select className={area} value={f.kind} onChange={(e) => setF({ ...f, kind: e.target.value as typeof f.kind })}>
+              <option value="dm_unique">Unique code per person — sent in DM automation</option>
+              <option value="store_code">One shared code — shown on a delivery page</option>
+            </select>
+          </div>
           <Input placeholder="Name (e.g. Diwali sale)" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />
-          <Input placeholder="Code start, 2–12 letters/numbers (e.g. DIWALI)" value={f.prefix} onChange={(e) => setF({ ...f, prefix: e.target.value })} />
+          {f.kind === "store_code"
+            ? <Input placeholder="Store code (e.g. DIWALI50)" value={f.storeCode} onChange={(e) => setF({ ...f, storeCode: e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, "").slice(0, 30) })} />
+            : <Input placeholder="Code start, 2–12 letters/numbers (e.g. DIWALI)" value={f.prefix} onChange={(e) => setF({ ...f, prefix: e.target.value })} />}
+          {f.kind === "store_code" && <Input placeholder="Code start for reference, 2–12 letters (e.g. DIWALI)" value={f.prefix} onChange={(e) => setF({ ...f, prefix: e.target.value })} />}
           <Input placeholder="Discount (e.g. 20% off)" value={f.discount} onChange={(e) => setF({ ...f, discount: e.target.value })} />
           <div className="grid grid-cols-2 gap-2">
             <div><Label className="text-xs">Max codes</Label><Input type="number" min={1} value={f.max} onChange={(e) => setF({ ...f, max: e.target.value })} /></div>
             <div><Label className="text-xs">Ends on (optional)</Label><Input type="date" value={f.expires} onChange={(e) => setF({ ...f, expires: e.target.value })} /></div>
           </div>
-          <Button onClick={submit} disabled={save.isPending}>Save campaign</Button>
-          <p className="text-xs text-muted-foreground">Each person gets one unique code like DIWALI-7KQ2MX. Use the “Send coupon” step in Flow builder with {"{code}"} in the message.</p>
+          <Button onClick={submit} disabled={save.isPending || !f.name || !f.prefix || !f.discount || (f.kind === "store_code" && !f.storeCode && !f.prefix)}>Save campaign</Button>
+          <p className="text-xs text-muted-foreground">{f.kind === "dm_unique"
+            ? <>Each person gets one unique code like DIWALI-7KQ2MX. Use the “Send coupon” step in Flow builder with {"{code}"} in the message.</>
+            : "One code for everyone (e.g. DIWALI50). Pick it in a delivery page's Price & offer card — it shows in the coupon box automatically while the campaign is active."}</p>
         </div>
       </Panel>
       <Panel title="Campaigns">
         {items.length === 0 ? <p className="text-sm text-muted-foreground">No campaigns yet.</p> : items.map((c) => (
           <div key={c.id} className="mb-2 flex items-center justify-between rounded-lg border border-border p-3 text-sm">
-            <div><p className="font-medium">{c.name}</p><p className="text-muted-foreground">{c.prefix}-XXXXXX · {c.discount_label} · max {c.max_codes}{c.expires_at ? ` · ends ${new Date(c.expires_at).toLocaleDateString()}` : ""}</p></div>
+            <div><p className="font-medium">{c.name} {c.kind === "store_code" && <span className="ml-1 rounded-full bg-muted px-2 py-0.5 text-[10px]">Store code</span>}</p><p className="text-muted-foreground">{c.kind === "store_code" ? c.store_code : `${c.prefix}-XXXXXX`} · {c.discount_label} · max {c.max_codes}{c.expires_at ? ` · ends ${new Date(c.expires_at).toLocaleDateString()}` : ""}</p></div>
             <Button size="icon" variant="ghost" aria-label="Delete" onClick={() => del.mutate({ organizationId: orgId, id: c.id, table: "coupon_campaigns" })}><Trash2 className="size-4" /></Button>
           </div>
         ))}
