@@ -133,6 +133,7 @@ function Products({ orgId, items }: { orgId: string; items: any[] }) {
     <div className="grid gap-4 lg:grid-cols-2">
       <Panel title="Add product">
         <div className="space-y-2">
+          <Chips label="Quick fill" items={PRODUCT_PRESETS.map((p) => p.name)} onPick={(v) => { const p = PRODUCT_PRESETS.find((x) => x.name === v)!; setF({ ...f, name: p.name, price: p.price, originalPrice: p.mrp, description: p.desc }); }} />
           <Input placeholder="Name (e.g. Recipe e-book)" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />
           <div className="grid grid-cols-2 gap-2">
             <div><Label className="text-xs">Selling price ₹</Label><Input placeholder="999" inputMode="decimal" value={f.price} onChange={(e) => setF({ ...f, price: e.target.value })} /></div>
@@ -183,12 +184,15 @@ function Coupons({ orgId, items }: { orgId: string; items: any[] }) {
               <option value="store_code">One shared code — shown on a delivery page</option>
             </select>
           </div>
+          <Chips label="Quick fill" items={["Diwali sale", "New Year sale", "Launch week", "Followers special"]} onPick={(v) => { const p = v.split(" ")[0]!.toUpperCase().slice(0, 12); setF({ ...f, name: v, prefix: p, storeCode: f.kind === "store_code" ? `${p}20` : f.storeCode, discount: f.discount || "20% off" }); }} />
           <Input placeholder="Name (e.g. Diwali sale)" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />
           {f.kind === "store_code"
             ? <Input placeholder="Store code (e.g. DIWALI50)" value={f.storeCode} onChange={(e) => setF({ ...f, storeCode: e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, "").slice(0, 30) })} />
             : <Input placeholder="Code start, 2–12 letters/numbers (e.g. DIWALI)" value={f.prefix} onChange={(e) => setF({ ...f, prefix: e.target.value })} />}
           {f.kind === "store_code" && <Input placeholder="Code start for reference, 2–12 letters (e.g. DIWALI)" value={f.prefix} onChange={(e) => setF({ ...f, prefix: e.target.value })} />}
+          <Chips items={["DIWALI", "SALE", "VIP", "FLASH", "LAUNCH"]} onPick={(v) => setF({ ...f, prefix: v, storeCode: f.kind === "store_code" ? `${v}20` : f.storeCode })} />
           <Input placeholder="Discount (e.g. 20% off)" value={f.discount} onChange={(e) => setF({ ...f, discount: e.target.value })} />
+          <Chips items={["10% off", "20% off", "50% off", "₹100 off", "Buy 1 Get 1"]} onPick={(v) => setF({ ...f, discount: v })} />
           <div className="grid grid-cols-2 gap-2">
             <div><Label className="text-xs">Max codes</Label><Input type="number" min={1} value={f.max} onChange={(e) => setF({ ...f, max: e.target.value })} /></div>
             <div><Label className="text-xs">Ends on (optional)</Label><Input type="date" value={f.expires} onChange={(e) => setF({ ...f, expires: e.target.value })} /></div>
@@ -389,6 +393,7 @@ function Pages({ orgId, items, leads, products, campaigns, whatsappOtp }: { orgI
               </div>
               {(() => { const d = priceDisplay(price?.originalPaise, price?.offerPaise); return d.original ? <p className="text-xs text-muted-foreground">Shows: <strong>{d.offer}</strong> <s>{d.original}</s> · {d.percent}% OFF</p> : f.priceOriginal && f.priceOffer ? <p className="text-xs text-destructive">Offer price must be lower than the original price to show a discount.</p> : null; })()}
               <Input placeholder="Discount label (optional, e.g. Diwali deal) — blank shows % OFF" value={f.discountLabel} onChange={(e) => setF({ ...f, discountLabel: e.target.value.slice(0, 40) })} />
+              <Chips items={["Diwali deal", "Launch offer", "Limited time", "Early bird", "Flash sale", "Today only"]} onPick={(v) => setF({ ...f, discountLabel: v })} />
               <div>
                 <Label className="text-xs">Coupon from a campaign (Coupons tab)</Label>
                 <select className={area} value={f.couponCampaignId} onChange={(e) => pickCampaign(e.target.value)}>
