@@ -386,6 +386,10 @@ alter table public.revenue_events enable row level security;
       console.log("[migrate] ensuring trust_settings base table");
       await sql.unsafe(TRUST_SETTINGS_BOOTSTRAP);
     }
+    if (file.startsWith("0006_")) {
+      console.log("[migrate] ensuring revenue core (products, coupons, delivery pages)");
+      await sql.unsafe(REVENUE_BOOTSTRAP);
+    }
     const body = await readFile(path.join(MIGRATIONS_DIR, file), "utf8");
     if (!body.trim()) continue;
     console.log(`[migrate] applying ${file}`);
