@@ -299,12 +299,33 @@ export const STANDARD_LEAD_FIELDS: LeadField[] = [
 export const EMAIL_ONLY_FIELDS: LeadField[] = [{ key: "email", label: "Email address", type: "email", required: true, options: [] }];
 
 /** Returns an error message, or null when the value is fine. */
+/** Throwaway inbox providers — leads from these are almost always fake. */
+export const DISPOSABLE_EMAIL_DOMAINS = new Set([
+  "mailinator.com", "guerrillamail.com", "guerrillamail.net", "10minutemail.com", "tempmail.com", "temp-mail.org", "yopmail.com",
+  "trashmail.com", "getnada.com", "sharklasers.com", "dispostable.com", "maildrop.cc", "fakeinbox.com", "throwawaymail.com",
+  "mailnesia.com", "tempmailo.com", "emailondeck.com", "mohmal.com", "mintemail.com", "spamgourmet.com", "tempr.email", "discard.email",
+]);
+
+/** Obvious fake phone numbers: all one digit, simple runs, or invalid Indian mobiles. */
+export function isFakePhone(raw: string): boolean {
+  let d = raw.replace(/\D/g, "");
+  if (d.length === 12 && d.startsWith("91")) d = d.slice(2);
+  if (d.length === 11 && d.startsWith("0")) d = d.slice(1);
+  if (/^(\d)\1+$/.test(d)) return true;
+  if ("01234567890123456789".includes(d) || "98765432109876543210".includes(d)) return true;
+  if (d.length === 10 && raw.replace(/\D/g, "").length <= 12 && !/^[6-9]/.test(d)) return true;
+  return false;
+}
+
 export function validateLeadValue(field: Pick<LeadField, "type" | "required" | "options">, raw: string): string | null {
   const value = raw.trim();
   if (!value) return field.required ? "Please complete all required fields" : null;
-  if (field.type === "email" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return "Enter a valid email address";
-  if (field.type === "phone") { const n = value.replace(/\D/g, "").length; if (n < 10 || n > 15) return "Enter a valid phone number"; }
-  if (field.type === "pincode" && !/^\d{6}$/.test(value)) return "Pincode must be 6 digits";
+  if (field.type === "email") {
+    if (!/^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i.test(value)) return "Enter a valid email address";
+    if (DISPOSABLE_EMAIL_DOMAINS.has(value.split("@")[1]!.toLowerCase())) return "Please use your real email — temporary inboxes are not accepted";
+  }
+  if (field.type === "phone") { const n = value.replace(/\D/g, "").length; if (n < 10 || n > 15 || isFakePhone(value)) return "Enter a valid phone number"; }
+  if (field.type === "pincode" && !/^[1-9]\d{5}$/.test(value)) return "Pincode must be 6 digits";
   if (field.type === "choice" && !field.options.includes(value)) return "Choose one of the available options";
   return null;
 }

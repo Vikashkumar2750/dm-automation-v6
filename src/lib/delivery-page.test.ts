@@ -48,7 +48,18 @@ describe("lead form checks", () => {
     expect(validateLeadValue({ type: "pincode", required: true, options: [] }, "11001")).not.toBeNull();
   });
   it("requires 10 to 15 phone digits", () => {
-    expect(validateLeadValue({ type: "phone", required: true, options: [] }, "98765 43210")).toBeNull();
+    expect(validateLeadValue({ type: "phone", required: true, options: [] }, "98123 45670")).toBeNull();
     expect(validateLeadValue({ type: "phone", required: true, options: [] }, "12345")).not.toBeNull();
   });
+});
+
+import { validateLeadValue as vlv, isFakePhone } from "./delivery-page";
+describe("lead anti-fake validation", () => {
+  const email = { type: "email" as const, required: true, options: [] };
+  const phone = { type: "phone" as const, required: true, options: [] };
+  it("rejects temporary inboxes", () => expect(vlv(email, "a@mailinator.com")).not.toBeNull());
+  it("accepts a normal email", () => expect(vlv(email, "a@gmail.com")).toBeNull());
+  it("rejects repeated-digit phones", () => expect(isFakePhone("9999999999")).toBe(true));
+  it("rejects Indian mobiles not starting 6-9", () => expect(vlv(phone, "5123456789")).not.toBeNull());
+  it("accepts a real Indian mobile", () => expect(vlv(phone, "+91 98123 45678")).toBeNull());
 });

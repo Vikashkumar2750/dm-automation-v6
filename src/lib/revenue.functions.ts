@@ -94,10 +94,14 @@ export const savePage = createServerFn({ method: "POST" })
     showPrice: z.boolean().default(false), priceOriginalPaise: z.number().int().min(0).max(100_000_000).nullable().default(null),
     priceOfferPaise: z.number().int().min(0).max(100_000_000).nullable().default(null), discountLabel: z.string().trim().max(40).nullable().default(null),
     couponCode: z.string().trim().toUpperCase().regex(/^[A-Z0-9-]{1,30}$/, "Coupon code: letters, numbers or - only").nullable().default(null),
-    couponNote: z.string().trim().max(120).nullable().default(null),
+    couponNote: z.string().trim().max(120).nullable().default(null), productId: z.string().uuid().nullable().default(null),
   }).parse(d))
   .handler(async ({ data, context }) => {
-    const row = { organization_id: data.organizationId, slug: data.slug, title: data.title, body: data.body, button_label: data.buttonLabel, button_url: data.buttonUrl, active: data.active,
+    if (data.productId) {
+      const { data: pr } = await (context as Ctx).supabase.from("revenue_products").select("id").eq("id", data.productId).eq("organization_id", data.organizationId).maybeSingle();
+      if (!pr) throw new Error("Product not found in this workspace");
+    }
+    const row = { product_id: data.productId, organization_id: data.organizationId, slug: data.slug, title: data.title, body: data.body, button_label: data.buttonLabel, button_url: data.buttonUrl, active: data.active,
       image_path: data.imagePath, show_image: data.showImage, image_alt: data.imageAlt, countdown_at: data.countdownAt, expiry_action: data.expiryAction, expiry_message: data.expiryMessage,
       form_config: data.formConfig, show_price: data.showPrice, price_original_paise: data.priceOriginalPaise, price_offer_paise: data.priceOfferPaise,
       discount_label: data.discountLabel, coupon_code: data.couponCode, coupon_note: data.couponNote };
@@ -239,6 +243,7 @@ export const submitOfferForm = createServerFn({ method: "POST" })
       if (problem) throw new Error(problem);
       if (value) clean[field.key] = value;
     }
+    await (await import("@/lib/email-check.server")).assertRealEmails(clean, fields);
     const key = { organization_id: link.organization_id, platform: link.platform, external_user_id: link.external_user_id };
     const { data: current } = await supabaseAdmin.from("contact_profiles").select("email, phone, custom_fields").match(key).maybeSingle();
     await supabaseAdmin.from("contact_profiles").upsert({ ...key,
@@ -268,6 +273,7 @@ export const submitPageForm = createServerFn({ method: "POST" })
       if (problem) throw new Error(problem);
       if (value) clean[field.key] = value;
     }
+    await (await import("@/lib/email-check.server")).assertRealEmails(clean, config.fields ?? []);
     const { error } = await supabaseAdmin.from("delivery_page_leads").insert({ organization_id: page.organization_id, delivery_page_id: page.id, answers: clean });
     if (error) throw new Error("Could not save details");
     await supabaseAdmin.from("revenue_events").insert({ organization_id: page.organization_id, kind: "form_complete", ref_id: page.id });
