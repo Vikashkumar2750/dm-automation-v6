@@ -254,7 +254,7 @@ export const submitOfferForm = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: link } = await supabaseAdmin.from("payment_links")
-      .select("id, organization_id, platform, external_user_id, delivery_pages!inner(active, form_config)").eq("offer_token", data.token).maybeSingle();
+      .select("id, organization_id, platform, external_user_id, delivery_pages!inner(active, form_config, otp_required)").eq("offer_token", data.token).maybeSingle();
     const page = Array.isArray(link?.delivery_pages) ? link?.delivery_pages[0] : link?.delivery_pages;
     const config = page?.form_config as { mode?: string; consent?: string; fields?: Array<{ key: string; type: string; required: boolean; options: string[] }> } | null;
     if (!link || !page?.active || !config || config.mode === "none") throw new Error("Form is not available");
@@ -267,6 +267,7 @@ export const submitOfferForm = createServerFn({ method: "POST" })
       if (value) clean[field.key] = value;
     }
     await (await import("@/lib/email-check.server")).assertRealEmails(clean, fields);
+    await assertOtpIfRequired(supabaseAdmin, link.organization_id as string, `offer:${data.token}`, !!page.otp_required, fields, clean);
     const key = { organization_id: link.organization_id, platform: link.platform, external_user_id: link.external_user_id };
     const { data: current } = await supabaseAdmin.from("contact_profiles").select("email, phone, custom_fields").match(key).maybeSingle();
     await supabaseAdmin.from("contact_profiles").upsert({ ...key,
@@ -283,7 +284,7 @@ export const submitPageForm = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ slug: z.string().regex(/^[a-z0-9-]{3,60}$/), answers: z.record(z.string(), z.string().trim().max(500)), website: z.string().max(0).optional() }).parse(d))
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: page } = await supabaseAdmin.from("delivery_pages").select("id, organization_id, form_config").eq("slug", data.slug).eq("active", true).maybeSingle();
+    const { data: page } = await supabaseAdmin.from("delivery_pages").select("id, organization_id, form_config, otp_required").eq("slug", data.slug).eq("active", true).maybeSingle();
     const config = page?.form_config as FormConfig | null;
     if (!page || !config || config.mode === "none") throw new Error("Form is not available");
     const { count } = await supabaseAdmin.from("delivery_page_leads").select("id", { count: "exact", head: true })
@@ -297,6 +298,7 @@ export const submitPageForm = createServerFn({ method: "POST" })
       if (value) clean[field.key] = value;
     }
     await (await import("@/lib/email-check.server")).assertRealEmails(clean, config.fields ?? []);
+    await assertOtpIfRequired(supabaseAdmin, page.organization_id as string, `page:${data.slug}`, !!page.otp_required, config.fields ?? [], clean);
     const { error } = await supabaseAdmin.from("delivery_page_leads").insert({ organization_id: page.organization_id, delivery_page_id: page.id, answers: clean });
     if (error) throw new Error("Could not save details");
     await supabaseAdmin.from("revenue_events").insert({ organization_id: page.organization_id, kind: "form_complete", ref_id: page.id });
