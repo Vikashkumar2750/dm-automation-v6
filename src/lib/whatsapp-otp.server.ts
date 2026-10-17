@@ -126,3 +126,29 @@ export async function consumeVerifiedOtp(admin: AdminClient, organizationId: str
   await admin.from("lead_otp_codes").delete().eq("id", row.id);
   return true;
 }
+
+/** Super Admin diagnostics: verify a workspace's WhatsApp credentials without sending a message. */
+export async function checkWhatsappCredentials(admin: AdminClient, organizationId: string): Promise<{ ok: boolean; detail: string }> {
+  const s = await loadSettings(admin, organizationId);
+  if (!s) return { ok: false, detail: "Token missing or unreadable" };
+  const res = await fetch(`https://graph.facebook.com/v21.0/${s.phone_number_id}?fields=display_phone_number,quality_rating`, {
+    headers: { Authorization: `Bearer ${s.access_token}` },
+  }).catch(() => null);
+  if (!res) return { ok: false, detail: "Network error reaching Meta" };
+  const body = await res.text();
+  if (!res.ok) return { ok: false, detail: `Meta ${res.status}: ${body.slice(0, 160)}` };
+  try {
+    const j = JSON.parse(body) as { display_phone_number?: string; quality_rating?: string };
+    return { ok: true, detail: `${j.display_phone_number ?? "number ok"}${j.quality_rating ? ` · quality ${j.quality_rating}` : ""}` };
+  } catch { return { ok: true, detail: "Credentials valid" }; }
+}
+
+/** Super Admin diagnostics: send a sample code through a workspace's template. The code is not stored. */
+export async function sendTestWhatsappOtp(admin: AdminClient, organizationId: string, rawPhone: string): Promise<{ ok: boolean; detail: string }> {
+  const phone = normalizePhone(rawPhone);
+  if (phone.length < 11 || phone.length > 15) return { ok: false, detail: "Invalid phone number" };
+  const s = await loadSettings(admin, organizationId);
+  if (!s) return { ok: false, detail: "WhatsApp OTP not set up" };
+  const r = await sendViaMeta(s, phone, String(randomInt(100000, 999999)));
+  return r.ok ? { ok: true, detail: "Sent" } : { ok: false, detail: r.error ?? "Failed" };
+}

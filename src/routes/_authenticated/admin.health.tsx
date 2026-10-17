@@ -5,6 +5,7 @@ import { Activity, Gauge, ShieldAlert, Webhook } from "lucide-react";
 
 import { PageHeader, Panel, StatCard, StatusBadge } from "@/components/app/primitives";
 import { getPlatformOverview, listAdminAccounts } from "@/lib/admin.functions";
+import { OtpDeliveryPanel } from "@/components/app/OtpDeliveryPanel";
 
 export const Route = createFileRoute("/_authenticated/admin/health")({
   head: () => ({
@@ -114,6 +115,7 @@ function HealthPage() {
           </div>
         )}
       </Panel>
+      <OtpDeliveryPanel />
     </div>
   );
 }
