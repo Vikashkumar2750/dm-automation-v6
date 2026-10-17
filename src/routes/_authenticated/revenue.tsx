@@ -21,7 +21,7 @@ import { DeliveryPageView } from "@/components/app/DeliveryPageView";
 import { DELIVERY_TEMPLATES, SAMPLE_BODY, EMAIL_ONLY_FIELDS, STANDARD_LEAD_FIELDS, priceDisplay, DEFAULT_POLICIES, DEFAULT_DISCLAIMER, DEFAULT_EXTRAS, type LeadField, type PageExtras } from "@/lib/delivery-page";
 import { previewDeliveryImage, uploadDeliveryImage } from "@/lib/delivery-media";
 import {
-  deleteRevenueItem, getRevenue, removeRazorpayKeys, saveCampaign, savePage, saveProduct, saveRazorpayKeys, saveRevenueSettings,
+  deleteRevenueItem, getRevenue, removeRazorpayKeys, removeWhatsappOtpSettings, saveCampaign, savePage, saveProduct, saveRazorpayKeys, saveRevenueSettings, saveWhatsappOtpSettings,
 } from "@/lib/revenue.functions";
 
 export const Route = createFileRoute("/_authenticated/revenue")({
@@ -536,7 +536,37 @@ function Payments({ orgId, d }: { orgId: string; d: Data }) {
           <Button onClick={() => saveSet.mutate({ organizationId: orgId, nudgeEnabled: s.enabled, nudgeDelayMinutes: s.delay, nudgeText: s.text })}>Save</Button>
         </div>
       </Panel>
+      <WhatsappOtpPanel orgId={orgId} d={d} />
     </div>
+  );
+}
+
+function WhatsappOtpPanel({ orgId, d }: { orgId: string; d: Data }) {
+  const saveOtp = useSave(useServerFn(saveWhatsappOtpSettings), "WhatsApp OTP connected");
+  const removeOtp = useSave(useServerFn(removeWhatsappOtpSettings), "WhatsApp OTP removed");
+  const [w, setW] = useState({ phoneNumberId: "", accessToken: "", templateName: "", templateLanguage: "en" });
+  return (
+    <Panel title="WhatsApp OTP (phone verification)">
+      {d.whatsappOtp ? (
+        <div className="space-y-3 text-sm">
+          <p>Connected — template <span className="font-mono">{d.whatsappOtp.templateName}</span>. Delivery pages can now verify lead phone numbers with a WhatsApp code.</p>
+          <Button variant="outline" onClick={() => removeOtp.mutate({ organizationId: orgId })}>Disconnect</Button>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          <p className="text-sm text-muted-foreground">Apne WhatsApp Business (Meta Cloud API) se delivery page ke phone numbers verify karo. Meta Business Suite → WhatsApp → API setup se ye details milengi. Token sirf server par encrypted rehta hai — kabhi browser mein nahi aata.</p>
+          <Input placeholder="Phone number ID (digits only)" inputMode="numeric" value={w.phoneNumberId} onChange={(e) => setW({ ...w, phoneNumberId: e.target.value.replace(/\D/g, "") })} />
+          <Input type="password" placeholder="Permanent access token" value={w.accessToken} onChange={(e) => setW({ ...w, accessToken: e.target.value })} />
+          <div className="grid grid-cols-2 gap-2">
+            <Input placeholder="Authentication template name" value={w.templateName} onChange={(e) => setW({ ...w, templateName: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "") })} />
+            <Input placeholder="Language (e.g. en or en_US)" value={w.templateLanguage} onChange={(e) => setW({ ...w, templateLanguage: e.target.value })} />
+          </div>
+          <Button disabled={saveOtp.isPending || !w.phoneNumberId || !w.accessToken || !w.templateName}
+            onClick={() => saveOtp.mutate({ organizationId: orgId, ...w }, { onSuccess: () => setW({ phoneNumberId: "", accessToken: "", templateName: "", templateLanguage: "en" }) })}>Connect WhatsApp OTP</Button>
+          <p className="text-xs text-muted-foreground">Template ka body variable {"{{1}}"} Meta apne aap OTP se badal deta hai — code kabhi browser tak nahi pahunchta. Ek number par 1 ghante mein max 3 codes, har code 5 minute valid.</p>
+        </div>
+      )}
+    </Panel>
   );
 }
 
