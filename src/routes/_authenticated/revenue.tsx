@@ -493,7 +493,7 @@ function Pages({ orgId, items, leads, products, campaigns, whatsappOtp }: { orgI
         <div className="mb-3 inline-flex rounded-lg border border-border p-1">{(["desktop", "mobile"] as const).map((v) => <Button key={v} type="button" size="sm" variant={previewDevice === v ? "default" : "ghost"} onClick={() => setPreviewDevice(v)}>{v === "desktop" ? "Computer" : "Mobile"}</Button>)}</div>
         <div className={`mx-auto max-h-[720px] overflow-auto rounded-xl border border-border ${previewDevice === "mobile" ? "max-w-[390px] rounded-[2rem] border-4" : "w-full"}`}>
           <DeliveryPageView title={f.title || "Your page title"} body={f.body.trim() ? f.body : SAMPLE_BODY} buttonLabel={f.buttonLabel || "Get access"} buttonHref="#"
-            imageUrl={f.showImage ? imagePreview : null} imagePlaceholder={!(f.showImage && imagePreview)} imageAlt={f.imageAlt} countdownAt={f.countdown ? new Date(f.countdown).toISOString() : null} expiryAction={f.expiryAction} expiryMessage={f.expiryMessage} price={price} key={JSON.stringify(fields)} leadForm={{ preview: true, config: formConfig }} />
+            imageUrl={f.showImage ? imagePreview : null} imagePlaceholder={!(f.showImage && imagePreview)} imageAlt={f.imageAlt} countdownAt={f.countdown ? new Date(f.countdown).toISOString() : null} expiryAction={f.expiryAction} expiryMessage={f.expiryMessage} price={price} key={JSON.stringify(fields)} leadForm={{ preview: true, config: formConfig }} buyerSlug={f.slug || slugify(f.title) || "preview"} />
         </div>
       </Panel>
     </div>
@@ -652,6 +652,23 @@ function ExtrasEditor({ value, onChange, onSaveCreator }: { value: PageExtras; o
         <textarea className="min-h-16 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" maxLength={1500} value={value.disclaimer ?? ""} onChange={(e) => onChange({ ...value, disclaimer: e.target.value })} />
         <p className="text-xs text-muted-foreground">Blank items are hidden on the page. Review the standard text so it matches how you really sell.</p>
       </div>
+    </div>
+  );
+}
+
+const PRODUCT_PRESETS = [
+  { name: "E-book / PDF guide", price: "199", mrp: "499", desc: "Instant PDF download" },
+  { name: "Online course", price: "999", mrp: "2999", desc: "Lifetime access to all lessons" },
+  { name: "1:1 Consultation (30 min)", price: "1499", mrp: "2499", desc: "Personal video call" },
+  { name: "Presets bundle", price: "499", mrp: "1499", desc: "Ready-to-use presets pack" },
+  { name: "Community access", price: "499", mrp: "999", desc: "Private group membership" },
+];
+
+function Chips({ items, onPick, label = "Samples" }: { items: string[]; onPick: (v: string) => void; label?: string }) {
+  return (
+    <div className="flex flex-wrap items-center gap-1.5">
+      <span className="text-[11px] text-muted-foreground">{label}:</span>
+      {items.map((v) => <button key={v} type="button" onClick={() => onPick(v)} className="rounded-full border border-border bg-muted px-2.5 py-0.5 text-xs text-muted-foreground hover:border-primary hover:text-primary">+ {v}</button>)}
     </div>
   );
 }
