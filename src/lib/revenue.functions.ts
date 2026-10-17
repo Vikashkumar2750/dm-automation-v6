@@ -304,3 +304,85 @@ export const submitPageForm = createServerFn({ method: "POST" })
     await supabaseAdmin.from("revenue_events").insert({ organization_id: page.organization_id, kind: "form_complete", ref_id: page.id });
     return { ok: true };
   });
+
+/** When a page requires WhatsApp OTP, a verified code for the entered phone must exist. */
+async function assertOtpIfRequired(admin: any, organizationId: string, pageRef: string, otpRequired: boolean, fields: Array<{ key: string; type: string }>, clean: Record<string, string>) {
+  if (!otpRequired) return;
+  const phoneField = fields.find((f) => f.type === "phone");
+  const phone = phoneField ? clean[phoneField.key] : undefined;
+  if (!phone) throw new Error("Please enter and verify your phone number");
+  const { consumeVerifiedOtp } = await import("@/lib/whatsapp-otp.server");
+  const ok = await consumeVerifiedOtp(admin, organizationId, pageRef, phone);
+  if (!ok) throw new Error("Please verify your phone number with the WhatsApp code first");
+}
+
+/** Owner/admin: connect the workspace's own WhatsApp (Meta Cloud API) for OTP messages. Token is encrypted and never returned. */
+export const saveWhatsappOtpSettings = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({
+    organizationId: org,
+    phoneNumberId: z.string().trim().regex(/^\d{5,30}$/, "Phone number ID looks wrong"),
+    accessToken: z.string().trim().min(20).max(500),
+    templateName: z.string().trim().regex(/^[a-z0-9_]{1,60}$/, "Template name: lowercase letters, numbers, _ only"),
+    templateLanguage: z.string().trim().regex(/^[a-z]{2}(_[A-Z]{2})?$/).default("en"),
+  }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertPaymentAdmin(context as Ctx, data.organizationId);
+    const { storeToken } = await import("@/lib/token-crypto.server");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin.from("whatsapp_otp_settings").upsert({
+      organization_id: data.organizationId, phone_number_id: data.phoneNumberId,
+      access_token: (await storeToken(data.accessToken)) ?? data.accessToken,
+      template_name: data.templateName, template_language: data.templateLanguage, updated_at: new Date().toISOString(),
+    });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const removeWhatsappOtpSettings = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ organizationId: org }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertPaymentAdmin(context as Ctx, data.organizationId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    await supabaseAdmin.from("whatsapp_otp_settings").delete().eq("organization_id", data.organizationId);
+    return { ok: true };
+  });
+
+/** Public: send a WhatsApp OTP for a delivery page's phone field. Never returns the code. */
+export const sendLeadOtp = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => z.object({
+    slug: z.string().regex(/^[a-z0-9-]{3,60}$/).optional(), token: z.string().uuid().optional(),
+    phone: z.string().trim().min(10).max(20),
+  }).parse(d))
+  .handler(async ({ data }) => {
+    if (!data.slug && !data.token) throw new Error("Page is missing");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    let organizationId: string | null = null;
+    let pageRef: string;
+    if (data.slug) {
+      const { data: p } = await supabaseAdmin.from("delivery_pages").select("organization_id").eq("slug", data.slug).eq("active", true).maybeSingle();
+      organizationId = (p?.organization_id as string | undefined) ?? null;
+      pageRef = `page:${data.slug}`;
+    } else {
+      const { data: l } = await supabaseAdmin.from("payment_links").select("organization_id").eq("offer_token", data.token!).maybeSingle();
+      organizationId = (l?.organization_id as string | undefined) ?? null;
+      pageRef = `offer:${data.token}`;
+    }
+    if (!organizationId) throw new Error("Page not found");
+    const { issueLeadOtp } = await import("@/lib/whatsapp-otp.server");
+    const result = await issueLeadOtp(supabaseAdmin, organizationId, pageRef, data.phone);
+    if ("error" in result) throw new Error(result.error);
+    return result;
+  });
+
+/** Public: check the 6-digit code. Returns only ok/error — never the phone or code. */
+export const verifyLeadOtpCode = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => z.object({ verificationId: z.string().uuid(), code: z.string().trim().regex(/^\d{6}$/, "Enter the 6-digit code") }).parse(d))
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { verifyLeadOtp } = await import("@/lib/whatsapp-otp.server");
+    const result = await verifyLeadOtp(supabaseAdmin, data.verificationId, data.code);
+    if ("error" in result) throw new Error(result.error);
+    return { ok: true };
+  });
