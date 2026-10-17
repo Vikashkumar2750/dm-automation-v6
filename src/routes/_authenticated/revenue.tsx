@@ -423,6 +423,15 @@ function Pages({ orgId, items, leads, products, campaigns, whatsappOtp }: { orgI
               </select>}
             </div>
             {f.formType === "full" && <LeadFieldsEditor fields={f.fields} onChange={(fields) => setF({ ...f, fields })} />}
+            {f.formType !== "none" && fields.some((x) => x.type === "phone") && (
+              <div className="flex items-center justify-between gap-2 rounded-md border border-border px-2 py-1.5">
+                <Label className="text-xs">Verify phone by WhatsApp OTP</Label>
+                <Switch checked={f.otpRequired} disabled={!whatsappOtp} onCheckedChange={(v) => setF({ ...f, otpRequired: v })} />
+              </div>
+            )}
+            {f.formType !== "none" && fields.some((x) => x.type === "phone") && !whatsappOtp && (
+              <p className="text-xs text-muted-foreground">WhatsApp OTP verification ke liye pehle Payments setup tab mein apna WhatsApp (Meta API) connect karo.</p>
+            )}
             {badLead && <p className="text-xs text-destructive">Give every field a question, and every dropdown at least one option.</p>}
             <p className="text-xs text-muted-foreground">Best default: two quick questions in DM, then an optional detailed form after the offer.</p>
           </div>
