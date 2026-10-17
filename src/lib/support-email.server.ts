@@ -2,11 +2,12 @@ const GATEWAY_URL = "https://connector-gateway.lovable.dev/resend";
 
 type SendResult = { status: "sent" | "failed" | "pending"; error: string | null };
 
+/** Gateway mode on Lovable Cloud (both keys); direct Resend API on Railway (RESEND_API_KEY only). */
 function gatewayKeys() {
   const lovableKey = process.env['LOVABLE_API_KEY'];
   const connectionKey = process.env['RESEND_API_KEY'];
-  if (!lovableKey || !connectionKey) return null;
-  return { lovableKey, connectionKey };
+  if (!connectionKey) return null;
+  return { lovableKey: lovableKey || null, connectionKey };
 }
 
 function fromAddress(senderName: string) {
@@ -24,13 +25,16 @@ async function sendViaResend(payload: {
 }): Promise<SendResult> {
   const keys = gatewayKeys();
   if (!keys) return { status: "pending", error: null };
-  const response = await fetch(`${GATEWAY_URL}/emails`, {
+  const direct = !keys.lovableKey || keys.connectionKey.startsWith("re_");
+  const response = await fetch(direct ? "https://api.resend.com/emails" : `${GATEWAY_URL}/emails`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${keys.lovableKey}`,
-      "X-Connection-Api-Key": keys.connectionKey,
-    },
+    headers: direct
+      ? { "Content-Type": "application/json", Authorization: `Bearer ${keys.connectionKey}` }
+      : {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${keys.lovableKey}`,
+          "X-Connection-Api-Key": keys.connectionKey,
+        },
     body: JSON.stringify(payload),
   });
   if (!response.ok) {
