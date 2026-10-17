@@ -239,6 +239,7 @@ export const submitOfferForm = createServerFn({ method: "POST" })
       if (problem) throw new Error(problem);
       if (value) clean[field.key] = value;
     }
+    await (await import("@/lib/email-check.server")).assertRealEmails(clean, fields);
     const key = { organization_id: link.organization_id, platform: link.platform, external_user_id: link.external_user_id };
     const { data: current } = await supabaseAdmin.from("contact_profiles").select("email, phone, custom_fields").match(key).maybeSingle();
     await supabaseAdmin.from("contact_profiles").upsert({ ...key,
@@ -268,6 +269,7 @@ export const submitPageForm = createServerFn({ method: "POST" })
       if (problem) throw new Error(problem);
       if (value) clean[field.key] = value;
     }
+    await (await import("@/lib/email-check.server")).assertRealEmails(clean, config.fields ?? []);
     const { error } = await supabaseAdmin.from("delivery_page_leads").insert({ organization_id: page.organization_id, delivery_page_id: page.id, answers: clean });
     if (error) throw new Error("Could not save details");
     await supabaseAdmin.from("revenue_events").insert({ organization_id: page.organization_id, kind: "form_complete", ref_id: page.id });
