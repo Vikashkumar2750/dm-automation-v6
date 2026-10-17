@@ -68,7 +68,7 @@ export function DeliveryPageView({ title, body, buttonLabel, buttonHref, imageUr
   const onCta = async (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
     if (expired || !buttonHref) return;
-    if (form.active && !(await form.run())) { document.getElementById("lead-form")?.scrollIntoView({ behavior: "smooth", block: "center" }); return; }
+    if (form.active && !(await form.run())) { Array.from(document.querySelectorAll<HTMLElement>(".lead-form")).find((el) => el.offsetParent)?.scrollIntoView({ behavior: "smooth", block: "center" }); return; }
     if (buttonHref !== "#") window.location.href = buttonHref;
   };
   const cta = buttonHref && !(expired && expiryAction === "hide_cta") ? (
@@ -106,6 +106,7 @@ export function DeliveryPageView({ title, body, buttonLabel, buttonHref, imageUr
             );
             return <p key={i} className="leading-relaxed text-muted-foreground"><Inline text={b.text} /></p>;
           })}
+          <LeadFields form={form} standalone={!cta} className="@3xl:hidden" />
           {faqs.length > 0 && (
             <div className="space-y-3 pt-4">
               <h2 className="text-xl font-semibold tracking-tight text-foreground">Frequently asked questions</h2>
@@ -164,7 +165,7 @@ export function DeliveryPageView({ title, body, buttonLabel, buttonHref, imageUr
             {countdownAt && !expired && <div><p className="mb-2 flex items-center justify-center gap-2 text-sm font-medium"><Clock3 className="size-4 text-primary" /> Offer ends in</p><div className="grid grid-cols-4 gap-2">{countdown.map((n, i) => <div key={i} className="rounded-md bg-muted px-2 py-2 text-center"><strong className="block text-lg">{String(n).padStart(2, "0")}</strong><span className="text-[10px] text-muted-foreground">{["Days", "Hours", "Mins", "Secs"][i]}</span></div>)}</div></div>}
             {expired && <p className="rounded-lg bg-muted p-3 text-sm text-muted-foreground">{expiryMessage || "This offer has ended."}</p>}
             {price && <PriceBox price={price} />}
-            <LeadFields form={form} standalone={!cta} />
+            <LeadFields form={form} standalone={!cta} className="hidden @3xl:block" />
             {cta && <div className="[&_a]:w-full">{cta}</div>}
             <ul className="grid gap-1.5 border-t border-border pt-3 text-xs text-muted-foreground">
               <li className="flex items-center gap-2"><ShieldCheck className="size-3.5 text-primary" /> Secure checkout & delivery</li>
