@@ -78,7 +78,7 @@ export function DeliveryPageView({ title, body, buttonLabel, buttonHref, imageUr
   ) : null;
 
   const d = price ? priceDisplay(price.originalPaise, price.offerPaise, price.label) : null;
-  const toCheckout = () => document.getElementById("checkout")?.scrollIntoView({ behavior: "smooth", block: "center" });
+  const toCheckout = () => { const lf = form.active && form.state !== "done" ? Array.from(document.querySelectorAll<HTMLElement>(".lead-form")).find((el) => el.offsetParent) : null; (lf ?? document.getElementById("checkout"))?.scrollIntoView({ behavior: "smooth", block: "center" }); };
   return (
     <div className="@container min-h-full bg-background">
     <div className="relative">
