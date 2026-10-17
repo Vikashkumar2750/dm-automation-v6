@@ -64,7 +64,7 @@ function RevenuePage() {
           <TabsContent value="report"><Report d={d} /></TabsContent>
           <TabsContent value="products"><Products orgId={orgId!} items={d.products} /></TabsContent>
           <TabsContent value="coupons"><Coupons orgId={orgId!} items={d.campaigns} /></TabsContent>
-          <TabsContent value="pages"><Pages orgId={orgId!} items={d.pages} leads={d.leads} products={d.products} /></TabsContent>
+          <TabsContent value="pages"><Pages orgId={orgId!} items={d.pages} leads={d.leads} products={d.products} campaigns={d.campaigns} whatsappOtp={d.whatsappOtp} /></TabsContent>
           <TabsContent value="payments"><Payments orgId={orgId!} d={d} /></TabsContent>
         </Tabs>
       )}
@@ -122,22 +122,26 @@ function Report({ d }: { d: Data }) {
 function Products({ orgId, items }: { orgId: string; items: any[] }) {
   const save = useSave(useServerFn(saveProduct), "Product saved");
   const del = useSave(useServerFn(deleteRevenueItem), "Deleted");
-  const [f, setF] = useState({ name: "", price: "", description: "", manualUrl: "" });
+  const [f, setF] = useState({ name: "", price: "", originalPrice: "", description: "", manualUrl: "" });
   const submit = () => {
     const p = rupeesToPaise(f.price);
     if (!f.name || !p) { toast.error("Name and price (at least ₹1) are needed"); return; }
-    save.mutate({ organizationId: orgId, name: f.name, pricePaise: p, description: f.description || null, manualUrl: f.manualUrl || null, active: true },
-      { onSuccess: () => setF({ name: "", price: "", description: "", manualUrl: "" }) });
+    save.mutate({ organizationId: orgId, name: f.name, pricePaise: p, originalPricePaise: f.originalPrice ? rupeesToPaise(f.originalPrice) : null, description: f.description || null, manualUrl: f.manualUrl || null, active: true },
+      { onSuccess: () => setF({ name: "", price: "", originalPrice: "", description: "", manualUrl: "" }) });
   };
   return (
     <div className="grid gap-4 lg:grid-cols-2">
       <Panel title="Add product">
         <div className="space-y-2">
           <Input placeholder="Name (e.g. Recipe e-book)" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />
-          <Input placeholder="Price in ₹" inputMode="decimal" value={f.price} onChange={(e) => setF({ ...f, price: e.target.value })} />
+          <div className="grid grid-cols-2 gap-2">
+            <div><Label className="text-xs">Selling price ₹</Label><Input placeholder="999" inputMode="decimal" value={f.price} onChange={(e) => setF({ ...f, price: e.target.value })} /></div>
+            <div><Label className="text-xs">MRP ₹ (optional, crossed out)</Label><Input placeholder="1999" inputMode="decimal" value={f.originalPrice} onChange={(e) => setF({ ...f, originalPrice: e.target.value })} /></div>
+          </div>
           <Input placeholder="Short description (optional)" value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} />
           <Input placeholder="Own payment link, used if Razorpay is not connected (optional)" value={f.manualUrl} onChange={(e) => setF({ ...f, manualUrl: e.target.value })} />
           <Button onClick={submit} disabled={save.isPending}>Save product</Button>
+          <p className="text-xs text-muted-foreground">Products are the single source of truth — delivery pages and payment links pick price and payment link from here.</p>
         </div>
       </Panel>
       <Panel title="Your products">
@@ -145,9 +149,9 @@ function Products({ orgId, items }: { orgId: string; items: any[] }) {
           <div className="space-y-2">
             {items.map((p) => (
               <div key={p.id} className="flex items-center justify-between gap-2 rounded-lg border border-border p-3 text-sm">
-                <div><p className="font-medium">{p.name}</p><p className="text-muted-foreground">{formatInr(p.price_paise)}{p.manual_url ? " · own link" : ""}</p></div>
+                <div><p className="font-medium">{p.name}</p><p className="text-muted-foreground">{formatInr(p.price_paise)}{p.original_price_paise > p.price_paise ? <s className="ml-1">{formatInr(p.original_price_paise)}</s> : null}{p.manual_url ? " · own link" : ""}</p></div>
                 <div className="flex items-center gap-2">
-                  <Switch checked={p.active} aria-label="Active" onCheckedChange={(v) => save.mutate({ organizationId: orgId, id: p.id, name: p.name, pricePaise: p.price_paise, description: p.description, manualUrl: p.manual_url, active: v })} />
+                  <Switch checked={p.active} aria-label="Active" onCheckedChange={(v) => save.mutate({ organizationId: orgId, id: p.id, name: p.name, pricePaise: p.price_paise, originalPricePaise: p.original_price_paise ?? null, description: p.description, manualUrl: p.manual_url, active: v })} />
                   <Button size="icon" variant="ghost" aria-label="Delete" onClick={() => del.mutate({ organizationId: orgId, id: p.id, table: "revenue_products" })}><Trash2 className="size-4" /></Button>
                 </div>
               </div>
