@@ -44,6 +44,7 @@ export const getRevenue = createServerFn({ method: "GET" })
     await assertMember(ctx, o);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: cred } = await supabaseAdmin.from("payment_credentials").select("razorpay_key_id").eq("organization_id", o).maybeSingle();
+    const { data: otpCfg } = await supabaseAdmin.from("whatsapp_otp_settings").select("phone_number_id, template_name").eq("organization_id", o).maybeSingle();
     const ev = (events.data ?? []) as Array<{ kind: string; amount_paise: number | null }>;
     const n = (k: string) => ev.filter((e) => e.kind === k).length;
     return {
@@ -54,6 +55,7 @@ export const getRevenue = createServerFn({ method: "GET" })
       settings: settings.data ?? { nudge_enabled: false, nudge_delay_minutes: 120, nudge_text: "Hi! Your payment link is still waiting. Need any help completing it?" },
       links: links.data ?? [],
       razorpay: cred ? { keyIdHint: `${String(cred.razorpay_key_id).slice(0, 8)}…` } : null,
+      whatsappOtp: otpCfg ? { phoneNumberId: String(otpCfg.phone_number_id).slice(0, 4) + "…", templateName: otpCfg.template_name as string } : null,
       funnel: {
         dmsSent: dms.count ?? 0, pageViews: n("page_view"), pageClicks: n("page_click"), paymentLinks: n("payment_link"),
         paid: n("paid"), revenuePaise: ev.filter((e) => e.kind === "paid").reduce((s, e) => s + (e.amount_paise ?? 0), 0),
@@ -67,10 +69,11 @@ export const saveProduct = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({
     organizationId: org, id: z.string().uuid().optional(), name: z.string().trim().min(1).max(120),
     description: z.string().max(500).nullable(), pricePaise: z.number().int().min(100).max(100_000_000),
+    originalPricePaise: z.number().int().min(0).max(100_000_000).nullable().default(null),
     manualUrl: httpsUrl.nullable(), active: z.boolean(),
   }).parse(d))
   .handler(async ({ data, context }) => {
-    const row = { organization_id: data.organizationId, name: data.name, description: data.description, price_paise: data.pricePaise, manual_url: data.manualUrl, active: data.active };
+    const row = { organization_id: data.organizationId, name: data.name, description: data.description, price_paise: data.pricePaise, original_price_paise: data.originalPricePaise, manual_url: data.manualUrl, active: data.active };
     const q = (context as Ctx).supabase.from("revenue_products");
     if (data.id) {
       const { error } = await q.update(row).eq("id", data.id).eq("organization_id", data.organizationId);
