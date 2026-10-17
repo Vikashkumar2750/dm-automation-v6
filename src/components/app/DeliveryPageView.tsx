@@ -2,6 +2,8 @@ import { ImageIcon, CheckCircle2, Clock3, Copy, Mail, Package, ShieldCheck, Tag 
 import { Fragment, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { DisclaimerContent } from "@/components/app/DisclaimerContent";
 import { BuyerSignIn, BuyerSignInButton } from "@/components/app/BuyerSignIn";
 import { LeadFields, useLeadForm, type LeadFormSource } from "@/components/app/DeliveryLeadForm";
 import { inlineParts, parseBody, priceDisplay, type Block } from "@/lib/delivery-page";
@@ -137,7 +139,22 @@ export function DeliveryPageView({ title, body, buttonLabel, buttonHref, imageUr
               ))}
             </div>
           )}
-          {extras.disclaimer && <p className="whitespace-pre-line border-t border-border pt-4 text-xs text-muted-foreground"><span className="font-semibold text-foreground">Disclaimer</span><br />{extras.disclaimer.replace(/\s*Learn more\.?\s*$/i, "")} <a href="/disclaimer" className="underline">Learn more</a>.</p>}
+          {extras.disclaimer && <div className="whitespace-pre-line border-t border-border pt-4 text-xs text-muted-foreground">
+            <span className="font-semibold text-foreground">Disclaimer</span><br />
+            {extras.disclaimer.replace(/\s*Learn more\.?\s*$/i, "")} {" "}
+            <Dialog>
+              <DialogTrigger asChild><Button type="button" variant="link" className="h-auto p-0 text-xs text-muted-foreground underline">Learn more</Button></DialogTrigger>.
+              <DialogContent className="max-w-2xl">
+                <DialogHeader className="pr-6">
+                  <DialogTitle>Disclaimer</DialogTitle>
+                  <DialogDescription>Important limitations and third-party platform information for AutoDM by Techaasvik.</DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 whitespace-normal text-sm leading-relaxed text-muted-foreground [&_h2]:text-base [&_h2]:font-semibold [&_h2]:text-foreground">
+                  <DisclaimerContent />
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>}
           <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border-l-4 border-primary bg-muted px-4 py-3 text-sm text-muted-foreground"><span>Already got access? {buyerSlug ? "Sign in with your email to open it again." : "Your link was sent in your DM."}</span>{buyerSlug && <Button size="sm" variant="outline" onClick={() => setSignIn(true)}>Access your purchase</Button>}</div>
           <p className="flex items-center gap-1.5 pt-2 text-xs text-muted-foreground"><ShieldCheck className="size-3.5" /> Secure delivery</p>
         </article>
