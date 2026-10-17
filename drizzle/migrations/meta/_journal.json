@@ -43,6 +43,13 @@
       "when": 1792147767225,
       "tag": "0005_buyer_access",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1792241353753,
+      "tag": "0006_revenue_coordination_and_whatsapp_otp",
+      "breakpoints": true
     }
   ]
 }
