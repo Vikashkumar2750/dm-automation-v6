@@ -94,7 +94,7 @@ export function LeadFields({ form, standalone, className = "" }: { form: ReturnT
   if (!form.active) return null;
   if (form.state === "done" && standalone) return <div className="rounded-lg border border-border bg-card p-5 text-center"><CheckCircle2 className="mx-auto size-7 text-success" /><p className="mt-2 font-medium">Details saved</p></div>;
   const { fields, answers, setAnswers, errors } = form;
-  return <div className={`lead-form w-full ${className} space-y-4 rounded-xl border border-border bg-background p-4 text-left text-card-foreground shadow-sm`}>
+  return <div className={`lead-form w-full ${className} space-y-4 rounded-xl border border-border bg-card p-4 text-left text-card-foreground shadow-sm`}>
     <div><h2 className="text-lg font-semibold">{fields.length === 1 ? "Where should we send it?" : "Fill in your details"}</h2><p className="mt-1 text-sm text-muted-foreground">Takes less than a minute.</p></div>
     {fields.map((field) => <div key={field.key} className="space-y-1.5">
       <Label htmlFor={`lead-${field.key}`}>{field.label}{field.required ? " *" : ""}</Label>
