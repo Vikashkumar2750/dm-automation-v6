@@ -330,6 +330,7 @@ function Pages({ orgId, items, leads, products, campaigns, whatsappOtp }: { orgI
     formConfig: { ...formConfig, fields: fields.map((x) => ({ ...x, label: x.label.trim() })) },
     showPrice: f.showPrice, priceOriginalPaise: price?.originalPaise ?? null, priceOfferPaise: price?.offerPaise ?? null,
     discountLabel: f.discountLabel || null, couponCode: f.couponCode.trim() || null, couponNote: f.couponNote || null, productId: f.productId || null,
+    couponCampaignId: f.couponCampaignId || null, otpRequired: f.otpRequired,
   }, { onSuccess: reset });
   const uploadImage = async (file: File | undefined) => {
     if (!file) return;
@@ -388,6 +389,15 @@ function Pages({ orgId, items, leads, products, campaigns, whatsappOtp }: { orgI
               </div>
               {(() => { const d = priceDisplay(price?.originalPaise, price?.offerPaise); return d.original ? <p className="text-xs text-muted-foreground">Shows: <strong>{d.offer}</strong> <s>{d.original}</s> · {d.percent}% OFF</p> : f.priceOriginal && f.priceOffer ? <p className="text-xs text-destructive">Offer price must be lower than the original price to show a discount.</p> : null; })()}
               <Input placeholder="Discount label (optional, e.g. Diwali deal) — blank shows % OFF" value={f.discountLabel} onChange={(e) => setF({ ...f, discountLabel: e.target.value.slice(0, 40) })} />
+              <div>
+                <Label className="text-xs">Coupon from a campaign (Coupons tab)</Label>
+                <select className={area} value={f.couponCampaignId} onChange={(e) => pickCampaign(e.target.value)}>
+                  <option value="">No campaign — use the static code below</option>
+                  {storeCampaigns.map((c) => <option key={c.id} value={c.id}>{c.name} · {c.store_code} · {c.discount_label}</option>)}
+                </select>
+                {storeCampaigns.length === 0 && <p className="mt-1 text-xs text-muted-foreground">No shared store-code campaigns yet — create one in the Coupons tab (type: “One shared code”).</p>}
+                {f.couponCampaignId && <p className="mt-1 text-xs text-muted-foreground">The campaign code and discount show on the page automatically and stop when the campaign ends.</p>}
+              </div>
               <div className="grid grid-cols-2 gap-2">
                 <Input placeholder="Coupon code (e.g. SAVE50)" value={f.couponCode} onChange={(e) => setF({ ...f, couponCode: e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, "").slice(0, 30) })} />
                 <Input placeholder="Coupon note (e.g. Use at checkout)" value={f.couponNote} onChange={(e) => setF({ ...f, couponNote: e.target.value.slice(0, 120) })} />
