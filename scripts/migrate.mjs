@@ -214,6 +214,159 @@ create policy "trust_settings update member" on public.trust_settings
   with check (public.current_user_is_org_member(organization_id));
 `;
 
+  // Revenue core (products, coupons, delivery pages, payment links, events)
+  // was created outside the .sql files; 0006 alters it, so bootstrap the base
+  // tables just before that migration runs. Idempotent.
+  const REVENUE_BOOTSTRAP = `
+create table if not exists public.revenue_products (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  name text not null,
+  description text,
+  price_paise integer not null default 0,
+  currency text not null default 'INR',
+  manual_url text,
+  active boolean not null default true,
+  created_at timestamptz not null default now()
+);
+grant select, insert, update, delete on public.revenue_products to authenticated;
+grant all on public.revenue_products to service_role;
+alter table public.revenue_products enable row level security;
+drop policy if exists "revenue_products member" on public.revenue_products;
+create policy "revenue_products member" on public.revenue_products
+  for all to authenticated
+  using (public.current_user_is_org_member(organization_id))
+  with check (public.current_user_is_org_member(organization_id));
+
+create table if not exists public.coupon_campaigns (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  name text not null,
+  prefix text not null,
+  discount_label text not null,
+  max_codes integer not null default 500,
+  expires_at timestamptz,
+  active boolean not null default true,
+  created_at timestamptz not null default now()
+);
+grant select, insert, update, delete on public.coupon_campaigns to authenticated;
+grant all on public.coupon_campaigns to service_role;
+alter table public.coupon_campaigns enable row level security;
+drop policy if exists "coupon_campaigns member" on public.coupon_campaigns;
+create policy "coupon_campaigns member" on public.coupon_campaigns
+  for all to authenticated
+  using (public.current_user_is_org_member(organization_id))
+  with check (public.current_user_is_org_member(organization_id));
+
+create table if not exists public.coupon_codes (
+  id uuid primary key default gen_random_uuid(),
+  campaign_id uuid not null references public.coupon_campaigns(id) on delete cascade,
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  code text not null,
+  platform text not null,
+  external_user_id text not null,
+  issued_at timestamptz not null default now()
+);
+create unique index if not exists coupon_codes_code_idx on public.coupon_codes (code);
+grant all on public.coupon_codes to service_role;
+alter table public.coupon_codes enable row level security;
+
+create table if not exists public.revenue_settings (
+  organization_id uuid primary key references public.organizations(id) on delete cascade,
+  nudge_enabled boolean not null default false,
+  nudge_delay_minutes integer not null default 60,
+  nudge_text text not null default '',
+  updated_at timestamptz not null default now()
+);
+grant select, insert, update on public.revenue_settings to authenticated;
+grant all on public.revenue_settings to service_role;
+alter table public.revenue_settings enable row level security;
+drop policy if exists "revenue_settings member" on public.revenue_settings;
+create policy "revenue_settings member" on public.revenue_settings
+  for all to authenticated
+  using (public.current_user_is_org_member(organization_id))
+  with check (public.current_user_is_org_member(organization_id));
+
+create table if not exists public.delivery_pages (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  slug text not null,
+  title text not null,
+  body text,
+  button_label text,
+  button_url text,
+  product_id uuid references public.revenue_products(id) on delete set null,
+  active boolean not null default true,
+  views integer not null default 0,
+  created_at timestamptz not null default now(),
+  image_path text,
+  show_image boolean not null default true,
+  image_alt text,
+  countdown_at timestamptz,
+  expiry_action text not null default 'none',
+  expiry_message text,
+  form_config jsonb not null default '{}'::jsonb,
+  price_original_paise integer,
+  price_offer_paise integer,
+  discount_label text,
+  coupon_code text,
+  coupon_note text,
+  show_price boolean not null default false
+);
+create unique index if not exists delivery_pages_slug_idx on public.delivery_pages (slug);
+grant select, insert, update, delete on public.delivery_pages to authenticated;
+grant all on public.delivery_pages to service_role;
+alter table public.delivery_pages enable row level security;
+drop policy if exists "delivery_pages member" on public.delivery_pages;
+create policy "delivery_pages member" on public.delivery_pages
+  for all to authenticated
+  using (public.current_user_is_org_member(organization_id))
+  with check (public.current_user_is_org_member(organization_id));
+
+create table if not exists public.delivery_page_leads (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  delivery_page_id uuid not null references public.delivery_pages(id) on delete cascade,
+  answers jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now()
+);
+grant all on public.delivery_page_leads to service_role;
+alter table public.delivery_page_leads enable row level security;
+
+create table if not exists public.payment_links (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  product_id uuid references public.revenue_products(id) on delete set null,
+  conversation_id uuid,
+  social_account_id uuid,
+  platform text not null,
+  external_user_id text not null,
+  provider text not null default 'manual',
+  provider_link_id text,
+  url text not null,
+  amount_paise integer not null default 0,
+  status text not null default 'created',
+  nudged_at timestamptz,
+  paid_at timestamptz,
+  created_at timestamptz not null default now()
+);
+grant all on public.payment_links to service_role;
+alter table public.payment_links enable row level security;
+
+create table if not exists public.revenue_events (
+  id uuid primary key default gen_random_uuid(),
+  organization_id uuid not null references public.organizations(id) on delete cascade,
+  kind text not null,
+  platform text,
+  external_user_id text,
+  ref_id uuid,
+  amount_paise integer,
+  created_at timestamptz not null default now()
+);
+grant all on public.revenue_events to service_role;
+alter table public.revenue_events enable row level security;
+`;
+
   const applied = new Set(
     (await sql`select name from public._app_migrations`).map((r) => r.name),
   );
