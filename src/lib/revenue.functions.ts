@@ -94,10 +94,14 @@ export const savePage = createServerFn({ method: "POST" })
     showPrice: z.boolean().default(false), priceOriginalPaise: z.number().int().min(0).max(100_000_000).nullable().default(null),
     priceOfferPaise: z.number().int().min(0).max(100_000_000).nullable().default(null), discountLabel: z.string().trim().max(40).nullable().default(null),
     couponCode: z.string().trim().toUpperCase().regex(/^[A-Z0-9-]{1,30}$/, "Coupon code: letters, numbers or - only").nullable().default(null),
-    couponNote: z.string().trim().max(120).nullable().default(null),
+    couponNote: z.string().trim().max(120).nullable().default(null), productId: z.string().uuid().nullable().default(null),
   }).parse(d))
   .handler(async ({ data, context }) => {
-    const row = { organization_id: data.organizationId, slug: data.slug, title: data.title, body: data.body, button_label: data.buttonLabel, button_url: data.buttonUrl, active: data.active,
+    if (data.productId) {
+      const { data: pr } = await (context as Ctx).supabase.from("revenue_products").select("id").eq("id", data.productId).eq("organization_id", data.organizationId).maybeSingle();
+      if (!pr) throw new Error("Product not found in this workspace");
+    }
+    const row = { product_id: data.productId, organization_id: data.organizationId, slug: data.slug, title: data.title, body: data.body, button_label: data.buttonLabel, button_url: data.buttonUrl, active: data.active,
       image_path: data.imagePath, show_image: data.showImage, image_alt: data.imageAlt, countdown_at: data.countdownAt, expiry_action: data.expiryAction, expiry_message: data.expiryMessage,
       form_config: data.formConfig, show_price: data.showPrice, price_original_paise: data.priceOriginalPaise, price_offer_paise: data.priceOfferPaise,
       discount_label: data.discountLabel, coupon_code: data.couponCode, coupon_note: data.couponNote };

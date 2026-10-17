@@ -64,7 +64,7 @@ function RevenuePage() {
           <TabsContent value="report"><Report d={d} /></TabsContent>
           <TabsContent value="products"><Products orgId={orgId!} items={d.products} /></TabsContent>
           <TabsContent value="coupons"><Coupons orgId={orgId!} items={d.campaigns} /></TabsContent>
-          <TabsContent value="pages"><Pages orgId={orgId!} items={d.pages} leads={d.leads} /></TabsContent>
+          <TabsContent value="pages"><Pages orgId={orgId!} items={d.pages} leads={d.leads} products={d.products} /></TabsContent>
           <TabsContent value="payments"><Payments orgId={orgId!} d={d} /></TabsContent>
         </Tabs>
       )}
@@ -199,12 +199,12 @@ type PageForm = {
   countdown: string; expiryAction: "disable_cta" | "hide_cta"; expiryMessage: string;
   formType: "none" | "email" | "full"; formMode: "optional" | "required"; fields: LeadField[];
   showPrice: boolean; priceOriginal: string; priceOffer: string; discountLabel: string; couponCode: string; couponNote: string;
-  extras: PageExtras;
+  extras: PageExtras; productId: string;
 };
 const EMPTY_PAGE: PageForm = {
   id: null, title: "", slug: "", originalSlug: "", body: "", buttonLabel: "", buttonUrl: "", imagePath: "", imageAlt: "", showImage: false, countdown: "", expiryAction: "disable_cta",
   expiryMessage: "This offer has ended.", formType: "none", formMode: "optional", fields: STANDARD_LEAD_FIELDS,
-  showPrice: false, priceOriginal: "", priceOffer: "", discountLabel: "", couponCode: "", couponNote: "", extras: DEFAULT_EXTRAS,
+  showPrice: false, priceOriginal: "", priceOffer: "", discountLabel: "", couponCode: "", couponNote: "", extras: DEFAULT_EXTRAS, productId: "",
 };
 const CONSENT = "I agree that my details may be used to fulfil this request and follow up about this offer.";
 const toLocalInput = (iso: string | null) => { if (!iso) return ""; const d = new Date(iso); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16); };
@@ -221,7 +221,7 @@ function pageToForm(p: any): PageForm {
     formType: cfg.mode === "none" || fields.length === 0 ? "none" : emailOnly ? "email" : "full", formMode: cfg.mode === "required" ? "required" : "optional",
     fields: emailOnly || fields.length === 0 ? STANDARD_LEAD_FIELDS : fields,
     showPrice: !!p.show_price, priceOriginal: paiseToRupees(p.price_original_paise), priceOffer: paiseToRupees(p.price_offer_paise),
-    discountLabel: p.discount_label ?? "", couponCode: p.coupon_code ?? "", couponNote: p.coupon_note ?? "", extras: cfg.extras ?? {},
+    discountLabel: p.discount_label ?? "", couponCode: p.coupon_code ?? "", couponNote: p.coupon_note ?? "", extras: cfg.extras ?? {}, productId: p.product_id ?? "",
   };
 }
 
@@ -267,7 +267,7 @@ function LeadFieldsEditor({ fields, onChange }: { fields: LeadField[]; onChange:
   );
 }
 
-function Pages({ orgId, items, leads }: { orgId: string; items: any[]; leads: Array<{ id: string; delivery_page_id: string; answers: Record<string, string>; created_at: string }> }) {
+function Pages({ orgId, items, leads, products }: { orgId: string; items: any[]; products: any[]; leads: Array<{ id: string; delivery_page_id: string; answers: Record<string, string>; created_at: string }> }) {
   const save = useSave(useServerFn(savePage), "Page saved");
   const del = useSave(useServerFn(deleteRevenueItem), "Deleted");
   const [f, setF] = useState<PageForm>(EMPTY_PAGE);
@@ -278,7 +278,17 @@ function Pages({ orgId, items, leads }: { orgId: string; items: any[]; leads: Ar
   const imageInput = useRef<HTMLInputElement>(null);
   const formTop = useRef<HTMLDivElement>(null);
   const origin = typeof window !== "undefined" ? window.location.origin : "";
-  const reset = () => { setF(EMPTY_PAGE); setImagePreview(""); };
+  const creatorKey = `autodm:creator-details:${orgId}`;
+  const savedCreator = (): PageExtras | null => { try { return JSON.parse(localStorage.getItem(creatorKey) ?? "null"); } catch { return null; } };
+  const withCreator = (p: PageForm): PageForm => { const c = savedCreator(); return c ? { ...p, extras: { ...p.extras, creatorName: c.creatorName, supportEmail: c.supportEmail } } : p; };
+  useEffect(() => { setF((v) => (v.id ? v : withCreator(v))); }, [orgId]);
+  const reset = () => { setF(withCreator(EMPTY_PAGE)); setImagePreview(""); };
+  const pickProduct = (id: string) => {
+    const pr = products.find((x) => x.id === id);
+    if (!pr) { setF({ ...f, productId: "" }); return; }
+    setF({ ...f, productId: id, showPrice: true, priceOffer: String(pr.price_paise / 100), title: f.title || pr.name,
+      buttonUrl: pr.manual_url || f.buttonUrl, buttonLabel: f.buttonLabel || "Buy now" });
+  };
   const startEdit = async (p: any) => {
     setF(pageToForm(p)); setImagePreview("");
     formTop.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -294,7 +304,7 @@ function Pages({ orgId, items, leads }: { orgId: string; items: any[]; leads: Ar
     imageAlt: f.imageAlt || null, countdownAt: f.countdown ? new Date(f.countdown).toISOString() : null, expiryAction: f.expiryAction, expiryMessage: f.expiryMessage || null,
     formConfig: { ...formConfig, fields: fields.map((x) => ({ ...x, label: x.label.trim() })) },
     showPrice: f.showPrice, priceOriginalPaise: price?.originalPaise ?? null, priceOfferPaise: price?.offerPaise ?? null,
-    discountLabel: f.discountLabel || null, couponCode: f.couponCode.trim() || null, couponNote: f.couponNote || null,
+    discountLabel: f.discountLabel || null, couponCode: f.couponCode.trim() || null, couponNote: f.couponNote || null, productId: f.productId || null,
   }, { onSuccess: reset });
   const uploadImage = async (file: File | undefined) => {
     if (!file) return;
@@ -336,6 +346,16 @@ function Pages({ orgId, items, leads }: { orgId: string; items: any[]; leads: Ar
           </div>
           <div className="space-y-2 rounded-lg border border-border p-3">
             <div className="flex items-center justify-between"><Label>Price &amp; offer</Label><Switch checked={f.showPrice} onCheckedChange={(v) => setF({ ...f, showPrice: v })} /></div>
+            <div>
+              <Label className="text-xs">Linked product (from Products tab)</Label>
+              <select className={area} value={f.productId} onChange={(e) => pickProduct(e.target.value)}>
+                <option value="">No product — fill price manually</option>
+                {products.map((pr) => <option key={pr.id} value={pr.id}>{pr.name} · ₹{pr.price_paise / 100}{pr.active ? "" : " (inactive)"}</option>)}
+              </select>
+              {products.length === 0 && <p className="mt-1 text-xs text-muted-foreground">No products yet — add one in the Products tab to auto-fill price and payment link.</p>}
+              {f.productId && (() => { const pr = products.find((x) => x.id === f.productId); return pr && f.priceOffer && rupeesToPaise(f.priceOffer) !== pr.price_paise
+                ? <p className="mt-1 text-xs text-destructive">Offer price (₹{f.priceOffer}) differs from the product price (₹{pr.price_paise / 100}) that buyers are charged.</p> : null; })()}
+            </div>
             {f.showPrice && <>
               <div className="grid grid-cols-2 gap-2">
                 <div><Label className="text-xs">Original price ₹ (crossed out)</Label><Input inputMode="decimal" placeholder="1999" value={f.priceOriginal} onChange={(e) => setF({ ...f, priceOriginal: e.target.value.replace(/[^\d.]/g, "") })} /></div>
@@ -347,7 +367,7 @@ function Pages({ orgId, items, leads }: { orgId: string; items: any[]; leads: Ar
                 <Input placeholder="Coupon code (e.g. SAVE50)" value={f.couponCode} onChange={(e) => setF({ ...f, couponCode: e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, "").slice(0, 30) })} />
                 <Input placeholder="Coupon note (e.g. Use at checkout)" value={f.couponNote} onChange={(e) => setF({ ...f, couponNote: e.target.value.slice(0, 120) })} />
               </div>
-              <p className="text-xs text-muted-foreground">Display only. The amount charged is your product price in the payment link — keep them the same.</p>
+              <p className="text-xs text-muted-foreground">Pick a product to fill the offer price and its payment link automatically. You can still edit everything.</p>
             </>}
           </div>
           <div className="space-y-2 rounded-lg border border-border p-3">
@@ -356,7 +376,7 @@ function Pages({ orgId, items, leads }: { orgId: string; items: any[]; leads: Ar
             {f.countdown && <><select className={area} value={f.expiryAction} onChange={(e) => setF({ ...f, expiryAction: e.target.value as typeof f.expiryAction })}><option value="disable_cta">Disable button when ended</option><option value="hide_cta">Hide button when ended</option></select><Input placeholder="Message after expiry" value={f.expiryMessage} onChange={(e) => setF({ ...f, expiryMessage: e.target.value })} /></>}
             <p className="text-xs text-muted-foreground">Uses one fixed deadline. It never restarts for each visitor.</p>
           </div>
-          <ExtrasEditor value={f.extras} onChange={(extras) => setF({ ...f, extras })} />
+          <ExtrasEditor value={f.extras} onChange={(extras) => setF({ ...f, extras })} onSaveCreator={() => { localStorage.setItem(creatorKey, JSON.stringify({ creatorName: f.extras.creatorName?.trim() ?? "", supportEmail: f.extras.supportEmail?.trim() ?? "" })); toast.success("Saved — new pages will be filled automatically"); }} />
           <div className="space-y-2 rounded-lg border border-border p-3">
             <Label>Lead form</Label>
             <div className="grid grid-cols-2 gap-2">
@@ -371,6 +391,9 @@ function Pages({ orgId, items, leads }: { orgId: string; items: any[]; leads: Ar
             {badLead && <p className="text-xs text-destructive">Give every field a question, and every dropdown at least one option.</p>}
             <p className="text-xs text-muted-foreground">Best default: two quick questions in DM, then an optional detailed form after the offer.</p>
           </div>
+          <div className="space-y-2 rounded-lg border border-border p-3">
+          <Label>Main button — where buyers go</Label>
+          <p className="text-xs text-muted-foreground">Paid product: paste your payment link (Razorpay / Cashfree / Instamojo payment page) or pick a product above. Free product: paste the download, course or group link.</p>
           <div className="grid grid-cols-2 gap-2">
             <div className="flex items-center gap-1">
               <Input placeholder="Button text" value={f.buttonLabel} onChange={(e) => setF({ ...f, buttonLabel: e.target.value })} />
@@ -382,7 +405,7 @@ function Pages({ orgId, items, leads }: { orgId: string; items: any[]; leads: Ar
               />
             </div>
             <div className="flex items-center gap-1">
-              <Input placeholder="https://button-link" value={f.buttonUrl} onChange={(e) => setF({ ...f, buttonUrl: e.target.value })} />
+              <Input placeholder="Payment or download link (https://…)" value={f.buttonUrl} onChange={(e) => setF({ ...f, buttonUrl: e.target.value })} />
               <FieldInfo
                 title="Button link"
                 how="Ye address us page ka hai jo button dabane par khulega. Poora link http:// ya https:// se shuru karo. Delivery page ka apna link (jaise origin/p/slug) bhi daal sakte ho, ya koi bhi website."
@@ -390,6 +413,7 @@ function Pages({ orgId, items, leads }: { orgId: string; items: any[]; leads: Ar
                 example={`https://yoursite.com/your-guide ya apna delivery page: ${origin}/p/free-guide`}
               />
             </div>
+          </div>
           </div>
           <div className="flex gap-2">
             <Button onClick={submit} disabled={save.isPending || badLead}>{f.id ? "Update page" : "Save page"}</Button>
@@ -514,12 +538,13 @@ function cleanExtras(x: PageExtras): PageExtras {
 
 const POLICY_LABELS = [["refund", "Refund policy"], ["fulfilment", "Fulfilment policy"], ["privacy", "Privacy policy"], ["terms", "Terms & conditions"]] as const;
 
-function ExtrasEditor({ value, onChange }: { value: PageExtras; onChange: (v: PageExtras) => void }) {
+function ExtrasEditor({ value, onChange, onSaveCreator }: { value: PageExtras; onChange: (v: PageExtras) => void; onSaveCreator: () => void }) {
   const d = value.deliverables ?? {}; const pol = value.policies ?? {};
   return (
     <div className="space-y-4 rounded-lg border border-border p-3">
       <div className="space-y-2">
-        <Label>Creator & support (optional)</Label>
+        <div className="flex items-center justify-between gap-2"><Label>Creator & support (optional)</Label>
+          <Button type="button" size="sm" variant="outline" disabled={!value.creatorName?.trim() && !value.supportEmail?.trim()} onClick={onSaveCreator}>Save for next pages</Button></div>
         <div className="grid gap-2 sm:grid-cols-2">
           <Input placeholder="Creator name (e.g. Techaasvik)" maxLength={80} value={value.creatorName ?? ""} onChange={(e) => onChange({ ...value, creatorName: e.target.value })} />
           <Input type="email" placeholder="Support email" maxLength={120} value={value.supportEmail ?? ""} onChange={(e) => onChange({ ...value, supportEmail: e.target.value })} />
