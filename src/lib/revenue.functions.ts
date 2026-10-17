@@ -98,16 +98,22 @@ export const savePage = createServerFn({ method: "POST" })
     priceOfferPaise: z.number().int().min(0).max(100_000_000).nullable().default(null), discountLabel: z.string().trim().max(40).nullable().default(null),
     couponCode: z.string().trim().toUpperCase().regex(/^[A-Z0-9-]{1,30}$/, "Coupon code: letters, numbers or - only").nullable().default(null),
     couponNote: z.string().trim().max(120).nullable().default(null), productId: z.string().uuid().nullable().default(null),
+    couponCampaignId: z.string().uuid().nullable().default(null), otpRequired: z.boolean().default(false),
   }).parse(d))
   .handler(async ({ data, context }) => {
     if (data.productId) {
       const { data: pr } = await (context as Ctx).supabase.from("revenue_products").select("id").eq("id", data.productId).eq("organization_id", data.organizationId).maybeSingle();
       if (!pr) throw new Error("Product not found in this workspace");
     }
+    if (data.couponCampaignId) {
+      const { data: cc } = await (context as Ctx).supabase.from("coupon_campaigns").select("id").eq("id", data.couponCampaignId).eq("organization_id", data.organizationId).maybeSingle();
+      if (!cc) throw new Error("Coupon campaign not found in this workspace");
+    }
     const row = { product_id: data.productId, organization_id: data.organizationId, slug: data.slug, title: data.title, body: data.body, button_label: data.buttonLabel, button_url: data.buttonUrl, active: data.active,
       image_path: data.imagePath, show_image: data.showImage, image_alt: data.imageAlt, countdown_at: data.countdownAt, expiry_action: data.expiryAction, expiry_message: data.expiryMessage,
       form_config: data.formConfig, show_price: data.showPrice, price_original_paise: data.priceOriginalPaise, price_offer_paise: data.priceOfferPaise,
-      discount_label: data.discountLabel, coupon_code: data.couponCode, coupon_note: data.couponNote };
+      discount_label: data.discountLabel, coupon_code: data.couponCode, coupon_note: data.couponNote,
+      coupon_campaign_id: data.couponCampaignId, otp_required: data.otpRequired };
     const q = (context as Ctx).supabase.from("delivery_pages");
     if (data.id) {
       const { error } = await q.update(row).eq("id", data.id).eq("organization_id", data.organizationId);
@@ -125,9 +131,12 @@ export const saveCampaign = createServerFn({ method: "POST" })
     organizationId: org, id: z.string().uuid().optional(), name: z.string().trim().min(1).max(80),
     prefix: z.string().trim().toUpperCase().regex(/^[A-Z0-9]{2,12}$/), discountLabel: z.string().trim().min(1).max(80),
     maxCodes: z.number().int().min(1).max(100000), expiresAt: z.string().datetime().nullable(), active: z.boolean(),
+    kind: z.enum(["dm_unique", "store_code"]).default("dm_unique"),
+    storeCode: z.string().trim().toUpperCase().regex(/^[A-Z0-9-]{2,30}$/, "Store code: letters, numbers or - only").nullable().default(null),
   }).parse(d))
   .handler(async ({ data, context }) => {
-    const row = { organization_id: data.organizationId, name: data.name, prefix: data.prefix, discount_label: data.discountLabel, max_codes: data.maxCodes, expires_at: data.expiresAt, active: data.active };
+    const row = { organization_id: data.organizationId, name: data.name, prefix: data.prefix, discount_label: data.discountLabel, max_codes: data.maxCodes, expires_at: data.expiresAt, active: data.active,
+      kind: data.kind, store_code: data.kind === "store_code" ? (data.storeCode ?? data.prefix) : null };
     const q = (context as Ctx).supabase.from("coupon_campaigns");
     if (data.id) {
       const { error } = await q.update(row).eq("id", data.id).eq("organization_id", data.organizationId);
