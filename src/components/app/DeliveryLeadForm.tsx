@@ -103,6 +103,28 @@ export function LeadFields({ form, standalone }: { form: ReturnType<typeof useLe
         : <Input id={`lead-${field.key}`} type={field.type === "phone" ? "tel" : field.type === "email" ? "email" : "text"} inputMode={field.type === "pincode" || field.type === "phone" ? "numeric" : undefined}
             maxLength={field.type === "pincode" ? 6 : 200} value={answers[field.key] ?? ""} onChange={(e) => setAnswers({ ...answers, [field.key]: e.target.value })} />}
       {errors[field.key] && <p className="text-xs text-destructive">{errors[field.key]}</p>}
+      {form.otpNeeded && field.key === form.phoneKey && !form.otp.verified && (
+        <div className="space-y-2 rounded-lg border border-primary/30 bg-primary/5 p-3">
+          {!form.otp.id ? (
+            <Button type="button" size="sm" variant="outline" className="w-full" disabled={form.otp.busy} onClick={() => void form.sendOtp()}>
+              <ShieldCheck className="size-4" /> {form.otp.busy ? "Sending…" : "Verify this number on WhatsApp"}
+            </Button>
+          ) : (
+            <div className="flex gap-2">
+              <Input inputMode="numeric" maxLength={6} placeholder="6-digit code" value={form.otp.code}
+                onChange={(e) => form.setOtp({ ...form.otp, code: e.target.value.replace(/\D/g, "").slice(0, 6) })} />
+              <Button type="button" size="sm" disabled={form.otp.busy || form.otp.code.length !== 6} onClick={() => void form.verifyOtp()}>
+                {form.otp.busy ? "Checking…" : "Verify"}
+              </Button>
+            </div>
+          )}
+          {form.otp.id && !form.otp.verified && <button type="button" className="text-xs text-primary underline" onClick={() => void form.sendOtp()}>Resend code</button>}
+          {form.otp.error && <p className="text-xs text-destructive">{form.otp.error}</p>}
+        </div>
+      )}
+      {form.otpNeeded && field.key === form.phoneKey && form.otp.verified && (
+        <p className="flex items-center gap-1.5 text-xs font-medium text-success"><CheckCircle2 className="size-3.5" /> Phone number verified on WhatsApp</p>
+      )}
     </div>)}
     {form.consent && <p className="text-xs text-muted-foreground">{form.consent}</p>}
     {form.note && <p className="text-sm text-muted-foreground">{form.note}</p>}
