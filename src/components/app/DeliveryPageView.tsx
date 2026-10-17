@@ -33,6 +33,16 @@ function PriceBox({ price }: { price: PagePrice }) {
   );
 }
 
+function TrustLines() {
+  return (
+    <ul className="grid gap-1.5 border-t border-border pt-3 text-xs text-muted-foreground">
+      <li className="flex items-center gap-2"><ShieldCheck className="size-3.5 text-primary" /> Secure checkout & delivery</li>
+      <li className="flex items-center gap-2"><CheckCircle2 className="size-3.5 text-primary" /> Instant access after you continue</li>
+      <li className="flex items-center gap-2"><Clock3 className="size-3.5 text-primary" /> Access again anytime with your email</li>
+    </ul>
+  );
+}
+
 function Inline({ text }: { text: string }) {
   return <>{inlineParts(text).map((p, i) => p.bold ? <strong key={i} className="font-semibold text-foreground">{p.text}</strong> : <Fragment key={i}>{p.text}</Fragment>)}</>;
 }
@@ -96,6 +106,8 @@ export function DeliveryPageView({ title, body, buttonLabel, buttonHref, imageUr
           {intro && <p className="text-pretty text-base text-muted-foreground"><Inline text={intro} /></p>}
           {content.map((b, i) => {
             if (b.t === "faq") return null;
+            // The FAQ section renders its own heading below; hide duplicate headings from the body.
+            if ((b.t === "h1" || b.t === "h2" || b.t === "h3") && /frequently\s*asked|^faq\b/i.test(b.text.trim())) return null;
             if (b.t === "h1" || b.t === "h2") return <h2 key={i} className="pt-3 text-xl font-semibold tracking-tight text-foreground"><Inline text={b.text} /></h2>;
             if (b.t === "h3") return <h3 key={i} className="pt-2 text-lg font-semibold text-foreground"><Inline text={b.text} /></h3>;
             if (b.t === "quote") return <blockquote key={i} className="rounded-xl border-l-4 border-primary bg-primary/5 px-5 py-4 text-foreground"><Inline text={b.text} /></blockquote>;
@@ -106,7 +118,12 @@ export function DeliveryPageView({ title, body, buttonLabel, buttonHref, imageUr
             );
             return <p key={i} className="leading-relaxed text-muted-foreground"><Inline text={b.text} /></p>;
           })}
-          <LeadFields form={form} standalone={!cta} className="@3xl:hidden" />
+          {form.active && (
+            <div className="space-y-3 @3xl:hidden">
+              <LeadFields form={form} standalone={!cta} />
+              {cta && <div className="rounded-2xl border border-primary/20 bg-card p-4 text-card-foreground shadow-sm"><div className="[&_a]:w-full">{cta}</div><div className="mt-3"><TrustLines /></div></div>}
+            </div>
+          )}
           {faqs.length > 0 && (
             <div className="space-y-3 pt-4">
               <h2 className="text-xl font-semibold tracking-tight text-foreground">Frequently asked questions</h2>
@@ -167,11 +184,7 @@ export function DeliveryPageView({ title, body, buttonLabel, buttonHref, imageUr
             {price && <PriceBox price={price} />}
             <LeadFields form={form} standalone={!cta} className="hidden @3xl:block" />
             {cta && <div className="[&_a]:w-full">{cta}</div>}
-            <ul className="grid gap-1.5 border-t border-border pt-3 text-xs text-muted-foreground">
-              <li className="flex items-center gap-2"><ShieldCheck className="size-3.5 text-primary" /> Secure checkout & delivery</li>
-              <li className="flex items-center gap-2"><CheckCircle2 className="size-3.5 text-primary" /> Instant access after you continue</li>
-              <li className="flex items-center gap-2"><Clock3 className="size-3.5 text-primary" /> Access again anytime with your email</li>
-            </ul>
+            <TrustLines />
           </div>
         </aside>
       </div>
