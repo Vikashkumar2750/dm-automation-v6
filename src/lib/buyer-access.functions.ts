@@ -20,8 +20,8 @@ async function pageOrg(admin: any, s: string) {
 }
 
 async function hasLead(admin: any, orgId: string, mail: string) {
-  const { data } = await admin.from("delivery_page_leads").select("id").eq("organization_id", orgId).ilike("answers->>email", mail).limit(1);
-  return (data?.length ?? 0) > 0;
+  const { data } = await admin.from("delivery_page_leads").select("answers").eq("organization_id", orgId).ilike("answers->>email", mail).limit(50);
+  return (data ?? []).some((r: any) => !r.answers?._stage || r.answers._stage === "completed");
 }
 
 export const requestBuyerCode = createServerFn({ method: "POST" })
@@ -36,7 +36,12 @@ export const requestBuyerCode = createServerFn({ method: "POST" })
     const { count } = await supabaseAdmin.from("buyer_login_codes").select("id", { count: "exact", head: true })
       .eq("organization_id", orgId).eq("email", data.email).gte("created_at", since);
     if ((count ?? 0) >= 5) throw new Error("Too many codes requested. Try again in an hour.");
-    if (!(await hasLead(supabaseAdmin, orgId, data.email))) return { ok: true };
+    if (!(await hasLead(supabaseAdmin, orgId, data.email))) {
+      // Not a buyer yet: keep the email as a tagged sign-in lead, send nothing (no enumeration).
+      const { data: page } = await supabaseAdmin.from("delivery_pages").select("id").eq("slug", data.slug).maybeSingle();
+      if (page) await (await import("@/lib/revenue.functions")).upsertPartialLead(supabaseAdmin, orgId, page.id as string, { email: data.email }, "buyer_signin_attempt");
+      return { ok: true };
+    }
     const code = String(crypto.getRandomValues(new Uint32Array(1))[0]! % 1_000_000).padStart(6, "0");
     await supabaseAdmin.from("buyer_login_codes").insert({ organization_id: orgId, email: data.email, code_hash: await sha256(`${orgId}:${data.email}:${code}`), expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString() });
     await sendPlainEmail(data.email, `Your sign-in code: ${code}`, `Your code is ${code}\n\nIt works for 10 minutes. If you didn't ask for it, ignore this email.`);
@@ -68,11 +73,12 @@ export const getBuyerLibrary = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: s } = await supabaseAdmin.from("buyer_sessions").select("organization_id, email, expires_at").eq("token_hash", await sha256(data.token)).maybeSingle();
     if (!s || new Date(s.expires_at).getTime() < Date.now()) return null;
-    const { data: leads } = await supabaseAdmin.from("delivery_page_leads").select("created_at, delivery_pages!inner(title, slug, active, button_url, image_path, show_image)")
+    const { data: leads } = await supabaseAdmin.from("delivery_page_leads").select("created_at, answers, delivery_pages!inner(title, slug, active, button_url, image_path, show_image)")
       .eq("organization_id", s.organization_id).ilike("answers->>email", s.email).order("created_at", { ascending: false }).limit(50);
     const seen = new Set<string>();
     const items = (leads ?? []).flatMap((l: any) => {
       const p = Array.isArray(l.delivery_pages) ? l.delivery_pages[0] : l.delivery_pages;
+      if (l.answers?._stage && l.answers._stage !== "completed") return [];
       if (!p?.active || seen.has(p.slug)) return [];
       seen.add(p.slug);
       return [{ title: p.title as string, slug: p.slug as string, at: l.created_at as string, hasFile: !!p.button_url,
