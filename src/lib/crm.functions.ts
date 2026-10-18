@@ -229,3 +229,46 @@ export const deleteBroadcast = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+/** AI drafts one stage-aware follow-up per selected delivery-page lead (member RLS read, drafts only — nothing is sent). */
+export const draftLeadFollowUps = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({
+    organizationId: org,
+    leadIds: z.array(z.string().uuid()).min(1).max(20),
+    channel: z.enum(["whatsapp", "email"]),
+    tone: z.enum(["helpful", "offer", "short"]),
+  }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context as Ctx;
+    const { data: rows, error } = await supabase.from("delivery_page_leads")
+      .select("id, answers, delivery_pages(title, slug)")
+      .eq("organization_id", data.organizationId).in("id", data.leadIds);
+    if (error) throw new Error(error.message);
+    type L = { id: string; name: string; email: string; phone: string; stage: string; page: string; slug: string };
+    const leads: L[] = (rows ?? []).map((r: any) => {
+      const a = (r.answers ?? {}) as Record<string, unknown>;
+      return { id: r.id as string, name: String(a["name"] ?? ""), email: String(a["email"] ?? ""), phone: String(a["phone"] ?? ""),
+        stage: String(a["_stage"] ?? "completed"), page: r.delivery_pages?.title ?? "our page", slug: r.delivery_pages?.slug ?? "" };
+    });
+    if (leads.length === 0) throw new Error("No leads found");
+    const { runModel } = await import("@/lib/ai.functions");
+    const schema = z.object({ drafts: z.array(z.object({ id: z.string(), subject: z.string().max(150).optional().default(""), message: z.string().max(1200) })) });
+    const system = `You write short, warm, personal follow-up messages for a creator to send to people who visited their delivery page.
+Match the lead's stage:
+- intent_started: they started the form but did not submit — gently ask if something stopped them and invite them to finish.
+- otp_pending: they did not finish WhatsApp code verification — offer help and say they can try again.
+- buyer_signin_attempt: they tried to sign in to access purchases — offer help getting access.
+- completed: they finished — thank them, give a quick tip, light next step.
+Tone: ${data.tone === "offer" ? "mention a limited-time reason to act now, without inventing prices or discounts" : data.tone === "short" ? "very short, 1-2 sentences" : "helpful and supportive"}.
+Channel: ${data.channel === "email" ? "email: include a subject line" : "WhatsApp chat: no subject, casual, at most one emoji"}.
+Use the person's first name if known. Never invent facts. Write in the same language a creator in India would use in English. Return one draft per lead id.`;
+    const prompt = JSON.stringify(leads.map(({ id, name, stage, page }) => ({ id, name, stage, page })));
+    const out = await runModel(prompt, system, schema, userId, `{"drafts":[{"id":"lead id","subject":"email subject or empty","message":"text"}]}`);
+    return {
+      drafts: leads.map((l) => {
+        const d = out.drafts.find((x) => x.id === l.id);
+        return { id: l.id, name: l.name, email: l.email, phone: l.phone, stage: l.stage, page: l.page, subject: d?.subject ?? "", message: d?.message ?? "" };
+      }),
+    };
+  });
