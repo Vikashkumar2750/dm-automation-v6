@@ -5,7 +5,7 @@ import { CheckCircle2, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { sendLeadOtp, submitOfferForm, submitPageForm, verifyLeadOtpCode } from "@/lib/revenue.functions";
+import { captureLeadProgress, sendLeadOtp, submitOfferForm, submitPageForm, verifyLeadOtpCode } from "@/lib/revenue.functions";
 import { validateLeadValue, type LeadField } from "@/lib/delivery-page";
 
 export type LeadFormConfig = { mode: "none" | "optional" | "required"; consent?: string; fields?: LeadField[]; extras?: PageExtras; otpRequired?: boolean };
@@ -22,6 +22,7 @@ export function useLeadForm(src: LeadFormSource | null | undefined) {
   const submitPage = useServerFn(submitPageForm);
   const sendOtpFn = useServerFn(sendLeadOtp);
   const verifyOtpFn = useServerFn(verifyLeadOtpCode);
+  const captureFn = useServerFn(captureLeadProgress);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [state, setState] = useState<"idle" | "saving" | "done">("idle");
@@ -31,6 +32,12 @@ export function useLeadForm(src: LeadFormSource | null | undefined) {
   const active = fields.length > 0;
   const phoneField = fields.find((f) => f.type === "phone");
   const otpNeeded = !!src?.config.otpRequired && !!phoneField && !src.preview;
+
+  /** Silent background save of email/phone so drop-offs are still captured. Never shows errors. */
+  const capture = (stage: "intent_started" | "otp_pending", extra?: Record<string, string>) => {
+    if (!src || src.preview || state === "done") return;
+    void captureFn({ data: { ...(src.slug ? { slug: src.slug } : { token: src.token! }), answers: { ...answers, ...extra }, stage } }).catch(() => {});
+  };
 
   const sendOtp = async () => {
     if (!src || !phoneField) return;
@@ -42,6 +49,7 @@ export function useLeadForm(src: LeadFormSource | null | undefined) {
       const r = await sendOtpFn({ data: { ...(src.slug ? { slug: src.slug } : { token: src.token! }), phone } });
       setOtp({ id: r.verificationId, verified: false, busy: false, error: "", code: "" });
       setNote("Code sent on WhatsApp — check your messages.");
+      capture("otp_pending");
     } catch (e) {
       setOtp({ ...otp, busy: false, error: e instanceof Error ? e.message : "Could not send the code" });
     }
@@ -86,7 +94,7 @@ export function useLeadForm(src: LeadFormSource | null | undefined) {
     return true;
   };
 
-  return { active, answers, setAnswers, errors, state, note, run, fields, consent: src?.config.consent, otpNeeded, otp, setOtp, sendOtp, verifyOtp, phoneKey: phoneField?.key };
+  return { active, answers, setAnswers, errors, state, note, run, capture, fields, consent: src?.config.consent, otpNeeded, otp, setOtp, sendOtp, verifyOtp, phoneKey: phoneField?.key };
 }
 
 /** Form fields only — the page's main button submits. With `standalone`, shows its own Submit button. */
@@ -101,7 +109,8 @@ export function LeadFields({ form, standalone, className = "" }: { form: ReturnT
       {field.type === "choice"
         ? <select id={`lead-${field.key}`} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={answers[field.key] ?? ""} onChange={(e) => setAnswers({ ...answers, [field.key]: e.target.value })}><option value="">Choose…</option>{field.options.map((o) => <option key={o}>{o}</option>)}</select>
         : <Input id={`lead-${field.key}`} type={field.type === "phone" ? "tel" : field.type === "email" ? "email" : "text"} inputMode={field.type === "pincode" || field.type === "phone" ? "numeric" : undefined}
-            maxLength={field.type === "pincode" ? 6 : 200} value={answers[field.key] ?? ""} onChange={(e) => setAnswers({ ...answers, [field.key]: e.target.value })} />}
+            maxLength={field.type === "pincode" ? 6 : 200} value={answers[field.key] ?? ""} onChange={(e) => setAnswers({ ...answers, [field.key]: e.target.value })}
+            onBlur={field.type === "email" || field.type === "phone" ? () => form.capture("intent_started") : undefined} />}
       {errors[field.key] && <p className="text-xs text-destructive">{errors[field.key]}</p>}
       {form.otpNeeded && field.key === form.phoneKey && !form.otp.verified && (
         <div className="space-y-2 rounded-lg border border-primary/30 bg-primary/5 p-3">
