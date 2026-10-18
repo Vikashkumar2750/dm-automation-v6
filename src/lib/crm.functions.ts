@@ -14,20 +14,23 @@ export const getCrm = createServerFn({ method: "GET" })
   .inputValidator((d: unknown) => z.object({ organizationId: org }).parse(d))
   .handler(async ({ data, context }) => {
     const sb = (context as Ctx).supabase;
-    const [tags, profiles, segments, leads] = await Promise.all([
+    const [tags, profiles, segments, leads, pages] = await Promise.all([
       sb.from("contact_tags").select("id, platform, external_user_id, tag").eq("organization_id", data.organizationId).limit(5000),
       sb.from("contact_profiles").select("platform, external_user_id, email, phone, notes, custom_fields").eq("organization_id", data.organizationId).limit(5000),
       sb.from("contact_segments").select("id, name, filter").eq("organization_id", data.organizationId).order("created_at"),
-      sb.from("delivery_page_leads").select("id, answers, created_at, delivery_pages(title, slug)").eq("organization_id", data.organizationId).order("created_at", { ascending: false }).limit(2000),
+      sb.from("delivery_page_leads").select("id, delivery_page_id, answers, created_at").eq("organization_id", data.organizationId).order("created_at", { ascending: false }).limit(2000),
+      sb.from("delivery_pages").select("id, title, slug").eq("organization_id", data.organizationId).limit(1000),
     ]);
+    if (leads.error) console.error("getCrm leads", leads.error.message);
+    const pageById = new Map(((pages.data ?? []) as Array<{ id: string; title: string; slug: string }>).map((p) => [p.id, p]));
     return {
       tags: (tags.data ?? []) as Array<{ id: string; platform: string; external_user_id: string; tag: string }>,
       profiles: (profiles.data ?? []) as Array<{ platform: string; external_user_id: string; email: string | null; phone: string | null; notes: string | null; custom_fields: Record<string, string> }>,
-      pageLeads: ((leads.data ?? []) as Array<{ id: string; answers: Record<string, unknown> | null; created_at: string; delivery_pages: { title: string; slug: string } | null }>).map((l) => ({
+      pageLeads: ((leads.data ?? []) as Array<{ id: string; delivery_page_id: string; answers: Record<string, unknown> | null; created_at: string }>).map((l) => ({
         id: l.id,
-        pageTitle: l.delivery_pages?.title ?? "Deleted page",
-        pageSlug: l.delivery_pages?.slug ?? "",
-        answers: Object.fromEntries(Object.entries(l.answers ?? {}).map(([k, v]) => [k, String(v ?? "")])),
+        pageTitle: pageById.get(l.delivery_page_id)?.title ?? "Deleted page",
+        pageSlug: pageById.get(l.delivery_page_id)?.slug ?? "",
+        answers: Object.fromEntries(Object.entries(l.answers ?? {}).map(([k, v]) => [k, typeof v === "string" ? v : v == null ? "" : JSON.stringify(v)])),
         createdAt: l.created_at,
       })) as import("@/lib/crm").PageLead[],
       segments: (segments.data ?? []) as Array<{ id: string; name: string; filter: { tag?: string; platform?: "instagram" | "facebook" | "youtube"; hasEmail?: boolean; hasPhone?: boolean; search?: string } }>,
