@@ -490,13 +490,13 @@ function Pages({ orgId, items, leads, products, campaigns, whatsappOtp }: { orgI
           <div key={p.id} className={`mb-2 flex items-center justify-between gap-2 rounded-lg border p-3 text-sm ${f.id === p.id ? "border-primary" : "border-border"}`}>
             <div className="min-w-0"><p className="font-medium">{p.title}</p><p className="truncate text-muted-foreground">{origin}/p/{p.slug} · {p.views} views{n ? ` · ${n} leads` : ""}</p></div>
             <div className="flex">
-              {n > 0 && <Button size="icon" variant="ghost" aria-label="View leads" onClick={() => setLeadsFor(leadsFor === p.id ? null : p.id)}><Users className="size-4" /></Button>}
+              {<Button size="icon" variant="ghost" aria-label="View leads" title={`View leads (${n})`} onClick={() => setLeadsFor(leadsFor === p.id ? null : p.id)}><Users className="size-4" /></Button>}
               <Button size="icon" variant="ghost" aria-label="Edit page" onClick={() => void startEdit(p)}><Pencil className="size-4" /></Button>
               <Button size="icon" variant="ghost" aria-label="Copy link" onClick={() => { navigator.clipboard.writeText(`${origin}/p/${p.slug}`); toast.success("Link copied"); }}><Copy className="size-4" /></Button>
               <Button size="icon" variant="ghost" aria-label="Delete" onClick={() => { if (f.id === p.id) reset(); del.mutate({ organizationId: orgId, id: p.id, table: "delivery_pages" }); }}><Trash2 className="size-4" /></Button>
             </div>
           </div>); })}
-        {leadsFor && <div className="mt-3 max-h-72 space-y-2 overflow-auto rounded-lg border border-border p-3">
+        {leadsFor && <div className="mt-3 max-h-72 space-y-2 overflow-auto rounded-lg border border-border p-3">{pageLeads.length === 0 && <p className="text-xs text-muted-foreground">No leads on this page yet. Leads also show in Contacts → Delivery page leads.</p>}
           <p className="text-sm font-medium">Leads ({pageLeads.length})</p>
           {pageLeads.map((l) => { const st = STAGE_BADGE[l.answers["_stage"] ?? "completed"] ?? STAGE_BADGE["completed"]!; return <div key={l.id} className="rounded-md bg-muted p-2 text-xs"><div className="flex items-center justify-between gap-2"><p className="text-muted-foreground">{new Date(l.answers["_updated_at"] ?? l.created_at).toLocaleString()}</p><span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${st.cls}`}>{st.label}</span></div>{Object.entries(l.answers).filter(([k]) => !k.startsWith("_")).map(([k, v]) => <p key={k}><span className="text-muted-foreground">{k}:</span> {v}</p>)}</div>; })}
         </div>}
