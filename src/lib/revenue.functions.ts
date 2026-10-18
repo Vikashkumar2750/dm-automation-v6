@@ -300,7 +300,7 @@ export const submitPageForm = createServerFn({ method: "POST" })
     await (await import("@/lib/email-check.server")).assertRealEmails(clean, config.fields ?? []);
     await assertOtpIfRequired(supabaseAdmin, page.organization_id as string, `page:${data.slug}`, !!page.otp_required, config.fields ?? [], clean);
     const tagged: Record<string, string> = { ...clean };
-    for (const f of config.fields ?? []) { if (f.type === "email" && clean[f.key]) tagged.email = clean[f.key]!.toLowerCase(); if (f.type === "phone" && clean[f.key]) tagged.phone = clean[f.key]!; }
+    for (const f of config.fields ?? []) { if (f.type === "email" && clean[f.key]) tagged["email"] = clean[f.key]!.toLowerCase(); if (f.type === "phone" && clean[f.key]) tagged["phone"] = clean[f.key]!; }
     const leadId = await upsertPartialLead(supabaseAdmin, page.organization_id as string, page.id as string, tagged, "completed");
     if (!leadId) {
       const { error } = await supabaseAdmin.from("delivery_page_leads").insert({ organization_id: page.organization_id, delivery_page_id: page.id, answers: { ...tagged, _stage: "completed" } });
@@ -427,8 +427,8 @@ function captureValues(fields: Array<{ key: string; type: string }>, answers: Re
     if (!v) continue;
     if (validateLeadValue({ ...(f as LeadField), required: false }, v)) continue;
     out[f.key] = v;
-    if (f.type === "email") out.email = v.toLowerCase();
-    if (f.type === "phone") out.phone = v;
+    if (f.type === "email") out["email"] = v.toLowerCase();
+    if (f.type === "phone") out["phone"] = v;
   }
   return out;
 }
