@@ -386,3 +386,95 @@ export const verifyLeadOtpCode = createServerFn({ method: "POST" })
     if ("error" in result) throw new Error(result.error);
     return { ok: true };
   });
+
+// ------------------------------------------------------------ drop-off capture
+
+/** Stages a delivery-page lead can sit in. Rows without `_stage` are older completed submissions. */
+export const LEAD_STAGES = ["intent_started", "otp_pending", "buyer_signin_attempt", "completed"] as const;
+export type LeadStage = (typeof LEAD_STAGES)[number];
+const STAGE_RANK: Record<LeadStage, number> = { buyer_signin_attempt: 0, intent_started: 1, otp_pending: 2, completed: 3 };
+
+/** Higher stage wins; a lead never moves backwards (e.g. completed → intent_started). */
+export function nextLeadStage(current: string | null | undefined, incoming: LeadStage): LeadStage {
+  const cur = (current ?? "completed") as LeadStage;
+  if (!(cur in STAGE_RANK)) return incoming;
+  return STAGE_RANK[incoming] >= STAGE_RANK[cur] ? incoming : cur;
+}
+
+/** Saves or updates one partial lead per email/phone per page (24h window). Server-only helper. */
+export async function upsertPartialLead(admin: any, organizationId: string, pageId: string, answers: Record<string, string>, stage: LeadStage) {
+  const mail = (answers.email ?? "").toLowerCase();
+  const phone = answers.phone ?? "";
+  if (!mail && !phone) return null;
+  const { data: rows } = await admin.from("delivery_page_leads").select("id, answers")
+    .eq("delivery_page_id", pageId).gte("created_at", new Date(Date.now() - 86400_000).toISOString())
+    .order("created_at", { ascending: false }).limit(100);
+  const match = (rows ?? []).find((r: any) => {
+    const a = (r.answers ?? {}) as Record<string, string>;
+    if (!a._stage || a._stage === "completed") return false;
+    return (mail && (a.email ?? "").toLowerCase() === mail) || (phone && a.phone === phone);
+  });
+  const now = new Date().toISOString();
+  if (match) {
+    const prev = match.answers as Record<string, string>;
+    const merged = { ...prev, ...answers, _stage: nextLeadStage(prev._stage, stage), _updated_at: now };
+    await admin.from("delivery_page_leads").update({ answers: merged }).eq("id", match.id);
+    return match.id as string;
+  }
+  const { data: ins } = await admin.from("delivery_page_leads").insert({ organization_id: organizationId, delivery_page_id: pageId,
+    answers: { ...answers, _stage: stage, _updated_at: now } }).select("id").maybeSingle();
+  return (ins?.id as string | undefined) ?? null;
+}
+
+/** Keeps only valid email/phone values (by field type) so junk never lands in leads. */
+function captureValues(fields: Array<{ key: string; type: string }>, answers: Record<string, string>) {
+  const out: Record<string, string> = {};
+  for (const f of fields) {
+    const v = String(answers[f.key] ?? "").trim();
+    if (!v) continue;
+    if (validateLeadValue({ ...(f as LeadField), required: false }, v)) continue;
+    out[f.key] = v;
+    if (f.type === "email") out.email = v.toLowerCase();
+    if (f.type === "phone") out.phone = v;
+  }
+  return out;
+}
+
+/** Public: silent capture while a visitor types (before submit) or after a WhatsApp code was sent. */
+export const captureLeadProgress = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => z.object({
+    slug: z.string().regex(/^[a-z0-9-]{3,60}$/).optional(), token: z.string().uuid().optional(),
+    answers: z.record(z.string(), z.string().trim().max(500)),
+    stage: z.enum(["intent_started", "otp_pending"]),
+  }).parse(d))
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    if (data.slug) {
+      const { data: page } = await supabaseAdmin.from("delivery_pages").select("id, organization_id, form_config").eq("slug", data.slug).eq("active", true).maybeSingle();
+      const config = page?.form_config as FormConfig | null;
+      if (!page || !config || config.mode === "none") return { ok: false };
+      const clean = captureValues(config.fields ?? [], data.answers);
+      if (!clean.email && !clean.phone) return { ok: false };
+      await upsertPartialLead(supabaseAdmin, page.organization_id as string, page.id as string, clean, data.stage);
+      return { ok: true };
+    }
+    if (data.token) {
+      const { data: link } = await supabaseAdmin.from("payment_links")
+        .select("organization_id, platform, external_user_id, delivery_pages!inner(active, form_config)").eq("offer_token", data.token).maybeSingle();
+      const page = Array.isArray(link?.delivery_pages) ? link?.delivery_pages[0] : link?.delivery_pages;
+      const config = page?.form_config as FormConfig | null;
+      if (!link || !page?.active || !config) return { ok: false };
+      const clean = captureValues(config.fields ?? [], data.answers);
+      if (!clean.email && !clean.phone) return { ok: false };
+      const key = { organization_id: link.organization_id, platform: link.platform, external_user_id: link.external_user_id };
+      const { data: current } = await supabaseAdmin.from("contact_profiles").select("email, phone, custom_fields").match(key).maybeSingle();
+      const cf = (current?.custom_fields as Record<string, unknown> | null) ?? {};
+      await supabaseAdmin.from("contact_profiles").upsert({ ...key,
+        email: current?.email || (clean.email ?? null), phone: current?.phone || (clean.phone ?? null),
+        custom_fields: { ...cf, ...clean, delivery_stage: nextLeadStage(cf.delivery_stage as string | undefined ?? "buyer_signin_attempt", data.stage) },
+        updated_at: new Date().toISOString(),
+      }, { onConflict: "organization_id,platform,external_user_id" });
+      return { ok: true };
+    }
+    return { ok: false };
+  });
