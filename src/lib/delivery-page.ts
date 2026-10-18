@@ -349,3 +349,16 @@ export const DEFAULT_DISCLAIMER = "Techaasvik shall not be held liable for any c
 
 /** New pages start with standard policies and the platform disclaimer filled in (all editable). */
 export const DEFAULT_EXTRAS: PageExtras = { policies: { ...DEFAULT_POLICIES }, disclaimer: DEFAULT_DISCLAIMER };
+
+/** Stages a delivery-page lead can sit in. Rows without `_stage` are older completed submissions. */
+export const LEAD_STAGES = ["intent_started", "otp_pending", "buyer_signin_attempt", "completed"] as const;
+export type LeadStage = (typeof LEAD_STAGES)[number];
+const STAGE_RANK: Record<LeadStage, number> = { buyer_signin_attempt: 0, intent_started: 1, otp_pending: 2, completed: 3 };
+
+/** Higher stage wins; a lead never moves backwards (e.g. completed → intent_started). */
+export function nextLeadStage(current: string | null | undefined, incoming: LeadStage): LeadStage {
+  const cur = (current ?? "completed") as LeadStage;
+  if (!(cur in STAGE_RANK)) return incoming;
+  return STAGE_RANK[incoming] >= STAGE_RANK[cur] ? incoming : cur;
+}
+

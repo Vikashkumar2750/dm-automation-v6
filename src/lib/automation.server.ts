@@ -935,7 +935,7 @@ async function deliverDm(
   }
 
   const prefix = rule.action === "comment_private_reply" ? "[private reply] " : "";
-  const summary = link ? `${text}\n[${buttonLabel}] ${link}` : text;
+  const summary = link ? [`${text}\n[${buttonLabel}] ${link}`, ...extras.map((b) => `[${b.label}] ${b.url}`)].join("\n") : text;
   await recordOutbound(admin, ctx, rule, `${prefix}${summary}`, sent.id ?? null);
   await log(admin, ctx, rule.id, "sent", rule.action);
   return true;
