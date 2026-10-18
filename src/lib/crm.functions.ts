@@ -245,9 +245,12 @@ export const draftLeadFollowUps = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context as Ctx;
     const { data: rows, error } = await supabase.from("delivery_page_leads")
-      .select("id, answers, delivery_pages(title, slug)")
+      .select("id, answers, delivery_page_id")
       .eq("organization_id", data.organizationId).in("id", data.leadIds);
     if (error) throw new Error(error.message);
+    const { data: pg } = await supabase.from("delivery_pages").select("id, title, slug").eq("organization_id", data.organizationId);
+    const pm = new Map(((pg ?? []) as any[]).map((p) => [p.id, p]));
+    for (const r of (rows ?? []) as any[]) r.delivery_pages = pm.get(r.delivery_page_id) ?? null;
     type L = { id: string; name: string; email: string; phone: string; stage: string; page: string; slug: string };
     const leads: L[] = (rows ?? []).map((r: any) => {
       const a = (r.answers ?? {}) as Record<string, unknown>;
