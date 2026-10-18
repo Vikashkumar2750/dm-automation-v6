@@ -396,21 +396,21 @@ export const verifyLeadOtpCode = createServerFn({ method: "POST" })
 
 /** Saves or updates one partial lead per email/phone per page (24h window). Server-only helper. */
 export async function upsertPartialLead(admin: any, organizationId: string, pageId: string, answers: Record<string, string>, stage: LeadStage) {
-  const mail = (answers.email ?? "").toLowerCase();
-  const phone = answers.phone ?? "";
+  const mail = (answers["email"] ?? "").toLowerCase();
+  const phone = answers["phone"] ?? "";
   if (!mail && !phone) return null;
   const { data: rows } = await admin.from("delivery_page_leads").select("id, answers")
     .eq("delivery_page_id", pageId).gte("created_at", new Date(Date.now() - 86400_000).toISOString())
     .order("created_at", { ascending: false }).limit(100);
   const match = (rows ?? []).find((r: any) => {
     const a = (r.answers ?? {}) as Record<string, string>;
-    if (!a._stage || a._stage === "completed") return false;
-    return (mail && (a.email ?? "").toLowerCase() === mail) || (phone && a.phone === phone);
+    if (!a["_stage"] || a["_stage"] === "completed") return false;
+    return (mail && (a["email"] ?? "").toLowerCase() === mail) || (phone && a["phone"] === phone);
   });
   const now = new Date().toISOString();
   if (match) {
     const prev = match.answers as Record<string, string>;
-    const merged = { ...prev, ...answers, _stage: nextLeadStage(prev._stage, stage), _updated_at: now };
+    const merged = { ...prev, ...answers, _stage: nextLeadStage(prev["_stage"], stage), _updated_at: now };
     await admin.from("delivery_page_leads").update({ answers: merged }).eq("id", match.id);
     return match.id as string;
   }
@@ -447,7 +447,7 @@ export const captureLeadProgress = createServerFn({ method: "POST" })
       const config = page?.form_config as FormConfig | null;
       if (!page || !config || config.mode === "none") return { ok: false };
       const clean = captureValues(config.fields ?? [], data.answers);
-      if (!clean.email && !clean.phone) return { ok: false };
+      if (!clean["email"] && !clean["phone"]) return { ok: false };
       await upsertPartialLead(supabaseAdmin, page.organization_id as string, page.id as string, clean, data.stage);
       return { ok: true };
     }
@@ -458,13 +458,13 @@ export const captureLeadProgress = createServerFn({ method: "POST" })
       const config = page?.form_config as FormConfig | null;
       if (!link || !page?.active || !config) return { ok: false };
       const clean = captureValues(config.fields ?? [], data.answers);
-      if (!clean.email && !clean.phone) return { ok: false };
+      if (!clean["email"] && !clean["phone"]) return { ok: false };
       const key = { organization_id: link.organization_id, platform: link.platform, external_user_id: link.external_user_id };
       const { data: current } = await supabaseAdmin.from("contact_profiles").select("email, phone, custom_fields").match(key).maybeSingle();
       const cf = (current?.custom_fields as Record<string, unknown> | null) ?? {};
       await supabaseAdmin.from("contact_profiles").upsert({ ...key,
-        email: current?.email || (clean.email ?? null), phone: current?.phone || (clean.phone ?? null),
-        custom_fields: { ...cf, ...clean, delivery_stage: nextLeadStage(cf.delivery_stage as string | undefined ?? "buyer_signin_attempt", data.stage) },
+        email: current?.email || (clean["email"] ?? null), phone: current?.phone || (clean["phone"] ?? null),
+        custom_fields: { ...cf, ...clean, delivery_stage: nextLeadStage(cf["delivery_stage"] as string | undefined ?? "buyer_signin_attempt", data.stage) },
         updated_at: new Date().toISOString(),
       }, { onConflict: "organization_id,platform,external_user_id" });
       return { ok: true };

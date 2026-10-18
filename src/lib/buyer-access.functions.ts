@@ -21,7 +21,7 @@ async function pageOrg(admin: any, s: string) {
 
 async function hasLead(admin: any, orgId: string, mail: string) {
   const { data } = await admin.from("delivery_page_leads").select("answers").eq("organization_id", orgId).ilike("answers->>email", mail).limit(50);
-  return (data ?? []).some((r: any) => !r.answers?._stage || r.answers._stage === "completed");
+  return (data ?? []).some((r: any) => !r.answers?._stage || r.answers["_stage"] === "completed");
 }
 
 export const requestBuyerCode = createServerFn({ method: "POST" })
@@ -78,7 +78,7 @@ export const getBuyerLibrary = createServerFn({ method: "POST" })
     const seen = new Set<string>();
     const items = (leads ?? []).flatMap((l: any) => {
       const p = Array.isArray(l.delivery_pages) ? l.delivery_pages[0] : l.delivery_pages;
-      if (l.answers?._stage && l.answers._stage !== "completed") return [];
+      if (l.answers?._stage && l.answers["_stage"] !== "completed") return [];
       if (!p?.active || seen.has(p.slug)) return [];
       seen.add(p.slug);
       return [{ title: p.title as string, slug: p.slug as string, at: l.created_at as string, hasFile: !!p.button_url,

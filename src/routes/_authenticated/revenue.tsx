@@ -498,7 +498,7 @@ function Pages({ orgId, items, leads, products, campaigns, whatsappOtp }: { orgI
           </div>); })}
         {leadsFor && <div className="mt-3 max-h-72 space-y-2 overflow-auto rounded-lg border border-border p-3">
           <p className="text-sm font-medium">Leads ({pageLeads.length})</p>
-          {pageLeads.map((l) => { const st = STAGE_BADGE[l.answers._stage ?? "completed"] ?? STAGE_BADGE.completed!; return <div key={l.id} className="rounded-md bg-muted p-2 text-xs"><div className="flex items-center justify-between gap-2"><p className="text-muted-foreground">{new Date(l.answers._updated_at ?? l.created_at).toLocaleString()}</p><span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${st.cls}`}>{st.label}</span></div>{Object.entries(l.answers).filter(([k]) => !k.startsWith("_")).map(([k, v]) => <p key={k}><span className="text-muted-foreground">{k}:</span> {v}</p>)}</div>; })}
+          {pageLeads.map((l) => { const st = STAGE_BADGE[l.answers["_stage"] ?? "completed"] ?? STAGE_BADGE["completed"]!; return <div key={l.id} className="rounded-md bg-muted p-2 text-xs"><div className="flex items-center justify-between gap-2"><p className="text-muted-foreground">{new Date(l.answers["_updated_at"] ?? l.created_at).toLocaleString()}</p><span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${st.cls}`}>{st.label}</span></div>{Object.entries(l.answers).filter(([k]) => !k.startsWith("_")).map(([k, v]) => <p key={k}><span className="text-muted-foreground">{k}:</span> {v}</p>)}</div>; })}
         </div>}
       </Panel>
     </div>
