@@ -20,7 +20,7 @@ import { Sparkles } from "lucide-react";
 import { useTenant } from "@/hooks/useTenant";
 import { Pager, pageSlice } from "@/components/app/Pager";
 import { contactsToCsv, pageLeadsToCsv, extractContactInfo, matchesSegment, type CrmContact, type SegmentFilter } from "@/lib/crm";
-import { draftLeadFollowUps, addContactTag, deleteBroadcast, deleteSegment, getCrm, getOutreach, removeContactTag, saveContactProfile, saveNudgeSettings, saveSegment, saveSyncSettings, sendBroadcast } from "@/lib/crm.functions";
+import { setLeadFollowUp, draftLeadFollowUps, addContactTag, deleteBroadcast, deleteSegment, getCrm, getOutreach, removeContactTag, saveContactProfile, saveNudgeSettings, saveSegment, saveSyncSettings, sendBroadcast } from "@/lib/crm.functions";
 import { listConversations } from "@/lib/inbox.functions";
 
 export const Route = createFileRoute("/_authenticated/contacts")({
@@ -413,6 +413,12 @@ const LEAD_STAGE: Record<string, { label: string; tone: "success" | "warning" | 
   intent_started: { label: "Left form unsent", tone: "danger" },
   buyer_signin_attempt: { label: "Sign-in attempt", tone: "info" },
 };
+const FOLLOW: Record<string, { label: string; tone: "success" | "warning" | "info" | "neutral" }> = {
+  not_contacted: { label: "Not contacted", tone: "neutral" },
+  sent: { label: "Follow-up sent", tone: "info" },
+  replied: { label: "Replied", tone: "success" },
+  no_reply: { label: "No reply", tone: "warning" },
+};
 type Draft = Awaited<ReturnType<typeof draftLeadFollowUps>>["drafts"][number];
 
 function PageLeadsPanel({ orgId }: { orgId: string | null }) {
@@ -426,10 +432,22 @@ function PageLeadsPanel({ orgId }: { orgId: string | null }) {
   const [channel, setChannel] = useState<"whatsapp" | "email">("whatsapp");
   const [tone, setTone] = useState<"helpful" | "offer" | "short">("helpful");
   const [drafts, setDrafts] = useState<Draft[] | null>(null);
+  const [follow, setFollow] = useState("all");
+  const qc = useQueryClient();
+  const followFn = useServerFn(setLeadFollowUp);
+  const mark = useMutation({
+    mutationFn: (v: { ids: string[]; status: "not_contacted" | "sent" | "replied" | "no_reply"; channel?: "whatsapp" | "email" }) =>
+      followFn({ data: { organizationId: orgId!, leadIds: v.ids, status: v.status, ...(v.channel ? { channel: v.channel } : {}) } }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["crm", orgId] }),
+    onError: (e: Error) => toast.error(e.message),
+  });
+  const followOf = (l: { answers: Record<string, string> }) => l.answers["_followup_status"] || "not_contacted";
   const leadPages = [...new Set(pageLeads.map((l) => l.pageTitle))].sort();
   const stageOf = (l: { answers: Record<string, string> }) => l.answers["_stage"] || "completed";
   const shownLeads = pageLeads.filter((l) => (leadPage === "all" || l.pageTitle === leadPage)
-    && (stage === "all" || (stage === "dropped" ? stageOf(l) !== "completed" : stageOf(l) === stage)));
+    && (stage === "all" || (stage === "dropped" ? stageOf(l) !== "completed" : stageOf(l) === stage))
+    && (follow === "all" || followOf(l) === follow));
+  const counts = Object.fromEntries(Object.keys(FOLLOW).map((k) => [k, pageLeads.filter((l) => followOf(l) === k).length]));
   const allPicked = shownLeads.length > 0 && shownLeads.every((l) => picked.has(l.id));
   const toggle = (id: string) => setPicked((p) => { const n = new Set(p); if (n.has(id)) n.delete(id); else n.add(id); return n; });
   const draft = useMutation({
@@ -456,6 +474,10 @@ function PageLeadsPanel({ orgId }: { orgId: string | null }) {
               <option value="dropped">Dropped only</option>
               {Object.entries(LEAD_STAGE).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
             </select>
+            <select className={sel} value={follow} onChange={(e) => setFollow(e.target.value)} aria-label="Filter by follow-up">
+              <option value="all">Any follow-up</option>
+              {Object.entries(FOLLOW).map(([k, v]) => <option key={k} value={k}>{v.label} ({counts[k] ?? 0})</option>)}
+            </select>
             <select className={sel} value={leadPage} onChange={(e) => setLeadPage(e.target.value)} aria-label="Filter leads by page">
               <option value="all">All pages</option>
               {leadPages.map((t) => <option key={t} value={t}>{t}</option>)}
@@ -470,6 +492,10 @@ function PageLeadsPanel({ orgId }: { orgId: string | null }) {
             <select className={sel} value={channel} onChange={(e) => setChannel(e.target.value as "whatsapp" | "email")} aria-label="Channel"><option value="whatsapp">WhatsApp</option><option value="email">Email</option></select>
             <select className={sel} value={tone} onChange={(e) => setTone(e.target.value as "helpful" | "offer" | "short")} aria-label="Tone"><option value="helpful">Helpful</option><option value="offer">Limited-time nudge</option><option value="short">Short & direct</option></select>
             <Button size="sm" onClick={() => draft.mutate()} disabled={draft.isPending}><Sparkles className="size-4" /> {draft.isPending ? "Writing…" : "Draft AI follow-ups"}</Button>
+            <select className={sel} value="" aria-label="Mark selected" onChange={(e) => { const v = e.target.value as "sent" | "replied" | "no_reply" | "not_contacted"; if (v) mark.mutate({ ids: [...picked], status: v }); }}>
+              <option value="">Mark as…</option>
+              {Object.entries(FOLLOW).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+            </select>
             <Button size="sm" variant="ghost" onClick={() => setPicked(new Set())}>Clear</Button>
           </div>
         )}
@@ -477,10 +503,10 @@ function PageLeadsPanel({ orgId }: { orgId: string | null }) {
           <p className="text-sm text-muted-foreground">People who fill the form on your delivery pages (Sales &amp; Revenue → Pages) show up here.</p>
         ) : (
           <div className="max-h-96 max-w-full overflow-auto">
-            <table className="w-full min-w-[800px] text-sm">
+            <table className="w-full min-w-[920px] text-sm">
               <thead className="text-left text-xs text-muted-foreground"><tr>
                 <th className="py-2 pr-2"><Checkbox aria-label="Select all" checked={allPicked} onCheckedChange={() => setPicked(allPicked ? new Set() : new Set(shownLeads.map((l) => l.id)))} /></th>
-                <th className="pr-3">Name</th><th className="pr-3">Email</th><th className="pr-3">Phone</th><th className="pr-3">Stage</th><th className="pr-3">Other answers</th><th className="pr-3">Page</th><th>When</th></tr></thead>
+                <th className="pr-3">Name</th><th className="pr-3">Email</th><th className="pr-3">Phone</th><th className="pr-3">Stage</th><th className="pr-3">Follow-up</th><th className="pr-3">Other answers</th><th className="pr-3">Page</th><th>When</th></tr></thead>
               <tbody className="divide-y">
                 {shownLeads.map((l) => {
                   const other = Object.entries(l.answers).filter(([k]) => !["name", "email", "phone"].includes(k) && !k.startsWith("_"));
@@ -492,6 +518,13 @@ function PageLeadsPanel({ orgId }: { orgId: string | null }) {
                       <td className="pr-3">{l.answers["email"] || "—"}</td>
                       <td className="pr-3">{l.answers["phone"] || "—"}</td>
                       <td className="pr-3"><StatusBadge tone={st.tone}>{st.label}</StatusBadge></td>
+                      <td className="pr-3">
+                        <select className="h-8 rounded-md border border-input bg-background px-1 text-xs" value={followOf(l)} aria-label="Follow-up status"
+                          onChange={(e) => mark.mutate({ ids: [l.id], status: e.target.value as "sent" | "replied" | "no_reply" | "not_contacted" })}>
+                          {Object.entries(FOLLOW).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+                        </select>
+                        {l.answers["_followup_at"] && <p className="mt-0.5 text-[10px] text-muted-foreground">{l.answers["_followup_channel"] === "email" ? "Email" : l.answers["_followup_channel"] === "whatsapp" ? "WhatsApp" : ""} {new Date(l.answers["_followup_at"]).toLocaleDateString()}</p>}
+                      </td>
                       <td className="pr-3 text-xs text-muted-foreground">{other.map(([k, v]) => `${k}: ${v}`).join(" · ") || "—"}</td>
                       <td className="pr-3">{l.pageTitle}</td>
                       <td className="text-xs text-muted-foreground">{new Date(l.answers["_updated_at"] || l.createdAt).toLocaleString()}</td>
@@ -519,8 +552,8 @@ function PageLeadsPanel({ orgId }: { orgId: string | null }) {
                   <textarea className="min-h-24 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={d.message} onChange={(e) => set({ message: e.target.value })} aria-label="Message" />
                   <div className="flex flex-wrap gap-2">
                     <Button size="sm" variant="outline" onClick={() => { navigator.clipboard.writeText(d.message); toast.success("Copied"); }}>Copy</Button>
-                    {channel === "whatsapp" && d.phone && <Button size="sm" asChild><a href={waLink(d.phone, d.message)} target="_blank" rel="noreferrer">Open in WhatsApp</a></Button>}
-                    {channel === "email" && d.email && <Button size="sm" asChild><a href={`mailto:${d.email}?subject=${encodeURIComponent(d.subject)}&body=${encodeURIComponent(d.message)}`}>Open in email</a></Button>}
+                    {channel === "whatsapp" && d.phone && <Button size="sm" asChild><a href={waLink(d.phone, d.message)} target="_blank" rel="noreferrer" onClick={() => mark.mutate({ ids: [d.id], status: "sent", channel: "whatsapp" })}>Open in WhatsApp</a></Button>}
+                    {channel === "email" && d.email && <Button size="sm" asChild><a href={`mailto:${d.email}?subject=${encodeURIComponent(d.subject)}&body=${encodeURIComponent(d.message)}`} onClick={() => mark.mutate({ ids: [d.id], status: "sent", channel: "email" })}>Open in email</a></Button>}
                     {((channel === "whatsapp" && !d.phone) || (channel === "email" && !d.email)) && <span className="text-xs text-muted-foreground">No {channel === "whatsapp" ? "phone number" : "email"} for this lead — copy instead.</span>}
                   </div>
                 </div>
