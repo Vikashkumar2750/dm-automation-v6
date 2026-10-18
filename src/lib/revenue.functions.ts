@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
-import { validateLeadValue, type LeadField } from "@/lib/delivery-page";
+import { validateLeadValue, nextLeadStage, type LeadField, type LeadStage } from "@/lib/delivery-page";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
@@ -272,7 +272,7 @@ export const submitOfferForm = createServerFn({ method: "POST" })
     const { data: current } = await supabaseAdmin.from("contact_profiles").select("email, phone, custom_fields").match(key).maybeSingle();
     await supabaseAdmin.from("contact_profiles").upsert({ ...key,
       email: current?.email || (clean["email"] ?? null), phone: current?.phone || (clean["phone"] ?? null),
-      custom_fields: { ...((current?.custom_fields as Record<string, unknown> | null) ?? {}), ...clean, delivery_form_consent: config.consent || "accepted" },
+      custom_fields: { ...((current?.custom_fields as Record<string, unknown> | null) ?? {}), ...clean, delivery_form_consent: config.consent || "accepted", delivery_stage: "completed" },
       updated_at: new Date().toISOString(),
     }, { onConflict: "organization_id,platform,external_user_id" });
     await supabaseAdmin.from("revenue_events").insert({ organization_id: link.organization_id, platform: link.platform, external_user_id: link.external_user_id, kind: "form_complete", ref_id: link.id });
@@ -299,8 +299,13 @@ export const submitPageForm = createServerFn({ method: "POST" })
     }
     await (await import("@/lib/email-check.server")).assertRealEmails(clean, config.fields ?? []);
     await assertOtpIfRequired(supabaseAdmin, page.organization_id as string, `page:${data.slug}`, !!page.otp_required, config.fields ?? [], clean);
-    const { error } = await supabaseAdmin.from("delivery_page_leads").insert({ organization_id: page.organization_id, delivery_page_id: page.id, answers: clean });
-    if (error) throw new Error("Could not save details");
+    const tagged: Record<string, string> = { ...clean };
+    for (const f of config.fields ?? []) { if (f.type === "email" && clean[f.key]) tagged.email = clean[f.key]!.toLowerCase(); if (f.type === "phone" && clean[f.key]) tagged.phone = clean[f.key]!; }
+    const leadId = await upsertPartialLead(supabaseAdmin, page.organization_id as string, page.id as string, tagged, "completed");
+    if (!leadId) {
+      const { error } = await supabaseAdmin.from("delivery_page_leads").insert({ organization_id: page.organization_id, delivery_page_id: page.id, answers: { ...tagged, _stage: "completed" } });
+      if (error) throw new Error("Could not save details");
+    }
     await supabaseAdmin.from("revenue_events").insert({ organization_id: page.organization_id, kind: "form_complete", ref_id: page.id });
     return { ok: true };
   });
@@ -388,18 +393,6 @@ export const verifyLeadOtpCode = createServerFn({ method: "POST" })
   });
 
 // ------------------------------------------------------------ drop-off capture
-
-/** Stages a delivery-page lead can sit in. Rows without `_stage` are older completed submissions. */
-export const LEAD_STAGES = ["intent_started", "otp_pending", "buyer_signin_attempt", "completed"] as const;
-export type LeadStage = (typeof LEAD_STAGES)[number];
-const STAGE_RANK: Record<LeadStage, number> = { buyer_signin_attempt: 0, intent_started: 1, otp_pending: 2, completed: 3 };
-
-/** Higher stage wins; a lead never moves backwards (e.g. completed → intent_started). */
-export function nextLeadStage(current: string | null | undefined, incoming: LeadStage): LeadStage {
-  const cur = (current ?? "completed") as LeadStage;
-  if (!(cur in STAGE_RANK)) return incoming;
-  return STAGE_RANK[incoming] >= STAGE_RANK[cur] ? incoming : cur;
-}
 
 /** Saves or updates one partial lead per email/phone per page (24h window). Server-only helper. */
 export async function upsertPartialLead(admin: any, organizationId: string, pageId: string, answers: Record<string, string>, stage: LeadStage) {
