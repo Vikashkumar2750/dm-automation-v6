@@ -14,10 +14,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Sparkles } from "lucide-react";
 import { useTenant } from "@/hooks/useTenant";
 import { Pager, pageSlice } from "@/components/app/Pager";
 import { contactsToCsv, pageLeadsToCsv, extractContactInfo, matchesSegment, type CrmContact, type SegmentFilter } from "@/lib/crm";
-import { addContactTag, deleteBroadcast, deleteSegment, getCrm, getOutreach, removeContactTag, saveContactProfile, saveNudgeSettings, saveSegment, saveSyncSettings, sendBroadcast } from "@/lib/crm.functions";
+import { draftLeadFollowUps, addContactTag, deleteBroadcast, deleteSegment, getCrm, getOutreach, removeContactTag, saveContactProfile, saveNudgeSettings, saveSegment, saveSyncSettings, sendBroadcast } from "@/lib/crm.functions";
 import { listConversations } from "@/lib/inbox.functions";
 
 export const Route = createFileRoute("/_authenticated/contacts")({
@@ -404,26 +407,55 @@ function ContactDetail({ orgId, contact, crm, onSaved }: {
   );
 }
 
+const LEAD_STAGE: Record<string, { label: string; tone: "success" | "warning" | "danger" | "info" }> = {
+  completed: { label: "Completed", tone: "success" },
+  otp_pending: { label: "Dropped at WhatsApp code", tone: "warning" },
+  intent_started: { label: "Left form unsent", tone: "danger" },
+  buyer_signin_attempt: { label: "Sign-in attempt", tone: "info" },
+};
+type Draft = Awaited<ReturnType<typeof draftLeadFollowUps>>["drafts"][number];
+
 function PageLeadsPanel({ orgId }: { orgId: string | null }) {
   const fetchCrm = useServerFn(getCrm);
+  const draftFn = useServerFn(draftLeadFollowUps);
   const crm = useQuery({ queryKey: ["crm", orgId], enabled: !!orgId, queryFn: () => fetchCrm({ data: { organizationId: orgId! } }) });
   const pageLeads = crm.data?.pageLeads ?? [];
   const [leadPage, setLeadPage] = useState("all");
+  const [stage, setStage] = useState("all");
+  const [picked, setPicked] = useState<Set<string>>(new Set());
+  const [channel, setChannel] = useState<"whatsapp" | "email">("whatsapp");
+  const [tone, setTone] = useState<"helpful" | "offer" | "short">("helpful");
+  const [drafts, setDrafts] = useState<Draft[] | null>(null);
   const leadPages = [...new Set(pageLeads.map((l) => l.pageTitle))].sort();
-  const shownLeads = pageLeads.filter((l) => leadPage === "all" || l.pageTitle === leadPage);
+  const stageOf = (l: { answers: Record<string, string> }) => l.answers["_stage"] || "completed";
+  const shownLeads = pageLeads.filter((l) => (leadPage === "all" || l.pageTitle === leadPage)
+    && (stage === "all" || (stage === "dropped" ? stageOf(l) !== "completed" : stageOf(l) === stage)));
+  const allPicked = shownLeads.length > 0 && shownLeads.every((l) => picked.has(l.id));
+  const toggle = (id: string) => setPicked((p) => { const n = new Set(p); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+  const draft = useMutation({
+    mutationFn: () => draftFn({ data: { organizationId: orgId!, leadIds: [...picked].slice(0, 20), channel, tone } }),
+    onSuccess: (r) => setDrafts(r.drafts),
+    onError: (e: Error) => toast.error(e.message),
+  });
   function exportLeads() {
     const url = URL.createObjectURL(new Blob([pageLeadsToCsv(shownLeads)], { type: "text/csv" }));
     const a = document.createElement("a");
     a.href = url; a.download = "delivery-page-leads.csv"; a.click();
     URL.revokeObjectURL(url);
   }
+  const waLink = (phone: string, text: string) => `https://wa.me/${phone.replace(/\D/g, "").replace(/^(\d{10})$/, "91$1")}?text=${encodeURIComponent(text)}`;
 
   return (
     <>
       <Panel
         title={`Delivery page leads (${shownLeads.length})`}
         action={
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
+            <select className={sel} value={stage} onChange={(e) => setStage(e.target.value)} aria-label="Filter leads by stage">
+              <option value="all">All stages</option>
+              <option value="dropped">Dropped only</option>
+              {Object.entries(LEAD_STAGE).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+            </select>
             <select className={sel} value={leadPage} onChange={(e) => setLeadPage(e.target.value)} aria-label="Filter leads by page">
               <option value="all">All pages</option>
               {leadPages.map((t) => <option key={t} value={t}>{t}</option>)}
@@ -432,24 +464,37 @@ function PageLeadsPanel({ orgId }: { orgId: string | null }) {
           </div>
         }
       >
+        {picked.size > 0 && (
+          <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 p-2 text-sm">
+            <span className="font-medium">{picked.size} selected{picked.size > 20 ? " (first 20 used)" : ""}</span>
+            <select className={sel} value={channel} onChange={(e) => setChannel(e.target.value as "whatsapp" | "email")} aria-label="Channel"><option value="whatsapp">WhatsApp</option><option value="email">Email</option></select>
+            <select className={sel} value={tone} onChange={(e) => setTone(e.target.value as "helpful" | "offer" | "short")} aria-label="Tone"><option value="helpful">Helpful</option><option value="offer">Limited-time nudge</option><option value="short">Short & direct</option></select>
+            <Button size="sm" onClick={() => draft.mutate()} disabled={draft.isPending}><Sparkles className="size-4" /> {draft.isPending ? "Writing…" : "Draft AI follow-ups"}</Button>
+            <Button size="sm" variant="ghost" onClick={() => setPicked(new Set())}>Clear</Button>
+          </div>
+        )}
         {shownLeads.length === 0 ? (
           <p className="text-sm text-muted-foreground">People who fill the form on your delivery pages (Sales &amp; Revenue → Pages) show up here.</p>
         ) : (
           <div className="max-h-96 max-w-full overflow-auto">
-            <table className="w-full min-w-[700px] text-sm">
-              <thead className="text-left text-xs text-muted-foreground"><tr><th className="py-2 pr-3">Name</th><th className="pr-3">Email</th><th className="pr-3">Phone</th><th className="pr-3">Pincode</th><th className="pr-3">Other answers</th><th className="pr-3">Page</th><th>When</th></tr></thead>
+            <table className="w-full min-w-[800px] text-sm">
+              <thead className="text-left text-xs text-muted-foreground"><tr>
+                <th className="py-2 pr-2"><Checkbox aria-label="Select all" checked={allPicked} onCheckedChange={() => setPicked(allPicked ? new Set() : new Set(shownLeads.map((l) => l.id)))} /></th>
+                <th className="pr-3">Name</th><th className="pr-3">Email</th><th className="pr-3">Phone</th><th className="pr-3">Stage</th><th className="pr-3">Other answers</th><th className="pr-3">Page</th><th>When</th></tr></thead>
               <tbody className="divide-y">
                 {shownLeads.map((l) => {
-                  const other = Object.entries(l.answers).filter(([k]) => !["name", "email", "phone", "pincode"].includes(k));
+                  const other = Object.entries(l.answers).filter(([k]) => !["name", "email", "phone"].includes(k) && !k.startsWith("_"));
+                  const st = LEAD_STAGE[stageOf(l)] ?? LEAD_STAGE["completed"]!;
                   return (
                     <tr key={l.id}>
-                      <td className="py-2 pr-3">{l.answers["name"] || "—"}</td>
+                      <td className="py-2 pr-2"><Checkbox aria-label={`Select ${l.answers["name"] || l.answers["email"] || "lead"}`} checked={picked.has(l.id)} onCheckedChange={() => toggle(l.id)} /></td>
+                      <td className="pr-3">{l.answers["name"] || "—"}</td>
                       <td className="pr-3">{l.answers["email"] || "—"}</td>
                       <td className="pr-3">{l.answers["phone"] || "—"}</td>
-                      <td className="pr-3">{l.answers["pincode"] || "—"}</td>
+                      <td className="pr-3"><StatusBadge tone={st.tone}>{st.label}</StatusBadge></td>
                       <td className="pr-3 text-xs text-muted-foreground">{other.map(([k, v]) => `${k}: ${v}`).join(" · ") || "—"}</td>
                       <td className="pr-3">{l.pageTitle}</td>
-                      <td className="text-xs text-muted-foreground">{new Date(l.createdAt).toLocaleString()}</td>
+                      <td className="text-xs text-muted-foreground">{new Date(l.answers["_updated_at"] || l.createdAt).toLocaleString()}</td>
                     </tr>
                   );
                 })}
@@ -459,6 +504,31 @@ function PageLeadsPanel({ orgId }: { orgId: string | null }) {
         )}
       </Panel>
 
+      <Dialog open={!!drafts} onOpenChange={(v) => !v && setDrafts(null)}>
+        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-xl">
+          <DialogHeader><DialogTitle>AI follow-up drafts</DialogTitle></DialogHeader>
+          <p className="text-xs text-muted-foreground">Review and edit before sending. Nothing is sent automatically.</p>
+          <div className="space-y-3">
+            {drafts?.map((d, i) => {
+              const st = LEAD_STAGE[d.stage] ?? LEAD_STAGE["completed"]!;
+              const set = (patch: Partial<Draft>) => setDrafts((all) => all!.map((x, j) => (j === i ? { ...x, ...patch } : x)));
+              return (
+                <div key={d.id} className="space-y-2 rounded-lg border border-border p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-sm"><span className="font-medium">{d.name || d.email || d.phone || "Lead"}</span><StatusBadge tone={st.tone}>{st.label}</StatusBadge></div>
+                  {channel === "email" && <Input value={d.subject} onChange={(e) => set({ subject: e.target.value })} aria-label="Subject" />}
+                  <textarea className="min-h-24 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={d.message} onChange={(e) => set({ message: e.target.value })} aria-label="Message" />
+                  <div className="flex flex-wrap gap-2">
+                    <Button size="sm" variant="outline" onClick={() => { navigator.clipboard.writeText(d.message); toast.success("Copied"); }}>Copy</Button>
+                    {channel === "whatsapp" && d.phone && <Button size="sm" asChild><a href={waLink(d.phone, d.message)} target="_blank" rel="noreferrer">Open in WhatsApp</a></Button>}
+                    {channel === "email" && d.email && <Button size="sm" asChild><a href={`mailto:${d.email}?subject=${encodeURIComponent(d.subject)}&body=${encodeURIComponent(d.message)}`}>Open in email</a></Button>}
+                    {((channel === "whatsapp" && !d.phone) || (channel === "email" && !d.email)) && <span className="text-xs text-muted-foreground">No {channel === "whatsapp" ? "phone number" : "email"} for this lead — copy instead.</span>}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
