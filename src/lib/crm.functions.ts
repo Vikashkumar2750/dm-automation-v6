@@ -245,7 +245,8 @@ export const draftLeadFollowUps = createServerFn({ method: "POST" })
       .select("id, answers, delivery_pages(title, slug)")
       .eq("organization_id", data.organizationId).in("id", data.leadIds);
     if (error) throw new Error(error.message);
-    const leads = (rows ?? []).map((r: any) => {
+    type L = { id: string; name: string; email: string; phone: string; stage: string; page: string; slug: string };
+    const leads: L[] = (rows ?? []).map((r: any) => {
       const a = (r.answers ?? {}) as Record<string, unknown>;
       return { id: r.id as string, name: String(a["name"] ?? ""), email: String(a["email"] ?? ""), phone: String(a["phone"] ?? ""),
         stage: String(a["_stage"] ?? "completed"), page: r.delivery_pages?.title ?? "our page", slug: r.delivery_pages?.slug ?? "" };
