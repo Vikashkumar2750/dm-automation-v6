@@ -272,3 +272,30 @@ Use the person's first name if known. Never invent facts. Write in the same lang
       }),
     };
   });
+
+/** Creator-tracked outreach status on a delivery-page lead (stored in answers as _followup_*; never sends anything). */
+export const setLeadFollowUp = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({
+    organizationId: org,
+    leadIds: z.array(z.string().uuid()).min(1).max(200),
+    status: z.enum(["not_contacted", "sent", "replied", "no_reply"]),
+    channel: z.enum(["whatsapp", "email"]).optional(),
+  }).parse(d))
+  .handler(async ({ data, context }) => {
+    // Membership check through RLS: only leads the caller can read are updated.
+    const { data: rows, error } = await (context as Ctx).supabase.from("delivery_page_leads")
+      .select("id, answers").eq("organization_id", data.organizationId).in("id", data.leadIds);
+    if (error) throw new Error(error.message);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const now = new Date().toISOString();
+    for (const r of (rows ?? []) as Array<{ id: string; answers: Record<string, unknown> | null }>) {
+      const a = { ...(r.answers ?? {}) } as Record<string, unknown>;
+      a["_followup_status"] = data.status;
+      a["_followup_at"] = now;
+      if (data.channel) a["_followup_channel"] = data.channel;
+      if (data.status === "replied") a["_followup_replied_at"] = now;
+      await supabaseAdmin.from("delivery_page_leads").update({ answers: a as never }).eq("id", r.id).eq("organization_id", data.organizationId);
+    }
+    return { ok: true, updated: rows?.length ?? 0 };
+  });
