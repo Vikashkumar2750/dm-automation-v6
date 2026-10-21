@@ -226,7 +226,7 @@ async function chatCompletion(opts: {
   prompt: string;
   extraHeaders?: Record<string, string>;
   long?: boolean;
-  maxTokens?: number;
+  maxTokens?: number | undefined;
 }): Promise<{ text: string | null; status: number; detail?: string }> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), opts.long ? 180_000 : REQUEST_TIMEOUT_MS);
@@ -345,8 +345,8 @@ export async function generateWithFailover(input: {
   /** Long-form mode for the dashboard assistant: keeps formatting and allows longer output. */
   long?: boolean;
   /** Optional overrides for long-form writing (e.g. full blog articles). */
-  maxTokens?: number;
-  inputLimit?: number;
+  maxTokens?: number | undefined;
+  inputLimit?: number | undefined;
 }): Promise<AiResult> {
   const attempts: Attempt[] = [];
   const { config } = input;
