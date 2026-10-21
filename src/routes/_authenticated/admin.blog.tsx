@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { adminBlogAi, adminDeletePost, adminListPosts, adminSavePost, type BlogPost, type FaqItem } from "@/lib/blog.functions";
-import { geoChecks, scoreOf, seoChecks, slugify, type Check } from "@/lib/seo-score";
+import { geoChecks, scoreOf, seoChecks, slugify, wordCount, type Check } from "@/lib/seo-score";
 
 export const Route = createFileRoute("/_authenticated/admin/blog")({
   head: () => ({
@@ -98,14 +98,17 @@ function AdminBlogPage() {
     },
     onSuccess: ({ task, text, agent }) => {
       if (task === "agent" && agent) {
+        let keptContent = false;
         setD((p) => {
           if (!p) return p;
           const kw = slugify(p.focus_keyword ?? "");
           // Only change the URL of drafts, so live links never break.
           const slug = kw && !p.slug.includes(kw) && p.status !== "published" ? `${kw}-${p.slug}`.slice(0, 90).replace(/-+$/, "") : p.slug;
+          // Never let the agent shrink or wipe an existing article.
+          keptContent = wordCount(p.content) >= 200 && wordCount(text) < wordCount(p.content);
           return {
             ...p,
-            content: text,
+            content: keptContent ? p.content : text,
             slug,
             seo_title: agent.seoTitle || p.seo_title,
             meta_description: agent.metaDescription || p.meta_description,
@@ -114,7 +117,11 @@ function AdminBlogPage() {
             faq: agent.faq.length >= 3 ? agent.faq : p.faq,
           };
         });
-        toast.success("SEO & GEO agent improved the article — review it, then save");
+        toast.success(
+          keptContent
+            ? "Agent filled title, description, excerpt, cover alt & FAQs — your existing article was kept (the new draft was shorter)"
+            : "SEO & GEO agent rewrote the article and filled everything — review it, then save",
+        );
         return;
       }
       if (task === "outline" || task === "improve") return set("content", text);
