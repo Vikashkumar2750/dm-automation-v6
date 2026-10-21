@@ -46,6 +46,7 @@ import { Route as BlogIndexRouteImport } from './routes/blog.index'
 import { Route as BlogSlugRouteImport } from './routes/blog.$slug'
 import { Route as OTokenRouteImport } from './routes/o.$token'
 import { Route as PSlugRouteImport } from './routes/p.$slug'
+import { Route as ToolsWebpConverterRouteImport } from './routes/tools.webp-converter'
 import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated/admin.index'
 import { Route as AuthenticatedAdminAccountsRouteImport } from './routes/_authenticated/admin.accounts'
 import { Route as AuthenticatedAdminAlertsRouteImport } from './routes/_authenticated/admin.alerts'
@@ -55,6 +56,7 @@ import { Route as AuthenticatedAdminBlogRouteImport } from './routes/_authentica
 import { Route as AuthenticatedAdminHealthRouteImport } from './routes/_authenticated/admin.health'
 import { Route as AuthenticatedAdminInquiriesRouteImport } from './routes/_authenticated/admin.inquiries'
 import { Route as AuthenticatedAdminJobsRouteImport } from './routes/_authenticated/admin.jobs'
+import { Route as AuthenticatedAdminMediaRouteImport } from './routes/_authenticated/admin.media'
 import { Route as AuthenticatedAdminMessagesRouteImport } from './routes/_authenticated/admin.messages'
 import { Route as AuthenticatedAdminOrganizationsRouteImport } from './routes/_authenticated/admin.organizations'
 import { Route as AuthenticatedAdminPlansRouteImport } from './routes/_authenticated/admin.plans'
@@ -276,6 +278,11 @@ const PSlugRoute = PSlugRouteImport.update({
   path: '/p/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ToolsWebpConverterRoute = ToolsWebpConverterRouteImport.update({
+  id: '/tools/webp-converter',
+  path: '/tools/webp-converter',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedAdminIndexRoute = AuthenticatedAdminIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -324,6 +331,11 @@ const AuthenticatedAdminInquiriesRoute =
 const AuthenticatedAdminJobsRoute = AuthenticatedAdminJobsRouteImport.update({
   id: '/jobs',
   path: '/jobs',
+  getParentRoute: () => AuthenticatedAdminRoute,
+} as any)
+const AuthenticatedAdminMediaRoute = AuthenticatedAdminMediaRouteImport.update({
+  id: '/media',
+  path: '/media',
   getParentRoute: () => AuthenticatedAdminRoute,
 } as any)
 const AuthenticatedAdminMessagesRoute =
@@ -536,6 +548,7 @@ export interface FileRoutesByFullPath {
   '/blog/$slug': typeof BlogSlugRoute
   '/o/$token': typeof OTokenRoute
   '/p/$slug': typeof PSlugRoute
+  '/tools/webp-converter': typeof ToolsWebpConverterRoute
   '/blog/': typeof BlogIndexRoute
   '/admin/accounts': typeof AuthenticatedAdminAccountsRoute
   '/admin/alerts': typeof AuthenticatedAdminAlertsRoute
@@ -545,6 +558,7 @@ export interface FileRoutesByFullPath {
   '/admin/health': typeof AuthenticatedAdminHealthRoute
   '/admin/inquiries': typeof AuthenticatedAdminInquiriesRoute
   '/admin/jobs': typeof AuthenticatedAdminJobsRoute
+  '/admin/media': typeof AuthenticatedAdminMediaRoute
   '/admin/messages': typeof AuthenticatedAdminMessagesRoute
   '/admin/organizations': typeof AuthenticatedAdminOrganizationsRoute
   '/admin/plans': typeof AuthenticatedAdminPlansRoute
@@ -613,6 +627,7 @@ export interface FileRoutesByTo {
   '/blog/$slug': typeof BlogSlugRoute
   '/o/$token': typeof OTokenRoute
   '/p/$slug': typeof PSlugRoute
+  '/tools/webp-converter': typeof ToolsWebpConverterRoute
   '/blog': typeof BlogIndexRoute
   '/admin/accounts': typeof AuthenticatedAdminAccountsRoute
   '/admin/alerts': typeof AuthenticatedAdminAlertsRoute
@@ -622,6 +637,7 @@ export interface FileRoutesByTo {
   '/admin/health': typeof AuthenticatedAdminHealthRoute
   '/admin/inquiries': typeof AuthenticatedAdminInquiriesRoute
   '/admin/jobs': typeof AuthenticatedAdminJobsRoute
+  '/admin/media': typeof AuthenticatedAdminMediaRoute
   '/admin/messages': typeof AuthenticatedAdminMessagesRoute
   '/admin/organizations': typeof AuthenticatedAdminOrganizationsRoute
   '/admin/plans': typeof AuthenticatedAdminPlansRoute
@@ -693,6 +709,7 @@ export interface FileRoutesById {
   '/blog/$slug': typeof BlogSlugRoute
   '/o/$token': typeof OTokenRoute
   '/p/$slug': typeof PSlugRoute
+  '/tools/webp-converter': typeof ToolsWebpConverterRoute
   '/blog/': typeof BlogIndexRoute
   '/_authenticated/admin/accounts': typeof AuthenticatedAdminAccountsRoute
   '/_authenticated/admin/alerts': typeof AuthenticatedAdminAlertsRoute
@@ -702,6 +719,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/health': typeof AuthenticatedAdminHealthRoute
   '/_authenticated/admin/inquiries': typeof AuthenticatedAdminInquiriesRoute
   '/_authenticated/admin/jobs': typeof AuthenticatedAdminJobsRoute
+  '/_authenticated/admin/media': typeof AuthenticatedAdminMediaRoute
   '/_authenticated/admin/messages': typeof AuthenticatedAdminMessagesRoute
   '/_authenticated/admin/organizations': typeof AuthenticatedAdminOrganizationsRoute
   '/_authenticated/admin/plans': typeof AuthenticatedAdminPlansRoute
@@ -773,6 +791,7 @@ export interface FileRouteTypes {
     | '/blog/$slug'
     | '/o/$token'
     | '/p/$slug'
+    | '/tools/webp-converter'
     | '/blog/'
     | '/admin/accounts'
     | '/admin/alerts'
@@ -782,6 +801,7 @@ export interface FileRouteTypes {
     | '/admin/health'
     | '/admin/inquiries'
     | '/admin/jobs'
+    | '/admin/media'
     | '/admin/messages'
     | '/admin/organizations'
     | '/admin/plans'
@@ -850,6 +870,7 @@ export interface FileRouteTypes {
     | '/blog/$slug'
     | '/o/$token'
     | '/p/$slug'
+    | '/tools/webp-converter'
     | '/blog'
     | '/admin/accounts'
     | '/admin/alerts'
@@ -859,6 +880,7 @@ export interface FileRouteTypes {
     | '/admin/health'
     | '/admin/inquiries'
     | '/admin/jobs'
+    | '/admin/media'
     | '/admin/messages'
     | '/admin/organizations'
     | '/admin/plans'
@@ -929,6 +951,7 @@ export interface FileRouteTypes {
     | '/blog/$slug'
     | '/o/$token'
     | '/p/$slug'
+    | '/tools/webp-converter'
     | '/blog/'
     | '/_authenticated/admin/accounts'
     | '/_authenticated/admin/alerts'
@@ -938,6 +961,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/health'
     | '/_authenticated/admin/inquiries'
     | '/_authenticated/admin/jobs'
+    | '/_authenticated/admin/media'
     | '/_authenticated/admin/messages'
     | '/_authenticated/admin/organizations'
     | '/_authenticated/admin/plans'
@@ -988,6 +1012,7 @@ export interface RootRouteChildren {
   BlogSlugRoute: typeof BlogSlugRoute
   OTokenRoute: typeof OTokenRoute
   PSlugRoute: typeof PSlugRoute
+  ToolsWebpConverterRoute: typeof ToolsWebpConverterRoute
   BlogIndexRoute: typeof BlogIndexRoute
   ApiPublicCronEncryptTokensRoute: typeof ApiPublicCronEncryptTokensRoute
   ApiPublicCronFlowsRoute: typeof ApiPublicCronFlowsRoute
@@ -1269,6 +1294,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/tools/webp-converter': {
+      id: '/tools/webp-converter'
+      path: '/tools/webp-converter'
+      fullPath: '/tools/webp-converter'
+      preLoaderRoute: typeof ToolsWebpConverterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/admin/': {
       id: '/_authenticated/admin/'
       path: '/'
@@ -1330,6 +1362,13 @@ declare module '@tanstack/react-router' {
       path: '/jobs'
       fullPath: '/admin/jobs'
       preLoaderRoute: typeof AuthenticatedAdminJobsRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/media': {
+      id: '/_authenticated/admin/media'
+      path: '/media'
+      fullPath: '/admin/media'
+      preLoaderRoute: typeof AuthenticatedAdminMediaRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
     '/_authenticated/admin/messages': {
@@ -1561,6 +1600,7 @@ interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminHealthRoute: typeof AuthenticatedAdminHealthRoute
   AuthenticatedAdminInquiriesRoute: typeof AuthenticatedAdminInquiriesRoute
   AuthenticatedAdminJobsRoute: typeof AuthenticatedAdminJobsRoute
+  AuthenticatedAdminMediaRoute: typeof AuthenticatedAdminMediaRoute
   AuthenticatedAdminMessagesRoute: typeof AuthenticatedAdminMessagesRoute
   AuthenticatedAdminOrganizationsRoute: typeof AuthenticatedAdminOrganizationsRoute
   AuthenticatedAdminPlansRoute: typeof AuthenticatedAdminPlansRoute
@@ -1580,6 +1620,7 @@ const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminHealthRoute: AuthenticatedAdminHealthRoute,
   AuthenticatedAdminInquiriesRoute: AuthenticatedAdminInquiriesRoute,
   AuthenticatedAdminJobsRoute: AuthenticatedAdminJobsRoute,
+  AuthenticatedAdminMediaRoute: AuthenticatedAdminMediaRoute,
   AuthenticatedAdminMessagesRoute: AuthenticatedAdminMessagesRoute,
   AuthenticatedAdminOrganizationsRoute: AuthenticatedAdminOrganizationsRoute,
   AuthenticatedAdminPlansRoute: AuthenticatedAdminPlansRoute,
@@ -1676,6 +1717,7 @@ const rootRouteChildren: RootRouteChildren = {
   BlogSlugRoute: BlogSlugRoute,
   OTokenRoute: OTokenRoute,
   PSlugRoute: PSlugRoute,
+  ToolsWebpConverterRoute: ToolsWebpConverterRoute,
   BlogIndexRoute: BlogIndexRoute,
   ApiPublicCronEncryptTokensRoute: ApiPublicCronEncryptTokensRoute,
   ApiPublicCronFlowsRoute: ApiPublicCronFlowsRoute,
