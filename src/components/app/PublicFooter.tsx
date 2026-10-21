@@ -47,9 +47,9 @@ export function PublicFooter() {
           </FooterGroup>
         </div>
 
-        <div className="mt-10 flex flex-col gap-3 border-t pt-6 text-xs text-muted-foreground sm:flex-row sm:items-end sm:justify-between">
+        <div className="mt-10 flex flex-col gap-3 border-t pt-6 text-xs text-muted-foreground lg:flex-row lg:items-end lg:justify-between">
           <p>© {new Date().getFullYear()} Techaasvik. All rights reserved.</p>
-          <p className="max-w-xl sm:text-right">
+          <p className="lg:text-right lg:whitespace-nowrap">
             Instagram and Facebook are trademarks of Meta Platforms, Inc. YouTube is a trademark of Google LLC.
           </p>
         </div>
