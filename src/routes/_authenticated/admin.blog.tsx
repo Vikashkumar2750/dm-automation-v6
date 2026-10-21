@@ -85,10 +85,38 @@ function AdminBlogPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  type Task = "outline" | "improve" | "meta" | "faq" | "agent";
   const aiM = useMutation({
-    mutationFn: (task: "outline" | "improve" | "meta" | "faq") =>
-      ai({ data: { task, title: d!.title, focusKeyword: d!.focus_keyword ?? "", content: d!.content.slice(0, 20000) } }).then((r) => ({ task, text: r.text })),
-    onSuccess: ({ task, text }) => {
+    mutationFn: (task: Task) => {
+      const failing = [...seo, ...geo].filter((c) => !c.pass).map((c) => `${c.label} — ${c.tip}`);
+      return ai({
+        data: {
+          task, title: d!.title, focusKeyword: d!.focus_keyword ?? "", content: d!.content.slice(0, 40000),
+          slug: d!.slug, seoTitle: d!.seo_title ?? "", metaDescription: d!.meta_description ?? "", excerpt: d!.excerpt, failing,
+        },
+      }).then((r) => ({ task, text: r.text, agent: r.agent }));
+    },
+    onSuccess: ({ task, text, agent }) => {
+      if (task === "agent" && agent) {
+        setD((p) => {
+          if (!p) return p;
+          const kw = slugify(p.focus_keyword ?? "");
+          // Only change the URL of drafts, so live links never break.
+          const slug = kw && !p.slug.includes(kw) && p.status !== "published" ? slugify(`${p.focus_keyword} ${p.title.replace(new RegExp(p.focus_keyword ?? "", "i"), "")}`) : p.slug;
+          return {
+            ...p,
+            content: text,
+            slug,
+            seo_title: agent.seoTitle || p.seo_title,
+            meta_description: agent.metaDescription || p.meta_description,
+            excerpt: agent.excerpt || p.excerpt,
+            cover_alt: agent.coverAlt || p.cover_alt,
+            faq: agent.faq.length >= 3 ? agent.faq : p.faq,
+          };
+        });
+        toast.success("SEO & GEO agent improved the article — review it, then save");
+        return;
+      }
       if (task === "outline" || task === "improve") return set("content", text);
       try {
         const j = JSON.parse(text.match(/\{[\s\S]*\}/)?.[0] ?? text);
