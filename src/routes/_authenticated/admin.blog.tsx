@@ -229,7 +229,7 @@ function AdminBlogPage() {
           </Panel>
         </div>
         <div className="space-y-4 lg:sticky lg:top-4 lg:self-start">
-          <Panel title="Scores"><div className="space-y-6"><ScoreList title="SEO" checks={seo} /><ScoreList title="GEO (AI search)" checks={geo} /></div></Panel>
+          <Panel title="Scores"><div className="space-y-6"><Button className="w-full" disabled={busy || d.title.length < 3 || !(d.focus_keyword ?? "").trim()} onClick={() => aiM.mutate("agent")}>{busy && aiM.variables === "agent" ? <Loader2 className="mr-2 size-4 animate-spin" /> : <Bot className="mr-2 size-4" />}{busy && aiM.variables === "agent" ? "Optimising…" : "Fix all with SEO & GEO agent"}</Button><ScoreList title="SEO" checks={seo} /><ScoreList title="GEO (AI search)" checks={geo} /></div></Panel>
         </div>
       </div>
     </div>
