@@ -185,7 +185,7 @@ export const adminBlogAi = createServerFn({ method: "POST" })
       improve: `Rewrite and expand this Markdown article for SEO and AI search (GEO) while keeping its facts. Return only the improved Markdown.\n${WRITING_RULES}`,
       meta: 'Return ONLY JSON: {"seoTitle": "40-58 chars, starts with the focus keyword", "metaDescription": "130-155 chars with the focus keyword", "excerpt": "1-2 sentence summary, 100-200 chars"}',
       faq: 'Return ONLY JSON: {"faq": [{"q": "question", "a": "2-3 sentence answer"}]} with 5 questions people really search about the topic.',
-      agent: `You are an SEO & GEO optimisation agent. Improve EVERY part of this blog post so it passes all SEO and GEO checks (score 100/100) and fully satisfies user intent.
+      agent: `You are an all-in-one SEO & GEO optimisation agent. In ONE reply you do the job of four tools: write/improve the full article, generate the SEO title & meta description, write the excerpt, and create the FAQ — so the post passes every SEO and GEO check (score 100/100) and fully satisfies user intent.
 ${WRITING_RULES}
 Rules for the fields:
 - SEO_TITLE: 40-58 characters, begins with the exact focus keyword.
@@ -194,7 +194,10 @@ Rules for the fields:
 - COVER_ALT: descriptive alt text (8-14 words) with the focus keyword.
 - FAQ: 5 real search questions, 2-3 sentence answers, as a JSON array [{"q":"…","a":"…"}].
 - CONTENT: the full improved Markdown article. The very first paragraph (not a heading) must contain the exact focus keyword.
-Return EXACTLY this format, nothing before or after:
+Output contract (critical):
+- Return ALL six sections with the exact ===MARKERS=== below, in this order, with nothing before or after.
+- The CONTENT section must be the COMPLETE article of at least 1,100 words. Never truncate it, never stop mid-sentence, never write "(continued)" or "…". If space is tight, write tighter sections — but always finish the whole article including the conclusion.
+- Do not wrap any section in code fences.
 ===SEO_TITLE===
 …
 ===META===
