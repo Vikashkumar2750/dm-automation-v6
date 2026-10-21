@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { recordMediaAsset } from "@/lib/media.functions";
 
 export const DELIVERY_MEDIA_BUCKET = "delivery-page-images";
 
@@ -23,7 +24,7 @@ async function toWidescreen(file: File): Promise<Blob> {
     const ctx = canvas.getContext("2d");
     if (!ctx) throw new Error("Could not process this image");
     ctx.drawImage(img, (w - sw) / 2, (h - sh) / 2, sw, sh, 0, 0, outW, outH);
-    return await new Promise<Blob>((resolve, reject) => canvas.toBlob((b) => b ? resolve(b) : reject(new Error("Could not process this image")), "image/jpeg", 0.88));
+    return await new Promise<Blob>((resolve, reject) => canvas.toBlob((b) => b ? resolve(b) : reject(new Error("Could not process this image")), "image/webp", 0.82));
   } finally { URL.revokeObjectURL(url); }
 }
 
@@ -31,10 +32,10 @@ export async function uploadDeliveryImage(organizationId: string, file: File) {
   if (!file.type.startsWith("image/")) throw new Error("Choose an image file");
   if (file.size > 20 * 1024 * 1024) throw new Error("Image must be 20 MB or smaller");
   const blob = await toWidescreen(file);
-  const path = `${organizationId}/${crypto.randomUUID()}.jpg`;
+  const path = `${organizationId}/${crypto.randomUUID()}.webp`;
   const { error } = await supabase.storage.from(DELIVERY_MEDIA_BUCKET).upload(path, blob, {
-    cacheControl: "86400",
-    contentType: "image/jpeg",
+    cacheControl: "31536000",
+    contentType: blob.type || "image/webp",
     upsert: false,
   });
   if (error) {
@@ -44,6 +45,10 @@ export async function uploadDeliveryImage(organizationId: string, file: File) {
     if (/row-level security|unauthorized|403/i.test(error.message)) throw new Error("Only workspace owners, admins and managers can upload page images.");
     throw new Error(error.message);
   }
+  void recordMediaAsset({ data: {
+    organizationId, bucket: DELIVERY_MEDIA_BUCKET, path, kind: "image", originalName: file.name.slice(0, 200),
+    originalType: file.type, originalBytes: file.size, optimizedType: blob.type, optimizedBytes: blob.size, source: "delivery_page",
+  } }).catch(() => undefined);
   return path;
 }
 
