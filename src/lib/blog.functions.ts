@@ -156,7 +156,15 @@ export const adminBlogAi = createServerFn({ method: "POST" })
       scope: `blog:${context.userId}`,
       long: true,
     });
-    if (!result.text) throw new Error("AI could not complete this request — check AI keys in Settings");
+    if (!result.text) {
+      const last = result.attempts.at(-1);
+      const timedOut = result.attempts.some((a) => /abort/i.test(a.error));
+      if (last?.provider === "budget") throw new Error("Hourly AI limit reached — try again later");
+      if (timedOut) throw new Error("AI took too long to write this — try again or pick a faster model in Settings");
+      if (last?.status === 402) throw new Error("AI credits are exhausted — add credits or another key in Settings");
+      if (last?.status === 429) throw new Error("AI is busy right now — try again in a moment");
+      throw new Error(`AI could not complete this request (${result.attempts.map((a) => `${a.provider}: ${a.error}`).join("; ") || "no provider"})`);
+    }
     return { text: result.text.replace(/^```(?:markdown|md|json)?\s*|\s*```$/gi, "").trim() };
   });
 

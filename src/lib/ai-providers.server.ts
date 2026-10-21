@@ -228,7 +228,7 @@ async function chatCompletion(opts: {
   long?: boolean;
 }): Promise<{ text: string | null; status: number }> {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  const timer = setTimeout(() => controller.abort(), opts.long ? 90_000 : REQUEST_TIMEOUT_MS);
   try {
     const res = await fetch(opts.url, {
       method: "POST",
@@ -241,7 +241,7 @@ async function chatCompletion(opts: {
       body: JSON.stringify({
         model: opts.model,
         temperature: 0.7,
-        max_tokens: opts.long ? 1800 : 220,
+        max_tokens: opts.long ? 4000 : 220,
         messages: [
           { role: "system", content: opts.system },
           { role: "user", content: opts.prompt },
