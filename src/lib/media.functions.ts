@@ -31,8 +31,8 @@ export const recordMediaAsset = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase.from("media_assets").insert({
       organization_id: data.organizationId, user_id: context.userId, bucket: data.bucket, path: data.path,
-      kind: data.kind, original_name: data.originalName, original_type: data.originalType,
-      original_bytes: data.originalBytes, optimized_type: data.optimizedType, optimized_bytes: data.optimizedBytes, source: data.source,
+      kind: data.kind, original_name: data.originalName ?? null, original_type: data.originalType ?? null,
+      original_bytes: data.originalBytes, optimized_type: data.optimizedType ?? null, optimized_bytes: data.optimizedBytes, source: data.source,
     });
     if (error) console.error("recordMediaAsset", error.message);
     return { ok: !error };

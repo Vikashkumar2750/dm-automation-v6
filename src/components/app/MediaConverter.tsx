@@ -17,9 +17,10 @@ export function MediaConverter() {
     setItems((v) => [...v, ...list.map((f) => ({ name: f.name, status: "working" as const, progress: 0 }))]);
     for (let n = 0; n < list.length; n++) {
       const i = start + n;
+      const file = list[n]!;
       try {
-        if (list[n].size > 200 * 1024 * 1024) throw new Error("Max 200 MB per file");
-        const result = await convertAny(list[n], (p) => update(i, { progress: p }));
+        if (file.size > 200 * 1024 * 1024) throw new Error("Max 200 MB per file");
+        const result = await convertAny(file, (p) => update(i, { progress: p }));
         update(i, { status: "done", result, url: URL.createObjectURL(result.blob), progress: 100 });
       } catch (e) {
         update(i, { status: "error", error: e instanceof Error ? e.message : "Could not convert" });
