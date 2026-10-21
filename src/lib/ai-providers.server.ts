@@ -230,30 +230,47 @@ async function chatCompletion(opts: {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), opts.long ? 90_000 : REQUEST_TIMEOUT_MS);
   try {
-    const res = await fetch(opts.url, {
-      method: "POST",
-      signal: controller.signal,
-      headers: {
-        "content-type": "application/json",
-        authorization: `Bearer ${opts.key}`,
-        ...(opts.extraHeaders ?? {}),
-      },
-      body: JSON.stringify({
-        model: opts.model,
-        temperature: 0.7,
-        max_tokens: opts.long ? 4000 : 220,
-        messages: [
-          { role: "system", content: opts.system },
-          { role: "user", content: opts.prompt },
-        ],
-      }),
-    });
-    if (!res.ok) return { text: null, status: res.status };
-    const json = (await res.json().catch(() => ({}))) as {
-      choices?: { message?: { content?: string } }[];
-    };
-    const raw = json.choices?.[0]?.message?.content;
-    return { text: opts.long ? raw?.trim() || null : cleanOutput(raw), status: res.status };
+    let maxTokens = opts.long ? 4000 : 220;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const res = await fetch(opts.url, {
+        method: "POST",
+        signal: controller.signal,
+        headers: {
+          "content-type": "application/json",
+          authorization: `Bearer ${opts.key}`,
+          ...(opts.extraHeaders ?? {}),
+        },
+        body: JSON.stringify({
+          model: opts.model,
+          temperature: 0.7,
+          max_tokens: maxTokens,
+          messages: [
+            { role: "system", content: opts.system },
+            { role: "user", content: opts.prompt },
+          ],
+        }),
+      });
+      if (!res.ok) {
+        // OpenRouter answers 402 when the balance can't cover max_tokens, and
+        // says how many it can afford — retry once with that smaller budget.
+        if (res.status === 402 && attempt === 0) {
+          const body = await res.text().catch(() => "");
+          const afford = Number(body.match(/can only afford (\d+)/i)?.[1] ?? 0);
+          const next = afford - 20;
+          if (next >= 150 && next < maxTokens) {
+            maxTokens = next;
+            continue;
+          }
+        }
+        return { text: null, status: res.status };
+      }
+      const json = (await res.json().catch(() => ({}))) as {
+        choices?: { message?: { content?: string } }[];
+      };
+      const raw = json.choices?.[0]?.message?.content;
+      return { text: opts.long ? raw?.trim() || null : cleanOutput(raw), status: res.status };
+    }
+    return { text: null, status: 402 };
   } finally {
     clearTimeout(timer);
   }
