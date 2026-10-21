@@ -229,7 +229,7 @@ async function chatCompletion(opts: {
   maxTokens?: number;
 }): Promise<{ text: string | null; status: number; detail?: string }> {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), opts.long ? 90_000 : REQUEST_TIMEOUT_MS);
+  const timer = setTimeout(() => controller.abort(), opts.long ? 180_000 : REQUEST_TIMEOUT_MS);
   try {
     let maxTokens = opts.maxTokens ?? (opts.long ? 4000 : 220);
     for (let attempt = 0; attempt < 2; attempt++) {
