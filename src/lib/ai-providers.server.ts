@@ -226,7 +226,7 @@ async function chatCompletion(opts: {
   prompt: string;
   extraHeaders?: Record<string, string>;
   long?: boolean;
-}): Promise<{ text: string | null; status: number }> {
+}): Promise<{ text: string | null; status: number; detail?: string }> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), opts.long ? 90_000 : REQUEST_TIMEOUT_MS);
   try {
@@ -251,10 +251,10 @@ async function chatCompletion(opts: {
         }),
       });
       if (!res.ok) {
+        const body = await res.text().catch(() => "");
         // OpenRouter answers 402 when the balance can't cover max_tokens, and
         // says how many it can afford — retry once with that smaller budget.
         if (res.status === 402 && attempt === 0) {
-          const body = await res.text().catch(() => "");
           const afford = Number(body.match(/can only afford (\d+)/i)?.[1] ?? 0);
           const next = afford - 20;
           if (next >= 150 && next < maxTokens) {
@@ -262,7 +262,16 @@ async function chatCompletion(opts: {
             continue;
           }
         }
-        return { text: null, status: res.status };
+        let detail = "";
+        try {
+          const j = JSON.parse(body) as { error?: { message?: string } | string; message?: string };
+          detail = (typeof j.error === "string" ? j.error : j.error?.message) ?? j.message ?? "";
+        } catch {
+          detail = body;
+        }
+        // Never echo anything key-shaped back to the UI.
+        detail = detail.replace(/\b(sk|nvapi|re)[-_][A-Za-z0-9_-]{8,}/g, "[key]").replace(/\s+/g, " ").trim().slice(0, 200);
+        return { text: null, status: res.status, detail };
       }
       const json = (await res.json().catch(() => ({}))) as {
         choices?: { message?: { content?: string } }[];
@@ -353,7 +362,7 @@ export async function generateWithFailover(input: {
   const system = input.system.slice(0, limit);
   const prompt = input.prompt.slice(0, limit);
 
-  type Candidate = { name: string; run: () => Promise<{ text: string | null; status: number }> };
+  type Candidate = { name: string; run: () => Promise<{ text: string | null; status: number; detail?: string }> };
   const candidates: Candidate[] = [];
 
   config.openRouterKeys.forEach((key, index) => {
@@ -405,12 +414,13 @@ export async function generateWithFailover(input: {
 
   for (const candidate of candidates) {
     try {
-      const { text, status } = await candidate.run();
+      const { text, status, detail } = await candidate.run();
       if (text) return { text, provider: candidate.name, attempts };
+      const base = status === 402 ? "out of credits" : status === 429 ? "rate limited" : `no usable reply (${status})`;
       attempts.push({
         provider: candidate.name,
         status,
-        error: status === 402 ? "out of credits" : status === 429 ? "rate limited" : `no usable reply (${status})`,
+        error: detail ? `${base}: ${detail}` : base,
       });
     } catch (error) {
       attempts.push({
