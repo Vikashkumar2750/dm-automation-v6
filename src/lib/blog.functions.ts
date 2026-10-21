@@ -161,8 +161,6 @@ export const adminBlogAi = createServerFn({ method: "POST" })
       const timedOut = result.attempts.some((a) => /abort/i.test(a.error));
       if (last?.provider === "budget") throw new Error("Hourly AI limit reached — try again later");
       if (timedOut) throw new Error("AI took too long to write this — try again or pick a faster model in Settings");
-      if (result.attempts.some((a) => a.status === 402))
-        throw new Error("OpenRouter balance is too low for a full article — add a few dollars of credit on openrouter.ai, or set a free model (e.g. meta-llama/llama-3.3-70b-instruct:free) in System Settings");
       if (last?.status === 429) throw new Error("AI is busy right now — try again in a moment");
       throw new Error(`AI could not complete this request (${result.attempts.map((a) => `${a.provider}: ${a.error}`).join("; ") || "no provider"})`);
     }
