@@ -120,41 +120,109 @@ export const adminDeletePost = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+/** Keeps Markdown line breaks but strips control chars and obvious prompt-injection phrases. */
+function cleanArticleInput(value: string, limit: number): string {
+  return value
+    .replace(/[\u0000-\u0008\u000b-\u001f\u007f]/g, " ")
+    .replace(/\b(ignore|disregard|forget)\s+(all\s+|the\s+|your\s+|previous\s+|above\s+)*(instructions?|prompts?|rules?)\b/gi, " ")
+    .replace(/^\s*(system|assistant|developer)\s*:/gim, " ")
+    .slice(0, limit);
+}
+
+const WRITING_RULES = `Writing standard (always follow):
+- Minimum 1,100 words of real, useful content (count only body text). Never pad.
+- E-E-A-T: write from hands-on experience ("In our tests…", "When we set this up for creators…"), give practical steps, honest limitations, and who it is NOT for. No invented statistics — use only widely known facts or clearly label estimates.
+- Match search intent: answer the exact question in the first 2-3 sentences (40-70 words, includes the focus keyword), then go deeper.
+- Structure: H2/H3 headings (at least one containing the focus keyword), short paragraphs (max 3 sentences), bullet lists, numbered steps, and at least ONE Markdown table (comparison, checklist or pricing-style).
+- Include a definition sentence ("X is a …"), concrete numbers (minutes, %, ₹, steps), a "Key takeaways" bullet list and a short conclusion with a call to action for AutoDM by Techaasvik.
+- Focus keyword density 0.8-2% — natural, never stuffed.
+- Links: at least 2 internal Markdown links using ONLY the internal pages listed, and at least 2 external links to trusted official sources (Meta / Instagram / Facebook / Google docs). Never invent internal URLs.
+- Do NOT include an FAQ section inside the article body (FAQs are stored separately).`;
+
 /** AI writing help for super admins (not counted against the user daily limit). */
 export const adminBlogAi = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
     z
       .object({
-        task: z.enum(["outline", "improve", "meta", "faq"]),
+        task: z.enum(["outline", "improve", "meta", "faq", "agent"]),
         title: z.string().max(200),
         focusKeyword: z.string().max(120),
-        content: z.string().max(20_000),
+        content: z.string().max(40_000),
+        slug: z.string().max(120).optional(),
+        seoTitle: z.string().max(200).optional(),
+        metaDescription: z.string().max(400).optional(),
+        excerpt: z.string().max(800).optional(),
+        failing: z.array(z.string().max(200)).max(40).optional(),
       })
       .parse(d),
   )
   .handler(async ({ data, context }) => {
     await assertSuperAdmin(context);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { readAiProviders, generateWithFailover, sanitisePromptInput } = await import("@/lib/ai-providers.server");
+    const { readAiProviders, generateWithFailover } = await import("@/lib/ai-providers.server");
     const config = await readAiProviders(supabaseAdmin);
+
+    const { data: others } = await supabaseAdmin
+      .from("blog_posts")
+      .select("slug, title")
+      .eq("status", "published")
+      .neq("slug", data.slug ?? "")
+      .order("published_at", { ascending: false })
+      .limit(12);
+    const internalPages = [
+      "/ — AutoDM home (Instagram & Facebook DM automation)",
+      "/auth — Start free / sign up",
+      "/blog — All guides",
+      "/contact — Contact the team",
+      ...(others ?? []).map((p) => `/blog/${p.slug} — ${p.title}`),
+    ].join("\n");
+    const sources =
+      "https://developers.facebook.com/docs/messenger-platform, https://developers.facebook.com/docs/instagram-platform, https://help.instagram.com, https://www.facebook.com/business/help, https://transparency.meta.com/policies/community-standards, https://developers.google.com/search/docs/fundamentals/creating-helpful-content";
+
     const tasks: Record<string, string> = {
-      outline:
-        "Write a complete SEO and GEO optimised blog article in Markdown (900-1300 words). Start with a 2-3 sentence direct answer, use H2/H3 headings containing the focus keyword, bullet lists, concrete numbers, and mention AutoDM by Techaasvik naturally. Return only the Markdown.",
-      improve:
-        "Improve this Markdown article for SEO and AI search (GEO): clearer direct answer at the top, keyword in a subheading, short paragraphs, lists, a definition sentence. Keep facts; do not invent statistics. Return only the improved Markdown.",
-      meta: 'Return ONLY JSON: {"seoTitle": "30-60 chars with keyword", "metaDescription": "120-160 chars with keyword", "excerpt": "1-2 sentence summary, 80-200 chars"}',
-      faq: 'Return ONLY JSON: {"faq": [{"q": "question", "a": "2-3 sentence answer"}]} with 4 questions people really search about the topic.',
+      outline: `Write a complete SEO, GEO and E-E-A-T optimised blog article in Markdown. Mention AutoDM by Techaasvik naturally. Return only the Markdown.\n${WRITING_RULES}`,
+      improve: `Rewrite and expand this Markdown article for SEO and AI search (GEO) while keeping its facts. Return only the improved Markdown.\n${WRITING_RULES}`,
+      meta: 'Return ONLY JSON: {"seoTitle": "40-58 chars, starts with the focus keyword", "metaDescription": "130-155 chars with the focus keyword", "excerpt": "1-2 sentence summary, 100-200 chars"}',
+      faq: 'Return ONLY JSON: {"faq": [{"q": "question", "a": "2-3 sentence answer"}]} with 5 questions people really search about the topic.',
+      agent: `You are an SEO & GEO optimisation agent. Improve EVERY part of this blog post so it passes all SEO and GEO checks (score 100/100) and fully satisfies user intent.
+${WRITING_RULES}
+Rules for the fields:
+- SEO_TITLE: 40-58 characters, begins with the exact focus keyword.
+- META: 130-155 characters, contains the exact focus keyword and a benefit.
+- EXCERPT: 100-200 characters summary.
+- COVER_ALT: descriptive alt text (8-14 words) with the focus keyword.
+- FAQ: 5 real search questions, 2-3 sentence answers, as a JSON array [{"q":"…","a":"…"}].
+- CONTENT: the full improved Markdown article. The very first paragraph (not a heading) must contain the exact focus keyword.
+Return EXACTLY this format, nothing before or after:
+===SEO_TITLE===
+…
+===META===
+…
+===EXCERPT===
+…
+===COVER_ALT===
+…
+===FAQ===
+[…]
+===CONTENT===
+…`,
     };
+
+    const failing = data.failing?.length ? `\nCurrently failing checks to fix:\n- ${data.failing.join("\n- ")}\n` : "";
+    const prompt = cleanArticleInput(
+      `Title: ${data.title}\nFocus keyword: ${data.focusKeyword}\nURL slug: ${data.slug ?? ""}\nCurrent SEO title: ${data.seoTitle ?? ""}\nCurrent meta description: ${data.metaDescription ?? ""}\nCurrent excerpt: ${data.excerpt ?? ""}\n${failing}\nInternal pages you may link to (use these exact paths):\n${internalPages}\n\nTrusted external sources you may cite: ${sources}\n\nCurrent content:\n${data.content || "(empty — write it from scratch)"}`,
+      30_000,
+    );
+    const isLong = data.task === "outline" || data.task === "improve" || data.task === "agent";
     const result = await generateWithFailover({
       config: { ...config, enabled: true, useLovableFallback: true, maxCallsPerHour: 60 },
-      system: `You are a senior SEO content writer for a social media DM automation SaaS (Instagram, Facebook, YouTube). ${tasks[data.task]}`,
-      prompt: sanitisePromptInput(
-        `Title: ${data.title}\nFocus keyword: ${data.focusKeyword}\n\nCurrent content:\n${data.content}`,
-        18_000,
-      ),
+      system: `You are a senior SEO content writer and subject-matter expert for a social media DM automation SaaS (Instagram, Facebook, YouTube). ${tasks[data.task]}`,
+      prompt,
       scope: `blog:${context.userId}`,
       long: true,
+      inputLimit: 32_000,
+      maxTokens: isLong ? 7000 : 1200,
     });
     if (!result.text) {
       const last = result.attempts.at(-1);
@@ -164,7 +232,34 @@ export const adminBlogAi = createServerFn({ method: "POST" })
       if (last?.status === 429) throw new Error("AI is busy right now — try again in a moment");
       throw new Error(`AI could not complete this request (${result.attempts.map((a) => `${a.provider}: ${a.error}`).join("; ") || "no provider"})`);
     }
-    return { text: result.text.replace(/^```(?:markdown|md|json)?\s*|\s*```$/gi, "").trim() };
+    const text = result.text.replace(/^```(?:markdown|md|json)?\s*|\s*```$/gi, "").trim();
+    if (data.task !== "agent") return { text, agent: null };
+
+    const part = (name: string) => {
+      const m = text.match(new RegExp(`===${name}===\\s*([\\s\\S]*?)(?=\\n===[A-Z_]+===|$)`));
+      return m?.[1]?.trim() ?? "";
+    };
+    let faq: FaqItem[] = [];
+    try {
+      const raw = part("FAQ").replace(/^```(?:json)?|```$/g, "").trim();
+      faq = (JSON.parse(raw.match(/\[[\s\S]*\]/)?.[0] ?? "[]") as FaqItem[])
+        .filter((f) => f && typeof f.q === "string" && typeof f.a === "string")
+        .slice(0, 8);
+    } catch {
+      faq = [];
+    }
+    const content = part("CONTENT").replace(/^```(?:markdown|md)?\s*|\s*```$/g, "").trim();
+    if (content.length < 200) throw new Error("The AI reply was incomplete — please try again");
+    return {
+      text: content,
+      agent: {
+        seoTitle: part("SEO_TITLE").replace(/^["']|["']$/g, "").slice(0, 120),
+        metaDescription: part("META").replace(/^["']|["']$/g, "").slice(0, 320),
+        excerpt: part("EXCERPT").slice(0, 600),
+        coverAlt: part("COVER_ALT").slice(0, 200),
+        faq,
+      },
+    };
   });
 
 const IMAGE_TYPES: Record<string, string> = { "image/png": "png", "image/jpeg": "jpg", "image/webp": "webp", "image/gif": "gif" };

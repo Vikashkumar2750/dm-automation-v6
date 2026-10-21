@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
-import { Loader2, Plus, Sparkles, Trash2 } from "lucide-react";
+import { Bot, Loader2, Plus, Sparkles, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { MarkdownEditor, useBlogImageUpload } from "@/components/app/MarkdownEditor";
@@ -85,10 +85,38 @@ function AdminBlogPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  type Task = "outline" | "improve" | "meta" | "faq" | "agent";
   const aiM = useMutation({
-    mutationFn: (task: "outline" | "improve" | "meta" | "faq") =>
-      ai({ data: { task, title: d!.title, focusKeyword: d!.focus_keyword ?? "", content: d!.content.slice(0, 20000) } }).then((r) => ({ task, text: r.text })),
-    onSuccess: ({ task, text }) => {
+    mutationFn: (task: Task) => {
+      const failing = [...seo, ...geo].filter((c) => !c.pass).map((c) => `${c.label} — ${c.tip}`);
+      return ai({
+        data: {
+          task, title: d!.title, focusKeyword: d!.focus_keyword ?? "", content: d!.content.slice(0, 40000),
+          slug: d!.slug, seoTitle: d!.seo_title ?? "", metaDescription: d!.meta_description ?? "", excerpt: d!.excerpt, failing,
+        },
+      }).then((r) => ({ task, text: r.text, agent: r.agent }));
+    },
+    onSuccess: ({ task, text, agent }) => {
+      if (task === "agent" && agent) {
+        setD((p) => {
+          if (!p) return p;
+          const kw = slugify(p.focus_keyword ?? "");
+          // Only change the URL of drafts, so live links never break.
+          const slug = kw && !p.slug.includes(kw) && p.status !== "published" ? `${kw}-${p.slug}`.slice(0, 90).replace(/-+$/, "") : p.slug;
+          return {
+            ...p,
+            content: text,
+            slug,
+            seo_title: agent.seoTitle || p.seo_title,
+            meta_description: agent.metaDescription || p.meta_description,
+            excerpt: agent.excerpt || p.excerpt,
+            cover_alt: agent.coverAlt || p.cover_alt,
+            faq: agent.faq.length >= 3 ? agent.faq : p.faq,
+          };
+        });
+        toast.success("SEO & GEO agent improved the article — review it, then save");
+        return;
+      }
       if (task === "outline" || task === "improve") return set("content", text);
       try {
         const j = JSON.parse(text.match(/\{[\s\S]*\}/)?.[0] ?? text);
@@ -153,6 +181,10 @@ function AdminBlogPage() {
                 <div className="space-y-2"><Label>Focus keyword</Label><Input value={d.focus_keyword ?? ""} onChange={(e) => set("focus_keyword", e.target.value)} placeholder="instagram dm automation" /></div>
                 <div className="space-y-2"><Label>URL slug</Label><Input value={d.slug} onChange={(e) => set("slug", slugify(e.target.value))} /></div>
               </div>
+              <Button className="w-full sm:w-auto" disabled={busy || d.title.length < 3 || !(d.focus_keyword ?? "").trim()} onClick={() => aiM.mutate("agent")}>
+                {busy && aiM.variables === "agent" ? <Loader2 className="mr-2 size-4 animate-spin" /> : <Bot className="mr-2 size-4" />}
+                {busy && aiM.variables === "agent" ? "Agent is optimising… (up to 2 min)" : "SEO & GEO agent — fix everything to 100/100"}
+              </Button>
               <div className="flex flex-wrap gap-2">
                 {([["outline", "Write full article"], ["improve", "Improve for SEO/GEO"], ["meta", "Generate title & description"], ["faq", "Generate FAQs"]] as const).map(([t, l]) => (
                   <Button key={t} size="sm" variant="secondary" disabled={busy || d.title.length < 3} onClick={() => aiM.mutate(t)}>
