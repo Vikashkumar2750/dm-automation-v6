@@ -4,6 +4,7 @@ const SITE = "https://autodm.techaasvik.com";
 const PAGES: { path: string; priority: string; freq: string }[] = [
   { path: "/", priority: "1.0", freq: "weekly" },
   { path: "/blog", priority: "0.8", freq: "daily" },
+  { path: "/tools/webp-converter", priority: "0.7", freq: "monthly" },
   { path: "/contact", priority: "0.6", freq: "monthly" },
   { path: "/privacy", priority: "0.3", freq: "yearly" },
   { path: "/terms", priority: "0.3", freq: "yearly" },

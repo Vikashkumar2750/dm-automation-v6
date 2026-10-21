@@ -1,7 +1,7 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import {
-
+  Images,
   Newspaper,
   Activity,
   Building2,
@@ -49,6 +49,7 @@ const healthNav: NavItem[] = [
 const governNav: NavItem[] = [
   { label: "Plans & Billing", to: "/admin/plans", icon: CreditCard },
   { label: "Blog & SEO", to: "/admin/blog", icon: Newspaper },
+  { label: "Media Library", to: "/admin/media", icon: Images },
   { label: "Security & Audit", to: "/admin/audit", icon: FileClock },
   { label: "System Settings", to: "/admin/settings", icon: Settings },
 ];

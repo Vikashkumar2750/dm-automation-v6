@@ -50,6 +50,13 @@
       "when": 1792241353753,
       "tag": "0006_revenue_coordination_and_whatsapp_otp",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1792576489149,
+      "tag": "0007_migration",
+      "breakpoints": true
     }
   ]
 }

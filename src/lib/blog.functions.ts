@@ -302,7 +302,10 @@ const IMAGE_TYPES: Record<string, string> = { "image/png": "png", "image/jpeg": 
 export const adminUploadBlogImage = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
-    z.object({ name: z.string().max(120), type: z.string(), base64: z.string().max(7_000_000) }).parse(d),
+    z.object({
+      name: z.string().max(120), type: z.string(), base64: z.string().max(7_000_000),
+      originalBytes: z.number().int().min(0).optional(), originalType: z.string().max(100).optional(),
+    }).parse(d),
   )
   .handler(async ({ data, context }) => {
     await assertSuperAdmin(context);
@@ -318,7 +321,12 @@ export const adminUploadBlogImage = createServerFn({ method: "POST" })
     }
     const base = data.name.replace(/\.[^.]+$/, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 60) || "image";
     const path = `${new Date().toISOString().slice(0, 7)}/${base}-${crypto.randomUUID().slice(0, 8)}.${ext}`;
-    const { error } = await supabaseAdmin.storage.from(bucket).upload(path, bytes, { contentType: data.type });
+    const { error } = await supabaseAdmin.storage.from(bucket).upload(path, bytes, { contentType: data.type, cacheControl: "31536000" });
     if (error) throw new Error(error.message);
+    await supabaseAdmin.from("media_assets").insert({
+      user_id: context.userId, bucket, path, kind: "image", original_name: data.name,
+      original_type: data.originalType ?? data.type, original_bytes: data.originalBytes ?? bytes.byteLength,
+      optimized_type: data.type, optimized_bytes: bytes.byteLength, source: "blog",
+    });
     return { url: supabaseAdmin.storage.from(bucket).getPublicUrl(path).data.publicUrl };
   });

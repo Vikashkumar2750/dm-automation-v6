@@ -3,6 +3,7 @@
 // short-lived signed link when it hands the file to Instagram/Facebook.
 
 import { supabase } from "@/integrations/supabase/client";
+import { recordMediaAsset } from "@/lib/media.functions";
 
 export const MEDIA_BUCKET = "post-media";
 
@@ -25,6 +26,12 @@ export async function uploadPostMedia(organizationId: string, file: File) {
     contentType: file.type || "application/octet-stream",
   });
   if (error) throw new Error(error.message);
+  // Kept in the original format: Instagram/Facebook publishing only accepts JPEG/PNG and MP4.
+  const kind = file.type.startsWith("video/") ? "video" : file.type.startsWith("audio/") ? "audio" : file.type.startsWith("image/") ? "image" : "file";
+  void recordMediaAsset({ data: {
+    organizationId, bucket: MEDIA_BUCKET, path, kind, originalName: file.name.slice(0, 200), originalType: file.type,
+    originalBytes: file.size, optimizedType: file.type, optimizedBytes: file.size, source: "post",
+  } }).catch(() => undefined);
   return `${STORAGE_PREFIX}${path}`;
 }
 

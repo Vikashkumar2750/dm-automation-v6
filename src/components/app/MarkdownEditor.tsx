@@ -22,10 +22,17 @@ export function useBlogImageUpload() {
   const upload = useServerFn(adminUploadBlogImage);
   const [busy, setBusy] = useState(false);
   const run = async (file: File) => {
-    if (file.size > 5 * 1024 * 1024) throw new Error("Image must be under 5 MB");
+    if (file.size > 20 * 1024 * 1024) throw new Error("Image must be under 20 MB");
     setBusy(true);
     try {
-      return (await upload({ data: { name: file.name, type: file.type, base64: await fileToBase64(file) } })).url;
+      let out: File = file;
+      if (file.type !== "image/gif" && file.type.startsWith("image/")) {
+        const { toWebp } = await import("@/lib/media-convert");
+        const c = await toWebp(file).catch(() => null);
+        if (c && c.optimizedBytes < file.size) out = new File([c.blob], file.name.replace(/\.[^.]+$/, "") + ".webp", { type: "image/webp" });
+      }
+      if (out.size > 5 * 1024 * 1024) throw new Error("Image is still over 5 MB after optimizing");
+      return (await upload({ data: { name: out.name, type: out.type, base64: await fileToBase64(out), originalBytes: file.size, originalType: file.type } })).url;
     } finally {
       setBusy(false);
     }

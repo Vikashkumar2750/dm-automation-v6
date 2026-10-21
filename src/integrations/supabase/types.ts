@@ -1439,6 +1439,57 @@ export type Database = {
         }
         Relationships: []
       }
+      media_assets: {
+        Row: {
+          bucket: string
+          created_at: string
+          id: string
+          kind: string
+          optimized_bytes: number
+          optimized_type: string | null
+          organization_id: string | null
+          original_bytes: number
+          original_name: string | null
+          original_type: string | null
+          path: string
+          source: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          bucket: string
+          created_at?: string
+          id?: string
+          kind?: string
+          optimized_bytes?: number
+          optimized_type?: string | null
+          organization_id?: string | null
+          original_bytes?: number
+          original_name?: string | null
+          original_type?: string | null
+          path: string
+          source?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          bucket?: string
+          created_at?: string
+          id?: string
+          kind?: string
+          optimized_bytes?: number
+          optimized_type?: string | null
+          organization_id?: string | null
+          original_bytes?: number
+          original_name?: string | null
+          original_type?: string | null
+          path?: string
+          source?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       messages: {
         Row: {
           body: string

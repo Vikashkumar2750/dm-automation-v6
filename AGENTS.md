@@ -32,5 +32,5 @@
 - Legal page and delivery popup share DisclaimerContent for consistent text.
 - Workflows requires feature_flags.workflows_enabled via getPlatformStatus — Super Admin controls rollout.
 - Read subdirectory AGENTS.md before edits.
-- Safety send caps (hourly/daily/journeys-per-contact) are per connected account via account-safety.server, clamped to Super Admin max values in feature_flags (safety_caps / safety_caps_<orgId>); plan quota stays workspace-wide — Meta flags accounts individually, billing is per workspace.
-- Chats that lose their account link (disconnect/reconnect) are re-linked by public.relink_conversation_accounts (webhook evidence, else the only account on that platform), run on deploy and after each account connect — keeps Inbox/Contacts account filters complete without touching Meta delivery.
+- Safety send caps are per connected account (account-safety.server), clamped to feature_flags safety_caps[_<orgId>]; plan quota is workspace-wide — Meta flags accounts, billing is per workspace.
+- public.relink_conversation_accounts re-links chats after disconnect/reconnect (on deploy + each connect) — keeps account filters complete without touching Meta delivery.

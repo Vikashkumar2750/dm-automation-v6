@@ -596,6 +596,15 @@ function LandingPage() {
             </div>
           </div>
         </section>
+        <section className="mx-auto max-w-6xl px-6 pb-16">
+          <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-border bg-card p-6">
+            <div>
+              <h2 className="text-xl font-semibold">Free tool: WebP &amp; WebM converter</h2>
+              <p className="text-sm text-muted-foreground">Shrink any photo, video or audio for faster pages — right in your browser.</p>
+            </div>
+            <Button asChild variant="outline"><Link to="/tools/webp-converter">Open converter</Link></Button>
+          </div>
+        </section>
       </main>
 
       <PublicFooter />
