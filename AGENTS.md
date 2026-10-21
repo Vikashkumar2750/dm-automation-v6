@@ -34,3 +34,4 @@
 - Read subdirectory AGENTS.md before edits.
 - Safety send caps (hourly/daily/journeys-per-contact) are per connected account via account-safety.server, clamped to Super Admin max values in feature_flags (safety_caps / safety_caps_<orgId>); plan quota stays workspace-wide — Meta flags accounts individually, billing is per workspace.
 - Chats that lose their account link (disconnect/reconnect) are re-linked by public.relink_conversation_accounts (webhook evidence, else the only account on that platform), run on deploy and after each account connect — keeps Inbox/Contacts account filters complete without touching Meta delivery.
+- Media uploads are recorded in media_assets (before/after bytes) and managed by Super Admin at /admin/media; website images (delivery pages, blog) convert to WebP in the browser, while post-media keeps JPEG/MP4 — Meta publishing rejects WebP/WebM.
