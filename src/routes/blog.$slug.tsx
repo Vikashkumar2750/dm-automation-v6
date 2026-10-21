@@ -70,7 +70,7 @@ function BlogPostPage() {
   return (
     <div className="min-h-screen bg-background">
       <PublicHeader />
-      <main className="mx-auto max-w-3xl px-4 py-12">
+      <main className="mx-auto max-w-6xl px-6 py-12">
         <Link to="/blog" className="text-sm text-muted-foreground hover:text-foreground">← All articles</Link>
         <h1 className="mt-4 text-4xl font-bold tracking-tight">{post.title}</h1>
         <p className="mt-3 text-sm text-muted-foreground">
