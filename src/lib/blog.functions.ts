@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { wordCount } from "@/lib/seo-score";
 
 export type FaqItem = { q: string; a: string };
 export type BlogPost = {
@@ -218,15 +219,17 @@ Output contract (critical):
       30_000,
     );
     const isLong = data.task === "outline" || data.task === "improve" || data.task === "agent";
-    const result = await generateWithFailover({
-      config: { ...config, enabled: true, useLovableFallback: true, maxCallsPerHour: 60 },
-      system: `You are a senior SEO content writer and subject-matter expert for a social media DM automation SaaS (Instagram, Facebook, YouTube). ${tasks[data.task]}`,
-      prompt,
-      scope: `blog:${context.userId}`,
-      long: true,
-      inputLimit: 32_000,
-      maxTokens: isLong ? 7000 : 1200,
-    });
+    const callAi = (extraNote = "") =>
+      generateWithFailover({
+        config: { ...config, enabled: true, useLovableFallback: true, maxCallsPerHour: 60 },
+        system: `You are a senior SEO content writer and subject-matter expert for a social media DM automation SaaS (Instagram, Facebook, YouTube). ${tasks[data.task]}`,
+        prompt: prompt + extraNote,
+        scope: `blog:${context.userId}`,
+        long: true,
+        inputLimit: 32_000,
+        maxTokens: data.task === "agent" ? 8000 : isLong ? 7000 : 1200,
+      });
+    let result = await callAi();
     if (!result.text) {
       const last = result.attempts.at(-1);
       const timedOut = result.attempts.some((a) => /abort/i.test(a.error));
@@ -235,33 +238,61 @@ Output contract (critical):
       if (last?.status === 429) throw new Error("AI is busy right now — try again in a moment");
       throw new Error(`AI could not complete this request (${result.attempts.map((a) => `${a.provider}: ${a.error}`).join("; ") || "no provider"})`);
     }
-    const text = result.text.replace(/^```(?:markdown|md|json)?\s*|\s*```$/gi, "").trim();
+    let text = result.text.replace(/^```(?:markdown|md|json)?\s*|\s*```$/gi, "").trim();
     if (data.task !== "agent") return { text, agent: null };
 
-    const part = (name: string) => {
-      const m = text.match(new RegExp(`===${name}===\\s*([\\s\\S]*?)(?=\\n===[A-Z_]+===|$)`));
+    const part = (name: string, from: string) => {
+      const m = from.match(new RegExp(`===${name}===\\s*([\\s\\S]*?)(?=\\n===[A-Z_]+===|$)`));
       return m?.[1]?.trim() ?? "";
     };
-    let faq: FaqItem[] = [];
-    try {
-      const raw = part("FAQ").replace(/^```(?:json)?|```$/g, "").trim();
-      faq = (JSON.parse(raw.match(/\[[\s\S]*\]/)?.[0] ?? "[]") as FaqItem[])
-        .filter((f) => f && typeof f.q === "string" && typeof f.a === "string")
-        .slice(0, 8);
-    } catch {
-      faq = [];
-    }
-    const content = part("CONTENT").replace(/^```(?:markdown|md)?\s*|\s*```$/g, "").trim();
-    if (content.length < 200) throw new Error("The AI reply was incomplete — please try again");
-    return {
-      text: content,
-      agent: {
-        seoTitle: part("SEO_TITLE").replace(/^["']|["']$/g, "").slice(0, 120),
-        metaDescription: part("META").replace(/^["']|["']$/g, "").slice(0, 320),
-        excerpt: part("EXCERPT").slice(0, 600),
-        coverAlt: part("COVER_ALT").slice(0, 200),
+    const parseAgent = (raw: string) => {
+      let content = part("CONTENT", raw).replace(/^```(?:markdown|md)?\s*|\s*```$/g, "").trim();
+      // Fallback: if the model skipped the CONTENT marker, treat everything after the FAQ block as the article.
+      if (content.length < 200) {
+        const afterFaq = raw.split(/===FAQ===/i)[1] ?? "";
+        content = afterFaq.replace(/^[\s\S]*?\]\s*(?=\n|$)/, "").replace(/===[A-Z_]+===/g, "").trim();
+      }
+      let faq: FaqItem[] = [];
+      try {
+        const rawFaq = part("FAQ", raw).replace(/^```(?:json)?|```$/g, "").trim();
+        faq = (JSON.parse(rawFaq.match(/\[[\s\S]*\]/)?.[0] ?? "[]") as FaqItem[])
+          .filter((f) => f && typeof f.q === "string" && typeof f.a === "string")
+          .slice(0, 8);
+      } catch {
+        faq = [];
+      }
+      return {
+        content,
+        seoTitle: part("SEO_TITLE", raw).replace(/^["']|["']$/g, "").slice(0, 120),
+        metaDescription: part("META", raw).replace(/^["']|["']$/g, "").slice(0, 320),
+        excerpt: part("EXCERPT", raw).slice(0, 600),
+        coverAlt: part("COVER_ALT", raw).slice(0, 200),
         faq,
-      },
+      };
+    };
+
+    let parsed = parseAgent(text);
+    // The agent must return a COMPLETE article — if it got cut off or came back thin, retry once with a strict reminder.
+    if (wordCount(parsed.content) < 800) {
+      result = await callAi(
+        "\n\nIMPORTANT: your previous reply was incomplete or too short (the article got cut off). Return the FULL response again: all six === sections, with a COMPLETE article of at least 1,100 words, finished to the very end.",
+      );
+      if (result.text) {
+        text = result.text.replace(/^```(?:markdown|md|json)?\s*|\s*```$/gi, "").trim();
+        const retry = parseAgent(text);
+        if (wordCount(retry.content) > wordCount(parsed.content)) parsed = retry;
+      }
+    }
+    if (parsed.content.length < 200) throw new Error("The AI reply was incomplete — please try again");
+    // Fill any field the model left blank so one click always completes the whole post.
+    const kw = data.focusKeyword.trim();
+    const seoTitle = parsed.seoTitle || (kw ? `${kw.replace(/\b\w/g, (c) => c.toUpperCase())}: ${data.title}` : data.title).slice(0, 120);
+    const excerpt = parsed.excerpt || (data.excerpt || parsed.content.replace(/[#*_>\[\]()!-]/g, " ").replace(/\s+/g, " ").trim()).slice(0, 200);
+    const metaDescription = parsed.metaDescription || excerpt.slice(0, 155);
+    const coverAlt = parsed.coverAlt || `${kw || data.title} — step by step guide`.slice(0, 200);
+    return {
+      text: parsed.content,
+      agent: { seoTitle, metaDescription, excerpt, coverAlt, faq: parsed.faq },
     };
   });
 
