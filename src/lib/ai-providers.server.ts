@@ -226,11 +226,12 @@ async function chatCompletion(opts: {
   prompt: string;
   extraHeaders?: Record<string, string>;
   long?: boolean;
+  maxTokens?: number;
 }): Promise<{ text: string | null; status: number; detail?: string }> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), opts.long ? 90_000 : REQUEST_TIMEOUT_MS);
   try {
-    let maxTokens = opts.long ? 4000 : 220;
+    let maxTokens = opts.maxTokens ?? (opts.long ? 4000 : 220);
     for (let attempt = 0; attempt < 2; attempt++) {
       const res = await fetch(opts.url, {
         method: "POST",
@@ -343,6 +344,9 @@ export async function generateWithFailover(input: {
   scope?: string;
   /** Long-form mode for the dashboard assistant: keeps formatting and allows longer output. */
   long?: boolean;
+  /** Optional overrides for long-form writing (e.g. full blog articles). */
+  maxTokens?: number;
+  inputLimit?: number;
 }): Promise<AiResult> {
   const attempts: Attempt[] = [];
   const { config } = input;
@@ -357,7 +361,7 @@ export async function generateWithFailover(input: {
     };
   }
 
-  const limit = input.long ? 4000 : MAX_PROMPT_CHARS;
+  const limit = input.inputLimit ?? (input.long ? 4000 : MAX_PROMPT_CHARS);
   const long = input.long === true;
   const system = input.system.slice(0, limit);
   const prompt = input.prompt.slice(0, limit);
@@ -376,6 +380,7 @@ export async function generateWithFailover(input: {
           system,
           prompt,
           long,
+          maxTokens: input.maxTokens,
           extraHeaders: { "X-Title": "AutoDM by Techaasvik" },
         }),
     });
@@ -391,6 +396,7 @@ export async function generateWithFailover(input: {
           system,
           prompt,
           long,
+          maxTokens: input.maxTokens,
         }),
     });
   }
@@ -405,6 +411,7 @@ export async function generateWithFailover(input: {
           system,
           prompt,
           long,
+          maxTokens: input.maxTokens,
         }),
     });
   }
