@@ -17,6 +17,7 @@ import {
   getProviderReadiness,
   listSocialAccounts,
   startSocialConnect,
+  testInstagramComments,
 } from "@/lib/social-accounts.functions";
 import { getWebhookConfig, listWebhookEvents } from "@/lib/webhooks.functions";
 
@@ -78,6 +79,18 @@ function SocialAccountsPage() {
   });
 
   const checkDelivery = useServerFn(checkWebhookDelivery);
+  const testCommentsFn = useServerFn(testInstagramComments);
+  const testComments = useMutation({
+    mutationFn: () => testCommentsFn({ data: { organizationId: orgId! } }),
+    onSuccess: (rows) => {
+      if (rows.length === 0) return toast("Connect an Instagram account first");
+      for (const r of rows) {
+        if (r.ok) toast.success(`${r.name}: Instagram comments read OK (${r.comments} comments)`);
+        else toast.error(`${r.name}: ${r.error}`);
+      }
+    },
+    onError: () => toast.error("Could not test Instagram comments"),
+  });
   const fixNotifications = useMutation({
     mutationFn: () => checkDelivery({ data: { organizationId: orgId!, repair: true } }),
     onSuccess: (rows) => {
@@ -307,7 +320,16 @@ function SocialAccountsPage() {
               Access tokens are stored securely on the server and never sent to the browser.
             </p>
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex flex-wrap items-center gap-1">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => testComments.mutate()}
+            disabled={!orgId || testComments.isPending}
+          >
+            {testComments.isPending ? <Loader2 className="size-4 animate-spin" /> : <CheckCircle2 className="size-4" />}
+            Test Instagram comments
+          </Button>
           <Button
             variant="outline"
             size="sm"
