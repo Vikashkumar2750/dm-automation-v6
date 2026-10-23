@@ -265,7 +265,7 @@ export const checkWebhookDelivery = createServerFn({ method: "POST" })
     return results;
   });
 
-/** Reads recent Instagram media comments for each connected Instagram account (exercises instagram_business_manage_comments). */
+/** Reads recent Instagram media comments for each connected Instagram account (exercises instagram_manage_comments). */
 export const testInstagramComments = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) => orgInput.parse(data))
