@@ -264,3 +264,43 @@ export const checkWebhookDelivery = createServerFn({ method: "POST" })
 
     return results;
   });
+
+/** Reads recent Instagram media comments for each connected Instagram account (exercises instagram_business_manage_comments). */
+export const testInstagramComments = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => orgInput.parse(data))
+  .handler(async ({ data, context }) => {
+    const { data: accounts, error } = await context.supabase
+      .from("social_accounts")
+      .select("id, name, external_id")
+      .eq("organization_id", data.organizationId)
+      .eq("platform", "instagram");
+    if (error) throw new Error(error.message);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { readToken } = await import("@/lib/token-crypto.server");
+    const out: Array<{ name: string; ok: boolean; comments: number; error?: string }> = [];
+    for (const a of accounts ?? []) {
+      const { data: row } = await supabaseAdmin
+        .from("social_account_tokens")
+        .select("access_token")
+        .eq("social_account_id", a.id)
+        .maybeSingle();
+      const token = row?.access_token ? await readToken(row.access_token) : null;
+      if (!token) { out.push({ name: a.name, ok: false, comments: 0, error: "Reconnect this account" }); continue; }
+      try {
+        const g = "https://graph.facebook.com/v21.0";
+        const media = await (await fetch(`${g}/${a.external_id}/media?fields=id&limit=3&access_token=${encodeURIComponent(token)}`)).json() as { data?: Array<{ id: string }>; error?: { message: string } };
+        if (media.error) throw new Error(media.error.message);
+        let count = 0;
+        for (const m of media.data ?? []) {
+          const c = await (await fetch(`${g}/${m.id}/comments?fields=id,text,timestamp&limit=10&access_token=${encodeURIComponent(token)}`)).json() as { data?: unknown[]; error?: { message: string } };
+          if (c.error) throw new Error(c.error.message);
+          count += c.data?.length ?? 0;
+        }
+        out.push({ name: a.name, ok: true, comments: count });
+      } catch (e) {
+        out.push({ name: a.name, ok: false, comments: 0, error: (e as Error).message.slice(0, 200) });
+      }
+    }
+    return out;
+  });

@@ -52,6 +52,7 @@ export const metaScopes = [
   "pages_manage_posts",
   "instagram_basic",
   "instagram_manage_comments",
+  "instagram_business_manage_comments",
   "instagram_manage_messages",
   "instagram_content_publish",
   "business_management",
