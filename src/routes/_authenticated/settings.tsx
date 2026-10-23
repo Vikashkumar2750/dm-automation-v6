@@ -197,7 +197,7 @@ function SettingsPage() {
               id="ws-brand"
               placeholder="Your agency name"
               value={form.brandName}
-              disabled={!canEdit}
+              disabled={!canEdit || !isAgency}
               onChange={(e) => setForm((f) => ({ ...f, brandName: e.target.value }))}
             />
           </div>
@@ -207,7 +207,7 @@ function SettingsPage() {
               id="ws-logo"
               placeholder="https://…/logo.png"
               value={form.logoUrl}
-              disabled={!canEdit}
+              disabled={!canEdit || !isAgency}
               onChange={(e) => setForm((f) => ({ ...f, logoUrl: e.target.value }))}
             />
           </div>
@@ -219,14 +219,14 @@ function SettingsPage() {
                 aria-label="Brand colour"
                 className="size-10 cursor-pointer rounded-lg border bg-surface-secondary"
                 value={/^#[0-9a-fA-F]{6}$/.test(form.brandColor) ? form.brandColor : "#2563eb"}
-                disabled={!canEdit}
+                disabled={!canEdit || !isAgency}
                 onChange={(e) => setForm((f) => ({ ...f, brandColor: e.target.value }))}
               />
               <Input
                 id="ws-color"
                 placeholder="#2563eb"
                 value={form.brandColor}
-                disabled={!canEdit}
+                disabled={!canEdit || !isAgency}
                 onChange={(e) => setForm((f) => ({ ...f, brandColor: e.target.value }))}
               />
             </div>
@@ -237,7 +237,7 @@ function SettingsPage() {
               id="ws-email"
               placeholder="support@yourbrand.com"
               value={form.supportEmail}
-              disabled={!canEdit}
+              disabled={!canEdit || !isAgency}
               onChange={(e) => setForm((f) => ({ ...f, supportEmail: e.target.value }))}
             />
           </div>
