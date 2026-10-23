@@ -140,5 +140,5 @@ Real Meta + YouTube credentials are available when we reach OAuth phases.
 - [x] Platform + account filters across pages, dashboard templates/new automation, guide cleanup
 - [x] Per-account safety limits with Super Admin max values; per-account usage table
 - [ ] Verify per-account limits and filters with real connected accounts (needs live data)
-- [ ] Lock Agency-only branding fields in Settings
-- [ ] Add instagram_business_manage_comments scope + test comments button
+- [x] Lock Agency-only branding fields in Settings
+- [x] Add instagram_business_manage_comments scope + test comments button
