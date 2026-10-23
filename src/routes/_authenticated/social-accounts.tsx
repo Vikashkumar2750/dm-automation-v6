@@ -83,7 +83,7 @@ function SocialAccountsPage() {
   const testComments = useMutation({
     mutationFn: () => testCommentsFn({ data: { organizationId: orgId! } }),
     onSuccess: (rows) => {
-      if (rows.length === 0) return toast("Connect an Instagram account first");
+      if (rows.length === 0) { toast("Connect an Instagram account first"); return; }
       for (const r of rows) {
         if (r.ok) toast.success(`${r.name}: Instagram comments read OK (${r.comments} comments)`);
         else toast.error(`${r.name}: ${r.error}`);
