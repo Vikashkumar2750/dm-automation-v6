@@ -26,9 +26,9 @@ import { supabase } from "@/integrations/supabase/client";
 const metaPartnerBadge = { url: "/meta-business-partner.png" };
 
 const pageTitle =
-  "AutoDM by Techaasvik — Turn Instagram, Facebook & YouTube comments into leads";
+  "AutoDM — Instagram Comment-to-DM Automation, Sales Pages & Unified Inbox";
 const pageDescription =
-  "One inbox for Instagram and Facebook DMs and comments, smart public comment replies and publishing for YouTube, scheduling and analytics. Reply in seconds, stay inside platform rules.";
+  "Auto-reply to Instagram & Facebook comments with DMs, sell via built-in delivery pages with WhatsApp OTP leads, and reply on YouTube — official Meta APIs, from ₹9.";
 
 
 const faqs = [
