@@ -105,9 +105,9 @@ const AI_WINDOW_MS = 24 * 3600_000;
 
 /** AI flow suggestion: active Agency plan only, one generated flow per workspace per 24 hours. */
 async function aiFlowStatus(admin: any, flags: Record<string, unknown>, orgId: string) {
-  const { data: org } = await admin.from("organizations").select("plan, plan_expires_at").eq("id", orgId).maybeSingle();
-  const expired = org?.plan_expires_at && new Date(org.plan_expires_at as string) < new Date();
-  const allowed = org?.plan === "agency" && !expired;
+  const { data: org } = await admin.from("organizations").select("plan, plan_expires_at, parent_organization_id, plan_source").eq("id", orgId).maybeSingle();
+  const { resolveWorkspaceEntitlements } = await import("./workspace-entitlements.server");
+  const allowed = !!org && (await resolveWorkspaceEntitlements(admin, org)).plan === "agency";
   const last = typeof flags[AI_KEY(orgId)] === "string" ? Date.parse(flags[AI_KEY(orgId)] as string) : NaN;
   const nextAt = Number.isFinite(last) && Date.now() - last < AI_WINDOW_MS ? new Date(last + AI_WINDOW_MS).toISOString() : null;
   return { allowed, nextAt };

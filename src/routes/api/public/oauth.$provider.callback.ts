@@ -60,6 +60,13 @@ export const Route = createFileRoute("/api/public/oauth/$provider/callback")({
         const redirectUri = `${origin}/api/public/oauth/${provider}/callback`;
 
         try {
+          // Recheck the role in case access changed while Meta consent was open.
+          const { data: membership, error: membershipError } = await supabaseAdmin
+            .from("organization_members").select("role")
+            .eq("organization_id", stateRow.organization_id).eq("user_id", stateRow.user_id).maybeSingle();
+          if (membershipError || !membership || !["owner", "admin", "manager"].includes(membership.role)) {
+            throw new Error("not_allowed");
+          }
           const connected =
             provider === "meta"
               ? await connectMeta({ code, redirectUri, stateRow, supabaseAdmin })
@@ -83,7 +90,6 @@ type AdminClient = Awaited<
   typeof import("@/integrations/supabase/client.server")
 >["supabaseAdmin"];
 
-const PLAN_ACCOUNT_LIMITS: Record<string, number> = { starter: 1, pro: 5 };
 const limitHits = new WeakMap<StateRow, boolean>();
 
 /** Per-platform account cap for the workspace plan. Reconnecting an existing account is always allowed. */
@@ -93,39 +99,40 @@ async function withinPlanLimit(
   platform: string,
   externalId: string,
 ): Promise<boolean> {
-  const { data: existing } = await supabaseAdmin
+  const { data: existing, error: existingError } = await supabaseAdmin
     .from("social_accounts")
     .select("id")
     .eq("organization_id", stateRow.organization_id)
     .eq("platform", platform as "instagram" | "facebook" | "youtube")
     .eq("external_id", externalId)
     .maybeSingle();
+  if (existingError) throw new Error("Unable to check connected accounts");
   if (existing) return true;
-  const { data: org } = await supabaseAdmin
+  const { data: org, error: orgError } = await supabaseAdmin
     .from("organizations")
-    .select("plan, plan_expires_at")
+    .select("plan, plan_expires_at, parent_organization_id, plan_source")
     .eq("id", stateRow.organization_id)
     .maybeSingle();
-  let plan = (org?.plan as string | undefined) ?? "starter";
-  const expires = org?.plan_expires_at as string | null | undefined;
-  if (plan !== "starter" && plan !== "agency" && expires && new Date(expires) < new Date()) {
-    plan = "starter";
-  }
-  const limit = PLAN_ACCOUNT_LIMITS[plan];
-  if (limit === undefined) return true; // agency / custom = unlimited
+  if (orgError || !org) throw new Error("Unable to check workspace plan");
+  const { resolveWorkspaceEntitlements } = await import("@/lib/workspace-entitlements.server");
+  const { socialAccountLimit } = await import("@/lib/workspace-entitlements");
+  const limit = socialAccountLimit((await resolveWorkspaceEntitlements(supabaseAdmin, org)).plan);
+  if (limit === null) return true;
   // User-wide cap: count accounts across EVERY workspace this user owns, so
   // creating extra workspaces cannot bypass the plan limit.
-  const { data: ownedOrgs } = await supabaseAdmin
+  const { data: ownedOrgs, error: ownedError } = await supabaseAdmin
     .from("organizations")
     .select("id")
     .eq("owner_id", stateRow.user_id);
+  if (ownedError) throw new Error("Unable to check account limit");
   const orgIds = (ownedOrgs ?? []).map((o) => o.id as string);
   if (!orgIds.includes(stateRow.organization_id)) orgIds.push(stateRow.organization_id);
-  const { count } = await supabaseAdmin
+  const { count, error: countError } = await supabaseAdmin
     .from("social_accounts")
     .select("id", { count: "exact", head: true })
     .in("organization_id", orgIds)
     .eq("platform", platform as "instagram" | "facebook" | "youtube");
+  if (countError || count === null) throw new Error("Unable to check account limit");
   return (count ?? 0) < limit;
 }
 

@@ -34,3 +34,4 @@
 - Read subdirectory AGENTS.md before edits.
 - Safety send caps are per connected account (account-safety.server), clamped to feature_flags safety_caps[_<orgId>]; plan quota is workspace-wide — Meta flags accounts, billing is per workspace.
 - public.relink_conversation_accounts re-links chats after disconnect/reconnect (on deploy + each connect) — keeps account filters complete without touching Meta delivery.
+- Workspace entitlements derive active root Agency benefits through workspace-entitlements.* after child membership verification; inherited grants use plan_source agency_parent and never outlive the parent — keeps client labels, branding, connection caps and quotas consistent without sharing workspace data.

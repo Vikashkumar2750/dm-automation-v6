@@ -33,7 +33,7 @@ export type ClientWorkspace = {
 };
 
 const SELECT =
-  "id, name, slug, plan, brand_name, logo_url, brand_color, support_email, timezone, parent_organization_id, plan_expires_at";
+  "id, name, slug, plan, plan_source, brand_name, logo_url, brand_color, support_email, timezone, parent_organization_id, plan_expires_at";
 
 type AuthedClient = SupabaseClient<Database>;
 
@@ -60,7 +60,10 @@ export const getWorkspace = createServerFn({ method: "GET" })
       .maybeSingle();
     if (error) throw new Error(error.message);
     if (!org) throw new Error("not_found");
-    return { ...org, my_role: role } as WorkspaceSettings;
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { resolveWorkspaceEntitlements } = await import("./workspace-entitlements.server");
+    const entitlement = await resolveWorkspaceEntitlements(supabaseAdmin, org);
+    return { ...org, ...entitlement, my_role: role } as WorkspaceSettings;
   });
 
 const brandingInput = z.object({
@@ -86,12 +89,13 @@ export const updateWorkspace = createServerFn({ method: "POST" })
 
     const { data: org } = await context.supabase
       .from("organizations")
-      .select("plan, plan_expires_at")
+      .select("plan, plan_expires_at, parent_organization_id, plan_source")
       .eq("id", data.organizationId)
       .single();
-    const agency =
-      org?.plan === "agency" &&
-      (!org.plan_expires_at || new Date(org.plan_expires_at).getTime() > Date.now());
+    if (!org) throw new Error("not_found");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { resolveWorkspaceEntitlements } = await import("./workspace-entitlements.server");
+    const agency = (await resolveWorkspaceEntitlements(supabaseAdmin, org)).plan === "agency";
     const update: {
       name: string;
       timezone: string;
@@ -129,7 +133,7 @@ export const listClientWorkspaces = createServerFn({ method: "GET" })
 
     const { data: orgs } = await context.supabase
       .from("organizations")
-      .select("id, name, brand_name, plan, logo_url, brand_color, parent_organization_id")
+      .select("id, name, brand_name, plan, plan_expires_at, plan_source, logo_url, brand_color, parent_organization_id")
       .in("id", ids)
       .order("created_at", { ascending: true });
 
@@ -145,17 +149,19 @@ export const listClientWorkspaces = createServerFn({ method: "GET" })
     const count = (rows: { organization_id: string }[] | null, id: string) =>
       (rows ?? []).filter((r) => r.organization_id === id).length;
 
-    return (orgs ?? []).map((o) => ({
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { resolveWorkspaceEntitlements } = await import("./workspace-entitlements.server");
+    return Promise.all((orgs ?? []).map(async (o) => ({
       id: o.id,
       name: o.name,
       brand_name: o.brand_name,
-      plan: o.plan,
+      plan: (await resolveWorkspaceEntitlements(supabaseAdmin, o)).plan,
       logo_url: o.logo_url,
       brand_color: o.brand_color,
       members: count(members, o.id),
       accounts: count(accounts, o.id),
       is_client: o.parent_organization_id === data.organizationId,
-    }));
+    })));
   });
 
 export const createClientWorkspace = createServerFn({ method: "POST" })
@@ -176,13 +182,13 @@ export const createClientWorkspace = createServerFn({ method: "POST" })
     // spawn extra workspaces to bypass per-plan account limits.
     const { data: parentOrg } = await context.supabase
       .from("organizations")
-      .select("plan, plan_expires_at")
+      .select("plan, plan_expires_at, parent_organization_id")
       .eq("id", data.parentOrganizationId)
       .maybeSingle();
     const plan = (parentOrg?.plan as string | undefined) ?? "starter";
     const expired =
       parentOrg?.plan_expires_at && new Date(parentOrg.plan_expires_at) < new Date();
-    if (plan !== "agency" || expired) throw new Error("agency_only");
+    if (plan !== "agency" || expired || parentOrg?.parent_organization_id) throw new Error("agency_only");
 
     const base = data.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
     const slug = `${base || "client"}-${crypto.randomUUID().slice(0, 8)}`;
@@ -193,7 +199,9 @@ export const createClientWorkspace = createServerFn({ method: "POST" })
         name: data.name,
         slug,
         owner_id: context.userId,
-        plan: "starter",
+        plan: "agency",
+        plan_source: "agency_parent",
+        plan_expires_at: parentOrg?.plan_expires_at ?? null,
         parent_organization_id: data.parentOrganizationId,
       })
       .select("id")
@@ -212,4 +220,21 @@ export const createClientWorkspace = createServerFn({ method: "POST" })
     }
 
     return { id: org.id };
+  });
+
+/** Only the caller's member workspaces; parent reads expose entitlements, not parent data. */
+export const getTenantOrganizations = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data, error } = await context.supabase.from("organization_members")
+      .select("role, organizations(id, name, slug, plan, plan_expires_at, plan_source, parent_organization_id, created_at, brand_name, logo_url, brand_color)")
+      .eq("user_id", context.userId);
+    if (error) throw new Error(error.message);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { resolveWorkspaceEntitlements } = await import("./workspace-entitlements.server");
+    return Promise.all((data ?? []).flatMap((row) => {
+      const org = row.organizations;
+      if (!org) return [];
+      return [(async () => ({ ...org, ...(await resolveWorkspaceEntitlements(supabaseAdmin, org)), role: row.role }))()];
+    }));
   });
