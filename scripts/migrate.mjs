@@ -400,6 +400,22 @@ alter table public.revenue_events enable row level security;
     count += 1;
   }
 
+  // Repair old Starter clients without granting an independent Agency subscription.
+  // Runtime always rechecks the parent, so downgrade/expiry cannot leave unlimited clients.
+  await sql`
+    update public.organizations child
+    set plan = 'agency', plan_source = 'agency_parent', plan_expires_at = parent.plan_expires_at
+    from public.organizations parent
+    where child.parent_organization_id = parent.id
+      and parent.parent_organization_id is null
+      and parent.plan = 'agency'
+      and (parent.plan_expires_at is null or parent.plan_expires_at > now())
+      and (child.plan = 'starter' or child.plan_source = 'agency_parent')
+      and (child.plan is distinct from 'agency'
+        or child.plan_source is distinct from 'agency_parent'
+        or child.plan_expires_at is distinct from parent.plan_expires_at)
+  `;
+
   console.log(
     count === 0
       ? `[migrate] up to date (${files.length} migrations already applied)`

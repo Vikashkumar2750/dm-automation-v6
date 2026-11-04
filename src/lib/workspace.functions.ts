@@ -33,7 +33,7 @@ export type ClientWorkspace = {
 };
 
 const SELECT =
-  "id, name, slug, plan, brand_name, logo_url, brand_color, support_email, timezone, parent_organization_id, plan_expires_at";
+  "id, name, slug, plan, plan_source, brand_name, logo_url, brand_color, support_email, timezone, parent_organization_id, plan_expires_at";
 
 type AuthedClient = SupabaseClient<Database>;
 
