@@ -1,9 +1,9 @@
 # DM FB-IG-YT by Techaasvik — Build Roadmap
 
 ## Agency client entitlements (Nov 4)
-- [ ] Resolve active parent Agency benefits for existing/new client workspaces, including connections, branding, labels and quotas.
-- [ ] Add deployment repair and regression tests without changing workspace data isolation.
-- [ ] Verify signed-in client workspace; real Meta connection requires account authorization after deployment.
+- [x] Resolve active parent Agency benefits for existing/new client workspaces, including connections, branding, labels and quotas.
+- [x] Add deployment repair and regression tests without changing workspace data isolation.
+- [ ] Verify signed-in client workspace and real Meta connection after Railway deployment (blocked: no preview account matches the requesting user; requires preview sign-in and Meta authorization).
 
 ## Oct 15 filter repairs
 - [x] Repair Calendar, Inbox and Contacts filtering; tests and signed-in controlled-data browser checks pass for switching between two accounts.

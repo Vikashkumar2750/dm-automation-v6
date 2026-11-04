@@ -182,13 +182,13 @@ export const createClientWorkspace = createServerFn({ method: "POST" })
     // spawn extra workspaces to bypass per-plan account limits.
     const { data: parentOrg } = await context.supabase
       .from("organizations")
-      .select("plan, plan_expires_at")
+      .select("plan, plan_expires_at, parent_organization_id")
       .eq("id", data.parentOrganizationId)
       .maybeSingle();
     const plan = (parentOrg?.plan as string | undefined) ?? "starter";
     const expired =
       parentOrg?.plan_expires_at && new Date(parentOrg.plan_expires_at) < new Date();
-    if (plan !== "agency" || expired) throw new Error("agency_only");
+    if (plan !== "agency" || expired || parentOrg?.parent_organization_id) throw new Error("agency_only");
 
     const base = data.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
     const slug = `${base || "client"}-${crypto.randomUUID().slice(0, 8)}`;
