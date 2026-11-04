@@ -135,8 +135,10 @@ export const getClientReports = createServerFn({ method: "GET" })
     if (!ids.length) return [];
     const { data: orgs } = await sb
       .from("organizations")
-      .select("id, name, plan, plan_expires_at, parent_organization_id")
+      .select("id, name, plan, plan_expires_at, plan_source, parent_organization_id")
       .in("id", ids);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { resolveWorkspaceEntitlements } = await import("./workspace-entitlements.server");
     return Promise.all(
       (orgs ?? []).map(async (o: any) => {
         const count = async (q: any) => (await q).count ?? 0;
@@ -146,7 +148,8 @@ export const getClientReports = createServerFn({ method: "GET" })
           count(sb.from("automation_runs").select("id", { count: "exact", head: true }).eq("organization_id", o.id).gte("created_at", since)),
           count(sb.from("conversations").select("id", { count: "exact", head: true }).eq("organization_id", o.id).gte("last_message_at", since)),
         ]);
-        return { id: o.id, name: o.name, plan: o.plan, planExpiresAt: o.plan_expires_at, isClient: !!o.parent_organization_id, inbound, outbound, runs, conversations: convs };
+        const entitlement = await resolveWorkspaceEntitlements(supabaseAdmin, o);
+        return { id: o.id, name: o.name, plan: entitlement.plan, planExpiresAt: entitlement.plan_expires_at, isClient: !!o.parent_organization_id, inbound, outbound, runs, conversations: convs };
       }),
     );
   });

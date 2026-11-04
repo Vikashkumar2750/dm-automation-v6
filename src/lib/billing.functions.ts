@@ -30,7 +30,7 @@ export const getBillingState = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { data: org } = await context.supabase
       .from("organizations")
-      .select("id, name, plan, plan_expires_at, plan_source")
+      .select("id, name, plan, plan_expires_at, plan_source, parent_organization_id")
       .eq("id", data.organizationId)
       .maybeSingle();
     const { data: orders } = await context.supabase
@@ -46,13 +46,17 @@ export const getBillingState = createServerFn({ method: "POST" })
       .eq("user_id", context.userId)
       .maybeSingle();
 
+    if (!org || !me) throw new Error("not_a_member");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { resolveWorkspaceEntitlements } = await import("./workspace-entitlements.server");
+    const entitlement = await resolveWorkspaceEntitlements(supabaseAdmin, org);
     const keyId = process.env["RAZORPAY_KEY_ID"] ?? "";
     return {
-      plan: (org?.plan ?? "starter") as string,
-      planExpiresAt: (org?.plan_expires_at as string | null) ?? null,
-      planSource: (org?.plan_source as string | null) ?? "manual",
+      plan: entitlement.plan,
+      planExpiresAt: entitlement.plan_expires_at,
+      planSource: entitlement.inherited ? "agency_parent" : org.plan_source,
       orders: orders ?? [],
-      canPay: ["owner", "admin"].includes((me?.role as string) ?? ""),
+      canPay: !entitlement.inherited && ["owner", "admin"].includes(me.role),
       razorpayKeyId: keyId,
       demoMode: !keyId || DEMO_KEY_IDS.includes(keyId),
     };
