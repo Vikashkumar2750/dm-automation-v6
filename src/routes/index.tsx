@@ -6,6 +6,9 @@ import {
   CalendarDays,
   CheckCircle2,
   Clock,
+  Facebook,
+  Instagram,
+  Youtube,
   Inbox,
   MessageSquare,
   ShieldCheck,
@@ -47,9 +50,39 @@ const faqs = [
     a: "Yes. Create a separate workspace per client, invite your team with Admin, Manager, Agent or Viewer roles, and switch between clients without signing out.",
   },
   {
+    q: "How does Instagram comment-to-DM automation work?",
+    a: "You pick a post (or all posts) and a keyword. When someone comments that keyword, AutoDM posts a public reply and sends a private DM with your message and buttons within seconds, using Meta's official Instagram API.",
+  },
+  {
+    q: "Can I sell digital products directly from DMs?",
+    a: "Yes. Create a delivery page in Sales & Revenue, link a product and Razorpay, and attach it to a rule. Buyers get the link in DM, fill the lead form, pay and receive the product — every step is tracked.",
+  },
+  {
+    q: "Can I automate a Facebook Professional (creator) profile?",
+    a: "Meta does not allow official automation on personal profiles, even in Professional Mode. Connect a Facebook Page instead, share its m.me link or an AutoDM delivery page link on your profile posts.",
+  },
+  {
     q: "Do I need a credit card to start?",
     a: "No. Create your workspace, connect an account and try the inbox and automations first.",
   },
+];
+
+const funnel = [
+  { icon: MessageSquare, title: "Viewer comments a keyword", body: "“PRICE”, “LINK” or any word you choose under a reel, post or video." },
+  { icon: Bot, title: "Instant DM + public reply", body: "AutoDM replies in seconds with a message and up to 3 buttons — follow-gate optional." },
+  { icon: ShieldCheck, title: "Delivery page + verified lead", body: "Buyer lands on your sales page, leaves email/phone (WhatsApp OTP) — even drop-offs are captured." },
+  { icon: BarChart3, title: "Paid, delivered, tracked", body: "Razorpay payment, automatic delivery, and every lead stage visible in Contacts." },
+];
+
+const comparison: string[][] = [
+  ["Instagram & Facebook comment-to-DM", "Yes", "Yes", "No"],
+  ["YouTube comment auto-replies", "Yes", "No", "No"],
+  ["Built-in delivery / sales pages", "Yes", "No", "Yes"],
+  ["Lead capture with WhatsApp OTP", "Yes", "Limited", "No"],
+  ["Drop-off tracking & AI follow-ups", "Yes", "No", "Limited"],
+  ["Unified inbox + scheduling", "Yes", "Inbox only", "No"],
+  ["Agency client workspaces", "Yes", "Paid add-on", "No"],
+  ["Starting price", "₹9 trial, ₹59/mo", "≈ $15+/mo", "≈ $29+/mo"],
 ];
 
 const benefits = [
@@ -247,13 +280,20 @@ function LandingPage() {
                 Instagram · Facebook · YouTube in one workspace
               </span>
               <h1 className="mt-5 text-4xl font-bold tracking-tight sm:text-5xl">
-                Turn every comment and DM into a paying customer
+                Turn every reel comment into a paying customer — automatically
               </h1>
               <p className="mt-5 text-lg text-muted-foreground">
-                AutoDM answers your audience instantly — on Instagram and Facebook it
-                moves interested people from a comment into a private chat, and on
-                YouTube it replies publicly under the comment — all from one inbox.
+                Someone comments “PRICE” → AutoDM sends the DM in seconds → they open
+                your delivery page, verify, pay and get the product. Comment-to-DM for
+                Instagram &amp; Facebook, smart replies for YouTube, one inbox, built-in
+                sales pages.
               </p>
+              <div className="mt-5 flex items-center gap-3">
+                <Instagram className="size-6 text-instagram" aria-label="Instagram" />
+                <Facebook className="size-6 text-facebook" aria-label="Facebook" />
+                <Youtube className="size-6 text-youtube" aria-label="YouTube" />
+                <span className="text-sm text-muted-foreground">Official APIs · Setup in 5 minutes</span>
+              </div>
 
               <div className="mt-8 flex flex-wrap gap-3">
                 <Button asChild size="lg">
@@ -330,6 +370,28 @@ function LandingPage() {
                 Build it in a few minutes — no code, no Zapier, no developer.
               </p>
             </div>
+          </div>
+        </section>
+
+        {/* Comment-to-cash funnel */}
+        <section id="funnel" className="border-b bg-surface">
+          <div className="mx-auto max-w-6xl px-6 py-16 lg:py-20">
+            <h2 className="max-w-3xl text-3xl font-bold tracking-tight">
+              From comment to cash in 4 steps — no link-in-bio hunting
+            </h2>
+            <p className="mt-3 max-w-2xl text-muted-foreground">
+              Other tools stop at the DM. AutoDM carries the buyer all the way to payment and delivery, and shows you where every lead dropped.
+            </p>
+            <ol className="mt-10 grid gap-4 md:grid-cols-4">
+              {funnel.map((f, i) => (
+                <li key={f.title} className="panel relative p-5">
+                  <span className="num text-xs font-bold text-primary">STEP {i + 1}</span>
+                  <f.icon className="mt-3 size-6 text-primary" />
+                  <h3 className="mt-3 text-base font-semibold">{f.title}</h3>
+                  <p className="mt-2 text-sm text-muted-foreground">{f.body}</p>
+                </li>
+              ))}
+            </ol>
           </div>
         </section>
 
@@ -474,6 +536,45 @@ function LandingPage() {
                 </div>
               ))}
             </div>
+          </div>
+        </section>
+
+        {/* Comparison */}
+        <section id="compare" className="border-b bg-surface">
+          <div className="mx-auto max-w-6xl px-6 py-16 lg:py-20">
+            <h2 className="text-3xl font-bold tracking-tight">
+              AutoDM vs DM-only bots vs link-in-bio stores
+            </h2>
+            <p className="mt-3 max-w-2xl text-muted-foreground">
+              One subscription replaces a DM bot, a sales page builder and a social inbox.
+            </p>
+            <div className="mt-8 overflow-x-auto rounded-lg border bg-background">
+              <table className="w-full min-w-[640px] text-sm">
+                <thead className="bg-surface-secondary text-left">
+                  <tr>
+                    <th className="px-4 py-3 font-semibold">Feature</th>
+                    <th className="px-4 py-3 font-semibold text-primary">AutoDM</th>
+                    <th className="px-4 py-3 font-semibold">DM-only bots</th>
+                    <th className="px-4 py-3 font-semibold">Link-in-bio stores</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {comparison.map((row) => (
+                    <tr key={row[0]}>
+                      <td className="px-4 py-3">{row[0]}</td>
+                      {row.slice(1).map((v, i) => (
+                        <td key={i} className={`px-4 py-3 ${i === 0 ? "font-medium text-foreground" : "text-muted-foreground"}`}>
+                          {v}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="mt-3 text-xs text-subtle-foreground">
+              Based on publicly listed features of popular tools, 2026. Features vary by plan.
+            </p>
           </div>
         </section>
 
