@@ -1,0 +1,51 @@
+AutoDM by Techaasvik — Facebook Professional Profile Automation Guide
+=====================================================================
+
+WHY CAN'T I CONNECT MY FACEBOOK PROFESSIONAL / CREATOR PROFILE?
+---------------------------------------------------------------
+Meta's official Graph API and Messenger Platform only allow automation on
+Facebook PAGES and Instagram Professional (Business/Creator) accounts.
+A personal profile in Professional Mode — even if monetised — cannot be
+connected by ANY official tool (ManyChat, AutoDM, or others).
+This is a Meta policy, not an AutoDM limitation.
+
+Meta ka official API sirf Facebook Pages aur Instagram Professional accounts
+par automation allow karta hai. Professional Mode wali personal profile
+(chahe monetised ho) kisi bhi official tool se connect nahi hoti.
+
+WHAT YOU CAN DO INSTEAD — 3 WORKAROUNDS
+---------------------------------------
+
+1) Create / connect a Facebook Page
+   - Facebook par "Create Page" karein (aapke brand/creator naam se).
+   - AutoDM > Social Accounts > Connect Facebook > Page select karein.
+   - Apni Instagram Professional account ko us Page se link karein.
+   - Ab comment-to-DM, inbox, replies sab Page aur Instagram par chalenge.
+
+2) Use your Page's m.me link on your Professional Profile posts
+   - Har Facebook Page ka ek direct Messenger link hota hai:
+       https://m.me/YourPageUsername
+     (Page username: Page > Settings > Page info / Username.)
+   - AutoDM > Automations > New rule > Platform: Facebook > Trigger: DM keyword
+     (example keyword: GUIDE) > reply message + button/link > Save & activate.
+   - Professional Profile ki post/reel caption mein likhein:
+       "Free guide chahiye? Yahan message karein: m.me/YourPageUsername
+        aur type karein GUIDE"
+   - User link tap karke Page Messenger mein GUIDE likhega, AutoDM seconds mein
+     automated DM aur button bhej dega.
+
+3) Put an AutoDM Delivery Page link in your profile/caption
+   - AutoDM > Sales & Revenue > Delivery pages > New page > template choose karein.
+   - Product link karein, lead form on rakhein (email/phone capture + OTP).
+   - Page link copy karke Professional Profile bio, post caption ya
+     pinned comment mein daalein.
+   - Har visit, lead aur purchase AutoDM mein track hoga
+     (Contacts > Delivery page leads).
+
+TIPS
+----
+- Same content Page aur Profile dono par cross-post karein; automation Page
+  wale post par chalega.
+- Instagram par Creator/Business account rakhein — wahan full comment-to-DM
+  automation directly milti hai.
+- Help: AutoDM > Contact support.
