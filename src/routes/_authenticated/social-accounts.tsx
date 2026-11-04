@@ -10,6 +10,7 @@ import { PageHeader, Panel, PlatformBadge, StatusBadge, EmptyState } from "@/com
 import { Button } from "@/components/ui/button";
 import { useTenant } from "@/hooks/useTenant";
 import { EntryPointsCard } from "@/components/app/EntryPointsPanels";
+import { ProfessionalProfileGuide } from "@/components/app/ProfessionalProfileGuide";
 import { platformMeta, type SocialPlatform } from "@/lib/social";
 import {
   checkWebhookDelivery,
@@ -311,6 +312,8 @@ function SocialAccountsPage() {
           );
         })}
       </div>
+
+      <ProfessionalProfileGuide />
 
       <Panel className="mt-6" bodyClassName="p-0">
         <div className="flex items-center justify-between border-b px-5 py-4">
