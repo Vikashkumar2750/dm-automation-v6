@@ -3,6 +3,7 @@ import { useState, useSyncExternalStore } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 
 import { supabase } from "@/integrations/supabase/client";
+import { getTenantOrganizations } from "@/lib/workspace.functions";
 
 export type OrgRole = "owner" | "admin" | "manager" | "agent" | "viewer";
 
@@ -128,14 +129,15 @@ export function useTenant() {
     enabled: !!user,
     staleTime: 5 * 60_000,
     queryFn: async () => {
-      await ensureBootstrap(user!);
+      if (!user) return null;
+      await ensureBootstrap(user);
       const { data } = await supabase
         .from("profiles")
         .select("id, email, full_name, avatar_url")
-        .eq("id", user!.id)
+        .eq("id", user.id)
         .maybeSingle();
       // A brand-new workspace may have been created just now; refresh the list.
-      void queryClient.invalidateQueries({ queryKey: ["organizations", user!.id] });
+      void queryClient.invalidateQueries({ queryKey: ["organizations", user.id] });
       return data;
     },
   });
@@ -145,25 +147,20 @@ export function useTenant() {
     enabled: !!user,
     staleTime: 60_000,
     queryFn: async (): Promise<Organization[]> => {
-      const { data } = await supabase
-        .from("organization_members")
-        .select("role, organizations(id, name, slug, plan, plan_expires_at, created_at, brand_name, logo_url, brand_color)")
-        .eq("user_id", user!.id);
-
-      return (data ?? [])
-        .filter((row) => row.organizations)
-        .map((row) => ({
-          id: row.organizations!.id,
-          name: row.organizations!.name,
-          slug: row.organizations!.slug,
-          plan: planLabel(row.organizations!.plan),
+      if (!user) return [];
+      const data = await getTenantOrganizations();
+      return data.map((row) => ({
+          id: row.id,
+          name: row.name,
+          slug: row.slug,
+          plan: planLabel(row.plan),
           role: row.role as OrgRole,
-          brandName: row.organizations!.brand_name,
-          logoUrl: row.organizations!.logo_url,
-          brandColor: row.organizations!.brand_color,
-          planKey: row.organizations!.plan,
-          planExpiresAt: row.organizations!.plan_expires_at,
-          createdAt: row.organizations!.created_at,
+          brandName: row.brand_name,
+          logoUrl: row.logo_url,
+          brandColor: row.brand_color,
+          planKey: row.plan,
+          planExpiresAt: row.plan_expires_at,
+          createdAt: row.created_at,
         }));
     },
   });

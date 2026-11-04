@@ -1,5 +1,6 @@
 import { readPlatformConfig } from "@/lib/platform-config.server";
 import { DEFAULT_PLAN_LIMITS, type PlanLimits } from "@/lib/plans";
+import { resolveWorkspaceEntitlements } from "./workspace-entitlements.server";
 
 type AdminClient = import("@supabase/supabase-js").SupabaseClient;
 
@@ -10,13 +11,13 @@ export type ResolvedLimits = PlanLimits & { plan: string; overridden: boolean };
 /** Effective plan limits for a workspace: super-admin override > plan catalogue > defaults. null = unlimited. */
 export async function resolveOrgLimits(admin: AdminClient, orgId: string): Promise<ResolvedLimits> {
   const [{ data: org }, config, { data: ps }] = await Promise.all([
-    admin.from("organizations").select("plan, plan_expires_at, created_at").eq("id", orgId).maybeSingle(),
+    admin.from("organizations").select("plan, plan_expires_at, plan_source, parent_organization_id, created_at").eq("id", orgId).maybeSingle(),
     readPlatformConfig(admin),
     admin.from("platform_settings").select("feature_flags").eq("id", true).maybeSingle(),
   ]);
-  let plan = (org?.plan as string | undefined) ?? "starter";
-  const expires = org?.plan_expires_at as string | null | undefined;
-  if (plan !== "starter" && plan !== "agency" && expires && new Date(expires) < new Date()) plan = "starter";
+  const entitlement = await resolveWorkspaceEntitlements(admin, org ?? { plan: "starter" });
+  const plan = entitlement.plan;
+  const expires = entitlement.plan_expires_at;
   // Expired free trial: no new automated flows (mid-flow contacts are still finished by the caller).
   const { isTrialExpired } = await import("@/lib/trial");
   const trialOver = isTrialExpired(plan, plan === "starter" ? expires : null, org?.created_at as string | undefined);
