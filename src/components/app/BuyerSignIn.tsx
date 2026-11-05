@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { formatInr } from "@/lib/revenue";
 import { getBuyerContent, getBuyerLibrary, requestBuyerCode, signOutBuyer, verifyBuyerCode } from "@/lib/buyer-access.functions";
 
 type Library = { email: string; items: { title: string; slug: string; at: string; hasFile: boolean; imageUrl: string | null }[] };
@@ -125,12 +126,6 @@ export function BuyerSignIn({ slug, open, onOpenChange, creatorName }: { slug: s
                       <div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{it.title}</p><p className="text-xs text-muted-foreground">{new Date(it.at).toLocaleDateString()}</p></div>
                       <Button size="sm" disabled={busy} onClick={() => void openContent(it.slug)}>Open</Button>
                     </li>
-                  ))}
-                </ul>
-              ) : (
-                <ul className="divide-y divide-border rounded-lg border border-border text-sm">
-                  {lib.items.map((it) => (
-                    <li key={it.slug} className="flex items-center justify-between gap-3 px-3 py-2"><span className="truncate">{it.title}</span><span className="shrink-0 text-xs text-muted-foreground">{new Date(it.at).toLocaleString()}</span></li>
                   ))}
                 </ul>
               )}

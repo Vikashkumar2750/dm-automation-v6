@@ -9,7 +9,19 @@ import { BuyerSignIn, BuyerSignInButton } from "@/components/app/BuyerSignIn";
 import { LeadFields, useLeadForm, type LeadFormSource } from "@/components/app/DeliveryLeadForm";
 import { inlineParts, parseBody, priceDisplay, type Block } from "@/lib/delivery-page";
 
-export type PagePrice = { originalPaise: number | null; offerPaise: number | null; label?: string | null; couponCode?: string | null; couponNote?: string | null };
+export type PagePrice = { originalPaise: number | null; offerPaise: number | null; label?: string | null; couponCode?: string | null; couponNote?: string | null; charges?: { basePaise: number; gstPaise: number; feePaise: number; totalPaise: number } | null };
+
+function ChargeLines({ c }: { c: NonNullable<PagePrice["charges"]> }) {
+  const r = (p: number) => `₹${(p / 100).toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
+  return (
+    <dl className="mt-3 space-y-1 border-t border-border pt-3 text-xs text-muted-foreground">
+      <div className="flex justify-between"><dt>Price</dt><dd>{r(c.basePaise)}</dd></div>
+      {c.gstPaise > 0 && <div className="flex justify-between"><dt>GST</dt><dd>+ {r(c.gstPaise)}</dd></div>}
+      {c.feePaise > 0 && <div className="flex justify-between"><dt>Payment processing fee</dt><dd>+ {r(c.feePaise)}</dd></div>}
+      <div className="flex justify-between font-semibold text-foreground"><dt>Total payable</dt><dd>{r(c.totalPaise)}</dd></div>
+    </dl>
+  );
+}
 
 function PriceBox({ price }: { price: PagePrice }) {
   const [copied, setCopied] = useState(false);
@@ -22,6 +34,7 @@ function PriceBox({ price }: { price: PagePrice }) {
         {d.original && <span className="text-lg text-muted-foreground line-through">{d.original}</span>}
         {d.badge && <span className="rounded-full bg-primary px-2.5 py-0.5 text-xs font-semibold text-primary-foreground">{d.badge}</span>}
       </div>}
+      {price.charges && <ChargeLines c={price.charges} />}
       {price.couponCode && <div className="mt-4 rounded-xl border border-dashed border-primary/50 bg-primary/5 p-3">
         <p className="flex items-center justify-center gap-1.5 text-xs font-medium text-muted-foreground"><Tag className="size-3.5 text-primary" /> Use coupon code</p>
         <div className="mt-1.5 flex items-center justify-center gap-2">
