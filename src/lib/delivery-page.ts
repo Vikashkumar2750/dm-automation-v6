@@ -337,6 +337,7 @@ export type PageExtras = {
   policies?: { refund?: string | undefined; fulfilment?: string | undefined; privacy?: string | undefined; terms?: string | undefined };
   disclaimer?: string | undefined;
   charges?: { gstPercent?: number | undefined; passFee?: boolean | undefined };
+  socials?: Array<{ platform: "instagram" | "facebook" | "linkedin" | "youtube" | "x"; url: string; label?: string | undefined }> | undefined;
 };
 
 export const DEFAULT_POLICIES = {
