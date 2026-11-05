@@ -1,5 +1,15 @@
 /** Phase E revenue: pure helpers (client-safe). */
 
+/** A linked product is authoritative; inactive products cannot be sold. */
+export function checkoutAmount(pageAmount: number | null, product: { price_paise: number; active: boolean } | null, linked: boolean): number | null {
+  const amount = linked ? (product?.active ? product.price_paise : null) : pageAmount;
+  return amount !== null && Number.isInteger(amount) && amount >= 100 ? amount : null;
+}
+
+export function automaticCheckout(connected: boolean, amount: number | null): boolean {
+  return connected && amount !== null && amount >= 100;
+}
+
 export function formatInr(paise: number): string {
   return `₹${(paise / 100).toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
 }

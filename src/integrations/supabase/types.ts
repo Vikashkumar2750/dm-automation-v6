@@ -2307,6 +2307,7 @@ export type Database = {
           active: boolean
           created_at: string
           currency: string
+          delivery_url: string | null
           description: string | null
           id: string
           image_path: string | null
@@ -2320,6 +2321,7 @@ export type Database = {
           active?: boolean
           created_at?: string
           currency?: string
+          delivery_url?: string | null
           description?: string | null
           id?: string
           image_path?: string | null
@@ -2333,6 +2335,7 @@ export type Database = {
           active?: boolean
           created_at?: string
           currency?: string
+          delivery_url?: string | null
           description?: string | null
           id?: string
           image_path?: string | null

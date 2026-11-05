@@ -1,13 +1,31 @@
 import { describe, expect, it } from "vitest";
 
 import { sanitizeFlows, validateFlow } from "@/lib/flows";
-import { buildFunnel, makeCouponCode, nudgeDue, rupeesToPaise } from "@/lib/revenue";
+import { automaticCheckout, checkoutAmount, buildFunnel, makeCouponCode, nudgeDue, rupeesToPaise } from "@/lib/revenue";
 import { validRazorpaySignature } from "@/lib/revenue.server";
 import { createHmac } from "node:crypto";
 
 const HOUR = 3600_000;
 
 describe("revenue rules", () => {
+  it("connected Razorpay enables automatic checkout for a ₹299 product without a manual link", () => {
+    expect(automaticCheckout(true, checkoutAmount(null, { price_paise: 29900, active: true }, true))).toBe(true);
+    expect(automaticCheckout(false, 29900)).toBe(false);
+  });
+
+  it("linked product price is authoritative over a stale page offer price", () => {
+    expect(checkoutAmount(19900, { price_paise: 29900, active: true }, true)).toBe(29900);
+  });
+
+  it("inactive or missing linked products cannot fall back to a stale page price", () => {
+    expect(checkoutAmount(29900, { price_paise: 29900, active: false }, true)).toBeNull();
+    expect(checkoutAmount(29900, null, true)).toBeNull();
+  });
+
+  it("unlinked pages can use a manually entered ₹299 price", () => {
+    expect(checkoutAmount(29900, null, false)).toBe(29900);
+    expect(checkoutAmount(0, null, false)).toBeNull();
+  });
   it("rejects prices under ₹1 and converts rupees to paise", () => {
     expect(rupeesToPaise("0.5")).toBeNull();
     expect(rupeesToPaise("499")).toBe(49900);
