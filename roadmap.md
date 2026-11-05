@@ -1,7 +1,8 @@
 # DM FB-IG-YT by Techaasvik — Build Roadmap
 
 ## Remix setup (Nov 5)
-- [ ] Automatic Razorpay checkout: separate product deliverables from manual payments, enable paid pages without manual links, enforce paid access and test checkout selection.
+- [x] Automatic Razorpay checkout: separate product deliverables from manual payments, enable paid pages without manual links, enforce paid access and test checkout selection (24 focused tests passed).
+- [ ] Verify signed-in product save and actual Razorpay payment → return → access/email (blocked: requesting user has no matching preview auth account; requires sign-in and a test payment).
 - [ ] Replace CRON_SECRET, DATABASE_URL, Google OAuth credentials, Meta credentials/verify token, and Razorpay credentials (blocked: replacement form was declined; no values changed).
 - [ ] Clear copied Drizzle migrations and scaffold an empty migration set (blocked: no supported remix-reset tool is available; direct journal/snapshot deletion is prohibited).
 
