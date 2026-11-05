@@ -416,6 +416,31 @@ alter table public.revenue_events enable row level security;
         or child.plan_expires_at is distinct from parent.plan_expires_at)
   `;
 
+  // Client workspaces belong to the main Agency owner; other former owners become admins.
+  await sql`
+    update public.organizations child set owner_id = parent.owner_id
+    from public.organizations parent
+    where child.parent_organization_id = parent.id and child.owner_id is distinct from parent.owner_id
+  `;
+  await sql`
+    update public.organization_members m set role = 'admin'
+    from public.organizations o
+    where m.organization_id = o.id and o.parent_organization_id is not null
+      and m.role = 'owner' and m.user_id <> o.owner_id
+  `;
+  await sql`
+    insert into public.organization_members (organization_id, user_id, role)
+    select o.id, o.owner_id, 'owner' from public.organizations o
+    where o.parent_organization_id is not null
+      and not exists (select 1 from public.organization_members m where m.organization_id = o.id and m.user_id = o.owner_id)
+  `;
+  await sql`
+    update public.organization_members m set role = 'owner'
+    from public.organizations o
+    where m.organization_id = o.id and o.parent_organization_id is not null
+      and m.user_id = o.owner_id and m.role <> 'owner'
+  `;
+
   console.log(
     count === 0
       ? `[migrate] up to date (${files.length} migrations already applied)`

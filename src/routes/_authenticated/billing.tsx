@@ -290,7 +290,9 @@ function BillingPage() {
                 )}
                 {!canPay && !p.contactOnly && (
                   <p className="mt-2 text-xs text-muted-foreground">
-                    Only the workspace owner or an admin can pay.
+                    {billing.data?.planSource === "agency_parent"
+                      ? "This client workspace is covered by the main Agency account — only the Agency owner pays."
+                      : "Only the workspace owner or an admin can pay."}
                   </p>
                 )}
               </Panel>
