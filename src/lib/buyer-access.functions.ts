@@ -75,7 +75,7 @@ export const getBuyerLibrary = createServerFn({ method: "POST" })
     if (!s || new Date(s.expires_at).getTime() < Date.now()) return null;
     const { data: leads } = await supabaseAdmin.from("delivery_page_leads").select("created_at, answers, delivery_pages!inner(id, title, slug, active, button_url, image_path, show_image, product_id, price_offer_paise)")
       .eq("organization_id", s.organization_id).ilike("answers->>email", s.email).order("created_at", { ascending: false }).limit(50);
-    const { data: paid } = await supabaseAdmin.from("payment_links").select("delivery_page_id, product_id, paid_at, created_at").eq("organization_id", s.organization_id).eq("platform", "web").eq("external_user_id", s.email).eq("status", "paid");
+    const { data: paid } = await supabaseAdmin.from("payment_links").select("delivery_page_id, product_id, paid_at, created_at, amount_paise, provider_link_id").eq("organization_id", s.organization_id).eq("platform", "web").eq("external_user_id", s.email).eq("status", "paid");
     const seen = new Set<string>();
     // Paid purchases come straight from payment records, so they show even without a matching lead row.
     const paidPageIds = [...new Set((paid ?? []).map((p: any) => p.delivery_page_id).filter(Boolean))] as string[];
@@ -98,7 +98,11 @@ export const getBuyerLibrary = createServerFn({ method: "POST" })
       return [{ title: p.title as string, slug: p.slug as string, at: l.created_at as string, hasFile: !!p.button_url || !!p.product_id,
         imageUrl: p.show_image && p.image_path ? `/api/public/delivery-image/${p.image_path}` : null }];
     });
-    return { email: s.email as string, items: [...paidItems, ...leadItems] };
+    const titles = new Map((paidPages ?? []).map((p: any) => [p.id as string, p.title as string]));
+    const transactions = (paid ?? []).map((x: any) => ({ title: titles.get(x.delivery_page_id) ?? "Purchase", amountPaise: (x.amount_paise as number | null) ?? 0,
+      at: (x.paid_at ?? x.created_at) as string, ref: (x.provider_link_id as string | null) ?? null }))
+      .sort((a, b) => b.at.localeCompare(a.at));
+    return { email: s.email as string, items: [...paidItems, ...leadItems], transactions };
   });
 
 export const signOutBuyer = createServerFn({ method: "POST" })

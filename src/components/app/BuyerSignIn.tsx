@@ -105,7 +105,17 @@ export function BuyerSignIn({ slug, open, onOpenChange, creatorName }: { slug: s
             </aside>
             <section className="p-5">
               <DialogHeader className="mb-4 text-left"><DialogTitle>{tab === "purchases" ? "Your purchases" : "Transactions"}</DialogTitle><DialogDescription>Signed in as {lib.email}</DialogDescription></DialogHeader>
-              {lib.items.length === 0 ? (
+              {tab === "transactions" ? (
+                lib.transactions.length === 0 ? <p className="py-12 text-center text-sm text-muted-foreground">No payments yet.</p> : (
+                <ul className="max-h-80 divide-y divide-border overflow-y-auto rounded-lg border border-border text-sm">
+                  {lib.transactions.map((t, i) => (
+                    <li key={`${t.ref ?? i}`} className="flex items-center justify-between gap-3 px-3 py-2.5">
+                      <div className="min-w-0"><p className="truncate font-medium">{t.title}</p><p className="text-xs text-muted-foreground">{new Date(t.at).toLocaleString()}{t.ref ? ` · ${t.ref}` : ""}</p></div>
+                      <div className="shrink-0 text-right"><p className="font-semibold">{formatInr(t.amountPaise)}</p><p className="text-xs text-primary">Paid</p></div>
+                    </li>
+                  ))}
+                </ul>)
+              ) : lib.items.length === 0 ? (
                 <div className="grid place-items-center gap-2 py-12 text-center text-muted-foreground"><Package className="size-10" /><p className="font-medium text-foreground">No products found!</p><p className="text-xs">Items you get from this creator will show up here.</p></div>
               ) : tab === "purchases" ? (
                 <ul className="max-h-80 space-y-2 overflow-y-auto">
