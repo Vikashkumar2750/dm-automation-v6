@@ -62,9 +62,20 @@ export function DeliveryPageView({ title, body, buttonLabel, buttonHref, imageUr
     history.replaceState(null, "", window.location.pathname + window.location.search);
     if (m[1] === "failed") { toast.error("We couldn't confirm the payment yet. If money was deducted, check your email or sign in shortly."); return; }
     localStorage.setItem(`autodm:buyer:${buyerSlug}`, m[1]!);
-    toast.success("Payment successful — your purchase is ready. A receipt was sent to your email.");
-    setSignIn(true);
+    setPaidToken(m[1]!);
   }, [buyerSlug]);
+  const [paidToken, setPaidToken] = useState<string | null>(null);
+  const [opening, setOpening] = useState(false);
+  const openPurchase = async () => {
+    if (!paidToken || !buyerSlug) return;
+    setOpening(true);
+    try {
+      const { getBuyerContent } = await import("@/lib/buyer-access.functions");
+      const r = await getBuyerContent({ data: { token: paidToken, slug: buyerSlug } });
+      window.open(r.url, "_blank", "noopener");
+    } catch (e) { toast.error(e instanceof Error ? e.message : "Could not open your content"); }
+    finally { setOpening(false); }
+  };
   const form = useLeadForm(leadForm);
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -109,6 +120,17 @@ export function DeliveryPageView({ title, body, buttonLabel, buttonHref, imageUr
       {buyerSlug && <>
         <header className="sticky top-0 z-20 border-b border-border bg-background/90 backdrop-blur"><div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-2.5 @xl:px-6"><span className="truncate text-sm font-semibold text-foreground">{heading.replace(/\*\*/g, "")}</span><BuyerSignInButton onClick={() => setSignIn(true)} /></div></header>
         <BuyerSignIn slug={buyerSlug} open={signIn} onOpenChange={setSignIn} creatorName={extras.creatorName} />
+        <Dialog open={!!paidToken} onOpenChange={(v) => { if (!v) setPaidToken(null); }}>
+          <DialogContent className="max-w-md text-center">
+            <div className="mx-auto grid size-14 place-items-center rounded-full bg-primary/10"><CheckCircle2 className="size-8 text-primary" /></div>
+            <DialogHeader className="text-center sm:text-center">
+              <DialogTitle>Payment successful 🎉</DialogTitle>
+              <DialogDescription>Your purchase of “{heading.replace(/\*\*/g, "")}” is ready. A receipt is on its way to your email.</DialogDescription>
+            </DialogHeader>
+            <Button size="lg" className="h-12 w-full" disabled={opening} onClick={() => void openPurchase()}><Package className="size-4" /> {opening ? "Opening…" : "Access your content"}</Button>
+            <p className="text-xs text-muted-foreground">Come back anytime — tap “Sign in” at the top with the same email.</p>
+          </DialogContent>
+        </Dialog>
       </>}
       <div className="relative mx-auto grid max-w-6xl gap-8 px-4 py-8 @xl:px-6 @3xl:grid-cols-[minmax(0,1fr)_380px] @3xl:py-12">
         <article className="min-w-0 space-y-5">
