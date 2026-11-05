@@ -1,6 +1,7 @@
 # DM FB-IG-YT by Techaasvik — Build Roadmap
 
 ## Remix setup (Nov 5)
+- [ ] Add independent Super Admin Enabled / Hidden / Coming soon controls for Create Post and Calendar, including direct page visits.
 - [x] Automatic Razorpay checkout: separate product deliverables from manual payments, enable paid pages without manual links, enforce paid access and test checkout selection (26 focused tests passed).
 - [ ] Verify signed-in product save and actual Razorpay payment → return → access/email (blocked: requesting user has no matching preview auth account; requires sign-in and a test payment).
 - [ ] Replace CRON_SECRET, DATABASE_URL, Google OAuth credentials, Meta credentials/verify token, and Razorpay credentials (blocked: renewed secure form declined; values unchanged).
