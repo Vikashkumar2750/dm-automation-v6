@@ -82,6 +82,8 @@ import { Route as ApiPublicCronTrustGuardRouteImport } from './routes/api/public
 import { Route as ApiPublicCronYoutubeCommentsRouteImport } from './routes/api/public/cron.youtube-comments'
 import { Route as ApiPublicDeliveryImageSplatRouteImport } from './routes/api/public/delivery-image.$'
 import { Route as ApiPublicOfferTokenRouteImport } from './routes/api/public/offer.$token'
+import { Route as ApiPublicPaidSlugRouteImport } from './routes/api/public/paid.$slug'
+import { Route as ApiPublicPaySlugRouteImport } from './routes/api/public/pay.$slug'
 import { Route as ApiPublicPgSlugRouteImport } from './routes/api/public/pg.$slug'
 import { Route as ApiPublicTTokenRouteImport } from './routes/api/public/t.$token'
 import { Route as ApiPublicV1ResourceRouteImport } from './routes/api/public/v1.$resource'
@@ -479,6 +481,16 @@ const ApiPublicOfferTokenRoute = ApiPublicOfferTokenRouteImport.update({
   path: '/api/public/offer/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicPaidSlugRoute = ApiPublicPaidSlugRouteImport.update({
+  id: '/api/public/paid/$slug',
+  path: '/api/public/paid/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicPaySlugRoute = ApiPublicPaySlugRouteImport.update({
+  id: '/api/public/pay/$slug',
+  path: '/api/public/pay/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicPgSlugRoute = ApiPublicPgSlugRouteImport.update({
   id: '/api/public/pg/$slug',
   path: '/api/public/pg/$slug',
@@ -585,6 +597,8 @@ export interface FileRoutesByFullPath {
   '/api/public/cron/youtube-comments': typeof ApiPublicCronYoutubeCommentsRoute
   '/api/public/delivery-image/$': typeof ApiPublicDeliveryImageSplatRoute
   '/api/public/offer/$token': typeof ApiPublicOfferTokenRoute
+  '/api/public/paid/$slug': typeof ApiPublicPaidSlugRoute
+  '/api/public/pay/$slug': typeof ApiPublicPaySlugRoute
   '/api/public/pg/$slug': typeof ApiPublicPgSlugRoute
   '/api/public/t/$token': typeof ApiPublicTTokenRoute
   '/api/public/v1/$resource': typeof ApiPublicV1ResourceRoute
@@ -664,6 +678,8 @@ export interface FileRoutesByTo {
   '/api/public/cron/youtube-comments': typeof ApiPublicCronYoutubeCommentsRoute
   '/api/public/delivery-image/$': typeof ApiPublicDeliveryImageSplatRoute
   '/api/public/offer/$token': typeof ApiPublicOfferTokenRoute
+  '/api/public/paid/$slug': typeof ApiPublicPaidSlugRoute
+  '/api/public/pay/$slug': typeof ApiPublicPaySlugRoute
   '/api/public/pg/$slug': typeof ApiPublicPgSlugRoute
   '/api/public/t/$token': typeof ApiPublicTTokenRoute
   '/api/public/v1/$resource': typeof ApiPublicV1ResourceRoute
@@ -746,6 +762,8 @@ export interface FileRoutesById {
   '/api/public/cron/youtube-comments': typeof ApiPublicCronYoutubeCommentsRoute
   '/api/public/delivery-image/$': typeof ApiPublicDeliveryImageSplatRoute
   '/api/public/offer/$token': typeof ApiPublicOfferTokenRoute
+  '/api/public/paid/$slug': typeof ApiPublicPaidSlugRoute
+  '/api/public/pay/$slug': typeof ApiPublicPaySlugRoute
   '/api/public/pg/$slug': typeof ApiPublicPgSlugRoute
   '/api/public/t/$token': typeof ApiPublicTTokenRoute
   '/api/public/v1/$resource': typeof ApiPublicV1ResourceRoute
@@ -828,6 +846,8 @@ export interface FileRouteTypes {
     | '/api/public/cron/youtube-comments'
     | '/api/public/delivery-image/$'
     | '/api/public/offer/$token'
+    | '/api/public/paid/$slug'
+    | '/api/public/pay/$slug'
     | '/api/public/pg/$slug'
     | '/api/public/t/$token'
     | '/api/public/v1/$resource'
@@ -907,6 +927,8 @@ export interface FileRouteTypes {
     | '/api/public/cron/youtube-comments'
     | '/api/public/delivery-image/$'
     | '/api/public/offer/$token'
+    | '/api/public/paid/$slug'
+    | '/api/public/pay/$slug'
     | '/api/public/pg/$slug'
     | '/api/public/t/$token'
     | '/api/public/v1/$resource'
@@ -988,6 +1010,8 @@ export interface FileRouteTypes {
     | '/api/public/cron/youtube-comments'
     | '/api/public/delivery-image/$'
     | '/api/public/offer/$token'
+    | '/api/public/paid/$slug'
+    | '/api/public/pay/$slug'
     | '/api/public/pg/$slug'
     | '/api/public/t/$token'
     | '/api/public/v1/$resource'
@@ -1025,6 +1049,8 @@ export interface RootRouteChildren {
   ApiPublicCronYoutubeCommentsRoute: typeof ApiPublicCronYoutubeCommentsRoute
   ApiPublicDeliveryImageSplatRoute: typeof ApiPublicDeliveryImageSplatRoute
   ApiPublicOfferTokenRoute: typeof ApiPublicOfferTokenRoute
+  ApiPublicPaidSlugRoute: typeof ApiPublicPaidSlugRoute
+  ApiPublicPaySlugRoute: typeof ApiPublicPaySlugRoute
   ApiPublicPgSlugRoute: typeof ApiPublicPgSlugRoute
   ApiPublicTTokenRoute: typeof ApiPublicTTokenRoute
   ApiPublicV1ResourceRoute: typeof ApiPublicV1ResourceRoute
@@ -1546,6 +1572,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicOfferTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/paid/$slug': {
+      id: '/api/public/paid/$slug'
+      path: '/api/public/paid/$slug'
+      fullPath: '/api/public/paid/$slug'
+      preLoaderRoute: typeof ApiPublicPaidSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/pay/$slug': {
+      id: '/api/public/pay/$slug'
+      path: '/api/public/pay/$slug'
+      fullPath: '/api/public/pay/$slug'
+      preLoaderRoute: typeof ApiPublicPaySlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/pg/$slug': {
       id: '/api/public/pg/$slug'
       path: '/api/public/pg/$slug'
@@ -1730,6 +1770,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicCronYoutubeCommentsRoute: ApiPublicCronYoutubeCommentsRoute,
   ApiPublicDeliveryImageSplatRoute: ApiPublicDeliveryImageSplatRoute,
   ApiPublicOfferTokenRoute: ApiPublicOfferTokenRoute,
+  ApiPublicPaidSlugRoute: ApiPublicPaidSlugRoute,
+  ApiPublicPaySlugRoute: ApiPublicPaySlugRoute,
   ApiPublicPgSlugRoute: ApiPublicPgSlugRoute,
   ApiPublicTTokenRoute: ApiPublicTTokenRoute,
   ApiPublicV1ResourceRoute: ApiPublicV1ResourceRoute,

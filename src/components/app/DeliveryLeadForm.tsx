@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { PageExtras } from "@/lib/delivery-page";
 import { useServerFn } from "@tanstack/react-start";
 import { CheckCircle2, ShieldCheck } from "lucide-react";
@@ -26,6 +26,7 @@ export function useLeadForm(src: LeadFormSource | null | undefined) {
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [state, setState] = useState<"idle" | "saving" | "done">("idle");
+  const payUrl = useRef<string | null>(null);
   const [note, setNote] = useState("");
   const [otp, setOtp] = useState<OtpState>({ id: null, verified: false, busy: false, error: "", code: "" });
   const fields = src && src.config.mode !== "none" ? src.config.fields ?? [] : [];
@@ -84,7 +85,7 @@ export function useLeadForm(src: LeadFormSource | null | undefined) {
     setState("saving");
     try {
       if (src.token) await submitOffer({ data: { token: src.token, answers } });
-      else if (src.slug) await submitPage({ data: { slug: src.slug, answers } });
+      else if (src.slug) { const r = await submitPage({ data: { slug: src.slug, answers } }); payUrl.current = (r as { payUrl?: string }).payUrl ?? null; }
       setState("done");
     } catch (e) {
       setState("idle");
@@ -94,7 +95,7 @@ export function useLeadForm(src: LeadFormSource | null | undefined) {
     return true;
   };
 
-  return { active, answers, setAnswers, errors, state, note, run, capture, fields, consent: src?.config.consent, otpNeeded, otp, setOtp, sendOtp, verifyOtp, phoneKey: phoneField?.key };
+  return { payUrl, active, answers, setAnswers, errors, state, note, run, capture, fields, consent: src?.config.consent, otpNeeded, otp, setOtp, sendOtp, verifyOtp, phoneKey: phoneField?.key };
 }
 
 /** Form fields only — the page's main button submits. With `standalone`, shows its own Submit button. */

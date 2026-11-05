@@ -21,6 +21,9 @@ async function assertBillingRole(
     .maybeSingle();
   const role = data?.role as string | undefined;
   if (!role || !["owner", "admin"].includes(role)) throw new Error("forbidden");
+  // Client workspaces are billed only through the parent Agency workspace.
+  const { data: org } = await supabase.from("organizations").select("parent_organization_id").eq("id", organizationId).maybeSingle();
+  if (org?.parent_organization_id) throw new Error("client_workspace_billing_locked");
   return role;
 }
 

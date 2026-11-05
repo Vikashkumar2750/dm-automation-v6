@@ -1,3 +1,4 @@
+import { toast } from "sonner";
 import { ImageIcon, CheckCircle2, Clock3, Copy, Mail, Package, ShieldCheck, Tag } from "lucide-react";
 import { Fragment, useEffect, useState } from "react";
 
@@ -53,6 +54,17 @@ export function DeliveryPageView({ title, body, buttonLabel, buttonHref, imageUr
   countdownAt?: string | null; expiryAction?: "disable_cta" | "hide_cta"; expiryMessage?: string | null; price?: PagePrice | null; leadForm?: LeadFormSource | null; buyerSlug?: string | null; imagePlaceholder?: boolean;
 }) {
   const [signIn, setSignIn] = useState(false);
+  // Back from Razorpay: #paid=<token> signs the buyer in and opens their purchases.
+  useEffect(() => {
+    if (!buyerSlug) return;
+    const m = window.location.hash.match(/^#paid=([a-f0-9]{64}|failed)$/);
+    if (!m) return;
+    history.replaceState(null, "", window.location.pathname + window.location.search);
+    if (m[1] === "failed") { toast.error("We couldn't confirm the payment yet. If money was deducted, check your email or sign in shortly."); return; }
+    localStorage.setItem(`autodm:buyer:${buyerSlug}`, m[1]!);
+    toast.success("Payment successful — your purchase is ready. A receipt was sent to your email.");
+    setSignIn(true);
+  }, [buyerSlug]);
   const form = useLeadForm(leadForm);
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -79,6 +91,7 @@ export function DeliveryPageView({ title, body, buttonLabel, buttonHref, imageUr
     e.preventDefault();
     if (expired || !buttonHref) return;
     if (form.active && !(await form.run())) { Array.from(document.querySelectorAll<HTMLElement>(".lead-form")).find((el) => el.offsetParent)?.scrollIntoView({ behavior: "smooth", block: "center" }); return; }
+    if (form.payUrl?.current) { window.location.href = form.payUrl.current; return; }
     if (buttonHref !== "#") window.location.href = buttonHref;
   };
   const cta = buttonHref && !(expired && expiryAction === "hide_cta") ? (
