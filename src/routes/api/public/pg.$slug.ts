@@ -14,9 +14,11 @@ export const Route = createFileRoute("/api/public/pg/$slug")({
         const { data: product } = p.product_id ? await supabaseAdmin.from("revenue_products").select("price_paise, active").eq("id", p.product_id).eq("organization_id", p.organization_id).maybeSingle() : { data: null };
         const { data: credentials } = await supabaseAdmin.from("payment_credentials").select("organization_id").eq("organization_id", p.organization_id).maybeSingle();
         if (automaticCheckout(!!credentials, checkoutAmount(p.price_offer_paise, product, !!p.product_id))) return new Response(null, { status: 302, headers: { Location: `/p/${params.slug}`, "Cache-Control": "no-store" } });
-        if (!p?.button_url || !/^https:\/\//i.test(p.button_url)) return new Response("Not found", { status: 404 });
+        const { resolveContentUrl } = await import("@/lib/product-files.server");
+        const url = await resolveContentUrl(supabaseAdmin, p.button_url, p.organization_id);
+        if (!url) return new Response("Not found", { status: 404 });
         await supabaseAdmin.from("revenue_events").insert({ organization_id: p.organization_id, kind: "page_click", ref_id: p.id });
-        return new Response(null, { status: 302, headers: { Location: p.button_url } });
+        return new Response(null, { status: 302, headers: { Location: url, "Cache-Control": "no-store" } });
       },
     },
   },
