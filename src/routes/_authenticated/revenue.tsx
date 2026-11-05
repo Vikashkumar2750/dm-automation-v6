@@ -143,7 +143,7 @@ function Products({ orgId, items, connected }: { orgId: string; items: any[]; co
           <Input placeholder="Short description (optional)" value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} />
           {connected ? <StatusBadge tone="success">Razorpay connected · Automatic checkout</StatusBadge> : <Input placeholder="External payment link (optional fallback)" value={f.manualUrl} onChange={(e) => setF({ ...f, manualUrl: e.target.value })} />}
           <Label htmlFor="product-delivery">Content / deliverable link — access after payment</Label>
-          <Input id="product-delivery" placeholder="https://… (PDF, course or private group)" value={f.deliveryUrl} onChange={(e) => setF({ ...f, deliveryUrl: e.target.value })} />
+          <ContentFileField id="product-delivery" orgId={orgId} placeholder="https://… (course, drive or private group)" value={f.deliveryUrl} onChange={(v) => setF({ ...f, deliveryUrl: v })} />
           <div className="flex gap-2"><Button onClick={submit} disabled={save.isPending}>{f.id ? "Update product" : "Save product"}</Button>{f.id && <Button variant="outline" onClick={() => setF(blankP)}>Cancel</Button>}</div>
           <p className="text-xs text-muted-foreground">Price and content are shared with linked delivery pages.</p>
         </div>
@@ -470,7 +470,7 @@ function Pages({ orgId, items, leads, products, campaigns, whatsappOtp, connecte
               />
             </div>
             <div className="flex items-center gap-1">
-              <Input placeholder={autoCheckout ? "Content / deliverable link (optional page override)" : "Payment or download link (https://…)"} value={f.buttonUrl} onChange={(e) => setF({ ...f, buttonUrl: e.target.value })} />
+              <ContentFileField orgId={orgId} placeholder={autoCheckout ? "Content / deliverable link (optional page override)" : "Payment or download link (https://…)"} value={f.buttonUrl} onChange={(v) => setF({ ...f, buttonUrl: v })} />
               <FieldInfo
                 title={autoCheckout ? "Deliverable link" : "Button link"}
                 how={autoCheckout ? "Payment ke baad buyer ko ye content milega. Blank rakhen to linked product ka content use hoga." : "Button dabane par ye address khulega. https:// se shuru karein."}
