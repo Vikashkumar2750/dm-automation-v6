@@ -5,6 +5,7 @@ import { Fragment, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { DisclaimerContent } from "@/components/app/DisclaimerContent";
+import { SocialLinks } from "@/components/app/SocialIcon";
 import { BuyerSignIn, BuyerSignInButton } from "@/components/app/BuyerSignIn";
 import { LeadFields, useLeadForm, type LeadFormSource } from "@/components/app/DeliveryLeadForm";
 import { inlineParts, parseBody, priceDisplay, type Block } from "@/lib/delivery-page";
@@ -131,7 +132,7 @@ export function DeliveryPageView({ title, body, buttonLabel, buttonHref, imageUr
     <div className="relative">
       <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-72 bg-gradient-to-b from-primary/15 via-primary/5 to-transparent" />
       {buyerSlug && <>
-        <header className="sticky top-0 z-20 border-b border-border bg-background/90 backdrop-blur"><div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-2.5 @xl:px-6"><span className="truncate text-sm font-semibold text-foreground">{heading.replace(/\*\*/g, "")}</span><BuyerSignInButton onClick={() => setSignIn(true)} /></div></header>
+        <header className="sticky top-0 z-20 border-b border-border bg-background/90 backdrop-blur"><div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-2.5 @xl:px-6"><div className="min-w-0"><span className="block truncate text-sm font-semibold text-foreground">{heading.replace(/\*\*/g, "")}</span><a href="/" className="text-[10px] text-muted-foreground hover:text-primary">Powered by <span className="font-semibold">AutoDM</span> by Techaasvik</a></div><div className="flex shrink-0 items-center gap-2"><div className="hidden @md:block"><SocialLinks links={extras.socials} /></div><BuyerSignInButton onClick={() => setSignIn(true)} /></div></div></header>
         <BuyerSignIn slug={buyerSlug} open={signIn} onOpenChange={setSignIn} creatorName={extras.creatorName} />
         <Dialog open={!!paidToken} onOpenChange={(v) => { if (!v) setPaidToken(null); }}>
           <DialogContent className="max-w-md text-center">
@@ -223,6 +224,10 @@ export function DeliveryPageView({ title, body, buttonLabel, buttonHref, imageUr
           </div>}
           <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border-l-4 border-primary bg-muted px-4 py-3 text-sm text-muted-foreground"><span>Already got access? {buyerSlug ? "Sign in with your email to open it again." : "Your link was sent in your DM."}</span>{buyerSlug && <Button size="sm" variant="outline" onClick={() => setSignIn(true)}>Access your purchase</Button>}</div>
           <p className="flex items-center gap-1.5 pt-2 text-xs text-muted-foreground"><ShieldCheck className="size-3.5" /> Secure delivery</p>
+          <footer className="space-y-3 border-t border-border pt-5 text-center @xl:text-left">
+            {extras.socials?.length ? <div className="space-y-2"><p className="text-sm font-medium text-foreground">Follow {extras.creatorName || "the creator"}</p><div className="flex justify-center @xl:justify-start"><SocialLinks links={extras.socials} size="lg" /></div></div> : null}
+            <p className="text-xs text-muted-foreground">Powered by <a href="/" className="font-semibold text-foreground hover:text-primary">AutoDM by Techaasvik</a></p>
+          </footer>
         </article>
 
         <aside id="checkout" className="@3xl:sticky @3xl:top-6 @3xl:self-start">

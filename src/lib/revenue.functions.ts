@@ -35,7 +35,7 @@ export const getRevenue = createServerFn({ method: "GET" })
     const sb = ctx.supabase;
     const o = data.organizationId;
     const since = new Date(Date.now() - 30 * 86400_000).toISOString();
-    const [products, pages, campaigns, settings, links, events, dms, leads] = await Promise.all([
+    const [products, pages, campaigns, settings, links, events, dms, leads, accounts] = await Promise.all([
       sb.from("revenue_products").select("*").eq("organization_id", o).order("created_at"),
       sb.from("delivery_pages").select("*").eq("organization_id", o).order("created_at"),
       sb.from("coupon_campaigns").select("*").eq("organization_id", o).order("created_at"),
@@ -45,6 +45,7 @@ export const getRevenue = createServerFn({ method: "GET" })
       sb.from("revenue_events").select("kind, amount_paise, ref_id").eq("organization_id", o).gte("created_at", since).limit(10000),
       sb.from("automation_runs").select("id", { count: "exact", head: true }).eq("organization_id", o).eq("status", "sent").gte("created_at", since),
       sb.from("delivery_page_leads").select("id, delivery_page_id, answers, created_at").eq("organization_id", o).order("created_at", { ascending: false }).limit(200),
+      sb.from("social_accounts").select("id, platform, name, handle, external_id").eq("organization_id", o).order("created_at"),
     ]);
     await assertMember(ctx, o);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -57,6 +58,7 @@ export const getRevenue = createServerFn({ method: "GET" })
       pages: pages.data ?? [],
       leads: (leads.data ?? []) as Array<{ id: string; delivery_page_id: string; answers: Record<string, string>; created_at: string }>,
       campaigns: campaigns.data ?? [],
+      accounts: (accounts.data ?? []) as Array<{ id: string; platform: string; name: string; handle: string | null; external_id: string }>,
       settings: settings.data ?? { nudge_enabled: false, nudge_delay_minutes: 120, nudge_text: "Hi! Your payment link is still waiting. Need any help completing it?" },
       links: links.data ?? [],
       razorpay: cred ? { connected: true } : null,
@@ -99,7 +101,7 @@ export const savePage = createServerFn({ method: "POST" })
     buttonLabel: z.string().max(40).nullable(), buttonUrl: contentTarget.nullable(), active: z.boolean(),
     imagePath: z.string().regex(/^[0-9a-f-]{36}\/[A-Za-z0-9._-]+$/).nullable(), showImage: z.boolean(), imageAlt: z.string().trim().max(160).nullable(),
     countdownAt: z.string().datetime().nullable(), expiryAction: z.enum(["disable_cta", "hide_cta"]), expiryMessage: z.string().trim().max(160).nullable(),
-    formConfig: z.object({ mode: z.enum(["none", "optional", "required"]), consent: z.string().trim().max(300), fields: z.array(formField).max(8), extras: z.object({ creatorName: z.string().trim().max(80).optional(), supportEmail: z.string().trim().max(120).optional(), deliverables: z.object({ count: z.string().trim().max(40).optional(), format: z.string().trim().max(40).optional(), size: z.string().trim().max(40).optional() }).optional(), policies: z.object({ refund: z.string().trim().max(1500).optional(), fulfilment: z.string().trim().max(1500).optional(), privacy: z.string().trim().max(1500).optional(), terms: z.string().trim().max(1500).optional() }).optional(), disclaimer: z.string().trim().max(1500).optional(), charges: z.object({ gstPercent: z.number().min(0).max(28).optional(), passFee: z.boolean().optional() }).optional() }).optional() }),
+    formConfig: z.object({ mode: z.enum(["none", "optional", "required"]), consent: z.string().trim().max(300), fields: z.array(formField).max(8), extras: z.object({ creatorName: z.string().trim().max(80).optional(), supportEmail: z.string().trim().max(120).optional(), deliverables: z.object({ count: z.string().trim().max(40).optional(), format: z.string().trim().max(40).optional(), size: z.string().trim().max(40).optional() }).optional(), policies: z.object({ refund: z.string().trim().max(1500).optional(), fulfilment: z.string().trim().max(1500).optional(), privacy: z.string().trim().max(1500).optional(), terms: z.string().trim().max(1500).optional() }).optional(), disclaimer: z.string().trim().max(1500).optional(), charges: z.object({ gstPercent: z.number().min(0).max(28).optional(), passFee: z.boolean().optional() }).optional(), socials: z.array(z.object({ platform: z.enum(["instagram", "facebook", "linkedin", "youtube", "x"]), url: z.string().trim().url().max(300).refine((u) => u.startsWith("https://")), label: z.string().trim().max(80).optional() })).max(10).optional() }).optional() }),
     showPrice: z.boolean().default(false), priceOriginalPaise: z.number().int().min(0).max(100_000_000).nullable().default(null),
     priceOfferPaise: z.number().int().min(0).max(100_000_000).nullable().default(null), discountLabel: z.string().trim().max(40).nullable().default(null),
     couponCode: z.string().trim().toUpperCase().regex(/^[A-Z0-9-]{1,30}$/, "Coupon code: letters, numbers or - only").nullable().default(null),
