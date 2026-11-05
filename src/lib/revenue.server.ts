@@ -185,19 +185,28 @@ export async function startPageCheckout(admin: AdminClient, slug: string, leadId
   }
   if (!cred || !amount) return fallback;
   if (!lead || !email || answers["_stage"] !== "completed") throw new Error("Please complete your details before checkout");
-  const secret = await (await import("@/lib/token-crypto.server")).readToken(cred.razorpay_key_secret as string);
+  let secret: string | null;
+  try { secret = await (await import("@/lib/token-crypto.server")).readToken(cred.razorpay_key_secret as string); }
+  catch { throw new Error("Saved Razorpay secret cannot be read. Please re-save your Razorpay keys in Payments setup."); }
+  const digits = (answers["phone"] ?? "").replace(/\D/g, "");
+  const contact = digits.length >= 10 ? `+${digits.length === 10 ? `91${digits}` : digits}` : "";
   const res = await fetch("https://api.razorpay.com/v1/payment_links", {
     method: "POST",
     headers: { Authorization: `Basic ${Buffer.from(`${cred.razorpay_key_id}:${secret}`).toString("base64")}`, "Content-Type": "application/json" },
     body: JSON.stringify({
       amount, currency, description: name.slice(0, 2000), reference_id: `${leadId.replace(/-/g, "").slice(0, 24)}${Date.now().toString(36)}`.slice(0, 40),
-      customer: { email, ...(answers["phone"] ? { contact: answers["phone"] } : {}), ...(answers["name"] ? { name: answers["name"].slice(0, 100) } : {}) },
+      customer: { email, ...(contact ? { contact } : {}), ...(answers["name"] ? { name: answers["name"].slice(0, 100) } : {}) },
       notify: { email: false, sms: false }, reminder_enable: false,
       notes: { organization_id: page.organization_id, delivery_page: slug },
       callback_url: `${origin}/api/public/paid/${slug}`, callback_method: "get",
     }),
   }).catch(() => null);
-  if (!res?.ok) throw new Error("Payment checkout is temporarily unavailable. Please try again.");
+  if (!res) throw new Error("Could not reach Razorpay. Please try again.");
+  if (!res.ok) {
+    const body = (await res.json().catch(() => null)) as { error?: { description?: string } } | null;
+    const why = body?.error?.description;
+    throw new Error(res.status === 401 ? "Razorpay keys were rejected. Check Key ID and Secret in Payments setup." : `Razorpay: ${why ?? `error ${res.status}`}`);
+  }
   const j = (await res.json()) as { id?: string; short_url?: string };
   if (!j.id || !j.short_url) throw new Error("Could not create payment checkout");
   const { error: saveError } = await admin.from("payment_links").insert({

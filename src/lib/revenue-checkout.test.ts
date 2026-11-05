@@ -43,7 +43,7 @@ describe("automatic page checkout", () => {
   it("does not deliver private content when payment-link creation fails", async () => {
     const c = client();
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("Unavailable", { status: 503 })));
-    await expect(startPageCheckout(c.admin as never, "guide", "lead", "https://store.example.com")).rejects.toThrow("temporarily unavailable");
+    await expect(startPageCheckout(c.admin as never, "guide", "lead", "https://store.example.com")).rejects.toThrow("Razorpay");
     expect(c.inserts.filter(([table]) => table === "payment_links")).toHaveLength(0);
   });
 });
