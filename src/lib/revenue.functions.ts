@@ -301,13 +301,15 @@ export const submitPageForm = createServerFn({ method: "POST" })
     await assertOtpIfRequired(supabaseAdmin, page.organization_id as string, `page:${data.slug}`, !!page.otp_required, config.fields ?? [], clean);
     const tagged: Record<string, string> = { ...clean };
     for (const f of config.fields ?? []) { if (f.type === "email" && clean[f.key]) tagged["email"] = clean[f.key]!.toLowerCase(); if (f.type === "phone" && clean[f.key]) tagged["phone"] = clean[f.key]!; }
-    const leadId = await upsertPartialLead(supabaseAdmin, page.organization_id as string, page.id as string, tagged, "completed");
+    let leadId = await upsertPartialLead(supabaseAdmin, page.organization_id as string, page.id as string, tagged, "completed");
     if (!leadId) {
-      const { error } = await supabaseAdmin.from("delivery_page_leads").insert({ organization_id: page.organization_id, delivery_page_id: page.id, answers: { ...tagged, _stage: "completed" } });
-      if (error) throw new Error("Could not save details");
+      const { data: row, error } = await supabaseAdmin.from("delivery_page_leads").insert({ organization_id: page.organization_id, delivery_page_id: page.id, answers: { ...tagged, _stage: "completed" } }).select("id").single();
+      if (error || !row) throw new Error("Could not save details");
+      leadId = row.id as string;
     }
     await supabaseAdmin.from("revenue_events").insert({ organization_id: page.organization_id, kind: "form_complete", ref_id: page.id });
-    return { ok: true };
+    // Checkout goes through our own link so the buyer comes back signed in after paying.
+    return { ok: true, payUrl: `/api/public/pay/${data.slug}?lead=${leadId}` };
   });
 
 /** When a page requires WhatsApp OTP, a verified code for the entered phone must exist. */
