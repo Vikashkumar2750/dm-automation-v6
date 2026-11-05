@@ -118,7 +118,7 @@ export function BuyerSignIn({ slug, open, onOpenChange, creatorName }: { slug: s
                 </ul>)
               ) : lib.items.length === 0 ? (
                 <div className="grid place-items-center gap-2 py-12 text-center text-muted-foreground"><Package className="size-10" /><p className="font-medium text-foreground">No products found!</p><p className="text-xs">Items you get from this creator will show up here.</p></div>
-              ) : tab === "purchases" ? (
+              ) : (
                 <ul className="max-h-80 space-y-2 overflow-y-auto">
                   {lib.items.map((it) => (
                     <li key={it.slug} className="flex items-center gap-3 rounded-lg border border-border p-2">
