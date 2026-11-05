@@ -75,9 +75,21 @@ export const getBuyerLibrary = createServerFn({ method: "POST" })
     if (!s || new Date(s.expires_at).getTime() < Date.now()) return null;
     const { data: leads } = await supabaseAdmin.from("delivery_page_leads").select("created_at, answers, delivery_pages!inner(id, title, slug, active, button_url, image_path, show_image, product_id, price_offer_paise)")
       .eq("organization_id", s.organization_id).ilike("answers->>email", s.email).order("created_at", { ascending: false }).limit(50);
-    const { data: paid } = await supabaseAdmin.from("payment_links").select("delivery_page_id, product_id").eq("organization_id", s.organization_id).eq("platform", "web").eq("external_user_id", s.email).eq("status", "paid");
+    const { data: paid } = await supabaseAdmin.from("payment_links").select("delivery_page_id, product_id, paid_at, created_at").eq("organization_id", s.organization_id).eq("platform", "web").eq("external_user_id", s.email).eq("status", "paid");
     const seen = new Set<string>();
-    const items = (leads ?? []).flatMap((l: any) => {
+    // Paid purchases come straight from payment records, so they show even without a matching lead row.
+    const paidPageIds = [...new Set((paid ?? []).map((p: any) => p.delivery_page_id).filter(Boolean))] as string[];
+    const { data: paidPages } = paidPageIds.length
+      ? await supabaseAdmin.from("delivery_pages").select("id, title, slug, active, button_url, image_path, show_image, product_id").eq("organization_id", s.organization_id).in("id", paidPageIds)
+      : { data: [] as any[] };
+    const paidItems = (paidPages ?? []).flatMap((p: any) => {
+      if (!p.active || seen.has(p.slug)) return [];
+      seen.add(p.slug);
+      const at = (paid ?? []).find((x: any) => x.delivery_page_id === p.id);
+      return [{ title: p.title as string, slug: p.slug as string, at: (at?.paid_at ?? at?.created_at) as string, hasFile: true,
+        imageUrl: p.show_image && p.image_path ? `/api/public/delivery-image/${p.image_path}` : null }];
+    });
+    const leadItems = (leads ?? []).flatMap((l: any) => {
       const p = Array.isArray(l.delivery_pages) ? l.delivery_pages[0] : l.delivery_pages;
       if (l.answers?._stage && l.answers["_stage"] !== "completed") return [];
       if (!p?.active || seen.has(p.slug)) return [];
@@ -86,7 +98,7 @@ export const getBuyerLibrary = createServerFn({ method: "POST" })
       return [{ title: p.title as string, slug: p.slug as string, at: l.created_at as string, hasFile: !!p.button_url || !!p.product_id,
         imageUrl: p.show_image && p.image_path ? `/api/public/delivery-image/${p.image_path}` : null }];
     });
-    return { email: s.email as string, items };
+    return { email: s.email as string, items: [...paidItems, ...leadItems] };
   });
 
 export const signOutBuyer = createServerFn({ method: "POST" })
