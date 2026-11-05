@@ -216,7 +216,7 @@ export const createClientWorkspace = createServerFn({ method: "POST" })
       throw new Error(error?.message ?? "create_failed");
     }
 
-    const rows = [{ organization_id: org.id, user_id: mainOwnerId, role: "owner" }];
+    const rows: { organization_id: string; user_id: string; role: "owner" | "admin" }[] = [{ organization_id: org.id, user_id: mainOwnerId, role: "owner" }];
     if (mainOwnerId !== context.userId) rows.push({ organization_id: org.id, user_id: context.userId, role: "admin" });
     const { error: memberError } = await supabaseAdmin
       .from("organization_members")
