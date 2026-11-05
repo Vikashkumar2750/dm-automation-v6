@@ -3,8 +3,8 @@
 ## Remix setup (Nov 5)
 - [x] Automatic Razorpay checkout: separate product deliverables from manual payments, enable paid pages without manual links, enforce paid access and test checkout selection (26 focused tests passed).
 - [ ] Verify signed-in product save and actual Razorpay payment → return → access/email (blocked: requesting user has no matching preview auth account; requires sign-in and a test payment).
-- [ ] Replace CRON_SECRET, DATABASE_URL, Google OAuth credentials, Meta credentials/verify token, and Razorpay credentials (renewed request at 11:04; awaiting secure-form submission).
-- [ ] Refresh remixed backend connection (client binding is stale after remix).
+- [ ] Replace CRON_SECRET, DATABASE_URL, Google OAuth credentials, Meta credentials/verify token, and Razorpay credentials (blocked: renewed secure form declined; values unchanged).
+- [x] Refresh remixed backend connection (managed connection refreshed successfully).
 - [ ] Clear copied Drizzle migrations and scaffold an empty migration set (blocked: no supported remix-reset tool is available; direct journal/snapshot deletion is prohibited).
 
 ## Nov 5
