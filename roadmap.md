@@ -1,5 +1,9 @@
 # DM FB-IG-YT by Techaasvik — Build Roadmap
 
+## Remix setup (Nov 5)
+- [ ] Replace CRON_SECRET, DATABASE_URL, Google OAuth credentials, Meta credentials/verify token, and Razorpay credentials (blocked: replacement form was declined; no values changed).
+- [ ] Clear copied Drizzle migrations and scaffold an empty migration set (blocked: no supported remix-reset tool is available; direct journal/snapshot deletion is prohibited).
+
 ## Nov 5
 - [x] Agency: only the main Agency owner owns client workspaces; others join as members, can't pay or remove the owner.
 - [x] Delivery page: after a successful Razorpay payment, return buyer to the page signed in with purchases open, and email a receipt/access link.
