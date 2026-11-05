@@ -8,6 +8,7 @@ import { toast } from "sonner";
 
 import { AppShell } from "@/components/app/AppShell";
 import { GuideButton } from "@/components/app/GuideButton";
+import { ContentFileField } from "@/components/app/ContentFileField";
 import { EmptyState, PageHeader, Panel, StatusBadge } from "@/components/app/primitives";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
