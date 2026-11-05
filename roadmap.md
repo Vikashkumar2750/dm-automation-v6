@@ -1,5 +1,9 @@
 # DM FB-IG-YT by Techaasvik — Build Roadmap
 
+## Nov 5
+- [ ] Agency: only the main Agency owner owns client workspaces; others join as members, can't pay or remove the owner.
+- [ ] Delivery page: after a successful Razorpay payment, return buyer to the page signed in with purchases open, and email a receipt/access link.
+
 ## Agency client entitlements (Nov 4)
 - [x] Resolve active parent Agency benefits for existing/new client workspaces, including connections, branding, labels and quotas.
 - [x] Add deployment repair and regression tests without changing workspace data isolation.
