@@ -13,13 +13,13 @@ describe("publishing tab availability", () => {
   });
   it("shows Coming soon instead of enabling Calendar", () => {
     const flags = publishingModeFlags("calendar", "coming_soon");
-    expect(flags.calendar_enabled).toBe(false);
+    expect(flags["calendar_enabled"]).toBe(false);
     expect(publishingMode(flags, "calendar")).toBe("coming_soon");
     expect(publishingMode(flags, "create_post")).toBe("enabled");
   });
   it("restores a previously unavailable tab", () => {
     const flags = { ...publishingModeFlags("calendar", "coming_soon"), ...publishingModeFlags("calendar", "enabled") };
     expect(publishingMode(flags, "calendar")).toBe("enabled");
-    expect(flags.calendar_coming_soon).toBe(false);
+    expect(flags["calendar_coming_soon"]).toBe(false);
   });
 });
