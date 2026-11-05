@@ -688,7 +688,7 @@ function ExtrasEditor({ value, onChange, onSaveCreator, accounts }: { accounts: 
       <SocialsEditor accounts={accounts} value={value.socials ?? []} onChange={(socials) => onChange({ ...value, socials })} />
       <div className="space-y-2">
         <div className="flex items-center justify-between gap-2"><Label>Creator & support (optional)</Label>
-          <Button type="button" size="sm" variant="outline" disabled={!value.creatorName?.trim() && !value.supportEmail?.trim()} onClick={onSaveCreator}>Save for next pages</Button></div>
+          <Button type="button" size="sm" variant="outline" disabled={!value.creatorName?.trim() && !value.supportEmail?.trim() && !value.socials?.length} onClick={onSaveCreator}>Save for next pages</Button></div>
         <div className="grid gap-2 sm:grid-cols-2">
           <Input placeholder="Creator name (e.g. Techaasvik)" maxLength={80} value={value.creatorName ?? ""} onChange={(e) => onChange({ ...value, creatorName: e.target.value })} />
           <Input type="email" placeholder="Support email" maxLength={120} value={value.supportEmail ?? ""} onChange={(e) => onChange({ ...value, supportEmail: e.target.value })} />
