@@ -62,9 +62,9 @@ function RevenuePage() {
             <TabsTrigger value="payments">Payments setup</TabsTrigger>
           </TabsList>
           <TabsContent forceMount className="data-[state=inactive]:hidden" value="report"><Report d={d} /></TabsContent>
-          <TabsContent forceMount className="data-[state=inactive]:hidden" value="products"><Products orgId={orgId!} items={d.products} /></TabsContent>
+          <TabsContent forceMount className="data-[state=inactive]:hidden" value="products"><Products orgId={orgId ?? ""} items={d.products} connected={!!d.razorpay} /></TabsContent>
           <TabsContent forceMount className="data-[state=inactive]:hidden" value="coupons"><Coupons orgId={orgId!} items={d.campaigns} /></TabsContent>
-          <TabsContent forceMount className="data-[state=inactive]:hidden" value="pages"><Pages orgId={orgId!} items={d.pages} leads={d.leads} products={d.products} campaigns={d.campaigns} whatsappOtp={d.whatsappOtp} /></TabsContent>
+          <TabsContent forceMount className="data-[state=inactive]:hidden" value="pages"><Pages orgId={orgId!} items={d.pages} leads={d.leads} products={d.products} campaigns={d.campaigns} whatsappOtp={d.whatsappOtp} connected={!!d.razorpay} /></TabsContent>
           <TabsContent forceMount className="data-[state=inactive]:hidden" value="payments"><Payments orgId={orgId!} d={d} /></TabsContent>
         </Tabs>
       )}
@@ -119,15 +119,15 @@ function Report({ d }: { d: Data }) {
   );
 }
 
-function Products({ orgId, items }: { orgId: string; items: any[] }) {
+function Products({ orgId, items, connected }: { orgId: string; items: any[]; connected: boolean }) {
   const save = useSave(useServerFn(saveProduct), "Product saved");
   const del = useSave(useServerFn(deleteRevenueItem), "Deleted");
-  const blankP = { id: "", name: "", price: "", originalPrice: "", description: "", manualUrl: "" };
+  const blankP = { id: "", name: "", price: "", originalPrice: "", description: "", manualUrl: "", deliveryUrl: "" };
   const [f, setF] = useState(blankP);
   const submit = () => {
     const p = rupeesToPaise(f.price);
     if (!f.name || !p) { toast.error("Name and price (at least ₹1) are needed"); return; }
-    save.mutate({ organizationId: orgId, ...(f.id ? { id: f.id } : {}), name: f.name, pricePaise: p, originalPricePaise: f.originalPrice ? rupeesToPaise(f.originalPrice) : null, description: f.description || null, manualUrl: f.manualUrl || null, active: true },
+    save.mutate({ organizationId: orgId, ...(f.id ? { id: f.id } : {}), name: f.name, pricePaise: p, originalPricePaise: f.originalPrice ? rupeesToPaise(f.originalPrice) : null, description: f.description || null, manualUrl: f.manualUrl || null, deliveryUrl: f.deliveryUrl || null, active: true },
       { onSuccess: () => setF(blankP) });
   };
   return (
@@ -141,9 +141,11 @@ function Products({ orgId, items }: { orgId: string; items: any[] }) {
             <div><Label className="text-xs">MRP ₹ (optional, crossed out)</Label><Input placeholder="1999" inputMode="decimal" value={f.originalPrice} onChange={(e) => setF({ ...f, originalPrice: e.target.value })} /></div>
           </div>
           <Input placeholder="Short description (optional)" value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} />
-          <Input placeholder="Own payment link, used if Razorpay is not connected (optional)" value={f.manualUrl} onChange={(e) => setF({ ...f, manualUrl: e.target.value })} />
+          {connected ? <StatusBadge tone="success">Razorpay connected · Automatic checkout</StatusBadge> : <Input placeholder="External payment link (optional fallback)" value={f.manualUrl} onChange={(e) => setF({ ...f, manualUrl: e.target.value })} />}
+          <Label htmlFor="product-delivery">Content / deliverable link — access after payment</Label>
+          <Input id="product-delivery" placeholder="https://… (PDF, course or private group)" value={f.deliveryUrl} onChange={(e) => setF({ ...f, deliveryUrl: e.target.value })} />
           <div className="flex gap-2"><Button onClick={submit} disabled={save.isPending}>{f.id ? "Update product" : "Save product"}</Button>{f.id && <Button variant="outline" onClick={() => setF(blankP)}>Cancel</Button>}</div>
-          <p className="text-xs text-muted-foreground">Products are the single source of truth — delivery pages and payment links pick price and payment link from here.</p>
+          <p className="text-xs text-muted-foreground">Price and content are shared with linked delivery pages.</p>
         </div>
       </Panel>
       <Panel title="Your products">
@@ -151,10 +153,10 @@ function Products({ orgId, items }: { orgId: string; items: any[] }) {
           <div className="space-y-2">
             {items.map((p) => (
               <div key={p.id} className="flex items-center justify-between gap-2 rounded-lg border border-border p-3 text-sm">
-                <div><p className="font-medium">{p.name}</p><p className="text-muted-foreground">{formatInr(p.price_paise)}{p.original_price_paise > p.price_paise ? <s className="ml-1">{formatInr(p.original_price_paise)}</s> : null}{p.manual_url ? " · own link" : ""}</p></div>
+                <div><p className="font-medium">{p.name}</p><p className="text-muted-foreground">{formatInr(p.price_paise)}{p.original_price_paise > p.price_paise ? <s className="ml-1">{formatInr(p.original_price_paise)}</s> : null}{connected ? " · automatic checkout" : p.manual_url ? " · external payment" : ""}</p></div>
                 <div className="flex items-center gap-2">
-                  <Switch checked={p.active} aria-label="Active" onCheckedChange={(v) => save.mutate({ organizationId: orgId, id: p.id, name: p.name, pricePaise: p.price_paise, originalPricePaise: p.original_price_paise ?? null, description: p.description, manualUrl: p.manual_url, active: v })} />
-                  <Button size="icon" variant="ghost" aria-label="Edit" onClick={() => setF({ id: p.id, name: p.name, price: String(p.price_paise / 100), originalPrice: p.original_price_paise ? String(p.original_price_paise / 100) : "", description: p.description ?? "", manualUrl: p.manual_url ?? "" })}><Pencil className="size-4" /></Button>
+                  <Switch checked={p.active} aria-label="Active" onCheckedChange={(v) => save.mutate({ organizationId: orgId, id: p.id, name: p.name, pricePaise: p.price_paise, originalPricePaise: p.original_price_paise ?? null, description: p.description, manualUrl: p.manual_url, deliveryUrl: p.delivery_url ?? null, active: v })} />
+                  <Button size="icon" variant="ghost" aria-label="Edit" onClick={() => setF({ id: p.id, name: p.name, price: String(p.price_paise / 100), originalPrice: p.original_price_paise ? String(p.original_price_paise / 100) : "", description: p.description ?? "", manualUrl: p.manual_url ?? "", deliveryUrl: p.delivery_url ?? "" })}><Pencil className="size-4" /></Button>
                   <Button size="icon" variant="ghost" aria-label="Delete" onClick={() => del.mutate({ organizationId: orgId, id: p.id, table: "revenue_products" })}><Trash2 className="size-4" /></Button>
                 </div>
               </div>
@@ -302,7 +304,7 @@ const STAGE_BADGE: Record<string, { label: string; cls: string }> = {
   buyer_signin_attempt: { label: "Sign-in attempt", cls: "bg-primary/10 text-primary" },
 };
 
-function Pages({ orgId, items, leads, products, campaigns, whatsappOtp }: { orgId: string; items: any[]; products: any[]; campaigns: any[]; whatsappOtp: Data["whatsappOtp"]; leads: Array<{ id: string; delivery_page_id: string; answers: Record<string, string>; created_at: string }> }) {
+function Pages({ orgId, items, leads, products, campaigns, whatsappOtp, connected }: { connected: boolean; orgId: string; items: any[]; products: any[]; campaigns: any[]; whatsappOtp: Data["whatsappOtp"]; leads: Array<{ id: string; delivery_page_id: string; answers: Record<string, string>; created_at: string }> }) {
   const save = useSave(useServerFn(savePage), "Page saved");
   const del = useSave(useServerFn(deleteRevenueItem), "Deleted");
   const [f, setF] = useState<PageForm>(EMPTY_PAGE);
@@ -323,7 +325,7 @@ function Pages({ orgId, items, leads, products, campaigns, whatsappOtp }: { orgI
     if (!pr) { setF({ ...f, productId: "" }); return; }
     setF({ ...f, productId: id, showPrice: true, priceOffer: String(pr.price_paise / 100),
       priceOriginal: pr.original_price_paise ? String(pr.original_price_paise / 100) : f.priceOriginal,
-      title: f.title || pr.name, buttonUrl: pr.manual_url || f.buttonUrl, buttonLabel: f.buttonLabel || "Buy now" });
+      title: f.title || pr.name, buttonUrl: connected ? f.buttonUrl : pr.manual_url || f.buttonUrl, buttonLabel: f.buttonLabel || "Buy now" });
   };
   const pickCampaign = (id: string) => {
     const c = campaigns.find((x) => x.id === id);
@@ -336,6 +338,7 @@ function Pages({ orgId, items, leads, products, campaigns, whatsappOtp }: { orgI
     formTop.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     if (p.image_path) { try { setImagePreview(await previewDeliveryImage(p.image_path)); } catch { /* preview only */ } }
   };
+  const autoCheckout = connected && !!(f.productId || rupeesToPaise(f.priceOffer));
   const fields = formFields(f);
   const formConfig = { mode: f.formType === "none" ? "none" as const : f.formMode, consent: f.formType === "none" ? "" : CONSENT, fields, extras: cleanExtras(f.extras) };
   const price = f.showPrice ? { originalPaise: f.priceOriginal ? rupeesToPaise(f.priceOriginal) : null, offerPaise: f.priceOffer ? rupeesToPaise(f.priceOffer) : null, label: f.discountLabel || null, couponCode: f.couponCode.trim().toUpperCase() || null, couponNote: f.couponNote || null } : null;
@@ -395,7 +398,7 @@ function Pages({ orgId, items, leads, products, campaigns, whatsappOtp }: { orgI
                 <option value="">No product — fill price manually</option>
                 {products.map((pr) => <option key={pr.id} value={pr.id}>{pr.name} · ₹{pr.price_paise / 100}{pr.active ? "" : " (inactive)"}</option>)}
               </select>
-              {products.length === 0 && <p className="mt-1 text-xs text-muted-foreground">No products yet — add one in the Products tab to auto-fill price and payment link.</p>}
+              {products.length === 0 && <p className="mt-1 text-xs text-muted-foreground">No products yet — add one in the Products tab to auto-fill the selling price.</p>}
               {f.productId && (() => { const pr = products.find((x) => x.id === f.productId); return pr && f.priceOffer && rupeesToPaise(f.priceOffer) !== pr.price_paise
                 ? <p className="mt-1 text-xs text-destructive">Offer price (₹{f.priceOffer}) differs from the product price (₹{pr.price_paise / 100}) that buyers are charged.</p> : null; })()}
             </div>
@@ -420,7 +423,7 @@ function Pages({ orgId, items, leads, products, campaigns, whatsappOtp }: { orgI
                 <Input placeholder="Coupon code (e.g. SAVE50)" value={f.couponCode} onChange={(e) => setF({ ...f, couponCode: e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, "").slice(0, 30) })} />
                 <Input placeholder="Coupon note (e.g. Use at checkout)" value={f.couponNote} onChange={(e) => setF({ ...f, couponNote: e.target.value.slice(0, 120) })} />
               </div>
-              <p className="text-xs text-muted-foreground">Pick a product to fill the offer price and its payment link automatically. You can still edit everything.</p>
+              <p className="text-xs text-muted-foreground">Linked products determine the checkout price.</p>
             </>}
           </div>
           <div className="space-y-2 rounded-lg border border-border p-3">
@@ -454,8 +457,8 @@ function Pages({ orgId, items, leads, products, campaigns, whatsappOtp }: { orgI
             <p className="text-xs text-muted-foreground">Best default: two quick questions in DM, then an optional detailed form after the offer.</p>
           </div>
           <div className="space-y-2 rounded-lg border border-border p-3">
-          <Label>Main button — where buyers go</Label>
-          <p className="text-xs text-muted-foreground">Paid product: paste your payment link (Razorpay / Cashfree / Instamojo payment page) or pick a product above. Free product: paste the download, course or group link.</p>
+          <Label>{autoCheckout ? "Automatic checkout" : "Main button — where buyers go"}</Label>
+          <p className="text-xs text-muted-foreground">{autoCheckout ? "Razorpay connected — no manual payment link needed." : "Use an external payment link, or a download link for a free resource."}</p>
           <div className="grid grid-cols-2 gap-2">
             <div className="flex items-center gap-1">
               <Input placeholder="Button text" value={f.buttonLabel} onChange={(e) => setF({ ...f, buttonLabel: e.target.value })} />
@@ -467,10 +470,10 @@ function Pages({ orgId, items, leads, products, campaigns, whatsappOtp }: { orgI
               />
             </div>
             <div className="flex items-center gap-1">
-              <Input placeholder="Payment or download link (https://…)" value={f.buttonUrl} onChange={(e) => setF({ ...f, buttonUrl: e.target.value })} />
+              <Input placeholder={autoCheckout ? "Content / deliverable link (optional page override)" : "Payment or download link (https://…)"} value={f.buttonUrl} onChange={(e) => setF({ ...f, buttonUrl: e.target.value })} />
               <FieldInfo
-                title="Button link"
-                how="Ye address us page ka hai jo button dabane par khulega. Poora link http:// ya https:// se shuru karo. Delivery page ka apna link (jaise origin/p/slug) bhi daal sakte ho, ya koi bhi website."
+                title={autoCheckout ? "Deliverable link" : "Button link"}
+                how={autoCheckout ? "Payment ke baad buyer ko ye content milega. Blank rakhen to linked product ka content use hoga." : "Button dabane par ye address khulega. https:// se shuru karein."}
                 why="Button isi link par le jaata hai — galat ya adhoora link daala to visitor blank page par pahunchega."
                 example={`https://yoursite.com/your-guide ya apna delivery page: ${origin}/p/free-guide`}
               />
@@ -526,7 +529,7 @@ function Payments({ orgId, d }: { orgId: string; d: Data }) {
       <Panel title="Razorpay">
         {d.razorpay ? (
           <div className="space-y-3 text-sm">
-            <p>Connected with key <span className="font-mono">{d.razorpay.keyIdHint}</span>. Every customer gets their own payment link, and paid customers get the “paid” tag.</p>
+            <p>Razorpay connected · Automatic checkout active</p>
             <Button variant="outline" onClick={() => removeKeys.mutate({ organizationId: orgId })}>Disconnect</Button>
           </div>
         ) : (

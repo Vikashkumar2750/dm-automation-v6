@@ -1,0 +1,2 @@
+ALTER TABLE public.revenue_products ADD COLUMN IF NOT EXISTS delivery_url text;
+COMMENT ON COLUMN public.revenue_products.delivery_url IS 'Private product access URL; returned only to workspace members or confirmed paid buyers.';

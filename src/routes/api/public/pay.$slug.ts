@@ -11,9 +11,13 @@ export const Route = createFileRoute("/api/public/pay/$slug")({
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         const { startPageCheckout } = await import("@/lib/revenue.server");
         const origin = (process.env["PUBLIC_APP_URL"] || url.origin).replace(/\/$/, "");
+        try {
         const target = await startPageCheckout(supabaseAdmin as never, params.slug, lead, origin);
         if (!target) return new Response(null, { status: 302, headers: { Location: `/api/public/pg/${params.slug}` } });
-        return new Response(null, { status: 302, headers: { Location: target } });
+        return new Response(null, { status: 302, headers: { Location: target, "Cache-Control": "no-store" } });
+        } catch {
+          return new Response("Checkout unavailable. Return to the delivery page and try again.", { status: 503, headers: { "Cache-Control": "no-store" } });
+        }
       },
     },
   },

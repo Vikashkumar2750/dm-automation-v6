@@ -5,7 +5,7 @@
  */
 import { createHmac, timingSafeEqual } from "node:crypto";
 
-import { makeCouponCode, nudgeDue } from "@/lib/revenue";
+import { checkoutAmount, makeCouponCode, nudgeDue } from "@/lib/revenue";
 
 type AdminClient = import("@supabase/supabase-js").SupabaseClient;
 
@@ -55,7 +55,8 @@ export async function createPaymentLinkFor(admin: AdminClient, t: RevenueTarget,
       console.error("razorpay link failed", res.status, (await res.text()).slice(0, 300));
     }
   }
-  if (!url) return { error: cred ? "razorpay_failed" : "no_payment_method" };
+  if (cred && provider !== "razorpay") return { error: "razorpay_failed" };
+  if (!url) return { error: "no_payment_method" };
 
   const { data: row } = await admin.from("payment_links").insert({
     organization_id: t.organizationId, product_id: p.id, conversation_id: t.conversationId, social_account_id: t.socialAccountId,
@@ -164,22 +165,26 @@ export async function runPaymentNudges(admin: AdminClient) {
 
 /** Delivery-page checkout: a Razorpay link for this lead that returns the buyer to the page after paying. */
 export async function startPageCheckout(admin: AdminClient, slug: string, leadId: string, origin: string): Promise<string | null> {
-  const { data: page } = await admin.from("delivery_pages").select("id, organization_id, title, product_id, price_offer_paise, button_url")
+  const { data: page } = await admin.from("delivery_pages").select("id, organization_id, title, product_id, price_offer_paise, button_url, countdown_at")
     .eq("slug", slug).eq("active", true).maybeSingle();
-  if (!page) return null;
+  if (!page) throw new Error("Page not found");
+  if (page.countdown_at && new Date(page.countdown_at as string).getTime() <= Date.now()) throw new Error("This offer has ended");
   const fallback = page.button_url && /^https:\/\//i.test(page.button_url as string) ? (page.button_url as string) : null;
   const { data: lead } = await admin.from("delivery_page_leads").select("id, answers").eq("id", leadId).eq("delivery_page_id", page.id).maybeSingle();
   const answers = (lead?.answers ?? {}) as Record<string, string>;
   const email = (answers["email"] ?? "").toLowerCase();
   const { data: cred } = await admin.from("payment_credentials").select("razorpay_key_id, razorpay_key_secret").eq("organization_id", page.organization_id).maybeSingle();
-  let amount = page.price_offer_paise as number | null;
+  let amount = checkoutAmount(page.price_offer_paise as number | null, null, false);
   let currency = "INR";
   let name = page.title as string;
   if (page.product_id) {
-    const { data: p } = await admin.from("revenue_products").select("name, price_paise, currency, active").eq("id", page.product_id).maybeSingle();
-    if (p?.active) { amount = amount ?? (p.price_paise as number); currency = (p.currency as string) || "INR"; name = p.name as string; }
+    const { data: p } = await admin.from("revenue_products").select("name, price_paise, currency, active").eq("id", page.product_id).eq("organization_id", page.organization_id).maybeSingle();
+    amount = checkoutAmount(null, p as { price_paise: number; active: boolean } | null, true);
+    if (!amount) throw new Error("Product is unavailable");
+    if (p) { currency = (p.currency as string) || "INR"; name = p.name as string; }
   }
-  if (!lead || !email || !cred || !amount || amount < 100) return fallback;
+  if (!cred || !amount) return fallback;
+  if (!lead || !email || answers["_stage"] !== "completed") throw new Error("Please complete your details before checkout");
   const secret = await (await import("@/lib/token-crypto.server")).readToken(cred.razorpay_key_secret as string);
   const res = await fetch("https://api.razorpay.com/v1/payment_links", {
     method: "POST",
@@ -192,13 +197,15 @@ export async function startPageCheckout(admin: AdminClient, slug: string, leadId
       callback_url: `${origin}/api/public/paid/${slug}`, callback_method: "get",
     }),
   }).catch(() => null);
-  if (!res?.ok) { if (res) console.error("razorpay page link failed", res.status, (await res.text()).slice(0, 300)); return fallback; }
+  if (!res?.ok) throw new Error("Payment checkout is temporarily unavailable. Please try again.");
   const j = (await res.json()) as { id?: string; short_url?: string };
-  if (!j.id || !j.short_url) return fallback;
-  await admin.from("payment_links").insert({
+  if (!j.id || !j.short_url) throw new Error("Could not create payment checkout");
+  const { error: saveError } = await admin.from("payment_links").insert({
     organization_id: page.organization_id, product_id: page.product_id, delivery_page_id: page.id, platform: "web", external_user_id: email,
     provider: "razorpay", provider_link_id: j.id, url: j.short_url, amount_paise: amount,
   });
+  if (saveError) throw new Error("Could not save payment checkout. Please try again.");
+  await admin.from("revenue_events").insert({ organization_id: page.organization_id, kind: "page_click", ref_id: page.id });
   await admin.from("revenue_events").insert({ organization_id: page.organization_id, kind: "payment_link", ref_id: page.id, amount_paise: amount });
   return j.short_url;
 }

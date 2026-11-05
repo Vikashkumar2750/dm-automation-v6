@@ -1,3 +1,4 @@
+import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 import { ArrowRight, LogIn, LogOut, Mail, Package, Receipt, ShoppingBag } from "lucide-react";
 import { toast } from "sonner";
@@ -5,13 +6,14 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { getBuyerLibrary, requestBuyerCode, signOutBuyer, verifyBuyerCode } from "@/lib/buyer-access.functions";
+import { getBuyerContent, getBuyerLibrary, requestBuyerCode, signOutBuyer, verifyBuyerCode } from "@/lib/buyer-access.functions";
 
 type Library = { email: string; items: { title: string; slug: string; at: string; hasFile: boolean; imageUrl: string | null }[] };
 const key = (slug: string) => `autodm:buyer:${slug}`;
 
 /** Buyer sign-in: store card → email → 6-digit code → purchases portal (Purchases / Transactions). */
 export function BuyerSignIn({ slug, open, onOpenChange, creatorName }: { slug: string; open: boolean; onOpenChange: (v: boolean) => void; creatorName?: string | undefined }) {
+  const contentFn = useServerFn(getBuyerContent);
   const [step, setStep] = useState<"intro" | "email" | "code" | "library">("intro");
   const [tab, setTab] = useState<"purchases" | "transactions">("purchases");
   const [email, setEmail] = useState("");
@@ -35,6 +37,12 @@ export function BuyerSignIn({ slug, open, onOpenChange, creatorName }: { slug: s
     localStorage.setItem(key(slug), token);
     const l = await getBuyerLibrary({ data: { token } });
     setLib(l); setStep("library");
+  });
+  const openContent = (itemSlug: string) => run(async () => {
+    const token = localStorage.getItem(key(slug));
+    if (!token) throw new Error("Please sign in again");
+    const result = await contentFn({ data: { token, slug: itemSlug } });
+    window.location.assign(result.url);
   });
   const signOut = () => run(async () => {
     const token = localStorage.getItem(key(slug));
@@ -105,7 +113,7 @@ export function BuyerSignIn({ slug, open, onOpenChange, creatorName }: { slug: s
                     <li key={it.slug} className="flex items-center gap-3 rounded-lg border border-border p-2">
                       <div className="aspect-video w-20 shrink-0 overflow-hidden rounded bg-muted">{it.imageUrl ? <img src={it.imageUrl} alt="" className="size-full object-cover" /> : <Package className="m-auto mt-2 size-5 text-muted-foreground" />}</div>
                       <div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{it.title}</p><p className="text-xs text-muted-foreground">{new Date(it.at).toLocaleDateString()}</p></div>
-                      <Button asChild size="sm"><a href={it.hasFile ? `/api/public/pg/${it.slug}` : `/p/${it.slug}`} rel="nofollow">Open</a></Button>
+                      <Button size="sm" disabled={busy} onClick={() => void openContent(it.slug)}>Open</Button>
                     </li>
                   ))}
                 </ul>

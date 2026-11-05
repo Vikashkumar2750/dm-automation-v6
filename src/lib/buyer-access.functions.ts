@@ -73,15 +73,17 @@ export const getBuyerLibrary = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: s } = await supabaseAdmin.from("buyer_sessions").select("organization_id, email, expires_at").eq("token_hash", await sha256(data.token)).maybeSingle();
     if (!s || new Date(s.expires_at).getTime() < Date.now()) return null;
-    const { data: leads } = await supabaseAdmin.from("delivery_page_leads").select("created_at, answers, delivery_pages!inner(title, slug, active, button_url, image_path, show_image)")
+    const { data: leads } = await supabaseAdmin.from("delivery_page_leads").select("created_at, answers, delivery_pages!inner(id, title, slug, active, button_url, image_path, show_image, product_id, price_offer_paise)")
       .eq("organization_id", s.organization_id).ilike("answers->>email", s.email).order("created_at", { ascending: false }).limit(50);
+    const { data: paid } = await supabaseAdmin.from("payment_links").select("delivery_page_id, product_id").eq("organization_id", s.organization_id).eq("platform", "web").eq("external_user_id", s.email).eq("status", "paid");
     const seen = new Set<string>();
     const items = (leads ?? []).flatMap((l: any) => {
       const p = Array.isArray(l.delivery_pages) ? l.delivery_pages[0] : l.delivery_pages;
       if (l.answers?._stage && l.answers["_stage"] !== "completed") return [];
       if (!p?.active || seen.has(p.slug)) return [];
+      if ((p.product_id || p.price_offer_paise >= 100) && !(paid ?? []).some((purchase) => purchase.delivery_page_id === p.id)) return [];
       seen.add(p.slug);
-      return [{ title: p.title as string, slug: p.slug as string, at: l.created_at as string, hasFile: !!p.button_url,
+      return [{ title: p.title as string, slug: p.slug as string, at: l.created_at as string, hasFile: !!p.button_url || !!p.product_id,
         imageUrl: p.show_image && p.image_path ? `/api/public/delivery-image/${p.image_path}` : null }];
     });
     return { email: s.email as string, items };
@@ -93,4 +95,21 @@ export const signOutBuyer = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     await supabaseAdmin.from("buyer_sessions").delete().eq("token_hash", await sha256(data.token));
     return { ok: true };
+  });
+
+/** Resolve private content only after a valid buyer session and a paid purchase. */
+export const getBuyerContent = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => z.object({ token: z.string().regex(/^[a-f0-9]{64}$/), slug }).parse(d))
+  .handler(async ({ data }) => {
+    const { supabaseAdmin: admin } = await import("@/integrations/supabase/client.server");
+    const { data: session } = await admin.from("buyer_sessions").select("organization_id, email, expires_at").eq("token_hash", await sha256(data.token)).maybeSingle();
+    if (!session || new Date(session.expires_at).getTime() <= Date.now()) throw new Error("Please sign in again");
+    const { data: page } = await admin.from("delivery_pages").select("id, product_id, button_url, price_offer_paise").eq("slug", data.slug).eq("organization_id", session.organization_id).eq("active", true).maybeSingle();
+    if (!page) throw new Error("Content is unavailable");
+    const { data: purchase } = await admin.from("payment_links").select("id").eq("organization_id", session.organization_id).eq("delivery_page_id", page.id).eq("platform", "web").eq("external_user_id", session.email).eq("status", "paid").limit(1).maybeSingle();
+    if ((page.product_id || (page.price_offer_paise ?? 0) >= 100) && !purchase) throw new Error("Complete payment to access this product");
+    const { data: product } = page.product_id ? await admin.from("revenue_products").select("delivery_url").eq("id", page.product_id).eq("organization_id", session.organization_id).maybeSingle() : { data: null };
+    const target = page.button_url || product?.delivery_url;
+    if (!target || !/^https:\/\//i.test(target)) throw new Error("The creator has not added content access yet");
+    return { url: target };
   });
