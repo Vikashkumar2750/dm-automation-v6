@@ -184,6 +184,9 @@ export async function startPageCheckout(admin: AdminClient, slug: string, leadId
     if (p) { currency = (p.currency as string) || "INR"; name = p.name as string; }
   }
   if (!cred || !amount) return fallback;
+  const { data: cfgRow } = await admin.from("delivery_pages").select("form_config").eq("id", page.id).maybeSingle();
+  const breakdown = withCharges(amount, ((cfgRow?.form_config as any)?.extras?.charges) ?? null);
+  amount = breakdown.totalPaise;
   if (!lead || !email || answers["_stage"] !== "completed") throw new Error("Please complete your details before checkout");
   let secret: string | null;
   try { secret = await (await import("@/lib/token-crypto.server")).readToken(cred.razorpay_key_secret as string); }
@@ -197,7 +200,7 @@ export async function startPageCheckout(admin: AdminClient, slug: string, leadId
       amount, currency, description: name.slice(0, 2000), reference_id: `${leadId.replace(/-/g, "").slice(0, 24)}${Date.now().toString(36)}`.slice(0, 40),
       customer: { email, ...(contact ? { contact } : {}), ...(answers["name"] ? { name: answers["name"].slice(0, 100) } : {}) },
       notify: { email: false, sms: false }, reminder_enable: false,
-      notes: { organization_id: page.organization_id, delivery_page: slug },
+      notes: { organization_id: page.organization_id, delivery_page: slug, price_paise: String(breakdown.basePaise), gst_paise: String(breakdown.gstPaise), fee_paise: String(breakdown.feePaise) },
       callback_url: `${origin}/api/public/paid/${slug}`, callback_method: "get",
     }),
   }).catch(() => null);
