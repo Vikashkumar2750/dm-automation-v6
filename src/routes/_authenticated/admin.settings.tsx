@@ -9,6 +9,8 @@ import { PageHeader, Panel, StatusBadge } from "@/components/app/primitives";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { publishingMode, publishingModeFlags, type PublishingMode } from "@/lib/publishing-availability";
 import { EmailAndResetPanels } from "@/components/app/PlatformConfigPanels";
 import { AiProvidersPanel } from "@/components/app/AiProvidersPanel";
 import { EntryPointsAdminPanel } from "@/components/app/EntryPointsPanels";
@@ -66,6 +68,7 @@ function SystemSettingsPage() {
       toast.success("Settings saved");
       void queryClient.invalidateQueries({ queryKey: ["platform-settings"] });
       void queryClient.invalidateQueries({ queryKey: ["platform-overview"] });
+      void queryClient.invalidateQueries({ queryKey: ["platform-status"] });
     },
     onError: () => toast.error("Could not save settings"),
   });
@@ -128,6 +131,24 @@ function SystemSettingsPage() {
       </Panel>
 
       <AdminSafetyCapsPanel orgId={null} />
+
+      <Panel title="Publishing tabs">
+        <div className="space-y-4">
+          {([{ key: "create_post", label: "Create Post" }, { key: "calendar", label: "Calendar" }] as const).map((feature) => (
+            <div key={feature.key} className="flex flex-wrap items-center justify-between gap-3">
+              <label id={`${feature.key}-label`} className="text-sm font-medium">{feature.label}</label>
+              <Select value={publishingMode(flags, feature.key)} disabled={!data || mutation.isPending} onValueChange={(mode) => mutation.mutate({ featureFlags: publishingModeFlags(feature.key, mode as PublishingMode) })}>
+                <SelectTrigger aria-labelledby={`${feature.key}-label`} className="w-44"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="enabled">Enabled</SelectItem>
+                  <SelectItem value="hidden">Hidden</SelectItem>
+                  <SelectItem value="coming_soon">Coming soon</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          ))}
+        </div>
+      </Panel>
 
       <Panel title="Feature flags">
         <div className="space-y-4">

@@ -47,7 +47,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { PageReadyGate } from "@/components/app/PageReadyGate";
 import { AutomationNotificationsProvider, AutomationNotificationBell } from "@/components/app/AutomationNotifications";
 
-type NavItem = { label: string; to: string; icon: LucideIcon; badge?: number };
+type NavItem = { label: string; to: string; icon: LucideIcon; badge?: number; comingSoon?: boolean };
 
 const primaryNav: NavItem[] = [
   { label: "Dashboard", to: "/dashboard", icon: LayoutDashboard },
@@ -89,6 +89,7 @@ function NavLink({ item, active }: { item: NavItem; active: boolean }) {
     >
       <Icon className="size-4.5 shrink-0" />
       <span className="flex-1 truncate">{item.label}</span>
+      {item.comingSoon && <span className="shrink-0 text-[10px] text-muted-foreground">Coming soon</span>}
       {item.badge !== undefined && (
         <span className="num rounded-md bg-surface-secondary px-1.5 py-0.5 text-xs text-muted-foreground">
           {item.badge}
@@ -101,6 +102,14 @@ function NavLink({ item, active }: { item: NavItem; active: boolean }) {
 function Sidebar({ pathname }: { pathname: string }) {
   const { activeOrg, loading } = useTenant();
   const workflowsOn = useWorkflowsEnabled();
+  const fetchStatus = useServerFn(getPlatformStatus);
+  const status = useQuery({ queryKey: ["platform-status"], queryFn: () => fetchStatus(), staleTime: 60_000, refetchInterval: 60_000 });
+  const navItems = primaryNav.filter((item) => {
+    if (item.to === "/workflows") return workflowsOn;
+    if (item.to === "/create-post") return Boolean(status.data && status.data.createPostMode !== "hidden");
+    if (item.to === "/calendar") return Boolean(status.data && status.data.calendarMode !== "hidden");
+    return true;
+  }).map((item) => ({ ...item, comingSoon: item.to === "/create-post" ? status.data?.createPostMode === "coming_soon" : item.to === "/calendar" ? status.data?.calendarMode === "coming_soon" : false }));
   const brand = activeOrg?.brandName?.trim() || "AutoDM";
   const logo = activeOrg?.logoUrl?.trim() || "/logo.webp";
   const color = activeOrg?.brandColor?.trim() || null;
@@ -147,7 +156,7 @@ function Sidebar({ pathname }: { pathname: string }) {
 
       <nav className="flex-1 overflow-y-auto px-3 py-4">
         <div className="space-y-1">
-          {primaryNav.filter((item) => item.to !== "/workflows" || workflowsOn).map((item) => (
+          {navItems.map((item) => (
             <NavLink key={item.to} item={item} active={pathname.startsWith(item.to)} />
           ))}
         </div>

@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { ArrowLeft, Loader2 } from "lucide-react";
 
 import { AppShell } from "@/components/app/AppShell";
+import { PublishingPageGate } from "@/components/app/PublishingPageGate";
 import { PageHeader, Panel } from "@/components/app/primitives";
 import { PostComposerForm } from "@/components/app/PostComposer";
 import { Button } from "@/components/ui/button";
@@ -27,7 +28,7 @@ export const Route = createFileRoute("/_authenticated/create-post_/new")({
       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
-  component: NewPostPage,
+  component: () => <PublishingPageGate feature="create_post"><NewPostPage /></PublishingPageGate>,
 });
 
 function NewPostPage() {

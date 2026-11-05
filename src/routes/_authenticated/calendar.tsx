@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, CircleCheck, CircleX, Clock, Loader2, Plus } from "lucide-react";
 
 import { AppShell } from "@/components/app/AppShell";
+import { PublishingPageGate } from "@/components/app/PublishingPageGate";
 import { PageHeader, Panel, StatusBadge } from "@/components/app/primitives";
 import { PostComposer, type ComposerDraft } from "@/components/app/PostComposer";
 import { Button } from "@/components/ui/button";
@@ -35,7 +36,7 @@ export const Route = createFileRoute("/_authenticated/calendar")({
       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
-  component: CalendarPage,
+  component: () => <PublishingPageGate feature="calendar"><CalendarPage /></PublishingPageGate>,
 });
 
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];

@@ -8,6 +8,7 @@ import { Copy, Loader2, Pencil, PenSquare, Plus, Send, Trash2 } from "lucide-rea
 import { toast } from "sonner";
 
 import { AppShell } from "@/components/app/AppShell";
+import { PublishingPageGate } from "@/components/app/PublishingPageGate";
 import {
   EmptyState,
   PageHeader,
@@ -52,7 +53,7 @@ export const Route = createFileRoute("/_authenticated/create-post")({
       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
-  component: CreatePostPage,
+  component: () => <PublishingPageGate feature="create_post"><CreatePostPage /></PublishingPageGate>,
 });
 
 export const statusTone = {
