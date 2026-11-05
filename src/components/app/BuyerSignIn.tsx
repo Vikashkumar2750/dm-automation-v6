@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { formatInr } from "@/lib/revenue";
 import { getBuyerContent, getBuyerLibrary, requestBuyerCode, signOutBuyer, verifyBuyerCode } from "@/lib/buyer-access.functions";
 
-type Library = { email: string; items: { title: string; slug: string; at: string; hasFile: boolean; imageUrl: string | null }[] };
+type Library = { email: string; items: { title: string; slug: string; at: string; hasFile: boolean; imageUrl: string | null }[]; transactions: { title: string; amountPaise: number; at: string; ref: string | null }[] };
 const key = (slug: string) => `autodm:buyer:${slug}`;
 
 /** Buyer sign-in: store card → email → 6-digit code → purchases portal (Purchases / Transactions). */

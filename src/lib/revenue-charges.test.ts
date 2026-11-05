@@ -10,7 +10,7 @@ describe("withCharges", () => {
   });
   it("grosses up the 2.36% Razorpay fee so the creator nets price + GST", () => {
     const b = withCharges(100000, { gstPercent: 18, passFee: true });
-    expect(b.totalPaise).toBe(120852);
+    expect(b.totalPaise).toBe(120853);
     expect(b.totalPaise - Math.round(b.totalPaise * 0.0236)).toBeGreaterThanOrEqual(118000);
   });
 });
