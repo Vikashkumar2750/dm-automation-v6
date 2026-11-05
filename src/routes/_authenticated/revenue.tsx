@@ -342,7 +342,8 @@ function Pages({ orgId, items, leads, products, campaigns, whatsappOtp, connecte
   const autoCheckout = connected && !!(f.productId || rupeesToPaise(f.priceOffer));
   const fields = formFields(f);
   const formConfig = { mode: f.formType === "none" ? "none" as const : f.formMode, consent: f.formType === "none" ? "" : CONSENT, fields, extras: cleanExtras(f.extras) };
-  const price = f.showPrice ? { originalPaise: f.priceOriginal ? rupeesToPaise(f.priceOriginal) : null, offerPaise: f.priceOffer ? rupeesToPaise(f.priceOffer) : null, label: f.discountLabel || null, couponCode: f.couponCode.trim().toUpperCase() || null, couponNote: f.couponNote || null } : null;
+  const price = f.showPrice ? { originalPaise: f.priceOriginal ? rupeesToPaise(f.priceOriginal) : null, offerPaise: f.priceOffer ? rupeesToPaise(f.priceOffer) : null, label: f.discountLabel || null, couponCode: f.couponCode.trim().toUpperCase() || null, couponNote: f.couponNote || null, charges: null as ReturnType<typeof withCharges> | null } : null;
+  if (price?.offerPaise) { const b = withCharges(price.offerPaise, f.extras.charges); price.charges = b.totalPaise === price.offerPaise ? null : b; }
   const badLead = f.formType === "full" && (fields.length === 0 || fields.some((x) => !x.label.trim() || (x.type === "choice" && x.options.length === 0)));
   const submit = () => save.mutate({
     organizationId: orgId, id: f.id ?? undefined, title: f.title, slug: f.slug || slugify(f.title), body: f.body || null,
@@ -629,6 +630,7 @@ function cleanExtras(x: PageExtras): PageExtras {
     creatorName: t(x.creatorName), supportEmail: t(x.supportEmail), disclaimer: t(x.disclaimer),
     deliverables: { count: t(x.deliverables?.count), format: t(x.deliverables?.format), size: t(x.deliverables?.size) },
     policies: { refund: t(x.policies?.refund), fulfilment: t(x.policies?.fulfilment), privacy: t(x.policies?.privacy), terms: t(x.policies?.terms) },
+    charges: { gstPercent: x.charges?.gstPercent || undefined, passFee: x.charges?.passFee || undefined },
   };
 }
 
@@ -638,6 +640,19 @@ function ExtrasEditor({ value, onChange, onSaveCreator }: { value: PageExtras; o
   const d = value.deliverables ?? {}; const pol = value.policies ?? {};
   return (
     <div className="space-y-4 rounded-lg border border-border p-3">
+      <div className="space-y-2">
+        <Label>GST & processing fee (added on top of selling price)</Label>
+        <div className="flex flex-wrap items-center gap-2">
+          {[0, 5, 12, 18, 28].map((g) => (
+            <Button key={g} type="button" size="sm" variant={(value.charges?.gstPercent ?? 0) === g ? "default" : "outline"} onClick={() => onChange({ ...value, charges: { ...value.charges, gstPercent: g } })}>{g === 0 ? "No GST" : `GST ${g}%`}</Button>
+          ))}
+        </div>
+        <label className="flex items-center gap-2 text-sm">
+          <input type="checkbox" checked={!!value.charges?.passFee} onChange={(e) => onChange({ ...value, charges: { ...value.charges, passFee: e.target.checked } })} />
+          Buyer pays Razorpay processing fee (2% + 18% GST on fee = 2.36%)
+        </label>
+        <p className="text-xs text-muted-foreground">Calculated automatically from the product's selling price and shown to buyers as a price breakdown.</p>
+      </div>
       <div className="space-y-2">
         <div className="flex items-center justify-between gap-2"><Label>Creator & support (optional)</Label>
           <Button type="button" size="sm" variant="outline" disabled={!value.creatorName?.trim() && !value.supportEmail?.trim()} onClick={onSaveCreator}>Save for next pages</Button></div>
