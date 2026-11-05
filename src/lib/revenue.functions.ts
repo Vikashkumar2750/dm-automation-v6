@@ -1,3 +1,4 @@
+import { isProductFile, validProductFileRef } from "@/lib/product-files";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { automaticCheckout, checkoutAmount } from "@/lib/revenue";
