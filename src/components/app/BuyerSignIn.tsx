@@ -6,9 +6,10 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { formatInr } from "@/lib/revenue";
 import { getBuyerContent, getBuyerLibrary, requestBuyerCode, signOutBuyer, verifyBuyerCode } from "@/lib/buyer-access.functions";
 
-type Library = { email: string; items: { title: string; slug: string; at: string; hasFile: boolean; imageUrl: string | null }[] };
+type Library = { email: string; items: { title: string; slug: string; at: string; hasFile: boolean; imageUrl: string | null }[]; transactions: { title: string; amountPaise: number; at: string; ref: string | null }[] };
 const key = (slug: string) => `autodm:buyer:${slug}`;
 
 /** Buyer sign-in: store card → email → 6-digit code → purchases portal (Purchases / Transactions). */
@@ -105,9 +106,19 @@ export function BuyerSignIn({ slug, open, onOpenChange, creatorName }: { slug: s
             </aside>
             <section className="p-5">
               <DialogHeader className="mb-4 text-left"><DialogTitle>{tab === "purchases" ? "Your purchases" : "Transactions"}</DialogTitle><DialogDescription>Signed in as {lib.email}</DialogDescription></DialogHeader>
-              {lib.items.length === 0 ? (
+              {tab === "transactions" ? (
+                lib.transactions.length === 0 ? <p className="py-12 text-center text-sm text-muted-foreground">No payments yet.</p> : (
+                <ul className="max-h-80 divide-y divide-border overflow-y-auto rounded-lg border border-border text-sm">
+                  {lib.transactions.map((t, i) => (
+                    <li key={`${t.ref ?? i}`} className="flex items-center justify-between gap-3 px-3 py-2.5">
+                      <div className="min-w-0"><p className="truncate font-medium">{t.title}</p><p className="text-xs text-muted-foreground">{new Date(t.at).toLocaleString()}{t.ref ? ` · ${t.ref}` : ""}</p></div>
+                      <div className="shrink-0 text-right"><p className="font-semibold">{formatInr(t.amountPaise)}</p><p className="text-xs text-primary">Paid</p></div>
+                    </li>
+                  ))}
+                </ul>)
+              ) : lib.items.length === 0 ? (
                 <div className="grid place-items-center gap-2 py-12 text-center text-muted-foreground"><Package className="size-10" /><p className="font-medium text-foreground">No products found!</p><p className="text-xs">Items you get from this creator will show up here.</p></div>
-              ) : tab === "purchases" ? (
+              ) : (
                 <ul className="max-h-80 space-y-2 overflow-y-auto">
                   {lib.items.map((it) => (
                     <li key={it.slug} className="flex items-center gap-3 rounded-lg border border-border p-2">
@@ -115,12 +126,6 @@ export function BuyerSignIn({ slug, open, onOpenChange, creatorName }: { slug: s
                       <div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{it.title}</p><p className="text-xs text-muted-foreground">{new Date(it.at).toLocaleDateString()}</p></div>
                       <Button size="sm" disabled={busy} onClick={() => void openContent(it.slug)}>Open</Button>
                     </li>
-                  ))}
-                </ul>
-              ) : (
-                <ul className="divide-y divide-border rounded-lg border border-border text-sm">
-                  {lib.items.map((it) => (
-                    <li key={it.slug} className="flex items-center justify-between gap-3 px-3 py-2"><span className="truncate">{it.title}</span><span className="shrink-0 text-xs text-muted-foreground">{new Date(it.at).toLocaleString()}</span></li>
                   ))}
                 </ul>
               )}

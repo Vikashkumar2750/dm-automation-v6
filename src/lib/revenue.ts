@@ -6,6 +6,20 @@ export function checkoutAmount(pageAmount: number | null, product: { price_paise
   return amount !== null && Number.isInteger(amount) && amount >= 100 ? amount : null;
 }
 
+/** Razorpay standard domestic fee: 2% + 18% GST on that fee = 2.36% of the charged amount. */
+export const RAZORPAY_FEE_RATE = 0.0236;
+export type PageCharges = { gstPercent?: number | undefined; passFee?: boolean | undefined };
+export type ChargeBreakdown = { basePaise: number; gstPaise: number; feePaise: number; totalPaise: number };
+
+/** GST is added on the selling price; the processing fee is grossed up so the creator still nets price + GST. */
+export function withCharges(basePaise: number, c?: PageCharges | null): ChargeBreakdown {
+  const pct = Math.min(Math.max(Number(c?.gstPercent) || 0, 0), 28);
+  const gstPaise = Math.round((basePaise * pct) / 100);
+  const subtotal = basePaise + gstPaise;
+  const totalPaise = c?.passFee ? Math.ceil(subtotal / (1 - RAZORPAY_FEE_RATE)) : subtotal;
+  return { basePaise, gstPaise, feePaise: totalPaise - subtotal, totalPaise };
+}
+
 export function automaticCheckout(connected: boolean, amount: number | null): boolean {
   return connected && amount !== null && amount >= 100;
 }

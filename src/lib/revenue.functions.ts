@@ -1,7 +1,7 @@
 import { isProductFile, validProductFileRef } from "@/lib/product-files";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { automaticCheckout, checkoutAmount } from "@/lib/revenue";
+import { automaticCheckout, checkoutAmount, withCharges, type PageCharges } from "@/lib/revenue";
 
 import { validateLeadValue, nextLeadStage, type LeadField, type LeadStage } from "@/lib/delivery-page";
 
@@ -99,7 +99,7 @@ export const savePage = createServerFn({ method: "POST" })
     buttonLabel: z.string().max(40).nullable(), buttonUrl: contentTarget.nullable(), active: z.boolean(),
     imagePath: z.string().regex(/^[0-9a-f-]{36}\/[A-Za-z0-9._-]+$/).nullable(), showImage: z.boolean(), imageAlt: z.string().trim().max(160).nullable(),
     countdownAt: z.string().datetime().nullable(), expiryAction: z.enum(["disable_cta", "hide_cta"]), expiryMessage: z.string().trim().max(160).nullable(),
-    formConfig: z.object({ mode: z.enum(["none", "optional", "required"]), consent: z.string().trim().max(300), fields: z.array(formField).max(8), extras: z.object({ creatorName: z.string().trim().max(80).optional(), supportEmail: z.string().trim().max(120).optional(), deliverables: z.object({ count: z.string().trim().max(40).optional(), format: z.string().trim().max(40).optional(), size: z.string().trim().max(40).optional() }).optional(), policies: z.object({ refund: z.string().trim().max(1500).optional(), fulfilment: z.string().trim().max(1500).optional(), privacy: z.string().trim().max(1500).optional(), terms: z.string().trim().max(1500).optional() }).optional(), disclaimer: z.string().trim().max(1500).optional() }).optional() }),
+    formConfig: z.object({ mode: z.enum(["none", "optional", "required"]), consent: z.string().trim().max(300), fields: z.array(formField).max(8), extras: z.object({ creatorName: z.string().trim().max(80).optional(), supportEmail: z.string().trim().max(120).optional(), deliverables: z.object({ count: z.string().trim().max(40).optional(), format: z.string().trim().max(40).optional(), size: z.string().trim().max(40).optional() }).optional(), policies: z.object({ refund: z.string().trim().max(1500).optional(), fulfilment: z.string().trim().max(1500).optional(), privacy: z.string().trim().max(1500).optional(), terms: z.string().trim().max(1500).optional() }).optional(), disclaimer: z.string().trim().max(1500).optional(), charges: z.object({ gstPercent: z.number().min(0).max(28).optional(), passFee: z.boolean().optional() }).optional() }).optional() }),
     showPrice: z.boolean().default(false), priceOriginalPaise: z.number().int().min(0).max(100_000_000).nullable().default(null),
     priceOfferPaise: z.number().int().min(0).max(100_000_000).nullable().default(null), discountLabel: z.string().trim().max(40).nullable().default(null),
     couponCode: z.string().trim().toUpperCase().regex(/^[A-Z0-9-]{1,30}$/, "Coupon code: letters, numbers or - only").nullable().default(null),
@@ -230,9 +230,14 @@ export const getPublicPage = createServerFn({ method: "GET" })
     return { title: p.title as string, body: (p.body as string | null) ?? "", buttonLabel: p.button_label as string | null, hasButton: checkout || !!p.button_url,
       imageUrl: p.show_image && p.image_path ? `/api/public/delivery-image/${p.image_path as string}` : null, imageAlt: p.image_alt as string | null,
       countdownAt: p.countdown_at as string | null, expiryAction: p.expiry_action as "disable_cta" | "hide_cta", expiryMessage: p.expiry_message as string | null,
-      price: p.show_price || checkout ? { originalPaise: product?.original_price_paise ?? p.price_original_paise as number | null, offerPaise: amount, label: p.discount_label as string | null, couponCode: coupon.code ?? (p.coupon_code as string | null), couponNote: coupon.note ?? (p.coupon_note as string | null) } : null,
+      price: p.show_price || checkout ? { originalPaise: product?.original_price_paise ?? p.price_original_paise as number | null, offerPaise: amount, label: p.discount_label as string | null, couponCode: coupon.code ?? (p.coupon_code as string | null), couponNote: coupon.note ?? (p.coupon_note as string | null), charges: amount ? chargesFor(amount, (config as any).extras?.charges) : null } : null,
       formConfig: effectiveConfig, otpRequired: !!p.otp_required };
   });
+
+function chargesFor(amount: number, c: PageCharges | undefined) {
+  const b = withCharges(amount, c);
+  return b.totalPaise === amount ? null : b;
+}
 
 /** Store-code campaign linked to a page overrides the static coupon box. */
 async function campaignCoupon(admin: any, p: { coupon_campaign_id?: string | null }): Promise<{ code: string | null; note: string | null }> {

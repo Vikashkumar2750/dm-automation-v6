@@ -336,6 +336,7 @@ export type PageExtras = {
   deliverables?: { count?: string | undefined; format?: string | undefined; size?: string | undefined };
   policies?: { refund?: string | undefined; fulfilment?: string | undefined; privacy?: string | undefined; terms?: string | undefined };
   disclaimer?: string | undefined;
+  charges?: { gstPercent?: number | undefined; passFee?: boolean | undefined };
 };
 
 export const DEFAULT_POLICIES = {
