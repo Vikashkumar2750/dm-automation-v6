@@ -17,7 +17,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useTenant } from "@/hooks/useTenant";
-import { buildFunnel, formatInr, rupeesToPaise, slugify } from "@/lib/revenue";
+import { buildFunnel, formatInr, rupeesToPaise, slugify, withCharges } from "@/lib/revenue";
 import { DeliveryPageView } from "@/components/app/DeliveryPageView";
 import { DELIVERY_TEMPLATES, SAMPLE_BODY, EMAIL_ONLY_FIELDS, STANDARD_LEAD_FIELDS, priceDisplay, DEFAULT_POLICIES, DEFAULT_DISCLAIMER, DEFAULT_EXTRAS, type LeadField, type PageExtras } from "@/lib/delivery-page";
 import { previewDeliveryImage, uploadDeliveryImage } from "@/lib/delivery-media";
