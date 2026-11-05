@@ -15,7 +15,7 @@ type OtpState = { id: string | null; verified: boolean; busy: boolean; error: st
 
 /**
  * Lead form state. `run()` validates and saves; returns false only when the visitor must fix a field.
- * Network/save failures never block the visitor from continuing.
+ * Network/save failures block checkout until details are saved.
  */
 export function useLeadForm(src: LeadFormSource | null | undefined) {
   const submitOffer = useServerFn(submitOfferForm);
@@ -90,7 +90,8 @@ export function useLeadForm(src: LeadFormSource | null | undefined) {
     } catch (e) {
       setState("idle");
       const msg = e instanceof Error ? e.message : "";
-      if (/email|phone|pincode|valid|verif/i.test(msg)) { setNote(msg); return false; }
+      setNote(msg || "Could not save your details. Please try again.");
+      return false;
     }
     return true;
   };

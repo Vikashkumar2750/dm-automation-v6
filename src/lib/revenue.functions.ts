@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { automaticCheckout, checkoutAmount } from "@/lib/revenue";
 
 import { validateLeadValue, nextLeadStage, type LeadField, type LeadStage } from "@/lib/delivery-page";
 
@@ -54,7 +55,7 @@ export const getRevenue = createServerFn({ method: "GET" })
       campaigns: campaigns.data ?? [],
       settings: settings.data ?? { nudge_enabled: false, nudge_delay_minutes: 120, nudge_text: "Hi! Your payment link is still waiting. Need any help completing it?" },
       links: links.data ?? [],
-      razorpay: cred ? { keyIdHint: `${String(cred.razorpay_key_id).slice(0, 8)}…` } : null,
+      razorpay: cred ? { connected: true } : null,
       whatsappOtp: otpCfg ? { phoneNumberId: String(otpCfg.phone_number_id).slice(0, 4) + "…", templateName: otpCfg.template_name as string } : null,
       funnel: {
         dmsSent: dms.count ?? 0, pageViews: n("page_view"), pageClicks: n("page_click"), paymentLinks: n("payment_link"),
@@ -70,10 +71,10 @@ export const saveProduct = createServerFn({ method: "POST" })
     organizationId: org, id: z.string().uuid().optional(), name: z.string().trim().min(1).max(120),
     description: z.string().max(500).nullable(), pricePaise: z.number().int().min(100).max(100_000_000),
     originalPricePaise: z.number().int().min(0).max(100_000_000).nullable().default(null),
-    manualUrl: httpsUrl.nullable(), active: z.boolean(),
+    manualUrl: httpsUrl.nullable(), deliveryUrl: httpsUrl.nullable().default(null), active: z.boolean(),
   }).parse(d))
   .handler(async ({ data, context }) => {
-    const row = { organization_id: data.organizationId, name: data.name, description: data.description, price_paise: data.pricePaise, original_price_paise: data.originalPricePaise, manual_url: data.manualUrl, active: data.active };
+    const row = { organization_id: data.organizationId, name: data.name, description: data.description, price_paise: data.pricePaise, original_price_paise: data.originalPricePaise, manual_url: data.manualUrl, delivery_url: data.deliveryUrl, active: data.active };
     const q = (context as Ctx).supabase.from("revenue_products");
     if (data.id) {
       const { error } = await q.update(row).eq("id", data.id).eq("organization_id", data.organizationId);
@@ -208,17 +209,23 @@ export const getPublicPage = createServerFn({ method: "GET" })
   .inputValidator((d: unknown) => z.object({ slug: z.string().regex(/^[a-z0-9-]{3,60}$/) }).parse(d))
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: p } = await supabaseAdmin.from("delivery_pages").select("id, organization_id, title, body, button_label, button_url, views, image_path, show_image, image_alt, countdown_at, expiry_action, expiry_message, form_config, show_price, price_original_paise, price_offer_paise, discount_label, coupon_code, coupon_note, coupon_campaign_id, otp_required")
+    const { data: p } = await supabaseAdmin.from("delivery_pages").select("id, organization_id, title, body, button_label, button_url, views, image_path, show_image, image_alt, countdown_at, expiry_action, expiry_message, form_config, show_price, price_original_paise, price_offer_paise, discount_label, coupon_code, coupon_note, coupon_campaign_id, otp_required, product_id")
       .eq("slug", data.slug).eq("active", true).maybeSingle();
     if (!p) return null;
     await supabaseAdmin.from("delivery_pages").update({ views: (p.views ?? 0) + 1 }).eq("id", p.id);
     await supabaseAdmin.from("revenue_events").insert({ organization_id: p.organization_id, kind: "page_view", ref_id: p.id });
+    const { data: product } = p.product_id ? await supabaseAdmin.from("revenue_products").select("price_paise, original_price_paise, active").eq("id", p.product_id).eq("organization_id", p.organization_id).maybeSingle() : { data: null };
+    const { data: credentials } = await supabaseAdmin.from("payment_credentials").select("organization_id").eq("organization_id", p.organization_id).maybeSingle();
+    const amount = checkoutAmount(p.price_offer_paise, product, !!p.product_id);
+    const checkout = automaticCheckout(!!credentials, amount);
+    const config = (p.form_config ?? { mode: "none", fields: [] }) as FormConfig;
+    const effectiveConfig: FormConfig = checkout ? { ...config, mode: "required", fields: (config.fields ?? []).some((f) => f.type === "email") ? (config.fields ?? []).map((f) => f.type === "email" ? { ...f, required: true } : f) : [...(config.mode === "none" ? [] : config.fields ?? []), { key: "email", label: "Email", type: "email", required: true, options: [] }] } : config;
     const coupon = await campaignCoupon(supabaseAdmin, p);
-    return { title: p.title as string, body: (p.body as string | null) ?? "", buttonLabel: p.button_label as string | null, hasButton: !!p.button_url,
+    return { title: p.title as string, body: (p.body as string | null) ?? "", buttonLabel: p.button_label as string | null, hasButton: checkout || !!p.button_url,
       imageUrl: p.show_image && p.image_path ? `/api/public/delivery-image/${p.image_path as string}` : null, imageAlt: p.image_alt as string | null,
       countdownAt: p.countdown_at as string | null, expiryAction: p.expiry_action as "disable_cta" | "hide_cta", expiryMessage: p.expiry_message as string | null,
-      price: p.show_price ? { originalPaise: p.price_original_paise as number | null, offerPaise: p.price_offer_paise as number | null, label: p.discount_label as string | null, couponCode: coupon.code ?? (p.coupon_code as string | null), couponNote: coupon.note ?? (p.coupon_note as string | null) } : null,
-      formConfig: p.form_config as FormConfig, otpRequired: !!p.otp_required };
+      price: p.show_price || checkout ? { originalPaise: product?.original_price_paise ?? p.price_original_paise as number | null, offerPaise: amount, label: p.discount_label as string | null, couponCode: coupon.code ?? (p.coupon_code as string | null), couponNote: coupon.note ?? (p.coupon_note as string | null) } : null,
+      formConfig: effectiveConfig, otpRequired: !!p.otp_required };
   });
 
 /** Store-code campaign linked to a page overrides the static coupon box. */
@@ -284,9 +291,14 @@ export const submitPageForm = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ slug: z.string().regex(/^[a-z0-9-]{3,60}$/), answers: z.record(z.string(), z.string().trim().max(500)), website: z.string().max(0).optional() }).parse(d))
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: page } = await supabaseAdmin.from("delivery_pages").select("id, organization_id, form_config, otp_required").eq("slug", data.slug).eq("active", true).maybeSingle();
-    const config = page?.form_config as FormConfig | null;
-    if (!page || !config || config.mode === "none") throw new Error("Form is not available");
+    const { data: page } = await supabaseAdmin.from("delivery_pages").select("id, organization_id, form_config, otp_required, product_id, price_offer_paise").eq("slug", data.slug).eq("active", true).maybeSingle();
+    if (!page) throw new Error("Form is not available");
+    const { data: product } = page.product_id ? await supabaseAdmin.from("revenue_products").select("price_paise, active").eq("id", page.product_id).eq("organization_id", page.organization_id).maybeSingle() : { data: null };
+    const { data: cred } = await supabaseAdmin.from("payment_credentials").select("organization_id").eq("organization_id", page.organization_id).maybeSingle();
+    const checkout = automaticCheckout(!!cred, checkoutAmount(page.price_offer_paise, product, !!page.product_id));
+    const stored = (page.form_config ?? { mode: "none", fields: [] }) as FormConfig;
+    const config: FormConfig = checkout ? { ...stored, mode: "required", fields: (stored.fields ?? []).some((f) => f.type === "email") ? (stored.fields ?? []).map((f) => f.type === "email" ? { ...f, required: true } : f) : [...(stored.mode === "none" ? [] : stored.fields ?? []), { key: "email", label: "Email", type: "email", required: true, options: [] }] } : stored;
+    if (config.mode === "none") throw new Error("Form is not available");
     const { count } = await supabaseAdmin.from("delivery_page_leads").select("id", { count: "exact", head: true })
       .eq("delivery_page_id", page.id).gte("created_at", new Date(Date.now() - 3600_000).toISOString());
     if ((count ?? 0) >= 300) throw new Error("Too many submissions right now. Please try again later.");
