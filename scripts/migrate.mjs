@@ -76,6 +76,24 @@ try {
       .catch((e) => console.warn(`[migrate] could not ensure policy ${name}:`, e.message));
   }
 
+  // Private bucket for uploaded product/delivery files (max 50 MB). Idempotent.
+  await sql`
+    insert into storage.buckets (id, name, public, file_size_limit)
+    values ('product-files', 'product-files', false, 52428800)
+    on conflict (id) do nothing
+  `.catch((e) => console.warn("[migrate] could not ensure product-files bucket:", e.message));
+  for (const [name, cmd, clause] of [
+    ["product files members read", "select", "using"],
+    ["product files writers upload", "insert", "with check"],
+    ["product files writers delete", "delete", "using"],
+  ]) {
+    const roles = cmd === "select" ? "" : " and m.role::text in ('owner','admin','manager')";
+    const cond = `bucket_id = 'product-files' and exists (select 1 from public.organization_members m where m.organization_id::text = (storage.foldername(name))[1] and m.user_id = auth.uid()${roles})`;
+    await sql.unsafe(`drop policy if exists "${name}" on storage.objects`).catch(() => {});
+    await sql.unsafe(`create policy "${name}" on storage.objects for ${cmd} to authenticated ${clause} (${cond})`)
+      .catch((e) => console.warn(`[migrate] could not ensure policy ${name}:`, e.message));
+  }
+
   // Inbox core (conversations + messages) was created outside the .sql files.
   // 0004 depends on it, so bootstrap it just before that migration runs.
   const INBOX_BOOTSTRAP = `

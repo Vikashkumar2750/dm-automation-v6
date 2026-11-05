@@ -1,3 +1,4 @@
+import { isProductFile, validProductFileRef } from "@/lib/product-files";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { automaticCheckout, checkoutAmount } from "@/lib/revenue";
@@ -10,6 +11,9 @@ type Ctx = { supabase: any; userId: string };
 const org = z.string().uuid();
 type FormConfig = { mode: "none" | "optional" | "required"; consent?: string; fields?: LeadField[] };
 const httpsUrl = z.string().trim().max(500).regex(/^https:\/\//i, "Link must start with https://");
+/** Content target: an https link or an uploaded file reference (folder checked against the workspace in the handler). */
+const contentTarget = z.string().trim().max(500).regex(/^(https:\/\/|file:)/i, "Link must start with https://");
+const assertOwnFile = (v: string | null, orgId: string) => { if (v && isProductFile(v) && !validProductFileRef(v, orgId)) throw new Error("Uploaded file does not belong to this workspace"); };
 const formField = z.object({ key: z.string().regex(/^[a-z0-9_]{1,30}$/), label: z.string().trim().min(1).max(80), type: z.enum(["text", "email", "phone", "pincode", "choice"]), required: z.boolean(), options: z.array(z.string().trim().min(1).max(30)).max(10) });
 
 async function assertMember(ctx: Ctx, organizationId: string) {
@@ -71,9 +75,10 @@ export const saveProduct = createServerFn({ method: "POST" })
     organizationId: org, id: z.string().uuid().optional(), name: z.string().trim().min(1).max(120),
     description: z.string().max(500).nullable(), pricePaise: z.number().int().min(100).max(100_000_000),
     originalPricePaise: z.number().int().min(0).max(100_000_000).nullable().default(null),
-    manualUrl: httpsUrl.nullable(), deliveryUrl: httpsUrl.nullable().default(null), active: z.boolean(),
+    manualUrl: httpsUrl.nullable(), deliveryUrl: contentTarget.nullable().default(null), active: z.boolean(),
   }).parse(d))
   .handler(async ({ data, context }) => {
+    assertOwnFile(data.deliveryUrl, data.organizationId);
     const row = { organization_id: data.organizationId, name: data.name, description: data.description, price_paise: data.pricePaise, original_price_paise: data.originalPricePaise, manual_url: data.manualUrl, delivery_url: data.deliveryUrl, active: data.active };
     const q = (context as Ctx).supabase.from("revenue_products");
     if (data.id) {
@@ -91,7 +96,7 @@ export const savePage = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({
     organizationId: org, id: z.string().uuid().optional(), slug: z.string().regex(/^[a-z0-9-]{3,60}$/),
     title: z.string().trim().min(1).max(120), body: z.string().max(8000).nullable(),
-    buttonLabel: z.string().max(40).nullable(), buttonUrl: httpsUrl.nullable(), active: z.boolean(),
+    buttonLabel: z.string().max(40).nullable(), buttonUrl: contentTarget.nullable(), active: z.boolean(),
     imagePath: z.string().regex(/^[0-9a-f-]{36}\/[A-Za-z0-9._-]+$/).nullable(), showImage: z.boolean(), imageAlt: z.string().trim().max(160).nullable(),
     countdownAt: z.string().datetime().nullable(), expiryAction: z.enum(["disable_cta", "hide_cta"]), expiryMessage: z.string().trim().max(160).nullable(),
     formConfig: z.object({ mode: z.enum(["none", "optional", "required"]), consent: z.string().trim().max(300), fields: z.array(formField).max(8), extras: z.object({ creatorName: z.string().trim().max(80).optional(), supportEmail: z.string().trim().max(120).optional(), deliverables: z.object({ count: z.string().trim().max(40).optional(), format: z.string().trim().max(40).optional(), size: z.string().trim().max(40).optional() }).optional(), policies: z.object({ refund: z.string().trim().max(1500).optional(), fulfilment: z.string().trim().max(1500).optional(), privacy: z.string().trim().max(1500).optional(), terms: z.string().trim().max(1500).optional() }).optional(), disclaimer: z.string().trim().max(1500).optional() }).optional() }),
@@ -102,6 +107,7 @@ export const savePage = createServerFn({ method: "POST" })
     couponCampaignId: z.string().uuid().nullable().default(null), otpRequired: z.boolean().default(false),
   }).parse(d))
   .handler(async ({ data, context }) => {
+    assertOwnFile(data.buttonUrl, data.organizationId);
     if (data.productId) {
       const { data: pr } = await (context as Ctx).supabase.from("revenue_products").select("id").eq("id", data.productId).eq("organization_id", data.organizationId).maybeSingle();
       if (!pr) throw new Error("Product not found in this workspace");

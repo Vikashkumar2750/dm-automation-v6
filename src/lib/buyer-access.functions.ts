@@ -121,7 +121,8 @@ export const getBuyerContent = createServerFn({ method: "POST" })
     const { data: purchase } = await admin.from("payment_links").select("id").eq("organization_id", session.organization_id).eq("delivery_page_id", page.id).eq("platform", "web").eq("external_user_id", session.email).eq("status", "paid").limit(1).maybeSingle();
     if ((page.product_id || (page.price_offer_paise ?? 0) >= 100) && !purchase) throw new Error("Complete payment to access this product");
     const { data: product } = page.product_id ? await admin.from("revenue_products").select("delivery_url").eq("id", page.product_id).eq("organization_id", session.organization_id).maybeSingle() : { data: null };
-    const target = page.button_url || product?.delivery_url;
-    if (!target || !/^https:\/\//i.test(target)) throw new Error("The creator has not added content access yet");
-    return { url: target };
+    const { resolveContentUrl } = await import("@/lib/product-files.server");
+    const url = await resolveContentUrl(admin, page.button_url || product?.delivery_url, session.organization_id);
+    if (!url) throw new Error("The creator has not added content access yet");
+    return { url };
   });
