@@ -1,3 +1,5 @@
+import { SocialIcon } from "@/components/app/SocialIcon";
+import { SOCIAL_LABELS, SOCIAL_PLATFORMS, cleanSocials, connectedAccountUrl, normalizeSocialUrl, type SocialLink } from "@/lib/social-links";
 import { AccountSelect } from "@/components/app/AccountSelect";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -65,7 +67,7 @@ function RevenuePage() {
           <TabsContent forceMount className="data-[state=inactive]:hidden" value="report"><Report d={d} /></TabsContent>
           <TabsContent forceMount className="data-[state=inactive]:hidden" value="products"><Products orgId={orgId ?? ""} items={d.products} connected={!!d.razorpay} /></TabsContent>
           <TabsContent forceMount className="data-[state=inactive]:hidden" value="coupons"><Coupons orgId={orgId!} items={d.campaigns} /></TabsContent>
-          <TabsContent forceMount className="data-[state=inactive]:hidden" value="pages"><Pages orgId={orgId!} items={d.pages} leads={d.leads} products={d.products} campaigns={d.campaigns} whatsappOtp={d.whatsappOtp} connected={!!d.razorpay} /></TabsContent>
+          <TabsContent forceMount className="data-[state=inactive]:hidden" value="pages"><Pages orgId={orgId!} items={d.pages} leads={d.leads} products={d.products} campaigns={d.campaigns} whatsappOtp={d.whatsappOtp} connected={!!d.razorpay} accounts={d.accounts} /></TabsContent>
           <TabsContent forceMount className="data-[state=inactive]:hidden" value="payments"><Payments orgId={orgId!} d={d} /></TabsContent>
         </Tabs>
       )}
@@ -305,7 +307,7 @@ const STAGE_BADGE: Record<string, { label: string; cls: string }> = {
   buyer_signin_attempt: { label: "Sign-in attempt", cls: "bg-primary/10 text-primary" },
 };
 
-function Pages({ orgId, items, leads, products, campaigns, whatsappOtp, connected }: { connected: boolean; orgId: string; items: any[]; products: any[]; campaigns: any[]; whatsappOtp: Data["whatsappOtp"]; leads: Array<{ id: string; delivery_page_id: string; answers: Record<string, string>; created_at: string }> }) {
+function Pages({ orgId, items, leads, products, campaigns, whatsappOtp, connected, accounts }: { accounts: Data["accounts"]; connected: boolean; orgId: string; items: any[]; products: any[]; campaigns: any[]; whatsappOtp: Data["whatsappOtp"]; leads: Array<{ id: string; delivery_page_id: string; answers: Record<string, string>; created_at: string }> }) {
   const save = useSave(useServerFn(savePage), "Page saved");
   const del = useSave(useServerFn(deleteRevenueItem), "Deleted");
   const [f, setF] = useState<PageForm>(EMPTY_PAGE);
@@ -318,7 +320,8 @@ function Pages({ orgId, items, leads, products, campaigns, whatsappOtp, connecte
   const origin = typeof window !== "undefined" ? window.location.origin : "";
   const creatorKey = `autodm:creator-details:${orgId}`;
   const savedCreator = (): PageExtras | null => { try { return JSON.parse(localStorage.getItem(creatorKey) ?? "null"); } catch { return null; } };
-  const withCreator = (p: PageForm): PageForm => { const c = savedCreator(); return c ? { ...p, extras: { ...p.extras, creatorName: c.creatorName, supportEmail: c.supportEmail } } : p; };
+  const connectedSocials = (): SocialLink[] => accounts.flatMap((a) => { const url = connectedAccountUrl(a); return url ? [{ platform: a.platform as SocialLink["platform"], url, label: a.name }] : []; });
+  const withCreator = (p: PageForm): PageForm => { const c = savedCreator(); const socials = c?.socials?.length ? c.socials : connectedSocials(); return { ...p, extras: { ...p.extras, ...(c ? { creatorName: c.creatorName, supportEmail: c.supportEmail } : {}), socials } }; };
   useEffect(() => { setF((v) => (v.id ? v : withCreator(v))); }, [orgId]);
   const reset = () => { setF(withCreator(EMPTY_PAGE)); setImagePreview(""); };
   const pickProduct = (id: string) => {
@@ -434,7 +437,7 @@ function Pages({ orgId, items, leads, products, campaigns, whatsappOtp, connecte
             {f.countdown && <><select className={area} value={f.expiryAction} onChange={(e) => setF({ ...f, expiryAction: e.target.value as typeof f.expiryAction })}><option value="disable_cta">Disable button when ended</option><option value="hide_cta">Hide button when ended</option></select><Input placeholder="Message after expiry" value={f.expiryMessage} onChange={(e) => setF({ ...f, expiryMessage: e.target.value })} /></>}
             <p className="text-xs text-muted-foreground">Uses one fixed deadline. It never restarts for each visitor.</p>
           </div>
-          <ExtrasEditor value={f.extras} onChange={(extras) => setF({ ...f, extras })} onSaveCreator={() => { localStorage.setItem(creatorKey, JSON.stringify({ creatorName: f.extras.creatorName?.trim() ?? "", supportEmail: f.extras.supportEmail?.trim() ?? "" })); toast.success("Saved — new pages will be filled automatically"); }} />
+          <ExtrasEditor accounts={accounts} value={f.extras} onChange={(extras) => setF({ ...f, extras })} onSaveCreator={() => { localStorage.setItem(creatorKey, JSON.stringify({ creatorName: f.extras.creatorName?.trim() ?? "", supportEmail: f.extras.supportEmail?.trim() ?? "", socials: cleanSocials(f.extras.socials) })); toast.success("Saved — new pages will be filled automatically"); }} />
           <div className="space-y-2 rounded-lg border border-border p-3">
             <Label>Lead form</Label>
             <div className="grid grid-cols-2 gap-2">
@@ -631,12 +634,41 @@ function cleanExtras(x: PageExtras): PageExtras {
     deliverables: { count: t(x.deliverables?.count), format: t(x.deliverables?.format), size: t(x.deliverables?.size) },
     policies: { refund: t(x.policies?.refund), fulfilment: t(x.policies?.fulfilment), privacy: t(x.policies?.privacy), terms: t(x.policies?.terms) },
     charges: { gstPercent: x.charges?.gstPercent || undefined, passFee: x.charges?.passFee || undefined },
+    socials: cleanSocials(x.socials),
   };
+}
+
+function SocialsEditor({ accounts, value, onChange }: { accounts: Data["accounts"]; value: SocialLink[]; onChange: (v: SocialLink[]) => void }) {
+  const has = (url: string) => value.some((s) => s.url === url);
+  const manual = (p: SocialLink["platform"]) => value.find((s) => s.platform === p && !accounts.some((a) => connectedAccountUrl(a) === s.url))?.url ?? "";
+  const setManual = (p: SocialLink["platform"], input: string) => {
+    const rest = value.filter((s) => !(s.platform === p && !accounts.some((a) => connectedAccountUrl(a) === s.url)));
+    onChange(input.trim() ? [...rest, { platform: p, url: input.trim() }] : rest);
+  };
+  return (
+    <div className="space-y-2">
+      <Label>Social links (shown as icons in page header & footer)</Label>
+      {accounts.length > 0 && <div className="space-y-1.5">
+        <p className="text-xs text-muted-foreground">Connected accounts — tick the ones to show:</p>
+        {accounts.map((a) => { const url = connectedAccountUrl(a); if (!url) return null; return (
+          <label key={a.id} className="flex items-center gap-2 text-sm"><input type="checkbox" checked={has(url)} onChange={(e) => onChange(e.target.checked ? [...value, { platform: a.platform as SocialLink["platform"], url, label: a.name }] : value.filter((s) => s.url !== url))} />
+            <SocialIcon platform={a.platform as SocialLink["platform"]} className="size-4" /> {a.name}{a.handle ? ` (@${a.handle.replace(/^@/, "")})` : ""}</label>
+        ); })}
+      </div>}
+      <div className="grid gap-2 sm:grid-cols-2">
+        {SOCIAL_PLATFORMS.map((p) => (
+          <div key={p} className="flex items-center gap-2"><SocialIcon platform={p} className="size-4 shrink-0 text-muted-foreground" />
+            <Input placeholder={`${SOCIAL_LABELS[p]} link or @handle`} maxLength={300} value={manual(p)} onChange={(e) => setManual(p, e.target.value)} onBlur={(e) => { const n = normalizeSocialUrl(p, e.target.value); if (e.target.value && !n) toast.error(`Enter a valid ${SOCIAL_LABELS[p]} link`); setManual(p, n); }} /></div>
+        ))}
+      </div>
+      <p className="text-xs text-muted-foreground">Use "Save for next pages" below to keep these for every new page.</p>
+    </div>
+  );
 }
 
 const POLICY_LABELS = [["refund", "Refund policy"], ["fulfilment", "Fulfilment policy"], ["privacy", "Privacy policy"], ["terms", "Terms & conditions"]] as const;
 
-function ExtrasEditor({ value, onChange, onSaveCreator }: { value: PageExtras; onChange: (v: PageExtras) => void; onSaveCreator: () => void }) {
+function ExtrasEditor({ value, onChange, onSaveCreator, accounts }: { accounts: Data["accounts"]; value: PageExtras; onChange: (v: PageExtras) => void; onSaveCreator: () => void }) {
   const d = value.deliverables ?? {}; const pol = value.policies ?? {};
   return (
     <div className="space-y-4 rounded-lg border border-border p-3">
@@ -653,6 +685,7 @@ function ExtrasEditor({ value, onChange, onSaveCreator }: { value: PageExtras; o
         </label>
         <p className="text-xs text-muted-foreground">Calculated automatically from the product's selling price and shown to buyers as a price breakdown.</p>
       </div>
+      <SocialsEditor accounts={accounts} value={value.socials ?? []} onChange={(socials) => onChange({ ...value, socials })} />
       <div className="space-y-2">
         <div className="flex items-center justify-between gap-2"><Label>Creator & support (optional)</Label>
           <Button type="button" size="sm" variant="outline" disabled={!value.creatorName?.trim() && !value.supportEmail?.trim()} onClick={onSaveCreator}>Save for next pages</Button></div>
