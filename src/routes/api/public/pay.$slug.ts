@@ -15,8 +15,10 @@ export const Route = createFileRoute("/api/public/pay/$slug")({
         const target = await startPageCheckout(supabaseAdmin as never, params.slug, lead, origin);
         if (!target) return new Response(null, { status: 302, headers: { Location: `/api/public/pg/${params.slug}` } });
         return new Response(null, { status: 302, headers: { Location: target, "Cache-Control": "no-store" } });
-        } catch {
-          return new Response("Checkout unavailable. Return to the delivery page and try again.", { status: 503, headers: { "Cache-Control": "no-store" } });
+        } catch (e) {
+          const reason = e instanceof Error ? e.message : "Unknown error";
+          console.error("[checkout]", params.slug, reason);
+          return new Response(`Checkout unavailable: ${reason}\nReturn to the delivery page and try again.`, { status: 503, headers: { "Cache-Control": "no-store", "Content-Type": "text/plain; charset=utf-8" } });
         }
       },
     },

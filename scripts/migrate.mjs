@@ -365,6 +365,10 @@ create table if not exists public.revenue_events (
 );
 grant all on public.revenue_events to service_role;
 alter table public.revenue_events enable row level security;
+
+alter table public.revenue_products add column if not exists delivery_url text;
+alter table public.revenue_products add column if not exists original_price_paise integer;
+alter table public.payment_links add column if not exists delivery_page_id uuid references public.delivery_pages(id) on delete set null;
 `;
 
   const applied = new Set(
