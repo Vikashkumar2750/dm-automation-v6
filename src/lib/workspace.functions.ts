@@ -193,12 +193,17 @@ export const createClientWorkspace = createServerFn({ method: "POST" })
     const base = data.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
     const slug = `${base || "client"}-${crypto.randomUUID().slice(0, 8)}`;
 
-    const { data: org, error } = await context.supabase
+    // The main Agency owner owns every client workspace; anyone else who creates one joins as admin.
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: parentOwner } = await supabaseAdmin.from("organizations").select("owner_id")
+      .eq("id", data.parentOrganizationId).maybeSingle();
+    const mainOwnerId = (parentOwner?.owner_id as string | undefined) ?? context.userId;
+    const { data: org, error } = await supabaseAdmin
       .from("organizations")
       .insert({
         name: data.name,
         slug,
-        owner_id: context.userId,
+        owner_id: mainOwnerId,
         plan: "agency",
         plan_source: "agency_parent",
         plan_expires_at: parentOrg?.plan_expires_at ?? null,
@@ -211,9 +216,11 @@ export const createClientWorkspace = createServerFn({ method: "POST" })
       throw new Error(error?.message ?? "create_failed");
     }
 
-    const { error: memberError } = await context.supabase
+    const rows = [{ organization_id: org.id, user_id: mainOwnerId, role: "owner" }];
+    if (mainOwnerId !== context.userId) rows.push({ organization_id: org.id, user_id: context.userId, role: "admin" });
+    const { error: memberError } = await supabaseAdmin
       .from("organization_members")
-      .insert({ organization_id: org.id, user_id: context.userId, role: "owner" });
+      .insert(rows);
     if (memberError) {
       console.error("[createClientWorkspace] member insert failed", memberError);
       throw new Error(memberError.message);
