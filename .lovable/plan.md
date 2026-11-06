@@ -32,7 +32,7 @@ Also on the same page:
 - Coupon box on page: "Have a coupon code?" input + Apply. Copy button removed.
 - Auto-apply: if the page has a linked coupon, or the link has `?coupon=CODE` (for DMs/comments), it is applied on load and shown as a green "CODE applied (−₹X)" chip with Remove.
 - Manual: any active coupon of that workspace (created in Sales & Revenue → Coupons) can be typed and applied; clear messages for invalid/expired/used-up.
-- Discount is taken from the maximum price (MRP), not the selling price. Example: MRP ₹2,999, selling ₹999, 20% coupon → ₹599.80 off MRP → payable ₹2,399.20 capped so it never goes above the selling price? **Rule used: final price = MRP − coupon discount, and never more than the selling price nor below ₹1.** Flat coupons work the same way.
+- Discount is taken from the maximum price (MRP), not the selling price. Example: MRP ₹2,999, selling ₹999, 20% coupon → ₹599.80 off MRP → payable ₹2,399.20. **Rule: final price = MRP − coupon discount (never below ₹1).** With no coupon the buyer pays the selling price. If a coupon total comes out higher than the selling price, the page warns the creator while editing the coupon. Flat coupons work the same way.
 - Price box shows: MRP → coupon → GST → processing fee → total.
 - Checkout re-checks the coupon on the server and creates the Razorpay link for the exact total; usage count goes up only after payment. Receipt shows coupon used.
 
