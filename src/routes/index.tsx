@@ -343,7 +343,7 @@ function LandingPage() {
               <div className="anim-orb absolute bottom-0 left-0 -z-10 size-48 rounded-full bg-accent/40 blur-3xl" style={{ animationDelay: "-7s" }} aria-hidden />
               <Tilt3D>
                 <div className="anim-float">
-                  <img src={heroReelDm} alt="A creator's reel asks to comment PRICE; the commenter instantly gets an Instagram DM with a Get instant access button" width={1100} height={880} fetchPriority="high" decoding="async" className="w-full drop-shadow-xl" />
+                  <img src={heroReelDm} alt="A creator's reel asks to comment PRICE; the commenter instantly gets an Instagram DM with a Get instant access button" width={960} height={768} fetchPriority="high" decoding="async" className="w-full drop-shadow-xl" />
                 </div>
                 <div className="anim-float-slow absolute bottom-6 right-2 rounded-xl border bg-card/90 px-3 py-2 text-xs shadow-lg backdrop-blur" style={{ transform: "translateZ(60px)" }}>
                   <p className="flex items-center gap-1.5 font-semibold text-foreground"><span className="relative flex size-2"><span className="absolute inline-flex size-full animate-ping rounded-full bg-primary opacity-75" /><span className="relative inline-flex size-2 rounded-full bg-primary" /></span>DM sent in 2 seconds</p>
@@ -397,7 +397,7 @@ function LandingPage() {
               <Reveal key={x.title} className="grid items-center gap-8 md:grid-cols-2 md:gap-12">
                 <Tilt3D max={6} className={i % 2 ? "md:order-2" : ""}>
                   <div className={i % 2 ? "anim-float-slow" : "anim-float"} style={{ animationDelay: `-${i * 1.5}s` }}>
-                    <img src={x.img} alt={x.alt} loading="lazy" decoding="async" width={1100} height={836} className="w-full drop-shadow-xl" />
+                    <img src={x.img} alt={x.alt} loading="lazy" decoding="async" width={960} height={730} className="w-full drop-shadow-xl" />
                   </div>
                 </Tilt3D>
                 <div>
