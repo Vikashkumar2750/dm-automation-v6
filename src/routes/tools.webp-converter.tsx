@@ -39,9 +39,9 @@ function ConverterPage() {
         <section className="mt-12 max-w-3xl space-y-3 text-sm text-muted-foreground">
           <h2 className="text-xl font-semibold text-foreground">How it works</h2>
           <ol className="list-decimal space-y-1 pl-5">
-            <li>Choose up to 10 photos, videos or audio files.</li>
-            <li>Each one is converted right on your device — nothing is uploaded.</li>
-            <li>See the size before and after, then download the WebP or WebM file.</li>
+            <li>Choose up to 10 photos, videos or audio files, up to 800 MB each.</li>
+            <li>Each one is converted right on your device — nothing is uploaded or stored.</li>
+            <li>See the size before and after, then download the WebP or WebM file. The converted copy is cleared from your browser right after.</li>
           </ol>
         </section>
       </main>
