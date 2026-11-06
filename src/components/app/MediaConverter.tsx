@@ -43,7 +43,11 @@ export function MediaConverter() {
     // Give the browser a moment to start the download before freeing the memory.
     window.setTimeout(() => {
       if (url) { URL.revokeObjectURL(url); urls.current.delete(url); }
-      update(i, { status: "downloaded", url: undefined, result: items[i]?.result ? { ...items[i]!.result!, blob: new Blob() } : undefined });
+      setItems((list) => list.map((it, k) => {
+        if (k !== i) return it;
+        const { url: _u, ...rest } = it;
+        return { ...rest, status: "downloaded" as const, ...(it.result ? { result: { ...it.result, blob: new Blob() } } : {}) };
+      }));
     }, 1500);
   };
 

@@ -284,7 +284,7 @@ export function DeliveryPageView({ title, body, buttonLabel, buttonHref, imageUr
           <div className="space-y-4 rounded-2xl border border-primary/20 bg-card p-5 ring-1 ring-primary/5 text-card-foreground shadow-sm">
             {countdownAt && !expired && <div><p className="mb-2 flex items-center justify-center gap-2 text-sm font-medium"><Clock3 className="size-4 text-primary" /> Offer ends in</p><div className="grid grid-cols-4 gap-2">{countdown.map((n, i) => <div key={i} className="rounded-md bg-muted px-2 py-2 text-center"><strong className="block text-lg">{String(n).padStart(2, "0")}</strong><span className="text-[10px] text-muted-foreground">{["Days", "Hours", "Mins", "Secs"][i]}</span></div>)}</div></div>}
             {expired && <p className="rounded-lg bg-muted p-3 text-sm text-muted-foreground">{expiryMessage || "This offer has ended."}</p>}
-            {price && <PriceBox price={price} slug={buyerSlug} applied={coupon} onApplied={setCoupon} />}
+            {price && <PriceBox price={price} slug={buyerSlug ?? null} applied={coupon} onApplied={setCoupon} />}
             <LeadFields form={form} standalone={!cta} className="hidden @3xl:block" />
             {cta && <div className="[&_a]:w-full">{cta}</div>}
             <TrustLines />
