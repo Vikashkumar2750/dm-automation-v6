@@ -1,5 +1,5 @@
 import { toast } from "sonner";
-import { ImageIcon, CheckCircle2, Clock3, Copy, Mail, Package, ShieldCheck, Tag } from "lucide-react";
+import { ImageIcon, CheckCircle2, Clock3, Mail, Package, ShieldCheck, Tag } from "lucide-react";
 import { Fragment, useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -24,26 +24,75 @@ function ChargeLines({ c }: { c: NonNullable<PagePrice["charges"]> }) {
   );
 }
 
-function PriceBox({ price }: { price: PagePrice }) {
-  const [copied, setCopied] = useState(false);
+export type AppliedCoupon = { code: string; label: string; basePaise: number; discountPaise: number; pricePaise: number; charges: NonNullable<PagePrice["charges"]> };
+
+function PriceBox({ price, slug, applied, onApplied }: { price: PagePrice; slug?: string | null; applied: AppliedCoupon | null; onApplied: (c: AppliedCoupon | null) => void }) {
+  const [code, setCode] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const d = priceDisplay(price.originalPaise, price.offerPaise, price.label);
+  const r = (p: number) => `₹${(p / 100).toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
+  const apply = async (raw: string, silent = false) => {
+    const c = raw.trim().toUpperCase();
+    if (!c) return;
+    if (!slug) { if (!silent) setError("Coupons work on the live page"); return; }
+    setBusy(true); setError(null);
+    try {
+      const { checkPageCoupon } = await import("@/lib/revenue.functions");
+      const res = await checkPageCoupon({ data: { slug, code: c } });
+      if (res.ok) { onApplied(res as AppliedCoupon); setCode(""); }
+      else if (!silent) setError(res.error);
+    } catch { if (!silent) setError("Could not check this coupon. Try again."); }
+    finally { setBusy(false); }
+  };
+  // Auto-apply: ?coupon=CODE in the link (DMs, comments) wins, then the page's own coupon.
+  useEffect(() => {
+    if (!slug || applied) return;
+    const fromUrl = new URLSearchParams(window.location.search).get("coupon");
+    const auto = fromUrl || price.couponCode;
+    if (auto) void apply(auto, true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slug]);
   if (!d.offer && !price.couponCode) return null;
   return (
     <div className="rounded-xl border border-primary/30 bg-background p-4">
-      {d.offer && <div className="flex flex-wrap items-baseline justify-center gap-3">
+      {applied ? (
+        <div className="flex flex-wrap items-baseline justify-center gap-3">
+          <span className="text-4xl font-bold tracking-tight text-foreground">{r(applied.pricePaise)}</span>
+          <span className="text-lg text-muted-foreground line-through">{r(applied.basePaise)}</span>
+        </div>
+      ) : d.offer && <div className="flex flex-wrap items-baseline justify-center gap-3">
         <span className="text-4xl font-bold tracking-tight text-foreground">{d.offer}</span>
         {d.original && <span className="text-lg text-muted-foreground line-through">{d.original}</span>}
         {d.badge && <span className="rounded-full bg-primary px-2.5 py-0.5 text-xs font-semibold text-primary-foreground">{d.badge}</span>}
       </div>}
-      {price.charges && <ChargeLines c={price.charges} />}
-      {price.couponCode && <div className="mt-4 rounded-xl border border-dashed border-primary/50 bg-primary/5 p-3">
-        <p className="flex items-center justify-center gap-1.5 text-xs font-medium text-muted-foreground"><Tag className="size-3.5 text-primary" /> Use coupon code</p>
-        <div className="mt-1.5 flex items-center justify-center gap-2">
-          <code className="rounded-md bg-background px-3 py-1 text-lg font-bold tracking-widest text-foreground">{price.couponCode}</code>
-          <Button type="button" size="sm" variant="outline" onClick={() => { void navigator.clipboard?.writeText(price.couponCode!); setCopied(true); window.setTimeout(() => setCopied(false), 1500); }}><Copy className="size-3.5" /> {copied ? "Copied" : "Copy"}</Button>
-        </div>
-        {price.couponNote && <p className="mt-1.5 text-center text-xs text-muted-foreground">{price.couponNote}</p>}
-      </div>}
+      {applied ? (
+        <dl className="mt-3 space-y-1 border-t border-border pt-3 text-xs text-muted-foreground">
+          <div className="flex justify-between"><dt>Maximum price (MRP)</dt><dd>{r(applied.basePaise)}</dd></div>
+          <div className="flex justify-between text-primary"><dt>Coupon {applied.code}</dt><dd>− {r(applied.discountPaise)}</dd></div>
+          {applied.charges.gstPaise > 0 && <div className="flex justify-between"><dt>GST</dt><dd>+ {r(applied.charges.gstPaise)}</dd></div>}
+          {applied.charges.feePaise > 0 && <div className="flex justify-between"><dt>Payment processing fee</dt><dd>+ {r(applied.charges.feePaise)}</dd></div>}
+          <div className="flex justify-between font-semibold text-foreground"><dt>Total payable</dt><dd>{r(applied.charges.totalPaise)}</dd></div>
+        </dl>
+      ) : price.charges && <ChargeLines c={price.charges} />}
+      <div className="mt-4 border-t border-border pt-3">
+        {applied ? (
+          <div className="flex items-center justify-between gap-2 rounded-lg border border-primary/40 bg-primary/10 px-3 py-2 text-sm">
+            <span className="flex items-center gap-1.5 font-semibold text-primary"><CheckCircle2 className="size-4" /> {applied.code} applied (−{r(applied.discountPaise)})</span>
+            <button type="button" className="text-xs font-medium text-muted-foreground underline hover:text-foreground" onClick={() => onApplied(null)}>Remove</button>
+          </div>
+        ) : (
+          <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); void apply(code); }}>
+            <div className="relative flex-1">
+              <Tag className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+              <input value={code} onChange={(e) => { setCode(e.target.value.toUpperCase()); setError(null); }} placeholder="Have a coupon code?" aria-label="Coupon code" maxLength={30}
+                className="h-10 w-full rounded-lg border border-input bg-background pl-8 pr-2 text-sm uppercase tracking-wide outline-none focus:border-primary" />
+            </div>
+            <Button type="submit" variant="outline" className="h-10" disabled={busy || code.trim().length < 2}>{busy ? "Checking…" : "Apply"}</Button>
+          </form>
+        )}
+        {error && <p className="mt-1.5 text-xs text-destructive">{error}</p>}
+      </div>
     </div>
   );
 }
@@ -91,6 +140,7 @@ export function DeliveryPageView({ title, body, buttonLabel, buttonHref, imageUr
     finally { setOpening(false); }
   };
   const form = useLeadForm(leadForm);
+  const [coupon, setCoupon] = useState<AppliedCoupon | null>(null);
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     if (!countdownAt) return;
@@ -116,7 +166,7 @@ export function DeliveryPageView({ title, body, buttonLabel, buttonHref, imageUr
     e.preventDefault();
     if (expired || !buttonHref) return;
     if (form.active && !(await form.run())) { Array.from(document.querySelectorAll<HTMLElement>(".lead-form")).find((el) => el.offsetParent)?.scrollIntoView({ behavior: "smooth", block: "center" }); return; }
-    if (form.payUrl?.current) { window.location.href = form.payUrl.current; return; }
+    if (form.payUrl?.current) { window.location.href = form.payUrl.current + (coupon ? `&coupon=${encodeURIComponent(coupon.code)}` : ""); return; }
     if (buttonHref !== "#") window.location.href = buttonHref;
   };
   const cta = buttonHref && !(expired && expiryAction === "hide_cta") ? (
@@ -234,7 +284,7 @@ export function DeliveryPageView({ title, body, buttonLabel, buttonHref, imageUr
           <div className="space-y-4 rounded-2xl border border-primary/20 bg-card p-5 ring-1 ring-primary/5 text-card-foreground shadow-sm">
             {countdownAt && !expired && <div><p className="mb-2 flex items-center justify-center gap-2 text-sm font-medium"><Clock3 className="size-4 text-primary" /> Offer ends in</p><div className="grid grid-cols-4 gap-2">{countdown.map((n, i) => <div key={i} className="rounded-md bg-muted px-2 py-2 text-center"><strong className="block text-lg">{String(n).padStart(2, "0")}</strong><span className="text-[10px] text-muted-foreground">{["Days", "Hours", "Mins", "Secs"][i]}</span></div>)}</div></div>}
             {expired && <p className="rounded-lg bg-muted p-3 text-sm text-muted-foreground">{expiryMessage || "This offer has ended."}</p>}
-            {price && <PriceBox price={price} />}
+            {price && <PriceBox price={price} slug={buyerSlug} applied={coupon} onApplied={setCoupon} />}
             <LeadFields form={form} standalone={!cta} className="hidden @3xl:block" />
             {cta && <div className="[&_a]:w-full">{cta}</div>}
             <TrustLines />
