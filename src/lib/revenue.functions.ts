@@ -236,6 +236,26 @@ export const getPublicPage = createServerFn({ method: "GET" })
       formConfig: effectiveConfig, otpRequired: !!p.otp_required };
   });
 
+/** Public: check a coupon on a delivery page and return the new price (discount taken off the MRP). */
+export const checkPageCoupon = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => z.object({ slug: z.string().regex(/^[a-z0-9-]{3,60}$/), code: z.string().trim().min(2).max(30) }).parse(d))
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { resolvePageCoupon } = await import("@/lib/revenue.server");
+    const { data: p } = await supabaseAdmin.from("delivery_pages").select("id, organization_id, form_config, product_id, price_offer_paise, price_original_paise, coupon_code, coupon_note")
+      .eq("slug", data.slug).eq("active", true).maybeSingle();
+    if (!p) return { ok: false as const, error: "Page not found" };
+    const { data: product } = p.product_id ? await supabaseAdmin.from("revenue_products").select("price_paise, original_price_paise, active").eq("id", p.product_id).eq("organization_id", p.organization_id).maybeSingle() : { data: null };
+    const amount = checkoutAmount(p.price_offer_paise, product, !!p.product_id);
+    if (!amount) return { ok: false as const, error: "This page has no price to discount" };
+    const c = await resolvePageCoupon(supabaseAdmin as never, p as never, data.code);
+    if ("error" in c) return { ok: false as const, error: c.error };
+    const mrp = (product?.original_price_paise as number | null | undefined) ?? (p.price_original_paise as number | null);
+    const r = couponPrice(mrp, amount, c.discount);
+    return { ok: true as const, code: c.code, label: c.label, basePaise: r.basePaise, discountPaise: r.discountPaise, pricePaise: r.pricePaise,
+      charges: withCharges(r.pricePaise, (p.form_config as any)?.extras?.charges) };
+  });
+
 function chargesFor(amount: number, c: PageCharges | undefined) {
   const b = withCharges(amount, c);
   return b.totalPaise === amount ? null : b;
