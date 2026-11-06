@@ -344,13 +344,13 @@ function LandingPage() {
               <div className="anim-orb absolute bottom-0 left-0 -z-10 size-48 rounded-full bg-accent/40 blur-3xl" style={{ animationDelay: "-7s" }} aria-hidden />
               <Tilt3D>
                 <div className="anim-float">
-                  <img src={heroReelDm} alt="A creator's reel asks to comment PRICE; the commenter instantly gets an Instagram DM with a Get instant access button" width={1280} height={1024} fetchPriority="high" className="w-full mix-blend-multiply drop-shadow-2xl" />
+                  <img src={heroReelDm} alt="A creator's reel asks to comment PRICE; the commenter instantly gets an Instagram DM with a Get instant access button" width={1280} height={1024} fetchPriority="high" className="w-full mix-blend-multiply" />
                 </div>
                 <div className="anim-float-slow absolute bottom-6 right-2 rounded-xl border bg-card/90 px-3 py-2 text-xs shadow-lg backdrop-blur" style={{ transform: "translateZ(60px)" }}>
                   <p className="flex items-center gap-1.5 font-semibold text-foreground"><span className="relative flex size-2"><span className="absolute inline-flex size-full animate-ping rounded-full bg-primary opacity-75" /><span className="relative inline-flex size-2 rounded-full bg-primary" /></span>DM sent in 2 seconds</p>
                   <p className="text-muted-foreground">Quiet hours · per-person cap · opt-out</p>
                 </div>
-                <div className="anim-float absolute left-0 top-1/3 hidden rounded-xl border bg-card/90 px-3 py-2 text-xs shadow-lg backdrop-blur sm:block" style={{ animationDelay: "-3s" }}>
+                <div className="anim-float absolute left-0 top-4 hidden rounded-xl border bg-card/90 px-3 py-2 text-xs shadow-lg backdrop-blur sm:block" style={{ animationDelay: "-3s" }}>
                   <p className="font-semibold text-foreground">₹999 paid · content unlocked</p>
                   <p className="text-muted-foreground">Razorpay checkout</p>
                 </div>
