@@ -9,6 +9,7 @@ import { toast } from "sonner";
 
 import { AdminTable } from "@/components/app/AdminTable";
 import { AdminSafetyPanel } from "@/components/app/AdminSafetyPanel";
+import { AdminWorkspaceFeaturesPanel, AdminWorkspaceHealthPanel } from "@/components/app/AdminWorkspaceFeaturesPanel";
 import { AdminPlanLimitsPanel } from "@/components/app/AdminPlanLimitsPanel";
 import { PageHeader, Panel, StatCard, StatusBadge } from "@/components/app/primitives";
 import { Button } from "@/components/ui/button";
@@ -213,6 +214,8 @@ function OrgDetailPage() {
         )}
       </Panel>
 
+      <AdminWorkspaceFeaturesPanel orgId={orgId} />
+      <AdminWorkspaceHealthPanel orgId={orgId} />
       <AdminPlanLimitsPanel orgId={orgId} />
       <AdminSafetyCapsPanel orgId={orgId} />
       <AdminSafetyPanel orgId={orgId} />
