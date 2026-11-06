@@ -1,7 +1,7 @@
 import { isProductFile, validProductFileRef } from "@/lib/product-files";
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { automaticCheckout, checkoutAmount, withCharges, type PageCharges } from "@/lib/revenue";
+import { automaticCheckout, checkoutAmount, couponPrice, withCharges, type PageCharges } from "@/lib/revenue";
 
 import { validateLeadValue, nextLeadStage, type LeadField, type LeadStage } from "@/lib/delivery-page";
 
