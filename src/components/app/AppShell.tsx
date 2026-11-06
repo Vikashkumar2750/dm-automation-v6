@@ -169,7 +169,7 @@ function Sidebar({ pathname }: { pathname: string }) {
         </div>
         <div className="my-4 border-t" />
         <div className="space-y-1">
-          {secondaryNav.map((item) => (
+          {secondaryNav.filter((item) => item.to !== "/growth" || features?.growth !== "off").map((item) => (
             <NavLink key={item.to} item={item} active={pathname.startsWith(item.to)} />
           ))}
         </div>
