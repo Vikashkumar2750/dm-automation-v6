@@ -114,7 +114,7 @@ export function validRazorpaySignature(body: string, signature: string | null, s
 export async function handleRazorpayWebhook(admin: AdminClient, orgId: string, body: string, signature: string | null) {
   const { data: cred } = await admin.from("payment_credentials").select("webhook_secret").eq("organization_id", orgId).maybeSingle();
   if (!cred || !validRazorpaySignature(body, signature, ((await (await import("@/lib/token-crypto.server")).readToken(cred.webhook_secret as string))) ?? "")) return { status: 401 };
-  const evt = JSON.parse(body) as { event?: string; payload?: { payment_link?: { entity?: { id?: string; amount_paid?: number } } } };
+  const evt = JSON.parse(body) as { event?: string; payload?: { payment_link?: { entity?: { id?: string; amount_paid?: number; notes?: Record<string, string> } } } };
   if (evt.event !== "payment_link.paid") return { status: 200 };
   const ent = evt.payload?.payment_link?.entity;
   if (!ent?.id) return { status: 200 };
@@ -122,7 +122,7 @@ export async function handleRazorpayWebhook(admin: AdminClient, orgId: string, b
     .eq("organization_id", orgId).eq("provider_link_id", ent.id).eq("status", "created")
     .select("id, platform, external_user_id, amount_paise, delivery_page_id").maybeSingle();
   if (!link) return { status: 200 };
-  if (link.platform === "web" && link.delivery_page_id) await sendPurchaseEmail(admin, link.delivery_page_id as string, link.external_user_id as string, ent.amount_paid ?? (link.amount_paise as number), process.env["PUBLIC_APP_URL"] || "https://autodm.techaasvik.com");
+  if (link.platform === "web" && link.delivery_page_id) await sendPurchaseEmail(admin, link.delivery_page_id as string, link.external_user_id as string, ent.amount_paid ?? (link.amount_paise as number), process.env["PUBLIC_APP_URL"] || "https://autodm.techaasvik.com", ent.id, ent.notes ?? null);
   const t = { organizationId: orgId, platform: link.platform as string, externalUserId: link.external_user_id as string };
   await event(admin, t, "paid", link.id as string, ent.amount_paid ?? (link.amount_paise as number));
   await admin.from("contact_tags").upsert(

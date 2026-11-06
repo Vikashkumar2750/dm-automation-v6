@@ -360,6 +360,12 @@ export const submitPageForm = createServerFn({ method: "POST" })
       leadId = row.id as string;
     }
     await supabaseAdmin.from("revenue_events").insert({ organization_id: page.organization_id, kind: "form_complete", ref_id: page.id });
+    {
+      const { getRequest } = await import("@tanstack/react-start/server");
+      const origin = (process.env["PUBLIC_APP_URL"] || new URL(getRequest().url).origin).replace(/\/$/, "");
+      const { sendLeadEmails } = await import("@/lib/buyer-emails.server");
+      await sendLeadEmails(supabaseAdmin as never, { pageId: page.id as string, leadId, answers: tagged, origin, checkout });
+    }
     // Checkout goes through our own link so the buyer comes back signed in after paying.
     return { ok: true, payUrl: `/api/public/pay/${data.slug}?lead=${leadId}` };
   });
