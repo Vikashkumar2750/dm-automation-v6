@@ -6,7 +6,7 @@ import { Loader2, RefreshCw, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { fileToBase64 } from "@/components/app/MarkdownEditor";
-import { adminDeleteMedia, adminListMedia, adminReplaceMedia } from "@/lib/media.functions";
+import { adminCleanupTempMedia, adminDeleteMedia, adminListMedia, adminReplaceMedia } from "@/lib/media.functions";
 import { formatBytes, savedPercent } from "@/lib/media-convert";
 
 export const Route = createFileRoute("/_authenticated/admin/media")({
@@ -28,6 +28,12 @@ function AdminMediaPage() {
   const list = useServerFn(adminListMedia);
   const del = useServerFn(adminDeleteMedia);
   const replace = useServerFn(adminReplaceMedia);
+  const cleanup = useServerFn(adminCleanupTempMedia);
+  const onCleanup = async () => {
+    if (!confirm("Delete converted/temporary files older than 7 days?")) return;
+    try { const r = await cleanup({ data: { days: 7 } }); toast.success(r.removed ? `Removed ${r.removed} old temporary files` : "Nothing to clean — no temporary files older than 7 days"); await qc.invalidateQueries({ queryKey: ["admin-media"] }); }
+    catch (e) { toast.error(e instanceof Error ? e.message : "Cleanup failed"); }
+  };
   const qc = useQueryClient();
   const [busy, setBusy] = useState<string | null>(null);
   const q = useQuery({ queryKey: ["admin-media", userId], queryFn: () => list({ data: { userId: userId || null } }) });
@@ -65,13 +71,16 @@ function AdminMediaPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">Media Library</h1>
+          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Media Library</h1>
           <p className="text-sm text-muted-foreground">Website images are saved as WebP automatically. Post media keeps its format because Instagram/Facebook require JPEG/MP4.</p>
         </div>
+        <div className="flex flex-wrap items-center gap-2">
+        <button type="button" onClick={() => void onCleanup()} className="h-9 rounded-md border border-input bg-background px-3 text-sm font-medium hover:bg-muted">Clean up temp files (7+ days)</button>
         <select className="h-9 rounded-md border border-input bg-background px-3 text-sm" value={userId} onChange={(e) => setUserId(e.target.value)}>
           <option value="">All users</option>
           {users.map((u: any) => <option key={u.id} value={u.id}>{u.email ?? u.full_name ?? u.id}</option>)}
         </select>
+        </div>
       </div>
       {t && (
         <div className="grid gap-3 sm:grid-cols-3">

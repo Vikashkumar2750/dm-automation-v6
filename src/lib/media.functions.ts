@@ -96,3 +96,22 @@ export const adminReplaceMedia = createServerFn({ method: "POST" })
     await supabaseAdmin.from("platform_audit_log").insert({ actor_user_id: context.userId, action: "platform.media_replace", target_type: "media", target_id: data.id, detail: { bucket: row.bucket } });
     return { ok: true };
   });
+
+/** Deletes temporary/converter files (and their records) older than `days`. Real page/blog/post media is never touched. */
+export const adminCleanupTempMedia = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ days: z.number().int().min(1).max(90).default(7) }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertSuperAdmin(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const cutoff = new Date(Date.now() - data.days * 86_400_000).toISOString();
+    const { data: rows } = await supabaseAdmin.from("media_assets").select("id, bucket, path")
+      .in("source", ["converter", "temp"]).lt("created_at", cutoff).limit(1000);
+    const list = rows ?? [];
+    for (const b of [...new Set(list.map((r) => r.bucket))]) {
+      await supabaseAdmin.storage.from(b).remove(list.filter((r) => r.bucket === b).map((r) => r.path));
+    }
+    if (list.length) await supabaseAdmin.from("media_assets").delete().in("id", list.map((r) => r.id));
+    await supabaseAdmin.from("platform_audit_log").insert({ actor_user_id: context.userId, action: "platform.media_cleanup", target_type: "media", target_id: null, detail: { days: data.days, removed: list.length } });
+    return { removed: list.length };
+  });
