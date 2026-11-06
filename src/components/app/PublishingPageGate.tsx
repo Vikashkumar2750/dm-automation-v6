@@ -5,13 +5,15 @@ import { useServerFn } from "@tanstack/react-start";
 import { CalendarDays, PenSquare, Clock, ArrowLeft, Loader2 } from "lucide-react";
 import { getPlatformStatus } from "@/lib/platform-status.functions";
 import type { PublishingFeature } from "@/lib/publishing-availability";
+import { useWorkspaceFeatures } from "@/hooks/useWorkspaceFeatures";
 import { AppShell } from "@/components/app/AppShell";
 import { Button } from "@/components/ui/button";
 
 export function PublishingPageGate({ feature, children }: { feature: PublishingFeature; children: ReactNode }) {
   const fetchStatus = useServerFn(getPlatformStatus);
   const status = useQuery({ queryKey: ["platform-status"], queryFn: () => fetchStatus(), staleTime: 60_000, refetchInterval: 60_000 });
-  const mode = feature === "calendar" ? status.data?.calendarMode : status.data?.createPostMode;
+  const features = useWorkspaceFeatures().data;
+  const mode = features ? features[feature] : feature === "calendar" ? status.data?.calendarMode : status.data?.createPostMode;
   if (mode === "enabled") return children;
   const Icon = feature === "calendar" ? CalendarDays : PenSquare;
   return <AppShell>
