@@ -331,7 +331,7 @@ function InboxPage() {
       <div className="grid min-w-0 gap-4 lg:h-[calc(100dvh-8rem)] lg:min-h-0 lg:grid-cols-[340px_minmax(0,1fr)] lg:grid-rows-[auto_minmax(0,1fr)]">
       <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-3 lg:col-start-1 lg:row-start-1">
         <div className="min-w-0">
-          <h1 className="break-words text-2xl font-semibold">Unified Inbox</h1>
+          <h1 className="break-words text-2xl font-bold tracking-tight sm:text-3xl">Unified Inbox</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Messages and comments from Instagram,
             <br />
