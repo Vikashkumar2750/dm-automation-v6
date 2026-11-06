@@ -196,3 +196,21 @@
 .blog-content a { color: var(--primary); text-decoration: underline; }
 .blog-content img { border-radius: 0.75rem; margin: 1rem 0; }
 .blog-content blockquote { border-left: 3px solid var(--border); padding-left: 1rem; color: var(--muted-foreground); }
+
+/* Homepage motion */
+@keyframes float-y { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-12px) } }
+@keyframes rise-in { from { opacity: 0; transform: translateY(24px) } to { opacity: 1; transform: none } }
+@keyframes orb { 0%,100% { transform: translate(0,0) scale(1) } 50% { transform: translate(30px,-20px) scale(1.1) } }
+.anim-float { animation: float-y 6s ease-in-out infinite; }
+.anim-float-slow { animation: float-y 8s ease-in-out infinite 1s; }
+.anim-orb { animation: orb 14s ease-in-out infinite; }
+.reveal { opacity: 0; transform: translateY(24px); transition: opacity .7s ease, transform .7s ease; }
+.reveal.in { opacity: 1; transform: none; }
+.tilt-3d { transform-style: preserve-3d; transition: transform .25s ease-out; will-change: transform; }
+.lift-3d { transition: transform .3s ease, box-shadow .3s ease; }
+.lift-3d:hover { transform: perspective(800px) rotateX(4deg) translateY(-6px); box-shadow: 0 24px 40px -20px color-mix(in oklab, var(--primary) 45%, transparent); }
+@media (prefers-reduced-motion: reduce) {
+  .anim-float, .anim-float-slow, .anim-orb { animation: none; }
+  .reveal { opacity: 1; transform: none; }
+  .tilt-3d, .lift-3d:hover { transform: none !important; }
+}

@@ -2,7 +2,9 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import shotCommentDm from "@/assets/home-comment-to-dm.jpg";
 import shotInbox from "@/assets/home-inbox-revenue.jpg";
 import shotDelivery from "@/assets/home-delivery-page.jpg";
-import heroReelDm from "@/assets/home-hero-reel-dm.jpg";
+import heroAsset from "@/assets/hero-reel-to-dm.jpg.asset.json";
+import { Tilt3D, Reveal } from "@/components/home/Motion";
+const heroReelDm = heroAsset.url;
 import shotYtFb from "@/assets/home-youtube-facebook.jpg";
 import {
   ArrowRight,
@@ -338,12 +340,21 @@ function LandingPage() {
             </div>
 
             <div className="relative">
-              <div className="absolute inset-6 -z-10 rounded-[2rem] bg-primary/10 blur-3xl" aria-hidden />
-              <img src={heroReelDm} alt="A reel comment saying PRICE instantly gets an Instagram DM with a Get instant access button" width={1280} height={1024} fetchPriority="high" className="w-full mix-blend-multiply" />
-              <div className="absolute bottom-2 left-2 rounded-xl border bg-card px-3 py-2 text-xs shadow-sm">
-                <p className="font-semibold text-foreground">DM sent in 2 seconds</p>
-                <p className="text-muted-foreground">Quiet hours · per-person cap · opt-out</p>
-              </div>
+              <div className="anim-orb absolute -top-6 right-4 -z-10 size-56 rounded-full bg-primary/20 blur-3xl" aria-hidden />
+              <div className="anim-orb absolute bottom-0 left-0 -z-10 size-48 rounded-full bg-accent/40 blur-3xl" style={{ animationDelay: "-7s" }} aria-hidden />
+              <Tilt3D>
+                <div className="anim-float">
+                  <img src={heroReelDm} alt="A creator's reel asks to comment PRICE; the commenter instantly gets an Instagram DM with a Get instant access button" width={1280} height={1024} fetchPriority="high" className="w-full mix-blend-multiply drop-shadow-2xl" />
+                </div>
+                <div className="anim-float-slow absolute bottom-6 right-2 rounded-xl border bg-card/90 px-3 py-2 text-xs shadow-lg backdrop-blur" style={{ transform: "translateZ(60px)" }}>
+                  <p className="flex items-center gap-1.5 font-semibold text-foreground"><span className="relative flex size-2"><span className="absolute inline-flex size-full animate-ping rounded-full bg-primary opacity-75" /><span className="relative inline-flex size-2 rounded-full bg-primary" /></span>DM sent in 2 seconds</p>
+                  <p className="text-muted-foreground">Quiet hours · per-person cap · opt-out</p>
+                </div>
+                <div className="anim-float absolute left-0 top-1/3 hidden rounded-xl border bg-card/90 px-3 py-2 text-xs shadow-lg backdrop-blur sm:block" style={{ animationDelay: "-3s" }}>
+                  <p className="font-semibold text-foreground">₹999 paid · content unlocked</p>
+                  <p className="text-muted-foreground">Razorpay checkout</p>
+                </div>
+              </Tilt3D>
             </div>
           </div>
         </section>
@@ -359,7 +370,7 @@ function LandingPage() {
             </p>
             <ol className="mt-10 grid gap-4 md:grid-cols-4">
               {funnel.map((f, i) => (
-                <li key={f.title} className="panel relative p-5">
+                <li key={f.title} className="panel lift-3d relative p-5">
                   <span className="num text-xs font-bold text-primary">STEP {i + 1}</span>
                   <f.icon className="mt-3 size-6 text-primary" />
                   <h3 className="mt-3 text-base font-semibold">{f.title}</h3>
@@ -384,13 +395,15 @@ function LandingPage() {
               { img: shotYtFb, alt: "A YouTube comment gets an AI channel reply and a Facebook comment gets a Messenger DM with a View offer button", title: "YouTube & Facebook on autopilot too", body: "Smart AI replies answer YouTube comments with your link, and Facebook Page comments trigger a Messenger DM — all from the same workspace, with the same safety limits." },
               { img: shotDelivery, alt: "A product sales page with coupon applied, a payment success card and an email receipt", title: "Sell, get paid and deliver automatically", body: "Create a delivery page, connect Razorpay once and every buyer gets their own checkout link. Coupons apply on the page, content unlocks after payment and a receipt email goes out." },
             ].map((x, i) => (
-              <div key={x.title} className="grid items-center gap-8 md:grid-cols-2 md:gap-12">
-                <img src={x.img} alt={x.alt} loading="lazy" width={1200} height={912} className={`w-full rounded-2xl border border-border bg-surface ${i % 2 ? "md:order-2" : ""}`} />
+              <Reveal key={x.title} className="grid items-center gap-8 md:grid-cols-2 md:gap-12">
+                <Tilt3D max={6} className={i % 2 ? "md:order-2" : ""}>
+                  <img src={x.img} alt={x.alt} loading="lazy" width={1200} height={912} className="w-full rounded-2xl border border-border bg-surface shadow-xl" />
+                </Tilt3D>
                 <div>
                   <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">{x.title}</h2>
                   <p className="mt-4 text-base leading-relaxed text-muted-foreground">{x.body}</p>
                 </div>
-              </div>
+              </Reveal>
             ))}
           </div>
         </section>
@@ -406,7 +419,7 @@ function LandingPage() {
             </p>
             <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {benefits.map((b) => (
-                <div key={b.title} className="panel p-5">
+                <div key={b.title} className="panel lift-3d p-5">
                   <span className="inline-flex size-9 items-center justify-center rounded-lg bg-surface-secondary">
                     <b.icon className="size-4.5 text-primary" />
                   </span>
