@@ -66,7 +66,7 @@ export const adminWorkspaceHealth = createServerFn({ method: "POST" })
       a.from("whatsapp_otp_settings").select("organization_id").eq("organization_id", org).maybeSingle(),
       a.from("delivery_pages").select("id").eq("organization_id", org),
       a.from("payment_links").select("amount_paise").eq("organization_id", org).eq("status", "paid").limit(5000),
-      a.from("automation_runs").select("id, created_at, status, error").eq("organization_id", org).eq("status", "failed").order("created_at", { ascending: false }).limit(10),
+      a.from("automation_runs").select("id, created_at, status, detail").eq("organization_id", org).eq("status", "failed" as never).order("created_at", { ascending: false }).limit(10),
     ]);
     const pageIds = (pages.data ?? []).map((p: any) => p.id as string);
     let completed = 0, dropped = 0;
@@ -81,6 +81,6 @@ export const adminWorkspaceHealth = createServerFn({ method: "POST" })
       leads: { completed, dropped },
       paidOrders: (paid.data ?? []).length,
       revenuePaise: (paid.data ?? []).reduce((s: number, r: any) => s + Number(r.amount_paise || 0), 0),
-      recentErrors: (errors.data ?? []).map((e: any) => ({ id: e.id as string, at: e.created_at as string, error: String(e.error ?? "Failed").slice(0, 200) })),
+      recentErrors: (errors.data ?? []).map((e: any) => ({ id: e.id as string, at: e.created_at as string, error: String(e.detail ?? "Failed").slice(0, 200) })),
     };
   });
