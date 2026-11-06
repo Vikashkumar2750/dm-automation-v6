@@ -1,3 +1,4 @@
+import { WorkspaceFeatureGate } from "@/components/app/WorkspaceFeatureGate";
 import { SocialIcon } from "@/components/app/SocialIcon";
 import { SOCIAL_LABELS, SOCIAL_PLATFORMS, cleanSocials, connectedAccountUrl, normalizeSocialUrl, type SocialLink } from "@/lib/social-links";
 import { AccountSelect } from "@/components/app/AccountSelect";
@@ -38,7 +39,7 @@ export const Route = createFileRoute("/_authenticated/revenue")({
       { name: "twitter:card", content: "summary" },
     ],
   }),
-  component: RevenuePage,
+  component: () => <WorkspaceFeatureGate feature="revenue"><RevenuePage /></WorkspaceFeatureGate>,
 });
 
 const area = "w-full rounded-md border border-input bg-background px-3 py-2 text-sm";
