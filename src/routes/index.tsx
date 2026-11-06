@@ -373,6 +373,11 @@ function LandingPage() {
         {/* Product tour visuals */}
         <section id="tour" className="border-b">
           <div className="mx-auto max-w-6xl space-y-16 px-6 py-16 lg:py-20">
+            <div className="mx-auto max-w-2xl text-center">
+              <p className="text-xs font-bold tracking-widest text-primary uppercase">Feature breakdown</p>
+              <h2 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">See exactly what your followers see</h2>
+              <p className="mt-3 text-muted-foreground">Real screens from every step — comment, DM, inbox, checkout.</p>
+            </div>
             {[
               { img: shotCommentDm, alt: "A reel comment saying LINK gets an automatic DM reply with a link button", title: "Comment “LINK”, get the link in DM", body: "Pick a reel or post, choose a keyword and the DM to send. Every matching comment gets a public reply and a private message with your link — in seconds, around the clock." },
               { img: shotInbox, alt: "Unified inbox with conversations, contact tags and a revenue chart", title: "Every chat and every rupee in one place", body: "Instagram, Facebook and YouTube conversations land in one inbox. Tag contacts, hand chats to your team and see what each automation earned." },
