@@ -281,7 +281,7 @@ export async function finishPageCheckout(admin: AdminClient, slug: string, q: UR
       .eq("id", link.id).eq("status", "created").select("id").maybeSingle();
     if (flipped) {
       await event(admin, { organizationId: page.organization_id as string, platform: "web", externalUserId: email }, "paid", link.id as string, link.amount_paise as number);
-      await sendPurchaseEmail(admin, page.id as string, email, link.amount_paise as number, origin);
+      await sendPurchaseEmail(admin, page.id as string, email, link.amount_paise as number, origin, linkId);
     }
   }
   const raw = Array.from(crypto.getRandomValues(new Uint8Array(32)), (b) => b.toString(16).padStart(2, "0")).join("");
@@ -290,17 +290,8 @@ export async function finishPageCheckout(admin: AdminClient, slug: string, q: UR
   return raw;
 }
 
-/** One receipt + access email per paid delivery-page purchase. */
-export async function sendPurchaseEmail(admin: AdminClient, pageId: string, email: string, amountPaise: number, origin: string) {
-  try {
-    const { data: page } = await admin.from("delivery_pages").select("title, slug, form_config").eq("id", pageId).maybeSingle();
-    if (!page) return;
-    const { emailProviderReady, sendPlainEmail } = await import("@/lib/support-email.server");
-    if (!emailProviderReady()) return;
-    const creator = ((page.form_config as { extras?: { creatorName?: string } } | null)?.extras?.creatorName ?? "").trim();
-    const url = `${origin.replace(/\/$/, "")}/p/${page.slug}`;
-    await sendPlainEmail(email, `Your purchase: ${page.title}`,
-      `Thank you! Your payment of ₹${(amountPaise / 100).toFixed(2)} for "${page.title}" was successful.\n\nOpen your purchase any time:\n${url}\n\nTap "Sign in" on that page and use this email (${email}) to get a one-time code.\n\nKeep this email as your receipt.`,
-      creator || "AutoDM");
-  } catch (e) { console.error("purchase email failed", e); }
+/** One receipt + access email per paid delivery-page purchase (plus a sale alert to the creator). */
+export async function sendPurchaseEmail(admin: AdminClient, pageId: string, email: string, amountPaise: number, origin: string, providerLinkId?: string | null, notes?: Record<string, string> | null) {
+  const { sendPurchaseEmails } = await import("@/lib/buyer-emails.server");
+  await sendPurchaseEmails(admin, { pageId, email, amountPaise, origin, providerLinkId: providerLinkId ?? null, notes: notes ?? null });
 }
