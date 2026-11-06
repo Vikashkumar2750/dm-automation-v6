@@ -339,7 +339,7 @@ function LandingPage() {
 
             <div className="relative">
               <div className="absolute inset-6 -z-10 rounded-[2rem] bg-primary/10 blur-3xl" aria-hidden />
-              <img src={heroReelDm} alt="A reel comment saying PRICE instantly gets an Instagram DM with a Get instant access button" width={1280} height={1024} fetchPriority="high" className="w-full" />
+              <img src={heroReelDm} alt="A reel comment saying PRICE instantly gets an Instagram DM with a Get instant access button" width={1280} height={1024} fetchPriority="high" className="w-full mix-blend-multiply" />
               <div className="absolute bottom-2 left-2 rounded-xl border bg-card px-3 py-2 text-xs shadow-sm">
                 <p className="font-semibold text-foreground">DM sent in 2 seconds</p>
                 <p className="text-muted-foreground">Quiet hours · per-person cap · opt-out</p>
