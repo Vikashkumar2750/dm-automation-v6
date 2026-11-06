@@ -1,11 +1,10 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import shotCommentDm from "@/assets/home-comment-to-dm.jpg";
-import shotInbox from "@/assets/home-inbox-revenue.jpg";
-import shotDelivery from "@/assets/home-delivery-page.jpg";
-import heroAsset from "@/assets/hero-reel-to-dm.jpg.asset.json";
+import shotCommentDm from "@/assets/home-comment-to-dm.webp";
+import shotInbox from "@/assets/home-inbox-revenue.webp";
+import shotDelivery from "@/assets/home-delivery-page.webp";
+import heroReelDm from "@/assets/home-hero-reel-dm.webp";
 import { Tilt3D, Reveal } from "@/components/home/Motion";
-const heroReelDm = heroAsset.url;
-import shotYtFb from "@/assets/home-youtube-facebook.jpg";
+import shotYtFb from "@/assets/home-youtube-facebook.webp";
 import {
   ArrowRight,
   BarChart3,
@@ -344,7 +343,7 @@ function LandingPage() {
               <div className="anim-orb absolute bottom-0 left-0 -z-10 size-48 rounded-full bg-accent/40 blur-3xl" style={{ animationDelay: "-7s" }} aria-hidden />
               <Tilt3D>
                 <div className="anim-float">
-                  <img src={heroReelDm} alt="A creator's reel asks to comment PRICE; the commenter instantly gets an Instagram DM with a Get instant access button" width={1280} height={1024} fetchPriority="high" className="w-full rounded-3xl border border-border bg-card shadow-2xl" />
+                  <img src={heroReelDm} alt="A creator's reel asks to comment PRICE; the commenter instantly gets an Instagram DM with a Get instant access button" width={1100} height={880} fetchPriority="high" decoding="async" className="w-full mix-blend-multiply drop-shadow-2xl" />
                 </div>
                 <div className="anim-float-slow absolute bottom-6 right-2 rounded-xl border bg-card/90 px-3 py-2 text-xs shadow-lg backdrop-blur" style={{ transform: "translateZ(60px)" }}>
                   <p className="flex items-center gap-1.5 font-semibold text-foreground"><span className="relative flex size-2"><span className="absolute inline-flex size-full animate-ping rounded-full bg-primary opacity-75" /><span className="relative inline-flex size-2 rounded-full bg-primary" /></span>DM sent in 2 seconds</p>
@@ -397,7 +396,9 @@ function LandingPage() {
             ].map((x, i) => (
               <Reveal key={x.title} className="grid items-center gap-8 md:grid-cols-2 md:gap-12">
                 <Tilt3D max={6} className={i % 2 ? "md:order-2" : ""}>
-                  <img src={x.img} alt={x.alt} loading="lazy" width={1200} height={912} className="w-full rounded-2xl border border-border bg-surface shadow-xl" />
+                  <div className={i % 2 ? "anim-float-slow" : "anim-float"} style={{ animationDelay: `-${i * 1.5}s` }}>
+                    <img src={x.img} alt={x.alt} loading="lazy" decoding="async" width={1100} height={836} className="w-full mix-blend-multiply" />
+                  </div>
                 </Tilt3D>
                 <div>
                   <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">{x.title}</h2>
