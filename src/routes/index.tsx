@@ -1,4 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import shotCommentDm from "@/assets/home-comment-to-dm.jpg";
+import shotInbox from "@/assets/home-inbox-revenue.jpg";
+import shotDelivery from "@/assets/home-delivery-page.jpg";
 import {
   ArrowRight,
   BarChart3,
@@ -392,6 +395,25 @@ function LandingPage() {
                 </li>
               ))}
             </ol>
+          </div>
+        </section>
+
+        {/* Product tour visuals */}
+        <section id="tour" className="border-b">
+          <div className="mx-auto max-w-6xl space-y-16 px-6 py-16 lg:py-20">
+            {[
+              { img: shotCommentDm, alt: "A reel comment saying LINK gets an automatic DM reply with a link button", title: "Comment “LINK”, get the link in DM", body: "Pick a reel or post, choose a keyword and the DM to send. Every matching comment gets a public reply and a private message with your link — in seconds, around the clock." },
+              { img: shotInbox, alt: "Unified inbox with conversations, contact tags and a revenue chart", title: "Every chat and every rupee in one place", body: "Instagram, Facebook and YouTube conversations land in one inbox. Tag contacts, hand chats to your team and see what each automation earned." },
+              { img: shotDelivery, alt: "A product sales page with coupon applied, a payment success card and an email receipt", title: "Sell, get paid and deliver automatically", body: "Create a delivery page, connect Razorpay once and every buyer gets their own checkout link. Coupons apply on the page, content unlocks after payment and a receipt email goes out." },
+            ].map((x, i) => (
+              <div key={x.title} className="grid items-center gap-8 md:grid-cols-2 md:gap-12">
+                <img src={x.img} alt={x.alt} loading="lazy" width={1200} height={912} className={`w-full rounded-2xl border border-border bg-surface ${i % 2 ? "md:order-2" : ""}`} />
+                <div>
+                  <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">{x.title}</h2>
+                  <p className="mt-4 text-base leading-relaxed text-muted-foreground">{x.body}</p>
+                </div>
+              </div>
+            ))}
           </div>
         </section>
 
