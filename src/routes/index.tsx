@@ -2,6 +2,8 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import shotCommentDm from "@/assets/home-comment-to-dm.jpg";
 import shotInbox from "@/assets/home-inbox-revenue.jpg";
 import shotDelivery from "@/assets/home-delivery-page.jpg";
+import heroReelDm from "@/assets/home-hero-reel-dm.jpg";
+import shotYtFb from "@/assets/home-youtube-facebook.jpg";
 import {
   ArrowRight,
   BarChart3,
@@ -276,13 +278,13 @@ function LandingPage() {
       <main>
         {/* Hero */}
         <section className="border-b">
-          <div className="mx-auto grid max-w-6xl gap-10 px-6 py-16 lg:grid-cols-[1.1fr_0.9fr] lg:py-24">
+          <div className="mx-auto grid max-w-6xl gap-10 px-6 py-16 items-center lg:grid-cols-[1fr_1fr] lg:py-20">
             <div>
               <span className="inline-flex items-center gap-2 rounded-full border bg-surface px-3 py-1 text-xs font-medium text-muted-foreground">
                 <Sparkles className="size-3.5 text-primary" />
                 Instagram · Facebook · YouTube in one workspace
               </span>
-              <h1 className="mt-5 text-4xl font-bold tracking-tight sm:text-5xl">
+              <h1 className="mt-5 text-4xl font-bold leading-[1.05] tracking-tight sm:text-5xl lg:text-6xl">
                 Turn every reel comment into a paying customer — automatically
               </h1>
               <p className="mt-5 text-lg text-muted-foreground">
@@ -335,43 +337,13 @@ function LandingPage() {
               </div>
             </div>
 
-            <div className="panel p-5">
-              <p className="text-xs font-semibold tracking-wide text-subtle-foreground uppercase">
-                What a rule looks like (Instagram &amp; Facebook)
-              </p>
-              <div className="mt-4 space-y-3">
-                {[
-                  {
-                    label: "Trigger",
-                    value: "Comment on a reel contains “price”",
-                    tone: "text-instagram",
-                  },
-
-                  {
-                    label: "Public reply",
-                    value: "“Sent you the details in DM 💬”",
-                    tone: "text-facebook",
-                  },
-                  {
-                    label: "Private DM",
-                    value: "Price list + link, then hand over to your team",
-                    tone: "text-primary",
-                  },
-                  {
-                    label: "Safety",
-                    value: "Quiet hours, per-person cap, opt-out respected",
-                    tone: "text-success",
-                  },
-                ].map((row) => (
-                  <div key={row.label} className="rounded-lg border bg-surface-secondary p-3">
-                    <p className={`text-xs font-semibold ${row.tone}`}>{row.label}</p>
-                    <p className="mt-1 text-sm text-foreground">{row.value}</p>
-                  </div>
-                ))}
+            <div className="relative">
+              <div className="absolute inset-6 -z-10 rounded-[2rem] bg-primary/10 blur-3xl" aria-hidden />
+              <img src={heroReelDm} alt="A reel comment saying PRICE instantly gets an Instagram DM with a Get instant access button" width={1280} height={1024} fetchPriority="high" className="w-full" />
+              <div className="absolute bottom-2 left-2 rounded-xl border bg-card px-3 py-2 text-xs shadow-sm">
+                <p className="font-semibold text-foreground">DM sent in 2 seconds</p>
+                <p className="text-muted-foreground">Quiet hours · per-person cap · opt-out</p>
               </div>
-              <p className="mt-4 text-xs text-muted-foreground">
-                Build it in a few minutes — no code, no Zapier, no developer.
-              </p>
             </div>
           </div>
         </section>
@@ -404,6 +376,7 @@ function LandingPage() {
             {[
               { img: shotCommentDm, alt: "A reel comment saying LINK gets an automatic DM reply with a link button", title: "Comment “LINK”, get the link in DM", body: "Pick a reel or post, choose a keyword and the DM to send. Every matching comment gets a public reply and a private message with your link — in seconds, around the clock." },
               { img: shotInbox, alt: "Unified inbox with conversations, contact tags and a revenue chart", title: "Every chat and every rupee in one place", body: "Instagram, Facebook and YouTube conversations land in one inbox. Tag contacts, hand chats to your team and see what each automation earned." },
+              { img: shotYtFb, alt: "A YouTube comment gets an AI channel reply and a Facebook comment gets a Messenger DM with a View offer button", title: "YouTube & Facebook on autopilot too", body: "Smart AI replies answer YouTube comments with your link, and Facebook Page comments trigger a Messenger DM — all from the same workspace, with the same safety limits." },
               { img: shotDelivery, alt: "A product sales page with coupon applied, a payment success card and an email receipt", title: "Sell, get paid and deliver automatically", body: "Create a delivery page, connect Razorpay once and every buyer gets their own checkout link. Coupons apply on the page, content unlocks after payment and a receipt email goes out." },
             ].map((x, i) => (
               <div key={x.title} className="grid items-center gap-8 md:grid-cols-2 md:gap-12">
