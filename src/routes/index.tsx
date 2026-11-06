@@ -350,7 +350,7 @@ function LandingPage() {
                   <p className="flex items-center gap-1.5 font-semibold text-foreground"><span className="relative flex size-2"><span className="absolute inline-flex size-full animate-ping rounded-full bg-primary opacity-75" /><span className="relative inline-flex size-2 rounded-full bg-primary" /></span>DM sent in 2 seconds</p>
                   <p className="text-muted-foreground">Quiet hours · per-person cap · opt-out</p>
                 </div>
-                <div className="anim-float absolute left-0 top-4 hidden rounded-xl border bg-card/90 px-3 py-2 text-xs shadow-lg backdrop-blur sm:block" style={{ animationDelay: "-3s" }}>
+                <div className="anim-float absolute -left-8 top-1/2 hidden rounded-xl border bg-card/90 px-3 py-2 text-xs shadow-lg backdrop-blur sm:block" style={{ animationDelay: "-3s" }}>
                   <p className="font-semibold text-foreground">₹999 paid · content unlocked</p>
                   <p className="text-muted-foreground">Razorpay checkout</p>
                 </div>
