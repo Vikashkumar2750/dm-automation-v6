@@ -305,3 +305,36 @@ export const setLeadFollowUp = createServerFn({ method: "POST" })
     }
     return { ok: true, updated: rows?.length ?? 0 };
   });
+
+/** Send one reviewed follow-up email to one lead (no bulk), then mark it "Follow-up sent". */
+export const sendLeadFollowUpEmail = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({
+    organizationId: org, leadId: z.string().uuid(),
+    subject: z.string().trim().min(1).max(150), message: z.string().trim().min(1).max(4000),
+  }).parse(d))
+  .handler(async ({ data, context }) => {
+    // RLS: the caller must be able to read this lead in this workspace.
+    const { data: lead } = await (context as Ctx).supabase.from("delivery_page_leads")
+      .select("id, answers, delivery_page_id").eq("organization_id", data.organizationId).eq("id", data.leadId).maybeSingle();
+    if (!lead) throw new Error("Lead not found");
+    const answers = { ...((lead.answers ?? {}) as Record<string, unknown>) };
+    const to = String(answers["email"] ?? "").toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) throw new Error("This lead has no email address");
+    const f = await (await import("@/lib/workspace-features.server")).workspaceFeaturesFor(data.organizationId);
+    if (f.emails !== "enabled") throw new Error("Emails are switched off for this workspace");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: page } = await supabaseAdmin.from("delivery_pages").select("form_config").eq("id", lead.delivery_page_id).maybeSingle();
+    const extras = ((page?.form_config as any)?.extras ?? {}) as { creatorName?: string; supportEmail?: string };
+    const { emailProviderReady, sendBrandedEmail } = await import("@/lib/support-email.server");
+    if (!emailProviderReady()) throw new Error("Email sending is not set up yet. Ask your admin to add the email provider.");
+    const r = await sendBrandedEmail(to, data.subject, {
+      heading: data.subject, lines: data.message.split(/\n{2,}|\n/).map((l) => l.trim()).filter(Boolean),
+      ...(extras.supportEmail ? { replyTo: extras.supportEmail } : {}),
+    }, (extras.creatorName ?? "").trim() || "AutoDM");
+    if (r.status !== "sent") throw new Error(r.error ?? "Email could not be sent");
+    const now = new Date().toISOString();
+    answers["_followup_status"] = "sent"; answers["_followup_at"] = now; answers["_followup_channel"] = "email";
+    await supabaseAdmin.from("delivery_page_leads").update({ answers: answers as never }).eq("id", lead.id).eq("organization_id", data.organizationId);
+    return { ok: true };
+  });

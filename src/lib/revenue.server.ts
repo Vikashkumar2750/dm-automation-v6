@@ -5,7 +5,7 @@
  */
 import { createHmac, timingSafeEqual } from "node:crypto";
 
-import { checkoutAmount, makeCouponCode, nudgeDue, withCharges } from "@/lib/revenue";
+import { checkoutAmount, couponPrice, makeCouponCode, nudgeDue, parseDiscount, withCharges, type CouponDiscount } from "@/lib/revenue";
 
 type AdminClient = import("@supabase/supabase-js").SupabaseClient;
 
@@ -114,7 +114,7 @@ export function validRazorpaySignature(body: string, signature: string | null, s
 export async function handleRazorpayWebhook(admin: AdminClient, orgId: string, body: string, signature: string | null) {
   const { data: cred } = await admin.from("payment_credentials").select("webhook_secret").eq("organization_id", orgId).maybeSingle();
   if (!cred || !validRazorpaySignature(body, signature, ((await (await import("@/lib/token-crypto.server")).readToken(cred.webhook_secret as string))) ?? "")) return { status: 401 };
-  const evt = JSON.parse(body) as { event?: string; payload?: { payment_link?: { entity?: { id?: string; amount_paid?: number } } } };
+  const evt = JSON.parse(body) as { event?: string; payload?: { payment_link?: { entity?: { id?: string; amount_paid?: number; notes?: Record<string, string> } } } };
   if (evt.event !== "payment_link.paid") return { status: 200 };
   const ent = evt.payload?.payment_link?.entity;
   if (!ent?.id) return { status: 200 };
@@ -122,7 +122,7 @@ export async function handleRazorpayWebhook(admin: AdminClient, orgId: string, b
     .eq("organization_id", orgId).eq("provider_link_id", ent.id).eq("status", "created")
     .select("id, platform, external_user_id, amount_paise, delivery_page_id").maybeSingle();
   if (!link) return { status: 200 };
-  if (link.platform === "web" && link.delivery_page_id) await sendPurchaseEmail(admin, link.delivery_page_id as string, link.external_user_id as string, ent.amount_paid ?? (link.amount_paise as number), process.env["PUBLIC_APP_URL"] || "https://autodm.techaasvik.com");
+  if (link.platform === "web" && link.delivery_page_id) await sendPurchaseEmail(admin, link.delivery_page_id as string, link.external_user_id as string, ent.amount_paid ?? (link.amount_paise as number), process.env["PUBLIC_APP_URL"] || "https://autodm.techaasvik.com", ent.id, ent.notes ?? null);
   const t = { organizationId: orgId, platform: link.platform as string, externalUserId: link.external_user_id as string };
   await event(admin, t, "paid", link.id as string, ent.amount_paid ?? (link.amount_paise as number));
   await admin.from("contact_tags").upsert(
@@ -163,11 +163,42 @@ export async function runPaymentNudges(admin: AdminClient) {
   return { sent };
 }
 
+type CouponPage = { organization_id: string; coupon_code?: string | null; coupon_note?: string | null };
+
+/** A code typed on (or auto-applied to) a delivery page: the page's own code, or any active, unexpired workspace coupon (store code or a DM-issued code). */
+export async function resolvePageCoupon(admin: AdminClient, page: CouponPage, rawCode: string): Promise<{ code: string; label: string; discount: CouponDiscount } | { error: string }> {
+  const code = rawCode.trim().toUpperCase();
+  if (!/^[A-Z0-9-]{2,30}$/.test(code)) return { error: "Enter a valid coupon code" };
+  if (page.coupon_code && page.coupon_code.toUpperCase() === code) {
+    const d = parseDiscount(page.coupon_note);
+    if (d) return { code, label: page.coupon_note as string, discount: d };
+  }
+  const now = Date.now();
+  const usable = (c: any) => c && c.active && (!c.expires_at || new Date(c.expires_at).getTime() > now);
+  const { data: store } = await admin.from("coupon_campaigns").select("discount_label, expires_at, active")
+    .eq("organization_id", page.organization_id).eq("store_code", code).maybeSingle();
+  let camp: any = store;
+  if (!camp) {
+    const { data: issued } = await admin.from("coupon_codes").select("campaign_id").eq("organization_id", page.organization_id).eq("code", code).maybeSingle();
+    if (issued) {
+      const { data: c } = await admin.from("coupon_campaigns").select("discount_label, expires_at, active").eq("id", issued.campaign_id).eq("organization_id", page.organization_id).maybeSingle();
+      camp = c;
+    }
+  }
+  if (!camp) return { error: "This coupon code is not valid" };
+  if (!usable(camp)) return { error: "This coupon has expired" };
+  const d = parseDiscount(camp.discount_label);
+  if (!d) return { error: "This coupon has no price discount" };
+  return { code, label: camp.discount_label as string, discount: d };
+}
+
 /** Delivery-page checkout: a Razorpay link for this lead that returns the buyer to the page after paying. */
-export async function startPageCheckout(admin: AdminClient, slug: string, leadId: string, origin: string): Promise<string | null> {
-  const { data: page } = await admin.from("delivery_pages").select("id, organization_id, title, product_id, price_offer_paise, button_url, countdown_at")
+export async function startPageCheckout(admin: AdminClient, slug: string, leadId: string, origin: string, couponCode?: string | null): Promise<string | null> {
+  const { data: page } = await admin.from("delivery_pages").select("id, organization_id, title, product_id, price_offer_paise, price_original_paise, coupon_code, coupon_note, button_url, countdown_at")
     .eq("slug", slug).eq("active", true).maybeSingle();
   if (!page) throw new Error("Page not found");
+  const wf = await (await import("@/lib/workspace-features.server")).workspaceFeaturesFor(page.organization_id as string, admin);
+  if (wf.delivery_pages === "off" || wf.revenue === "hidden") throw new Error("This page is not available right now");
   if (page.countdown_at && new Date(page.countdown_at as string).getTime() <= Date.now()) throw new Error("This offer has ended");
   const fallback = page.button_url && /^https:\/\//i.test(page.button_url as string) ? (page.button_url as string) : null;
   const { data: lead } = await admin.from("delivery_page_leads").select("id, answers").eq("id", leadId).eq("delivery_page_id", page.id).maybeSingle();
@@ -177,13 +208,21 @@ export async function startPageCheckout(admin: AdminClient, slug: string, leadId
   let amount = checkoutAmount(page.price_offer_paise as number | null, null, false);
   let currency = "INR";
   let name = page.title as string;
+  let mrp = (page.price_original_paise as number | null) ?? null;
   if (page.product_id) {
-    const { data: p } = await admin.from("revenue_products").select("name, price_paise, currency, active").eq("id", page.product_id).eq("organization_id", page.organization_id).maybeSingle();
+    const { data: p } = await admin.from("revenue_products").select("name, price_paise, original_price_paise, currency, active").eq("id", page.product_id).eq("organization_id", page.organization_id).maybeSingle();
     amount = checkoutAmount(null, p as { price_paise: number; active: boolean } | null, true);
     if (!amount) throw new Error("Product is unavailable");
-    if (p) { currency = (p.currency as string) || "INR"; name = p.name as string; }
+    if (p) { currency = (p.currency as string) || "INR"; name = p.name as string; mrp = (p.original_price_paise as number | null) ?? mrp; }
   }
   if (!cred || !amount) return fallback;
+  let couponNote: string | null = null;
+  if (couponCode) {
+    const c = await resolvePageCoupon(admin, page as CouponPage, couponCode);
+    if ("error" in c) throw new Error(c.error);
+    amount = couponPrice(mrp, amount, c.discount).pricePaise;
+    couponNote = c.code;
+  }
   const { data: cfgRow } = await admin.from("delivery_pages").select("form_config").eq("id", page.id).maybeSingle();
   const breakdown = withCharges(amount, ((cfgRow?.form_config as any)?.extras?.charges) ?? null);
   amount = breakdown.totalPaise;
@@ -200,7 +239,7 @@ export async function startPageCheckout(admin: AdminClient, slug: string, leadId
       amount, currency, description: name.slice(0, 2000), reference_id: `${leadId.replace(/-/g, "").slice(0, 24)}${Date.now().toString(36)}`.slice(0, 40),
       customer: { email, ...(contact ? { contact } : {}), ...(answers["name"] ? { name: answers["name"].slice(0, 100) } : {}) },
       notify: { email: false, sms: false }, reminder_enable: false,
-      notes: { organization_id: page.organization_id, delivery_page: slug, price_paise: String(breakdown.basePaise), gst_paise: String(breakdown.gstPaise), fee_paise: String(breakdown.feePaise) },
+      notes: { organization_id: page.organization_id, delivery_page: slug, price_paise: String(breakdown.basePaise), gst_paise: String(breakdown.gstPaise), fee_paise: String(breakdown.feePaise), ...(couponNote ? { coupon: couponNote } : {}) },
       callback_url: `${origin}/api/public/paid/${slug}`, callback_method: "get",
     }),
   }).catch(() => null);
@@ -242,7 +281,7 @@ export async function finishPageCheckout(admin: AdminClient, slug: string, q: UR
       .eq("id", link.id).eq("status", "created").select("id").maybeSingle();
     if (flipped) {
       await event(admin, { organizationId: page.organization_id as string, platform: "web", externalUserId: email }, "paid", link.id as string, link.amount_paise as number);
-      await sendPurchaseEmail(admin, page.id as string, email, link.amount_paise as number, origin);
+      await sendPurchaseEmail(admin, page.id as string, email, link.amount_paise as number, origin, linkId);
     }
   }
   const raw = Array.from(crypto.getRandomValues(new Uint8Array(32)), (b) => b.toString(16).padStart(2, "0")).join("");
@@ -251,17 +290,8 @@ export async function finishPageCheckout(admin: AdminClient, slug: string, q: UR
   return raw;
 }
 
-/** One receipt + access email per paid delivery-page purchase. */
-export async function sendPurchaseEmail(admin: AdminClient, pageId: string, email: string, amountPaise: number, origin: string) {
-  try {
-    const { data: page } = await admin.from("delivery_pages").select("title, slug, form_config").eq("id", pageId).maybeSingle();
-    if (!page) return;
-    const { emailProviderReady, sendPlainEmail } = await import("@/lib/support-email.server");
-    if (!emailProviderReady()) return;
-    const creator = ((page.form_config as { extras?: { creatorName?: string } } | null)?.extras?.creatorName ?? "").trim();
-    const url = `${origin.replace(/\/$/, "")}/p/${page.slug}`;
-    await sendPlainEmail(email, `Your purchase: ${page.title}`,
-      `Thank you! Your payment of ₹${(amountPaise / 100).toFixed(2)} for "${page.title}" was successful.\n\nOpen your purchase any time:\n${url}\n\nTap "Sign in" on that page and use this email (${email}) to get a one-time code.\n\nKeep this email as your receipt.`,
-      creator || "AutoDM");
-  } catch (e) { console.error("purchase email failed", e); }
+/** One receipt + access email per paid delivery-page purchase (plus a sale alert to the creator). */
+export async function sendPurchaseEmail(admin: AdminClient, pageId: string, email: string, amountPaise: number, origin: string, providerLinkId?: string | null, notes?: Record<string, string> | null) {
+  const { sendPurchaseEmails } = await import("@/lib/buyer-emails.server");
+  await sendPurchaseEmails(admin, { pageId, email, amountPaise, origin, providerLinkId: providerLinkId ?? null, notes: notes ?? null });
 }

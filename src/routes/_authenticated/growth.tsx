@@ -1,3 +1,4 @@
+import { WorkspaceFeatureGate } from "@/components/app/WorkspaceFeatureGate";
 import { PlatformAccountFilter } from "@/components/app/PlatformAccountFilter";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -28,7 +29,7 @@ export const Route = createFileRoute("/_authenticated/growth")({
       { name: "twitter:card", content: "summary" },
     ],
   }),
-  component: GrowthPage,
+  component: () => <WorkspaceFeatureGate feature="growth"><GrowthPage /></WorkspaceFeatureGate>,
 });
 
 type Overview = Awaited<ReturnType<typeof getGrowthOverview>>;

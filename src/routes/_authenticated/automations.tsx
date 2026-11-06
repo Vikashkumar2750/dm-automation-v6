@@ -671,7 +671,7 @@ function AutomationsPage() {
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start">
         <section className="panel min-w-0">
           <div className="border-b px-5 py-4">
-            <h1 className="text-xl font-semibold">{draft?.id ? "Edit automation" : "New automation"}</h1>
+            <h1 className="text-2xl font-bold tracking-tight">{draft?.id ? "Edit automation" : "New automation"}</h1>
           </div>
           <div className="p-5">
           {draft && (

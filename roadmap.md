@@ -160,3 +160,11 @@ Real Meta + YouTube credentials are available when we reach OAuth phases.
 - [ ] Verify per-account limits and filters with real connected accounts (needs live data)
 - [x] Lock Agency-only branding fields in Settings
 - [x] Add instagram_business_manage_comments scope + test comments button
+
+## Master plan (Nov 2026) status
+- [x] Converter 800MB + clear after download; Super Admin temp cleanup button
+- [x] Coupons: manual Apply + auto-apply (?coupon=), discount from MRP, server re-check
+- [x] Per-workspace Super Admin feature switches + health; enforced on server for revenue writes, public pages, checkout, emails
+- [x] Emails: branded receipt, creator sale/lead alerts, lead confirmation, one-by-one follow-up send from Contacts
+- [x] Heading hierarchy (shared panels, page titles, delivery editor); homepage product visuals
+- [ ] Real payment, email delivery and signed-in Super Admin checks — need live test by owner

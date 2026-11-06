@@ -1,3 +1,4 @@
+import { WorkspaceFeatureGate } from "@/components/app/WorkspaceFeatureGate";
 import { Pager, pageSlice } from "@/components/app/Pager";
 import { PlatformAccountFilter } from "@/components/app/PlatformAccountFilter";
 import { csvCell } from "@/lib/csv-safe";
@@ -38,7 +39,7 @@ export const Route = createFileRoute("/_authenticated/team-desk")({
       { name: "twitter:card", content: "summary" },
     ],
   }),
-  component: TeamDeskPage,
+  component: () => <WorkspaceFeatureGate feature="team_desk"><TeamDeskPage /></WorkspaceFeatureGate>,
 });
 
 const sel = "h-9 rounded-md border border-input bg-background px-2 text-sm";

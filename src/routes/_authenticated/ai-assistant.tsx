@@ -1,3 +1,4 @@
+import { WorkspaceFeatureGate } from "@/components/app/WorkspaceFeatureGate";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -45,7 +46,7 @@ export const Route = createFileRoute("/_authenticated/ai-assistant")({
       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
-  component: AiAssistantPage,
+  component: () => <WorkspaceFeatureGate feature="ai"><AiAssistantPage /></WorkspaceFeatureGate>,
 });
 
 const TONES = ["Friendly", "Professional", "Playful", "Bold", "Calm & helpful"];

@@ -1,3 +1,4 @@
+import { WorkspaceFeatureGate } from "@/components/app/WorkspaceFeatureGate";
 import { SocialIcon } from "@/components/app/SocialIcon";
 import { SOCIAL_LABELS, SOCIAL_PLATFORMS, cleanSocials, connectedAccountUrl, normalizeSocialUrl, type SocialLink } from "@/lib/social-links";
 import { AccountSelect } from "@/components/app/AccountSelect";
@@ -38,7 +39,7 @@ export const Route = createFileRoute("/_authenticated/revenue")({
       { name: "twitter:card", content: "summary" },
     ],
   }),
-  component: RevenuePage,
+  component: () => <WorkspaceFeatureGate feature="revenue"><RevenuePage /></WorkspaceFeatureGate>,
 });
 
 const area = "w-full rounded-md border border-input bg-background px-3 py-2 text-sm";
@@ -671,9 +672,9 @@ const POLICY_LABELS = [["refund", "Refund policy"], ["fulfilment", "Fulfilment p
 function ExtrasEditor({ value, onChange, onSaveCreator, accounts }: { accounts: Data["accounts"]; value: PageExtras; onChange: (v: PageExtras) => void; onSaveCreator: () => void }) {
   const d = value.deliverables ?? {}; const pol = value.policies ?? {};
   return (
-    <div className="space-y-4 rounded-lg border border-border p-3">
+    <div className="space-y-6 rounded-xl border border-border p-4 sm:p-5 [&>div+div]:border-t [&>div+div]:border-border [&>div+div]:pt-5">
       <div className="space-y-2">
-        <Label>GST & processing fee (added on top of selling price)</Label>
+        <Label className="text-base font-semibold text-foreground">GST & processing fee (added on top of selling price)</Label>
         <div className="flex flex-wrap items-center gap-2">
           {[0, 5, 12, 18, 28].map((g) => (
             <Button key={g} type="button" size="sm" variant={(value.charges?.gstPercent ?? 0) === g ? "default" : "outline"} onClick={() => onChange({ ...value, charges: { ...value.charges, gstPercent: g } })}>{g === 0 ? "No GST" : `GST ${g}%`}</Button>
@@ -687,7 +688,7 @@ function ExtrasEditor({ value, onChange, onSaveCreator, accounts }: { accounts: 
       </div>
       <SocialsEditor accounts={accounts} value={value.socials ?? []} onChange={(socials) => onChange({ ...value, socials })} />
       <div className="space-y-2">
-        <div className="flex items-center justify-between gap-2"><Label>Creator & support (optional)</Label>
+        <div className="flex items-center justify-between gap-2"><Label className="text-base font-semibold text-foreground">Creator & support (optional)</Label>
           <Button type="button" size="sm" variant="outline" disabled={!value.creatorName?.trim() && !value.supportEmail?.trim() && !value.socials?.length} onClick={onSaveCreator}>Save for next pages</Button></div>
         <div className="grid gap-2 sm:grid-cols-2">
           <Input placeholder="Creator name (e.g. Techaasvik)" maxLength={80} value={value.creatorName ?? ""} onChange={(e) => onChange({ ...value, creatorName: e.target.value })} />
@@ -695,7 +696,7 @@ function ExtrasEditor({ value, onChange, onSaveCreator, accounts }: { accounts: 
         </div>
       </div>
       <div className="space-y-2">
-        <Label>"What you'll get" box (optional)</Label>
+        <Label className="text-base font-semibold text-foreground">"What you'll get" box (optional)</Label>
         <Chips label="Quick fill" items={DELIVERABLE_PRESETS.map((x) => x[0])} onPick={(v) => { const x = DELIVERABLE_PRESETS.find((y) => y[0] === v)!; onChange({ ...value, deliverables: { count: x[1], format: x[2], size: x[3] } }); }} />
         <div className="grid gap-2 sm:grid-cols-3">
           <Input placeholder="Items (e.g. 2 resources)" maxLength={40} value={d.count ?? ""} onChange={(e) => onChange({ ...value, deliverables: { ...d, count: e.target.value } })} />
@@ -708,7 +709,7 @@ function ExtrasEditor({ value, onChange, onSaveCreator, accounts }: { accounts: 
       </div>
       <div className="space-y-2">
         <div className="flex items-center justify-between gap-2">
-          <Label>Policies & compliance (optional)</Label>
+          <Label className="text-base font-semibold text-foreground">Policies & compliance (optional)</Label>
           <Button type="button" size="sm" variant="outline" onClick={() => onChange({ ...value, policies: { ...DEFAULT_POLICIES, ...Object.fromEntries(Object.entries(pol).filter(([, v]) => v)) }, disclaimer: value.disclaimer || DEFAULT_DISCLAIMER })}>Fill standard text</Button>
         </div>
         {POLICY_LABELS.map(([k, label]) => (

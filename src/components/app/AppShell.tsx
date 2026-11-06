@@ -42,6 +42,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { useTenant } from "@/hooks/useTenant";
+import { useWorkspaceFeatures } from "@/hooks/useWorkspaceFeatures";
 import { useWorkflowsEnabled } from "@/hooks/useWorkflowsEnabled";
 import { supabase } from "@/integrations/supabase/client";
 import { PageReadyGate } from "@/components/app/PageReadyGate";
@@ -104,12 +105,18 @@ function Sidebar({ pathname }: { pathname: string }) {
   const workflowsOn = useWorkflowsEnabled();
   const fetchStatus = useServerFn(getPlatformStatus);
   const status = useQuery({ queryKey: ["platform-status"], queryFn: () => fetchStatus(), staleTime: 60_000, refetchInterval: 60_000 });
+  const features = useWorkspaceFeatures().data;
+  const postMode = features?.create_post ?? status.data?.createPostMode;
+  const calMode = features?.calendar ?? status.data?.calendarMode;
   const navItems = primaryNav.filter((item) => {
-    if (item.to === "/workflows") return workflowsOn;
-    if (item.to === "/create-post") return Boolean(status.data && status.data.createPostMode !== "hidden");
-    if (item.to === "/calendar") return Boolean(status.data && status.data.calendarMode !== "hidden");
+    if (item.to === "/workflows") return features ? features.workflows === "enabled" : workflowsOn;
+    if (item.to === "/create-post") return Boolean(postMode && postMode !== "hidden");
+    if (item.to === "/calendar") return Boolean(calMode && calMode !== "hidden");
+    if (item.to === "/revenue") return features?.revenue !== "hidden";
+    if (item.to === "/team-desk") return features?.team_desk !== "off";
+    if (item.to === "/ai-assistant") return features?.ai !== "off";
     return true;
-  }).map((item) => ({ ...item, comingSoon: item.to === "/create-post" ? status.data?.createPostMode === "coming_soon" : item.to === "/calendar" ? status.data?.calendarMode === "coming_soon" : false }));
+  }).map((item) => ({ ...item, comingSoon: item.to === "/create-post" ? postMode === "coming_soon" : item.to === "/calendar" ? calMode === "coming_soon" : false }));
   const brand = activeOrg?.brandName?.trim() || "AutoDM";
   const logo = activeOrg?.logoUrl?.trim() || "/logo.webp";
   const color = activeOrg?.brandColor?.trim() || null;
@@ -162,7 +169,7 @@ function Sidebar({ pathname }: { pathname: string }) {
         </div>
         <div className="my-4 border-t" />
         <div className="space-y-1">
-          {secondaryNav.map((item) => (
+          {secondaryNav.filter((item) => item.to !== "/growth" || features?.growth !== "off").map((item) => (
             <NavLink key={item.to} item={item} active={pathname.startsWith(item.to)} />
           ))}
         </div>

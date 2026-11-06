@@ -86,3 +86,23 @@ export function nudgeDue(
   // Keep a 30-minute safety margin before Meta's 24-hour window closes.
   return now - new Date(lastInboundAt).getTime() < 23.5 * 3600_000;
 }
+
+export type CouponDiscount = { type: "percent"; value: number } | { type: "flat"; paise: number };
+
+/** "20% off", "20%", "₹100 off", "Rs 100", "100 OFF" → discount. Unknown → null. */
+export function parseDiscount(label: string | null | undefined): CouponDiscount | null {
+  const s = (label ?? "").replace(/,/g, "");
+  const pct = s.match(/(\d+(?:\.\d+)?)\s*%/);
+  if (pct) { const v = Number(pct[1]); return v > 0 && v <= 100 ? { type: "percent", value: v } : null; }
+  const flat = s.match(/(\d+(?:\.\d+)?)/);
+  if (flat) { const p = Math.round(Number(flat[1]) * 100); return p > 0 ? { type: "flat", paise: p } : null; }
+  return null;
+}
+
+/** Coupons are taken off the maximum price (MRP); without an MRP the selling price is the base. Never below ₹1. */
+export function couponPrice(mrpPaise: number | null, sellingPaise: number, d: CouponDiscount): { basePaise: number; discountPaise: number; pricePaise: number } {
+  const base = mrpPaise && mrpPaise > sellingPaise ? mrpPaise : sellingPaise;
+  const raw = d.type === "percent" ? Math.round((base * d.value) / 100) : d.paise;
+  const pricePaise = Math.max(100, base - raw);
+  return { basePaise: base, discountPaise: base - pricePaise, pricePaise };
+}
