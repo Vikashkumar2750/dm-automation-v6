@@ -3,10 +3,10 @@ type AdminClient = import("@supabase/supabase-js").SupabaseClient;
 
 const inr = (p: number) => `₹${(p / 100).toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
 
-async function ready(orgId: string) {
+async function ready(orgId: string, admin?: AdminClient) {
   const { emailProviderReady } = await import("@/lib/support-email.server");
   if (!emailProviderReady()) return false;
-  const f = await (await import("@/lib/workspace-features.server")).workspaceFeaturesFor(orgId);
+  const f = await (await import("@/lib/workspace-features.server")).workspaceFeaturesFor(orgId, admin);
   return f.emails === "enabled";
 }
 
@@ -26,7 +26,7 @@ function creatorOf(cfg: unknown) {
 export async function sendPurchaseEmails(admin: AdminClient, opts: { pageId: string; email: string; amountPaise: number; origin: string; providerLinkId?: string | null; notes?: Record<string, string> | null }) {
   try {
     const { data: page } = await admin.from("delivery_pages").select("organization_id, title, slug, form_config").eq("id", opts.pageId).maybeSingle();
-    if (!page || !(await ready(page.organization_id as string))) return;
+    if (!page || !(await ready(page.organization_id as string, admin))) return;
     const { sendBrandedEmail } = await import("@/lib/support-email.server");
     const c = creatorOf(page.form_config);
     const url = `${opts.origin.replace(/\/$/, "")}/p/${page.slug}`;
@@ -57,7 +57,7 @@ export async function sendPurchaseEmails(admin: AdminClient, opts: { pageId: str
 export async function sendLeadEmails(admin: AdminClient, opts: { pageId: string; leadId: string; answers: Record<string, string>; origin: string; checkout: boolean }) {
   try {
     const { data: page } = await admin.from("delivery_pages").select("organization_id, title, slug, form_config").eq("id", opts.pageId).maybeSingle();
-    if (!page || !(await ready(page.organization_id as string))) return;
+    if (!page || !(await ready(page.organization_id as string, admin))) return;
     const { sendBrandedEmail } = await import("@/lib/support-email.server");
     const c = creatorOf(page.form_config);
     const url = `${opts.origin.replace(/\/$/, "")}/p/${page.slug}`;

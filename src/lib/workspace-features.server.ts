@@ -1,9 +1,9 @@
 import { resolveWorkspaceFeatures, type WorkspaceFeatures } from "@/lib/workspace-features";
 
 /** Server-side read of a workspace's merged feature switches (Super Admin overrides included). */
-export async function workspaceFeaturesFor(orgId: string): Promise<WorkspaceFeatures> {
-  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const { data } = await supabaseAdmin.from("platform_settings").select("feature_flags").eq("id", true).maybeSingle();
+export async function workspaceFeaturesFor(orgId: string, admin?: any): Promise<WorkspaceFeatures> {
+  const db = admin ?? (await import("@/integrations/supabase/client.server")).supabaseAdmin;
+  const { data } = await db.from("platform_settings").select("feature_flags").eq("id", true).maybeSingle();
   return resolveWorkspaceFeatures((data?.feature_flags ?? {}) as Record<string, unknown>, orgId);
 }
 
