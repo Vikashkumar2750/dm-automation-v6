@@ -20,7 +20,7 @@ import { Sparkles } from "lucide-react";
 import { useTenant } from "@/hooks/useTenant";
 import { Pager, pageSlice } from "@/components/app/Pager";
 import { contactsToCsv, pageLeadsToCsv, extractContactInfo, matchesSegment, type CrmContact, type SegmentFilter } from "@/lib/crm";
-import { setLeadFollowUp, draftLeadFollowUps, addContactTag, deleteBroadcast, deleteSegment, getCrm, getOutreach, removeContactTag, saveContactProfile, saveNudgeSettings, saveSegment, saveSyncSettings, sendBroadcast } from "@/lib/crm.functions";
+import { setLeadFollowUp, draftLeadFollowUps, sendLeadFollowUpEmail, addContactTag, deleteBroadcast, deleteSegment, getCrm, getOutreach, removeContactTag, saveContactProfile, saveNudgeSettings, saveSegment, saveSyncSettings, sendBroadcast } from "@/lib/crm.functions";
 import { listConversations } from "@/lib/inbox.functions";
 
 export const Route = createFileRoute("/_authenticated/contacts")({
@@ -424,6 +424,14 @@ type Draft = Awaited<ReturnType<typeof draftLeadFollowUps>>["drafts"][number];
 function PageLeadsPanel({ orgId }: { orgId: string | null }) {
   const fetchCrm = useServerFn(getCrm);
   const draftFn = useServerFn(draftLeadFollowUps);
+  const sendEmailFn = useServerFn(sendLeadFollowUpEmail);
+  const [sendingId, setSendingId] = useState<string | null>(null);
+  const sendEmail = async (d: { id: string; subject: string; message: string }) => {
+    setSendingId(d.id);
+    try { await sendEmailFn({ data: { organizationId: orgId!, leadId: d.id, subject: d.subject, message: d.message } }); toast.success("Email sent"); qc.invalidateQueries(); }
+    catch (e) { toast.error(e instanceof Error ? e.message : "Could not send"); }
+    finally { setSendingId(null); }
+  };
   const crm = useQuery({ queryKey: ["crm", orgId], enabled: !!orgId, queryFn: () => fetchCrm({ data: { organizationId: orgId! } }) });
   const pageLeads = crm.data?.pageLeads ?? [];
   const [leadPage, setLeadPage] = useState("all");
@@ -553,7 +561,8 @@ function PageLeadsPanel({ orgId }: { orgId: string | null }) {
                   <div className="flex flex-wrap gap-2">
                     <Button size="sm" variant="outline" onClick={() => { navigator.clipboard.writeText(d.message); toast.success("Copied"); }}>Copy</Button>
                     {channel === "whatsapp" && d.phone && <Button size="sm" asChild><a href={waLink(d.phone, d.message)} target="_blank" rel="noreferrer" onClick={() => mark.mutate({ ids: [d.id], status: "sent", channel: "whatsapp" })}>Open in WhatsApp</a></Button>}
-                    {channel === "email" && d.email && <Button size="sm" asChild><a href={`mailto:${d.email}?subject=${encodeURIComponent(d.subject)}&body=${encodeURIComponent(d.message)}`} onClick={() => mark.mutate({ ids: [d.id], status: "sent", channel: "email" })}>Open in email</a></Button>}
+                    {channel === "email" && d.email && <Button size="sm" onClick={() => void sendEmail(d)} disabled={sendingId === d.id}>{sendingId === d.id ? "Sending…" : "Send email"}</Button>}
+                    {channel === "email" && d.email && <Button size="sm" variant="outline" asChild><a href={`mailto:${d.email}?subject=${encodeURIComponent(d.subject)}&body=${encodeURIComponent(d.message)}`} onClick={() => mark.mutate({ ids: [d.id], status: "sent", channel: "email" })}>Open in email</a></Button>}
                     {((channel === "whatsapp" && !d.phone) || (channel === "email" && !d.email)) && <span className="text-xs text-muted-foreground">No {channel === "whatsapp" ? "phone number" : "email"} for this lead — copy instead.</span>}
                   </div>
                 </div>
