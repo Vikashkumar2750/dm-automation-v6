@@ -428,7 +428,7 @@ function PageLeadsPanel({ orgId }: { orgId: string | null }) {
   const [sendingId, setSendingId] = useState<string | null>(null);
   const sendEmail = async (d: { id: string; subject: string; message: string }) => {
     setSendingId(d.id);
-    try { await sendEmailFn({ data: { organizationId: orgId!, leadId: d.id, subject: d.subject, message: d.message } }); toast.success("Email sent"); qc.invalidateQueries(); }
+    try { await sendEmailFn({ data: { organizationId: orgId!, leadId: d.id, subject: d.subject, message: d.message } }); toast.success("Email sent"); void crm.refetch(); }
     catch (e) { toast.error(e instanceof Error ? e.message : "Could not send"); }
     finally { setSendingId(null); }
   };
