@@ -80,6 +80,7 @@ export const saveProduct = createServerFn({ method: "POST" })
     manualUrl: httpsUrl.nullable(), deliveryUrl: contentTarget.nullable().default(null), active: z.boolean(),
   }).parse(d))
   .handler(async ({ data, context }) => {
+    await (await import("@/lib/workspace-features.server")).assertRevenueWritable(data.organizationId);
     assertOwnFile(data.deliveryUrl, data.organizationId);
     const row = { organization_id: data.organizationId, name: data.name, description: data.description, price_paise: data.pricePaise, original_price_paise: data.originalPricePaise, manual_url: data.manualUrl, delivery_url: data.deliveryUrl, active: data.active };
     const q = (context as Ctx).supabase.from("revenue_products");
@@ -109,6 +110,7 @@ export const savePage = createServerFn({ method: "POST" })
     couponCampaignId: z.string().uuid().nullable().default(null), otpRequired: z.boolean().default(false),
   }).parse(d))
   .handler(async ({ data, context }) => {
+    await (await import("@/lib/workspace-features.server")).assertRevenueWritable(data.organizationId);
     assertOwnFile(data.buttonUrl, data.organizationId);
     if (data.productId) {
       const { data: pr } = await (context as Ctx).supabase.from("revenue_products").select("id").eq("id", data.productId).eq("organization_id", data.organizationId).maybeSingle();
@@ -144,6 +146,7 @@ export const saveCampaign = createServerFn({ method: "POST" })
     storeCode: z.string().trim().toUpperCase().regex(/^[A-Z0-9-]{2,30}$/, "Store code: letters, numbers or - only").nullable().default(null),
   }).parse(d))
   .handler(async ({ data, context }) => {
+    await (await import("@/lib/workspace-features.server")).assertRevenueWritable(data.organizationId);
     const row = { organization_id: data.organizationId, name: data.name, prefix: data.prefix, discount_label: data.discountLabel, max_codes: data.maxCodes, expires_at: data.expiresAt, active: data.active,
       kind: data.kind, store_code: data.kind === "store_code" ? (data.storeCode ?? data.prefix) : null };
     const q = (context as Ctx).supabase.from("coupon_campaigns");
@@ -161,6 +164,7 @@ export const deleteRevenueItem = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ organizationId: org, id: z.string().uuid(), table: z.enum(["revenue_products", "delivery_pages", "coupon_campaigns"]) }).parse(d))
   .handler(async ({ data, context }) => {
+    await (await import("@/lib/workspace-features.server")).assertRevenueWritable(data.organizationId);
     const { error } = await (context as Ctx).supabase.from(data.table).delete().eq("id", data.id).eq("organization_id", data.organizationId);
     if (error) throw new Error(error.message);
     return { ok: true };
@@ -172,6 +176,7 @@ export const saveRevenueSettings = createServerFn({ method: "POST" })
     organizationId: org, nudgeEnabled: z.boolean(), nudgeDelayMinutes: z.number().int().min(15).max(1200), nudgeText: z.string().trim().min(1).max(600),
   }).parse(d))
   .handler(async ({ data, context }) => {
+    await (await import("@/lib/workspace-features.server")).assertRevenueWritable(data.organizationId);
     const { error } = await (context as Ctx).supabase.from("revenue_settings").upsert({
       organization_id: data.organizationId, nudge_enabled: data.nudgeEnabled, nudge_delay_minutes: data.nudgeDelayMinutes,
       nudge_text: data.nudgeText, updated_at: new Date().toISOString(),
@@ -220,6 +225,8 @@ export const getPublicPage = createServerFn({ method: "GET" })
     const { data: p } = await supabaseAdmin.from("delivery_pages").select("id, organization_id, title, body, button_label, button_url, views, image_path, show_image, image_alt, countdown_at, expiry_action, expiry_message, form_config, show_price, price_original_paise, price_offer_paise, discount_label, coupon_code, coupon_note, coupon_campaign_id, otp_required, product_id")
       .eq("slug", data.slug).eq("active", true).maybeSingle();
     if (!p) return null;
+    const wf = await (await import("@/lib/workspace-features.server")).workspaceFeaturesFor(p.organization_id as string);
+    if (wf.delivery_pages === "off" || wf.revenue === "hidden") return null;
     await supabaseAdmin.from("delivery_pages").update({ views: (p.views ?? 0) + 1 }).eq("id", p.id);
     await supabaseAdmin.from("revenue_events").insert({ organization_id: p.organization_id, kind: "page_view", ref_id: p.id });
     const { data: product } = p.product_id ? await supabaseAdmin.from("revenue_products").select("price_paise, original_price_paise, active").eq("id", p.product_id).eq("organization_id", p.organization_id).maybeSingle() : { data: null };

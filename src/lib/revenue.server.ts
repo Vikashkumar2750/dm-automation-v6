@@ -197,6 +197,8 @@ export async function startPageCheckout(admin: AdminClient, slug: string, leadId
   const { data: page } = await admin.from("delivery_pages").select("id, organization_id, title, product_id, price_offer_paise, price_original_paise, coupon_code, coupon_note, button_url, countdown_at")
     .eq("slug", slug).eq("active", true).maybeSingle();
   if (!page) throw new Error("Page not found");
+  const wf = await (await import("@/lib/workspace-features.server")).workspaceFeaturesFor(page.organization_id as string);
+  if (wf.delivery_pages === "off" || wf.revenue === "hidden") throw new Error("This page is not available right now");
   if (page.countdown_at && new Date(page.countdown_at as string).getTime() <= Date.now()) throw new Error("This offer has ended");
   const fallback = page.button_url && /^https:\/\//i.test(page.button_url as string) ? (page.button_url as string) : null;
   const { data: lead } = await admin.from("delivery_page_leads").select("id, answers").eq("id", leadId).eq("delivery_page_id", page.id).maybeSingle();
