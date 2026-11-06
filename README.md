@@ -1,4 +1,4 @@
-**Live app**: https://dmautomate.techaasvik.com
+**Live app**: https://autodm.techaasvik.com
 
 - **Ship faster**: describe what you want to build and Lovable handles the code.
 - **Stay in sync**: every change made in Lovable is committed straight to this repository.
