@@ -2,7 +2,10 @@ import { describe, expect, it } from "vitest";
 import { countActiveRules, countMonthlySent, readMonthlyRunUsage, resolveOrgLimits } from "./plan-limits.server";
 import { vi } from "vitest";
 
-vi.mock("@/lib/platform-config.server", () => ({ readPlatformConfig: async () => ({ plans: [] }) }));
+vi.mock("@/lib/platform-config.server", async (importOriginal) => ({
+  ...await importOriginal<typeof import("./platform-config.server")>(),
+  readPlatformConfig: async () => ({ plans: [] }),
+}));
 
 function entitlementClient(parentPlan = "agency", override = false) {
   return { from: (table: string) => ({ select: () => ({ eq: (_key: string, id: string) => ({

@@ -22,9 +22,9 @@ export const getPlanUsage = createServerFn({ method: "GET" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const m = await import("@/lib/plan-limits.server");
     const [limits, dmsThisMonth, activeRules] = await Promise.all([
-      m.resolveOrgLimits(supabaseAdmin, data.organizationId),
+      m.resolveOrgLimits(supabaseAdmin, data.organizationId, { strictReads: true }),
       m.readMonthlyRunUsage(supabaseAdmin, data.organizationId),
-      m.countActiveRules(supabaseAdmin, data.organizationId),
+      m.countActiveRules(supabaseAdmin, data.organizationId, undefined, { strictReads: true }),
     ]);
     return { ...limits, dmsThisMonth, activeRules };
   });
