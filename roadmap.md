@@ -210,3 +210,13 @@ Real Meta + YouTube credentials are available when we reach OAuth phases.
 - [x] Heading hierarchy (shared panels, page titles, delivery editor); homepage product visuals
 - [x] Public browser checks: seven informational/converter pages have canonical/JSON-LD; Contact renders desktop/mobile without horizontal overflow or page errors.
 - [ ] Real payment, email delivery and signed-in Super Admin checks — need live test by owner
+
+## Remaining-work acceptance — Nov 7
+- [x] Final regression suite: 397 tests passed; preview build OK. Ten public pages checked on desktop/phone: HTTP 200, required metadata, no horizontal overflow or page errors; signed-out Growth redirects to sign-in. These checks do not verify authenticated workflows.
+- [x] Added Growth source-specific, code-only server diagnostics; preserves generic browser errors and all RLS/workspace reads. Actual affected-account failure remains unverified, not fixed by this diagnostic change.
+- [x] Reconciled Railway setup with current scheduler/migration inventory; documented encryption, Instagram secret, sender configuration and managed-Cloud credential limitations.
+- [ ] Next: affected user signs in to preview; re-run Growth, customer/admin navigation, mobile layouts, draft retention, filters and exports as that account. Blocker: own-account session mint failed because no auth user matches the requester; do not impersonate another account.
+- [ ] Live integrations: fresh IG comment/follower taps, moderation/publishing, Agency connections and real-account filters. Blocker: connected provider accounts and Railway deployment access.
+- [ ] Buyer acceptance: authorized test payment → return → receipt/access email → private download, including unpaid denial. Blocker: creator/buyer accounts, payment authorization and verified email sender.
+- [ ] Deployment: configure/rotate secrets, verify encryption backfill and scheduler, apply missing schema through an approved migration, complete Meta/Google reviews. Blocker: external service access and credentials.
+- [ ] Copied migration reset remains blocked: supported reset mechanism unavailable; no journal or snapshot deletion performed.

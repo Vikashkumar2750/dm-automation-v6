@@ -25,6 +25,12 @@ export const getGrowthOverview = createServerFn({ method: "GET" })
     const org = data.organizationId;
     const now = Date.now();
     const since = (ms: number) => new Date(now - ms).toISOString();
+    const rejectRead = (source: string, error: { code?: string }) => {
+      // Fixed labels and bounded error codes only: never log rows, query URLs or identities.
+      const code = error.code && /^[A-Z0-9_]{1,32}$/.test(error.code) ? error.code : "unknown";
+      console.error("growth_overview_read_failed", { source, code });
+      throw new Error("Growth insights unavailable. Refresh to retry.");
+    };
     const accFilter = data.socialAccountId ? `social_account_id.eq.${data.socialAccountId}` : data.platform ? `platform.eq.${data.platform}` : "id.not.is.null";
     const [convs, runs, rev, posts, competitors, accounts] = await Promise.all([
       sb.from("conversations").select("id").eq("organization_id", org).or(accFilter).limit(5000),
@@ -35,8 +41,12 @@ export const getGrowthOverview = createServerFn({ method: "GET" })
       sb.from("social_accounts").select("id").eq("organization_id", org),
     ]);
     // Failed reads must never become plausible zero or healthy-looking insights.
-    for (const result of [convs, runs, rev, posts, competitors, accounts]) {
-      if (result.error) throw new Error("Growth insights unavailable. Refresh to retry.");
+    const reads = [
+      ["conversations", convs], ["automation_runs", runs], ["revenue_events", rev],
+      ["posts", posts], ["growth_competitors", competitors], ["social_accounts", accounts],
+    ] as const;
+    for (const [source, result] of reads) {
+      if (result.error) rejectRead(source, result.error);
     }
     const convIds = (convs.data ?? []).map((c) => c.id);
     let inbound: string[] = [];
@@ -48,7 +58,7 @@ export const getGrowthOverview = createServerFn({ method: "GET" })
         .eq("direction", "inbound")
         .gte("created_at", since(60 * DAY))
         .limit(10000);
-      if (error) throw new Error("Growth insights unavailable. Refresh to retry.");
+      if (error) rejectRead("messages", error);
       inbound = (msgs ?? []).map((m) => m.created_at as string);
     }
 
@@ -61,7 +71,10 @@ export const getGrowthOverview = createServerFn({ method: "GET" })
     const events: { stage: FunnelStage; at: string }[] = [
       ...runRows.map((r) => ({ stage: "triggered" as const, at: r.created_at })),
       ...runRows.filter((r) => r.status === "sent").map((r) => ({ stage: "dm_sent" as const, at: r.created_at })),
-      ...revRows.filter((r) => stageOf[r.kind]).map((r) => ({ stage: stageOf[r.kind]!, at: r.created_at })),
+      ...revRows.flatMap((r) => {
+        const stage = stageOf[r.kind];
+        return stage ? [{ stage, at: r.created_at }] : [];
+      }),
     ];
     const funnel = funnelHeatmap(events);
 
