@@ -41,7 +41,7 @@ supabase db dump --db-url "$DB_URL" -f data.sql --use-copy --data-only`}</pre>
     <section className="space-y-3 border-b pb-6">
       <h2 className="text-lg font-semibold">Daily snapshots & restore</h2>
       <p className="text-sm text-muted-foreground">Supabase paid plans keep daily backups (retention depends on plan); Point-in-Time Recovery is an add-on. View them in the Supabase project under Database → Backups. Google Drive scheduling is not configured here.</p>
-      <p className="text-sm text-muted-foreground">Restore targets a daily snapshot in the same project, not an arbitrary time or an individual table. Data written after it is lost, the schema reverts, and the database is unavailable for a few minutes. Export the current state first; storage files are not covered.</p>
+      <p className="text-sm text-muted-foreground">Restoring a daily backup replaces the whole database; data written after it is lost and the project is briefly unavailable. Export the current state first; storage files are not covered.</p>
     </section>
     <section className="space-y-3">
       <div className="flex items-center gap-2"><ShieldCheck className="h-5 w-5 text-primary" /><h2 className="text-lg font-semibold">Inbox account diagnostics</h2></div>
