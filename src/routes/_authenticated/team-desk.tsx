@@ -6,7 +6,7 @@ import { contactLabel } from "@/lib/contact-name";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Copy, Download, Inbox, ShieldCheck } from "lucide-react";
+import { Copy, Download, Inbox, ShieldCheck, RefreshCw } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -64,18 +64,19 @@ function TeamDeskPage() {
 
   return (
     <AppShell>
-      <PageHeader title="Team desk" description="Shared inbox, approvals, client reports and integrations for teams and agencies." actions={<div className="flex flex-wrap items-center gap-2"><PlatformAccountFilter orgId={orgId ?? null} platform={platform} onPlatformChange={setPlatform} accountId={accountId} onAccountChange={setAccountId} /><GuideButton guide="team-desk" /></div>} />
+      <PageHeader title="Team desk" description="Shared inbox, approvals, client reports and integrations for teams and agencies." actions={<div className="flex flex-wrap items-center gap-2"><PlatformAccountFilter orgId={orgId ?? null} platform={platform} onPlatformChange={setPlatform} accountId={accountId} onAccountChange={setAccountId} /><Button variant="outline" size="icon" aria-label="Refresh Team Desk" disabled={desk.isFetching || team.isFetching} onClick={() => { void desk.refetch(); void team.refetch(); }}><RefreshCw className="size-4" /></Button><GuideButton guide="team-desk" /></div>} />
+      {(desk.isError || team.isError) && <p role="alert" className="mb-4 text-sm text-destructive">Team Desk or teammate details could not be refreshed. Previously loaded results may be out of date.</p>}
       {!orgId || !desk.data ? (
-        <p className="text-sm text-muted-foreground">Loading…</p>
+        <p role="status" className="text-sm text-muted-foreground">{desk.isError ? "Team Desk unavailable. Refresh to retry." : "Loading Team Desk…"}</p>
       ) : (
-        <Tabs defaultValue="inbox">
-          <TabsList>
+        <Tabs key={orgId} defaultValue="inbox">
+          <TabsList className="h-auto max-w-full flex-wrap">
             <TabsTrigger value="inbox">Shared inbox</TabsTrigger>
             <TabsTrigger value="approvals">Approvals{pending ? ` (${pending})` : ""}</TabsTrigger>
             <TabsTrigger value="reports">Client reports</TabsTrigger>
             {reviewer && <TabsTrigger value="api">API & webhooks</TabsTrigger>}
           </TabsList>
-          <TabsContent value="inbox"><SharedInbox orgId={orgId} desk={{ ...desk.data, conversations: desk.data.conversations.filter((c) => platform === "all" || c.platform === platform) }} names={names} members={team.data ?? []} /></TabsContent>
+          <TabsContent value="inbox">{team.data ? <SharedInbox key={`${orgId}:${platform}:${accountId}`} orgId={orgId} desk={{ ...desk.data, conversations: desk.data.conversations.filter((c) => platform === "all" || c.platform === platform) }} names={names} members={team.data} /> : <p role="status" className="text-sm text-muted-foreground">{team.isError ? "Teammate details unavailable. Refresh to retry." : "Loading teammate details…"}</p>}</TabsContent>
           <TabsContent value="approvals"><Approvals orgId={orgId} desk={desk.data} names={names} reviewer={reviewer} /></TabsContent>
           <TabsContent value="reports"><Reports />{reviewer && <ClientBilling orgId={orgId} />}</TabsContent>
           {reviewer && <TabsContent value="api"><Integrations orgId={orgId} /></TabsContent>}
@@ -198,7 +199,7 @@ function Approvals({ orgId, desk, names, reviewer }: { orgId: string; desk: Desk
               <span className="rounded bg-muted px-1.5 py-0.5 capitalize">{a.status}</span>
               {a.note && <span>· “{a.note}”</span>}
             </div>
-            <p className="whitespace-pre-wrap text-sm">{a.body}</p>
+            <p className="whitespace-pre-wrap break-words text-sm">{a.body}</p>
             {reviewer && a.status === "pending" && (
               <div className="flex gap-2">
                 <Button size="sm" disabled={m.isPending} onClick={() => m.mutate({ id: a.id, conversationId: a.conversation_id, body: a.body, decision: "approved" })}>Approve & send</Button>
@@ -226,7 +227,8 @@ function Reports() {
     <Panel
       title="Workspaces you manage"
       action={
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <Button size="sm" variant="outline" aria-label="Refresh client reports" disabled={q.isFetching} onClick={() => void q.refetch()}><RefreshCw className="size-4" /></Button>
           <select className={sel} value={days} onChange={(e) => setDays(Number(e.target.value))}>
             <option value={7}>Last 7 days</option><option value={30}>Last 30 days</option><option value={90}>Last 90 days</option>
           </select>
@@ -234,7 +236,8 @@ function Reports() {
         </div>
       }
     >
-      {q.isLoading ? <p className="text-sm text-muted-foreground">Loading…</p> : (
+      {q.isError && <p role="alert" className="mb-3 text-sm text-destructive">Client reports could not be refreshed. Previously loaded results may be out of date.</p>}
+      {!q.data ? <p role="status" className="text-sm text-muted-foreground">{q.isError ? "Client reports unavailable. Refresh to retry." : "Loading client reports…"}</p> : q.data.length === 0 ? <p className="text-sm text-muted-foreground">No managed workspaces in this report.</p> : (
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="text-left text-xs text-muted-foreground"><tr><th className="py-2">Workspace</th><th>Plan</th><th>Messages in</th><th>Replies out</th><th>Automation runs</th><th>Active chats</th></tr></thead>
@@ -282,9 +285,10 @@ function ClientBilling({ orgId }: { orgId: string }) {
   };
   return (
     <div className="mt-4">
-      <Panel title="Client billing" action={<Button size="sm" variant="outline" onClick={csv} disabled={!rows.length}><Download className="mr-1 h-4 w-4" />Invoices CSV</Button>}>
-        <p className="mb-3 text-sm text-muted-foreground">Bill each client workspace. Paste your own payment link (e.g. Razorpay) so the client can pay, then mark it paid. Due: <b>₹{sum.due}</b> · Received: <b>₹{sum.paid}</b></p>
-        {clients.length === 0 ? <p className="text-sm text-muted-foreground">No client workspaces yet. Create or join a client workspace to bill it.</p> : (
+      <Panel title="Client billing" action={<div className="flex flex-wrap gap-2"><Button size="sm" variant="outline" aria-label="Refresh client billing" disabled={list.isFetching || ws.isFetching} onClick={() => { void list.refetch(); void ws.refetch(); }}><RefreshCw className="size-4" /></Button><Button size="sm" variant="outline" onClick={csv} disabled={!rows.length || !ws.data}><Download className="mr-1 h-4 w-4" />Invoices CSV</Button></div>}>
+        {(list.isError || ws.isError) && <p role="alert" className="mb-3 text-sm text-destructive">Invoice or client details could not be refreshed. Previously loaded results may be out of date.</p>}
+        <p className="mb-3 text-sm text-muted-foreground">Recorded invoices: due <b>{list.data ? `₹${sum.due}` : "—"}</b> · marked paid <b>{list.data ? `₹${sum.paid}` : "—"}</b>. Paid status is manually recorded, not a verified payment settlement.</p>
+        {!ws.data ? <p role="status" className="text-sm text-muted-foreground">{ws.isError ? "Client workspaces unavailable." : "Loading client workspaces…"}</p> : clients.length === 0 ? <p className="text-sm text-muted-foreground">No client workspaces yet. Create or join a client workspace to bill it.</p> : (
           <div className="mb-4 grid gap-2 md:grid-cols-6">
             <select className={sel + " md:col-span-2"} value={form.client} onChange={(e) => setForm({ ...form, client: e.target.value })}>
               <option value="">Choose client…</option>
@@ -297,7 +301,7 @@ function ClientBilling({ orgId }: { orgId: string }) {
             <Input className="md:col-span-6" placeholder="Note (optional)" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
           </div>
         )}
-        {rows.length === 0 ? <p className="text-sm text-muted-foreground">No invoices yet.</p> : (
+        {!list.data ? <p role="status" className="text-sm text-muted-foreground">{list.isError ? "Invoices unavailable. Refresh to retry." : "Loading invoices…"}</p> : rows.length === 0 ? <p className="text-sm text-muted-foreground">No invoices yet.</p> : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="text-left text-xs text-muted-foreground"><tr><th className="py-2">Client</th><th>Period</th><th>Amount</th><th>Status</th><th></th></tr></thead>
@@ -343,6 +347,7 @@ function Integrations({ orgId }: { orgId: string }) {
 
   return (
     <div className="grid gap-4 lg:grid-cols-2">
+      <div className="flex flex-wrap items-center gap-3 lg:col-span-2"><Button size="sm" variant="outline" disabled={q.isFetching} onClick={() => void q.refetch()}><RefreshCw className="size-4" /> Refresh integrations</Button>{q.isError && <p role="alert" className="text-sm text-destructive">Integrations could not be refreshed. Previously loaded results may be out of date.</p>}{!q.data && <p role="status" className="text-sm text-muted-foreground">{q.isError ? "Integrations unavailable." : "Loading integrations…"}</p>}</div>
       {shown && (
         <div className="rounded-md border border-primary bg-primary/5 p-3 text-sm lg:col-span-2">
           Copy this now — it will not be shown again:
@@ -361,7 +366,7 @@ function Integrations({ orgId }: { orgId: string }) {
         <ul className="space-y-2 text-sm">
           {(q.data?.keys ?? []).map((k) => (
             <li key={k.id} className="flex items-center justify-between gap-2 rounded border border-border p-2">
-              <div><div className="font-medium">{k.name}</div><div className="font-mono text-xs text-muted-foreground">{k.prefix}… · {k.revoked_at ? "revoked" : k.last_used_at ? `used ${new Date(k.last_used_at).toLocaleString()}` : "never used"}</div></div>
+              <div className="min-w-0 break-words"><div className="font-medium">{k.name}</div><div className="font-mono text-xs text-muted-foreground">{k.prefix}… · {k.revoked_at ? "revoked" : k.last_used_at ? `used ${new Date(k.last_used_at).toLocaleString()}` : "never used"}</div></div>
               {!k.revoked_at && <Button size="sm" variant="outline" onClick={() => run(rmKey({ data: { organizationId: orgId, id: k.id } }))}>Revoke</Button>}
             </li>
           ))}
