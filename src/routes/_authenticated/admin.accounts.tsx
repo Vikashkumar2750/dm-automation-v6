@@ -1,11 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Share2 } from "lucide-react";
+import { RefreshCw, Share2 } from "lucide-react";
 
 import { AdminTable } from "@/components/app/AdminTable";
 import { EmptyState, PageHeader, Panel, StatusBadge } from "@/components/app/primitives";
 import { listAdminAccounts } from "@/lib/admin.functions";
+import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/_authenticated/admin/accounts")({
   head: () => ({
@@ -23,11 +24,12 @@ export const Route = createFileRoute("/_authenticated/admin/accounts")({
 
 function AccountsPage() {
   const fetchAccounts = useServerFn(listAdminAccounts);
-  const { data, isLoading } = useQuery({
+  const accounts = useQuery({
     queryKey: ["admin-accounts"],
     queryFn: () => fetchAccounts(),
     retry: false,
   });
+  const { data, isLoading } = accounts;
 
   const rows = data ?? [];
 
@@ -36,11 +38,13 @@ function AccountsPage() {
       <PageHeader
         title="Social Accounts"
         description="Connection status and token expiry for every workspace."
+        actions={<Button variant="outline" size="icon" aria-label="Refresh social accounts" title="Refresh social accounts" disabled={accounts.isFetching} onClick={() => void accounts.refetch()}><RefreshCw className={accounts.isFetching ? "size-4 animate-spin" : "size-4"} /></Button>}
       />
-      <Panel title={`${rows.length} accounts`}>
+      {accounts.isError && <div role="alert" className="border-l-2 border-warning bg-warning-soft px-4 py-3 text-sm">Social accounts could not be refreshed{data ? "; previously loaded records are shown." : "."}</div>}
+      <Panel title={data ? `${rows.length} loaded accounts` : "Social accounts"}>
         {isLoading ? (
           <p className="text-sm text-muted-foreground">Loading…</p>
-        ) : rows.length === 0 ? (
+        ) : !data ? <p className="text-sm text-muted-foreground">Account data unavailable.</p> : rows.length === 0 ? (
           <EmptyState
             icon={Share2}
             title="No accounts connected"

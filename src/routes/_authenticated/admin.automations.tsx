@@ -1,11 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Workflow } from "lucide-react";
+import { RefreshCw, Workflow } from "lucide-react";
 
 import { AdminTable } from "@/components/app/AdminTable";
 import { EmptyState, PageHeader, Panel, StatusBadge } from "@/components/app/primitives";
 import { listAdminAutomations } from "@/lib/admin.functions";
+import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/_authenticated/admin/automations")({
   head: () => ({
@@ -23,23 +24,26 @@ export const Route = createFileRoute("/_authenticated/admin/automations")({
 
 function AdminAutomationsPage() {
   const fetchRules = useServerFn(listAdminAutomations);
-  const { data, isLoading } = useQuery({
+  const rules = useQuery({
     queryKey: ["admin-automations"],
     queryFn: () => fetchRules(),
     retry: false,
   });
+  const { data, isLoading } = rules;
   const rows = data ?? [];
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Automations"
-        description="Rules across every workspace, with runs in the last 24 hours."
+        description="Workspace rules and loaded run events from the last 24 hours."
+        actions={<Button variant="outline" size="icon" aria-label="Refresh automation rules" title="Refresh automation rules" disabled={rules.isFetching} onClick={() => void rules.refetch()}><RefreshCw className={rules.isFetching ? "size-4 animate-spin" : "size-4"} /></Button>}
       />
-      <Panel title={`${rows.length} rules`}>
+      {rules.isError && <div role="alert" className="border-l-2 border-warning bg-warning-soft px-4 py-3 text-sm">Rules could not be refreshed{data ? "; previously loaded records are shown." : "."}</div>}
+      <Panel title={data ? `${rows.length} loaded rules` : "Automation rules"} description="Run events are activity records, not distinct billable usage journeys.">
         {isLoading ? (
           <p className="text-sm text-muted-foreground">Loading…</p>
-        ) : rows.length === 0 ? (
+        ) : !data ? <p className="text-sm text-muted-foreground">Automation data unavailable.</p> : rows.length === 0 ? (
           <EmptyState
             icon={Workflow}
             title="No automation rules"
@@ -58,7 +62,7 @@ function AdminAutomationsPage() {
                 header: "Platform",
                 cell: (r) => <span className="capitalize">{r.platform ?? "all"}</span>,
               },
-              { header: "Runs (24h)", cell: (r) => <span className="num">{r.runs24h}</span> },
+              { header: "Loaded run events (24h)", cell: (r) => <span className="num">{r.runs24h}</span> },
               {
                 header: "State",
                 cell: (r) => (

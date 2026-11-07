@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Pencil, Users } from "lucide-react";
+import { Pencil, RefreshCw, Users } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -53,11 +53,12 @@ function UsersPage() {
     onError: (e: Error) => toast.error(e.message || "Action failed"),
   });
 
-  const { data, isLoading } = useQuery({
+  const users = useQuery({
     queryKey: ["admin-users"],
     queryFn: () => fetchUsers(),
     retry: false,
   });
+  const { data, isLoading } = users;
 
   const roleMutation = useMutation({
     mutationFn: (vars: { userId: string; grant: boolean }) => setSuper({ data: vars }),
@@ -111,22 +112,24 @@ function UsersPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Users" description="Accounts, workspace memberships and platform access." />
+      <PageHeader title="Users" description="Accounts, workspace memberships and platform access." actions={<Button variant="outline" size="icon" aria-label="Refresh users" title="Refresh users" disabled={users.isFetching || suspended.isFetching} onClick={() => { void users.refetch(); void suspended.refetch(); }}><RefreshCw className={users.isFetching || suspended.isFetching ? "size-4 animate-spin" : "size-4"} /></Button>} />
+      {(users.isError || suspended.isError) && <div role="alert" className="border-l-2 border-warning bg-warning-soft px-4 py-3 text-sm">{users.isError ? "Users could not be refreshed. " : ""}{suspended.isError ? "Suspension status could not be refreshed. " : ""}Previously loaded records may be out of date.</div>}
 
       <Panel
-        title={`${rows.length} users`}
+        title={data ? `${rows.length} of ${data.length} loaded users` : "Users"}
         action={
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search name or email"
-            className="h-9 w-56"
+            aria-label="Search users by name or email"
+            className="h-9 w-full sm:w-56"
           />
         }
       >
         {isLoading ? (
           <p className="text-sm text-muted-foreground">Loading…</p>
-        ) : rows.length === 0 ? (
+        ) : !data ? <p className="text-sm text-muted-foreground">User data unavailable.</p> : rows.length === 0 ? (
           <EmptyState icon={Users} title="No users" description="No users match this search." />
         ) : (
           <AdminTable

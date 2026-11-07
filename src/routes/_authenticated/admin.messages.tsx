@@ -1,11 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { MessageSquare } from "lucide-react";
+import { MessageSquare, RefreshCw } from "lucide-react";
 
 import { AdminTable } from "@/components/app/AdminTable";
 import { EmptyState, PageHeader, Panel, StatusBadge } from "@/components/app/primitives";
 import { listAdminMessages } from "@/lib/admin.functions";
+import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/_authenticated/admin/messages")({
   head: () => ({
@@ -23,12 +24,13 @@ export const Route = createFileRoute("/_authenticated/admin/messages")({
 
 function AdminMessagesPage() {
   const fetchMessages = useServerFn(listAdminMessages);
-  const { data, isLoading } = useQuery({
+  const messages = useQuery({
     queryKey: ["admin-messages"],
     queryFn: () => fetchMessages(),
     retry: false,
     refetchInterval: 60_000,
   });
+  const { data, isLoading } = messages;
   const rows = data ?? [];
 
   return (
@@ -36,11 +38,13 @@ function AdminMessagesPage() {
       <PageHeader
         title="Messages"
         description="Latest 100 messages platform-wide, for support and abuse investigation."
+        actions={<Button variant="outline" size="icon" aria-label="Refresh messages" title="Refresh messages" disabled={messages.isFetching} onClick={() => void messages.refetch()}><RefreshCw className={messages.isFetching ? "size-4 animate-spin" : "size-4"} /></Button>}
       />
-      <Panel title="Recent traffic">
+      {messages.isError && <div role="alert" className="border-l-2 border-warning bg-warning-soft px-4 py-3 text-sm">Messages could not be refreshed{data ? "; previously loaded records are shown." : "."}</div>}
+      <Panel title={data ? `${rows.length} recent messages (up to 100)` : "Recent traffic"}>
         {isLoading ? (
           <p className="text-sm text-muted-foreground">Loading…</p>
-        ) : rows.length === 0 ? (
+        ) : !data ? <p className="text-sm text-muted-foreground">Message data unavailable.</p> : rows.length === 0 ? (
           <EmptyState
             icon={MessageSquare}
             title="No messages yet"
