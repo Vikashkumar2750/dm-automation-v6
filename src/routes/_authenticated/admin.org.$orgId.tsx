@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { AdminSafetyCapsPanel } from "@/components/app/AdminSafetyCapsPanel";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Input } from "@/components/ui/input";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { AlertTriangle, ArrowLeft } from "lucide-react";
+import { AlertTriangle, ArrowLeft, RefreshCw } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 
 import { AdminTable } from "@/components/app/AdminTable";
@@ -52,9 +53,25 @@ const DURATIONS = [
   { value: "0", label: "No end date" },
 ];
 
+const DETAIL_TABS = [
+  ["overview", "Overview"], ["members", "Members"], ["accounts", "Social Accounts"],
+  ["automations", "Automations"], ["features", "Features & Access"], ["limits", "Usage & Limits"],
+  ["safety", "Safety Controls"], ["billing", "Billing & Plan"], ["activity", "Activity & Errors"],
+] as const;
+
+/** Mount on first visit, retain drafts thereafter, and isolate state per workspace. */
+function DetailTab({ value, active, visited, children }: { value: string; active: string; visited: string[]; children: ReactNode }) {
+  if (!visited.includes(value)) return null;
+  return <TabsContent forceMount value={value} hidden={active !== value} className="space-y-6 data-[state=inactive]:hidden">{children}</TabsContent>;
+}
+
 
 function OrgDetailPage() {
   const { orgId } = Route.useParams();
+  return <OrgDetailContent key={orgId} orgId={orgId} />;
+}
+
+function OrgDetailContent({ orgId }: { orgId: string }) {
   const fetchOrg = useServerFn(getAdminOrganization);
   const changePlan = useServerFn(setOrganizationPlan);
   const setPause = useServerFn(setOrganizationAutomationPause);
@@ -63,6 +80,8 @@ function OrgDetailPage() {
   const navigate = useNavigate();
   const removeOrg = useServerFn(deleteAdminOrganization);
   const [confirmName, setConfirmName] = useState("");
+  const [tab, setTab] = useState("overview");
+  const [visited, setVisited] = useState(["overview"]);
   const deleteMutation = useMutation({
     mutationFn: () => removeOrg({ data: { organizationId: orgId, confirmName: confirmName.trim() } }),
     onSuccess: () => {
@@ -73,11 +92,13 @@ function OrgDetailPage() {
     onError: (e: Error) => toast.error(e.message || "Could not delete the workspace"),
   });
 
-  const { data, isLoading, error } = useQuery({
+  const orgQuery = useQuery({
     queryKey: ["admin-org", orgId],
     queryFn: () => fetchOrg({ data: { organizationId: orgId } }),
     retry: false,
   });
+  const { data, isLoading, error } = orgQuery;
+  const tabProps = { active: tab, visited };
 
   const invalidate = () => void queryClient.invalidateQueries({ queryKey: ["admin-org", orgId] });
 
@@ -114,8 +135,9 @@ function OrgDetailPage() {
   if (isLoading) return <p className="text-sm text-muted-foreground">Loading…</p>;
   if (error || !data)
     return (
-      <Panel title="Not found">
-        <p className="text-sm text-muted-foreground">This workspace could not be loaded.</p>
+      <Panel title="Workspace unavailable">
+        <p className="mb-4 text-sm text-muted-foreground">This workspace could not be loaded.</p>
+        <Button variant="outline" onClick={() => void orgQuery.refetch()} disabled={orgQuery.isFetching}><RefreshCw className="size-4" />Try again</Button>
       </Panel>
     );
 
@@ -132,7 +154,26 @@ function OrgDetailPage() {
         title={data.org.name}
         description={`Created ${new Date(data.org.created_at).toLocaleDateString()} · ${data.org.slug}`}
         actions={
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <Button variant="outline" size="icon" aria-label="Refresh workspace" title="Refresh workspace" disabled={orgQuery.isFetching} onClick={() => void orgQuery.refetch()}><RefreshCw className={orgQuery.isFetching ? "size-4 animate-spin" : "size-4"} /></Button>
+            <StatusBadge tone="info">{data.org.plan}</StatusBadge>
+            <StatusBadge tone={data.org.automationsPaused ? "warning" : "success"}>{data.org.automationsPaused ? "Paused" : "Automations enabled"}</StatusBadge>
+            <Button
+              disabled={pauseMutation.isPending}
+              variant={data.org.automationsPaused ? "default" : "outline"}
+              onClick={() => pauseMutation.mutate(!data.org.automationsPaused)}
+            >
+              {data.org.automationsPaused ? "Resume automations" : "Pause automations"}
+            </Button>
+          </div>
+        }
+      />
+
+      <Tabs value={tab} onValueChange={(value) => { setTab(value); setVisited((previous) => previous.includes(value) ? previous : [...previous, value]); }} className="min-w-0">
+        <TabsList aria-label="Workspace detail sections" className="mb-4 w-full justify-start">{DETAIL_TABS.map(([value, label]) => <TabsTrigger key={value} value={value}>{label}</TabsTrigger>)}</TabsList>
+        <DetailTab value="billing" {...tabProps}>
+          <Panel title="Plan assignment">
+          <div className="flex flex-wrap items-center gap-3">
             <Select value={months} onValueChange={setMonths}>
               <SelectTrigger className="h-9 w-[150px]" aria-label="Plan duration">
                 <SelectValue />
@@ -147,6 +188,7 @@ function OrgDetailPage() {
             </Select>
             <Select
               value={data.org.plan}
+              disabled={planMutation.isPending}
               onValueChange={(p) => planMutation.mutate(p as (typeof PLANS)[number])}
             >
               <SelectTrigger className="h-9 w-[140px] capitalize">
@@ -160,16 +202,11 @@ function OrgDetailPage() {
                 ))}
               </SelectContent>
             </Select>
-            <Button
-              variant={data.org.automationsPaused ? "default" : "outline"}
-              onClick={() => pauseMutation.mutate(!data.org.automationsPaused)}
-            >
-              {data.org.automationsPaused ? "Resume automations" : "Pause automations"}
-            </Button>
           </div>
-        }
-      />
+          </Panel>
+        </DetailTab>
 
+      <DetailTab value="overview" {...tabProps}>
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard icon={Building2} label="Members" value={String(data.org.members)} />
         <StatCard icon={Share2} label="Connected accounts" value={String(data.org.accounts)} />
@@ -185,7 +222,10 @@ function OrgDetailPage() {
           sub={`${data.usage.postsScheduled} posts scheduled`}
         />
       </div>
+      <AdminWorkspaceHealthPanel orgId={orgId} />
+      </DetailTab>
 
+      <DetailTab value="accounts" {...tabProps}>
       <Panel title="Social accounts">
         {data.accounts.length === 0 ? (
           <p className="text-sm text-muted-foreground">No accounts connected.</p>
@@ -213,13 +253,20 @@ function OrgDetailPage() {
           />
         )}
       </Panel>
+      </DetailTab>
 
+      <DetailTab value="features" {...tabProps}>
       <AdminWorkspaceFeaturesPanel orgId={orgId} />
-      <AdminWorkspaceHealthPanel orgId={orgId} />
+      </DetailTab>
+      <DetailTab value="limits" {...tabProps}>
       <AdminPlanLimitsPanel orgId={orgId} />
+      </DetailTab>
+      <DetailTab value="safety" {...tabProps}>
       <AdminSafetyCapsPanel orgId={orgId} />
       <AdminSafetyPanel orgId={orgId} />
+      </DetailTab>
 
+      <DetailTab value="automations" {...tabProps}>
       <Panel title="Automation test console">
         <div className="space-y-3 text-sm">
           <p className="text-xs text-muted-foreground">
@@ -279,14 +326,15 @@ function OrgDetailPage() {
           />
         )}
       </Panel>
+      </DetailTab>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <DetailTab value="members" {...tabProps}>
         <Panel title="Team">
           <div className="space-y-2">
             {data.members.map((m) => (
               <div
                 key={m.user_id}
-                className="flex items-center justify-between rounded-lg border px-3 py-2 text-sm"
+                className="flex min-w-0 items-center justify-between gap-3 rounded-lg border px-3 py-2 text-sm"
               >
                 <div className="min-w-0">
                   <p className="truncate font-medium">{m.full_name ?? m.email ?? m.user_id}</p>
@@ -297,7 +345,9 @@ function OrgDetailPage() {
             ))}
           </div>
         </Panel>
+      </DetailTab>
 
+      <DetailTab value="activity" {...tabProps}>
         <Panel title="Recent errors">
           {data.recentErrors.length === 0 ? (
             <p className="text-sm text-muted-foreground">No recent errors.</p>
@@ -318,8 +368,9 @@ function OrgDetailPage() {
             </div>
           )}
         </Panel>
-      </div>
+      </DetailTab>
 
+      </Tabs>
       <Panel title="Danger zone">
         <div className="space-y-3">
           <p className="text-sm text-muted-foreground">
