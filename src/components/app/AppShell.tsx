@@ -141,7 +141,6 @@ function Sidebar({ pathname }: { pathname: string }) {
     .filter((g) => g.items.length > 0);
   const { openGroup, toggleGroup } = useSidebarGroup();
   const navigateTo = useNavigate();
-  const pathname = useRouterState({ select: (s) => s.location.pathname });
   const brand = activeOrg?.brandName?.trim() || "AutoDM";
   const logo = activeOrg?.logoUrl?.trim() || "/logo.webp";
   const color = activeOrg?.brandColor?.trim() || null;
