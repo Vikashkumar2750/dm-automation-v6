@@ -3,7 +3,7 @@ import { adminWorkspacesToCsv, filterAdminWorkspaces } from "./admin-directory";
 const rows = [
   { name: "Beta", slug: "client-02", plan: "agency", automationsPaused: true, accounts: 4, created_at: "2026-11-01" },
   { name: "Alpha", slug: "owner-01", plan: "starter", automationsPaused: false, accounts: 1, created_at: "2026-11-02" },
-] as const;
+] satisfies [{ name: string; slug: string; plan: string; automationsPaused: boolean; accounts: number; created_at: string }, { name: string; slug: string; plan: string; automationsPaused: boolean; accounts: number; created_at: string }];
 it("combines slug search with exact plan and pause filters", () => {
   expect(filterAdminWorkspaces(rows, " CLIENT-02 ", "agency", "paused", "newest")).toEqual([rows[0]]);
   expect(filterAdminWorkspaces(rows, "", "agency", "active", "newest")).toEqual([]);
