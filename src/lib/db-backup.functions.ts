@@ -12,7 +12,7 @@ async function adminFor(context: Ctx) {
 }
 
 async function audit(admin: any, userId: string, action: string, details: Record<string, unknown>) {
-  await admin.from("platform_audit_log").insert({ actor_id: userId, action, details } as never).then(() => null, () => null);
+  await admin.from("platform_audit_log").insert({ actor_user_id: userId, action, target_type: "database", detail: details } as never).then(() => null, () => null);
 }
 
 export const listBackups = createServerFn({ method: "POST" })
