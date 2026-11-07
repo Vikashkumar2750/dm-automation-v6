@@ -235,6 +235,8 @@ Real Meta + YouTube credentials are available when we reach OAuth phases.
 - [x] Checked the remaining GitHub administration alternative: the repository has one Build workflow (source analysis only), no migration step, and zero repository Actions secrets. No existing authorized live-database repair path was found through this connection; no workflow, secrets, database, provider actions or production data changed. All remaining items above stay explicitly blocked/skipped.
 
 ## Database recovery follow-up — Nov 7
+- [ ] Final continuation: validate dump requests, require attributable audit before download, prevent caching and false success on failed streams; align hosting documentation.
+- [ ] Google Drive connection requested Nov 7 at 17:42 UTC and declined; automatic full backups remain blocked by Drive authorization plus Railway scheduler/runtime setup.
 - [x] Current continuation: removed callable legacy partial-backup operations and retired their cron (authenticated requests return 410); SQL audit must save before execution and contains no query text. SQL always asks for confirmation, clears stale results and reports failures without asserting rollback.
 - [x] Verification: 399 tests pass across 61 files; latest preview build OK. Anonymous dump and unsigned backup-cron requests return 401; both live and local admin pages redirect this fresh signed-out browser to /auth. These checks do not verify signed-in execution or restore.
 - [ ] Verify cleaned Database Backups page and SQL audit on deployed Railway release (requires current authorized live session; no destructive SQL or full restore performed).
