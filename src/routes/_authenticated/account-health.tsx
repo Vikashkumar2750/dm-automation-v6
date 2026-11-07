@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { ShieldCheck, Webhook } from "lucide-react";
+import { ShieldCheck, Webhook, RefreshCw } from "lucide-react";
 
 import { AppShell } from "@/components/app/AppShell";
 import { DeliveryHealth } from "@/components/app/DeliveryHealth";
@@ -41,7 +41,7 @@ function expiryTone(iso: string | null, platform: "instagram" | "facebook" | "yo
   if (platform === "youtube") {
     return { tone: "success" as const, label: "Auto-renews" };
   }
-  if (!iso) return { tone: "neutral" as const, label: "No expiry" };
+  if (!iso) return { tone: "neutral" as const, label: "Expiry not recorded" };
   const days = Math.round((new Date(iso).getTime() - Date.now()) / 86_400_000);
   if (days < 0) return { tone: "danger" as const, label: "Access expired" };
   if (days <= 7) return { tone: "warning" as const, label: `Expires in ${days}d` };
@@ -69,7 +69,8 @@ function AccountHealthPage() {
   });
 
   const rows = accounts.data ?? [];
-  const failing = (events.data ?? []).filter((e) => e.status === "failed" || !e.signature_valid);
+  const failing = (events.data ?? []).filter((e) => e.signature_valid && e.status === "failed");
+  const rejected = (events.data ?? []).filter((e) => !e.signature_valid);
 
   return (
     <AppShell>
@@ -77,15 +78,16 @@ function AccountHealthPage() {
         title="Account Health"
         description="Connection status, permissions and incoming event health for every connected account."
         actions={
-          <Button asChild variant="outline">
+          <div className="flex flex-wrap gap-2"><Button variant="outline" size="icon" aria-label="Refresh account health" disabled={accounts.isFetching || events.isFetching} onClick={() => { void accounts.refetch(); void events.refetch(); }}><RefreshCw className="size-4" /></Button><Button asChild variant="outline">
             <Link to="/social-accounts">Manage accounts</Link>
-          </Button>
+          </Button></div>
         }
       />
+      {(accounts.isError || events.isError) && <p role="alert" className="mb-4 text-sm text-destructive">Account or event details could not be refreshed. Previously loaded results may be out of date.</p>}
 
       <div className="space-y-6">
         <Panel title="Connected accounts">
-          {rows.length === 0 ? (
+          {!accounts.data ? <p role="status" className="text-sm text-muted-foreground">{accounts.isError ? "Accounts unavailable. Refresh to retry." : "Loading accounts…"}</p> : rows.length === 0 ? (
             <EmptyState
               icon={ShieldCheck}
               title="No accounts connected"
@@ -106,7 +108,7 @@ function AccountHealthPage() {
                     className="flex flex-wrap items-center gap-3 rounded-xl border px-4 py-3"
                   >
                     <PlatformBadge platform={a.platform} withLabel={a.name} />
-                    <span className="text-xs text-muted-foreground">
+                    <span className="min-w-0 break-all text-xs text-muted-foreground">
                       {a.handle ? `@${a.handle}` : a.external_id}
                     </span>
                     <div className="ml-auto flex flex-wrap items-center gap-2">
@@ -138,12 +140,13 @@ function AccountHealthPage() {
 
         {orgId && <DeliveryHealth orgId={orgId} />}
 
-        <Panel title="Incoming event problems">
-          {failing.length === 0 ? (
+        <Panel title="Verified incoming failures · latest 20 events">
+          <p className="mb-3 text-xs text-muted-foreground">Failures in the latest 20 loaded events, not all delivery history. Rejected unsigned requests are excluded from delivery failures.</p>
+          {!events.data ? <p role="status" className="text-sm text-muted-foreground">{events.isError ? "Incoming events unavailable. Refresh to retry." : "Loading incoming events…"}</p> : failing.length === 0 ? (
             <EmptyState
               icon={Webhook}
-              title="No problems found"
-              description="Failed or unverified events from Instagram and Facebook will be listed here."
+              title="No verified failures in loaded events"
+              description="This limited sample does not confirm all deliveries are healthy."
             />
           ) : (
             <div className="space-y-2">
@@ -156,7 +159,7 @@ function AccountHealthPage() {
                     <span className="font-medium capitalize">{e.platform ?? "unknown"}</span>
                     <span className="text-muted-foreground"> · {e.event_type}</span>
                     {e.error ? (
-                      <div className="truncate text-xs text-danger">{e.error}</div>
+                      <div className="break-words text-xs text-destructive">{e.error}</div>
                     ) : null}
                   </div>
                   <div className="flex items-center gap-2">
@@ -171,6 +174,7 @@ function AccountHealthPage() {
             </div>
           )}
         </Panel>
+        {events.data && rejected.length > 0 && <Panel title={`Rejected unsigned requests · ${rejected.length} in loaded events`}><p className="text-sm text-muted-foreground">These requests failed signature verification and were rejected. They may be public callback probes and are not verified Meta delivery failures.</p></Panel>}
       </div>
     </AppShell>
   );
