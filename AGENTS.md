@@ -40,3 +40,4 @@
 - Dashboard overview reuses workspace-scoped queries and useWorkspaceFeatures for shortcuts; only real source metrics are shown — presentation changes must not add delivery calls or invent business counts.
 - Dashboard setup derives milestones from confirmed source reads; sales reuses the Revenue query and explicitly separates its fixed event window from the capped lead sample — prevents invented completion or misleading totals.
 - Item links carry a workspace ID and validated item ID; resolve only against active-workspace reads and never auto-switch workspaces — prevents stale search links from selecting another tenant's chat or post.
+- Admin overview derives priorities from its existing protected overview read, labels event samples explicitly, and keeps unsigned probes separate from verified delivery failures — no new delivery calls or misleading health totals.
