@@ -19,6 +19,8 @@ import {
 import { getPlatformOverview, grantOrganizationPlan, listPlanOrders } from "@/lib/admin.functions";
 import { formatPaise } from "@/lib/plans";
 import { PlanEditorPanel } from "@/components/app/PlatformConfigPanels";
+import { getPlatformConfig } from "@/lib/platform-config.functions";
+import { summarizePlanOrders } from "@/lib/admin-billing-summary";
 
 export const Route = createFileRoute("/_authenticated/admin/plans")({
   head: () => ({
@@ -34,15 +36,12 @@ export const Route = createFileRoute("/_authenticated/admin/plans")({
   component: PlansPage,
 });
 
-const PRICING: Record<string, { price: string; entitlements: string }> = {
-  starter: { price: "₹9 for 3 days trial", entitlements: "1 account each · automation · AI analysis" },
-  pro: { price: "₹59/mo · ₹299/6mo · ₹599/yr", entitlements: "5 accounts each · multi-publish · priority support" },
-  agency: { price: "Custom", entitlements: "Unlimited accounts · client workspaces · branding" },
-};
-
 function PlansPage() {
   const fetchOverview = useServerFn(getPlatformOverview);
   const fetchOrders = useServerFn(listPlanOrders);
+  const fetchConfig = useServerFn(getPlatformConfig);
+  const config = useQuery({ queryKey: ["platform-config"], queryFn: () => fetchConfig(), retry: false });
+  const pricing = Object.fromEntries((config.data?.plans ?? []).map((plan) => [plan.key, { price: plan.headline, entitlements: plan.perks.join(" · ") }]));
   const grantPlan = useServerFn(grantOrganizationPlan);
   const queryClient = useQueryClient();
 
@@ -64,7 +63,7 @@ function PlansPage() {
   });
 
   const orgs = data?.organizations ?? [];
-  const mrr = orgs.reduce((sum, o) => sum + (o.plan === "pro" ? 59 : 0), 0);
+  const billing = summarizePlanOrders(orders.data ?? []);
 
   async function onGrant() {
     if (!orgId) return;
@@ -94,9 +93,9 @@ function PlansPage() {
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
           icon={CreditCard}
-          label="Monthly recurring"
-          value={`₹${mrr.toLocaleString("en-IN")}`}
-          sub="From current plan assignments"
+          label="Recorded paid amount"
+          value={orders.isSuccess ? formatPaise(billing.cashPaise) : "—"}
+          sub="Latest 50 orders · not MRR or settled cash"
         />
         {data?.byPlan.map((p) => (
           <StatCard
@@ -104,14 +103,15 @@ function PlansPage() {
             icon={CreditCard}
             label={`${p.plan} workspaces`}
             value={String(p.count)}
-            sub={PRICING[p.plan]?.price ?? ""}
+            sub={pricing[p.plan]?.price ?? ""}
           />
         ))}
       </div>
 
       <Panel title="Plan entitlements">
         <div className="space-y-3">
-          {Object.entries(PRICING).map(([plan, info]) => (
+          {!config.data && <p className="text-sm text-muted-foreground">{config.isError ? "Plan configuration unavailable." : "Loading configured plans…"}</p>}
+          {Object.entries(pricing).map(([plan, info]) => (
             <div key={plan} className="rounded-lg border px-3 py-2 text-sm">
               <div className="flex items-center justify-between">
                 <span className="font-medium capitalize">{plan}</span>
@@ -170,6 +170,7 @@ function PlansPage() {
       </Panel>
 
       <Panel title="Recent payments and grants">
+        <p className="mb-4 text-sm text-muted-foreground">{orders.isError ? "Payment records could not be loaded." : `${billing.payments} paid orders · ${billing.grants} grants in the latest 50 records. Grants are excluded from the paid amount; recurring revenue is not calculated from plan assignments.`}</p>
         <AdminTable
           rows={orders.data ?? []}
           minWidth={720}
@@ -223,7 +224,7 @@ function PlansPage() {
             {
               header: "Value",
               cell: (o) => (
-                <span className="num">{PRICING[o.plan]?.price ?? "—"}</span>
+                <span className="num">{pricing[o.plan]?.price ?? "—"}</span>
               ),
             },
           ]}

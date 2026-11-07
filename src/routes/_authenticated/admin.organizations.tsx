@@ -56,6 +56,7 @@ function OrganizationsPage() {
   const [plan, setPlan] = useState("all");
   const [status, setStatus] = useState("all");
   const [sort, setSort] = useState("newest");
+  const [expiry, setExpiry] = useState("all");
   const [drafts, setDrafts] = useState<Record<string, { plan: string; months: string }>>({});
 
   const overview = useQuery({
@@ -92,8 +93,8 @@ function OrganizationsPage() {
     onError: () => toast.error("Could not update the workspace"),
   });
 
-  const rows = filterAdminWorkspaces(data?.organizations ?? [], search, plan, status, sort);
-  const filtered = Boolean(search.trim() || plan !== "all" || status !== "all");
+  const rows = filterAdminWorkspaces(data?.organizations ?? [], search, plan, status, sort, expiry);
+  const filtered = Boolean(search.trim() || plan !== "all" || status !== "all" || expiry !== "all");
 
   return (
     <div className="space-y-6">
@@ -112,15 +113,16 @@ function OrganizationsPage() {
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Name or slug"
-            aria-label="Search workspace name or slug"
+            placeholder="Workspace or owner"
+            aria-label="Search workspace name, slug or owner"
             className="h-9 w-full pl-8"
           />
           </div>
           <Select value={plan} onValueChange={setPlan}><SelectTrigger aria-label="Filter workspace plan" className="h-9 w-36"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">All plans</SelectItem>{PLANS.map((value) => <SelectItem key={value} value={value}>{value}</SelectItem>)}</SelectContent></Select>
           <Select value={status} onValueChange={setStatus}><SelectTrigger aria-label="Filter automation status" className="h-9 w-40"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Any status</SelectItem><SelectItem value="active">Automation active</SelectItem><SelectItem value="paused">Automation paused</SelectItem></SelectContent></Select>
           <Select value={sort} onValueChange={setSort}><SelectTrigger aria-label="Sort workspaces" className="h-9 w-36"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="newest">Newest first</SelectItem><SelectItem value="name">Name A–Z</SelectItem><SelectItem value="accounts">Most accounts</SelectItem></SelectContent></Select>
-          {filtered && <Button variant="ghost" size="sm" onClick={() => { setSearch(""); setPlan("all"); setStatus("all"); }}>Clear filters</Button>}
+          <Select value={expiry} onValueChange={setExpiry}><SelectTrigger aria-label="Filter plan expiry" className="h-9 w-40"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Any expiry</SelectItem><SelectItem value="soon">Expiring in 7 days</SelectItem><SelectItem value="expired">Expired</SelectItem></SelectContent></Select>
+          {filtered && <Button variant="ghost" size="sm" onClick={() => { setSearch(""); setPlan("all"); setStatus("all"); setExpiry("all"); }}>Clear filters</Button>}
           </div>
         }
       >
@@ -154,6 +156,8 @@ function OrganizationsPage() {
                 ),
               },
               { header: "Members", cell: (o) => <span className="num">{o.members}</span> },
+              { header: "Owner", cell: (o) => <div className="max-w-56 break-words"><p>{o.ownerName ?? "—"}</p><p className="text-xs text-muted-foreground">{o.ownerEmail ?? "—"}</p></div> },
+              { header: "Plan access & expiry", cell: (o) => <div className="space-y-1"><StatusBadge tone="info">{o.effectivePlan ?? o.plan}</StatusBadge><p className="text-xs text-muted-foreground">{o.planExpiresAt ? new Date(o.planExpiresAt).toLocaleDateString() : "No expiry"}</p>{o.parentId && <Link to="/admin/org/$orgId" params={{ orgId: o.parentId }} className="block text-xs text-primary">{o.inherited ? "Inherited from" : "Client of"} {o.parentName ?? "Agency"}</Link>}</div> },
               { header: "Accounts", cell: (o) => <span className="num">{o.accounts}</span> },
               { header: "Threads", cell: (o) => <span className="num">{o.conversations}</span> },
               { header: "Posts", cell: (o) => <span className="num">{o.posts}</span> },
