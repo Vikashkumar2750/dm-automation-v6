@@ -27,6 +27,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { PageReadyGate } from "@/components/app/PageReadyGate";
+import { useSidebarGroup } from "@/hooks/useSidebarGroup";
 
 type NavItem = { label: string; to: string; icon: LucideIcon; exact?: boolean };
 
@@ -61,20 +62,7 @@ function NavLink({ item, pathname }: { item: NavItem; pathname: string }) {
 }
 
 function Sidebar({ pathname }: { pathname: string }) {
-  const [collapsed, setCollapsed] = useState<string[]>([]);
-  useEffect(() => {
-    try {
-      const saved: unknown = JSON.parse(localStorage.getItem("autodm_admin_nav_collapsed") ?? "[]");
-      if (Array.isArray(saved)) setCollapsed(saved.filter((value): value is string => typeof value === "string"));
-    } catch { /* Optional display preference only. */ }
-  }, []);
-  const toggle = (label: string) => {
-    setCollapsed((previous) => {
-      const next = previous.includes(label) ? previous.filter((item) => item !== label) : [...previous, label];
-      try { localStorage.setItem("autodm_admin_nav_collapsed", JSON.stringify(next)); } catch { /* Optional preference. */ }
-      return next;
-    });
-  };
+  const { openGroup, toggleGroup } = useSidebarGroup();
   return (
     <div className="flex h-full flex-col border-r bg-sidebar">
       <div className="flex items-center gap-3 border-b px-5 py-4">
@@ -91,9 +79,8 @@ function Sidebar({ pathname }: { pathname: string }) {
 
       <nav aria-label="Super Admin navigation" className="flex-1 space-y-4 overflow-y-auto px-3 py-4">
         {navGroups.map((group, index) => {
-          const current = group.items.some((item) => item.exact ? pathname.replace(/\/$/, "") === item.to : pathname.startsWith(item.to) || (item.to === "/admin/organizations" && pathname.startsWith("/admin/org/")));
-          const expanded = current || !collapsed.includes(group.label);
-          return <div key={group.label}><Button variant="ghost" onClick={() => toggle(group.label)} aria-expanded={expanded} aria-controls={`admin-nav-${index}`} className="mb-1 h-8 w-full justify-between px-3 text-xs font-semibold text-subtle-foreground"><span>{group.label}</span><ChevronDown className={expanded ? "size-3.5" : "size-3.5 -rotate-90"} /></Button><div id={`admin-nav-${index}`} hidden={!expanded} className="space-y-1">{group.items.map((item) => <NavLink key={item.to} item={item} pathname={pathname} />)}</div></div>;
+          const expanded = openGroup === group.label;
+          return <div key={group.label}><Button variant="ghost" onClick={() => toggleGroup(group.label)} aria-expanded={expanded} aria-controls={`admin-nav-${index}`} className="mb-1 h-8 w-full justify-between px-3 text-xs font-semibold text-subtle-foreground"><span>{group.label}</span><ChevronDown className={expanded ? "size-3.5" : "size-3.5 -rotate-90"} /></Button><div id={`admin-nav-${index}`} hidden={!expanded} className="space-y-1">{group.items.map((item) => <NavLink key={item.to} item={item} pathname={pathname} />)}</div></div>;
         })}
       </nav>
     </div>
