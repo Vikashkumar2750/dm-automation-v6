@@ -1,4 +1,4 @@
-import { readPlatformConfig } from "@/lib/platform-config.server";
+import { CONFIG_KEY, mergeConfig, readPlatformConfig } from "@/lib/platform-config.server";
 import { DEFAULT_PLAN_LIMITS, type PlanLimits } from "@/lib/plans";
 import { resolveWorkspaceEntitlements } from "./workspace-entitlements.server";
 
@@ -9,12 +9,20 @@ export const overrideKey = (orgId: string) => `plan_limits_${orgId}`;
 export type ResolvedLimits = PlanLimits & { plan: string; overridden: boolean };
 
 /** Effective plan limits for a workspace: super-admin override > plan catalogue > defaults. null = unlimited. */
-export async function resolveOrgLimits(admin: AdminClient, orgId: string): Promise<ResolvedLimits> {
-  const [{ data: org }, config, { data: ps }] = await Promise.all([
+export async function resolveOrgLimits(admin: AdminClient, orgId: string, options: { strictReads?: boolean } = {}): Promise<ResolvedLimits> {
+  const [orgResult, configResult, settingsResult] = await Promise.all([
     admin.from("organizations").select("plan, plan_expires_at, plan_source, parent_organization_id, created_at").eq("id", orgId).maybeSingle(),
-    readPlatformConfig(admin),
+    options.strictReads ? Promise.resolve(null) : readPlatformConfig(admin),
     admin.from("platform_settings").select("feature_flags").eq("id", true).maybeSingle(),
   ]);
+  const { data: org } = orgResult;
+  const { data: ps } = settingsResult;
+  if (options.strictReads && (orgResult.error || !org || settingsResult.error)) {
+    throw new Error("Plan limits unavailable. Refresh to retry.");
+  }
+  const flags = (ps?.feature_flags ?? {}) as Record<string, unknown>;
+  // Display uses the same confirmed settings snapshot for catalogue and overrides.
+  const config = configResult ?? mergeConfig(flags[CONFIG_KEY]);
   const entitlement = await resolveWorkspaceEntitlements(admin, org ?? { plan: "starter" });
   const plan = entitlement.plan;
   const expires = entitlement.plan_expires_at;
@@ -25,7 +33,6 @@ export async function resolveOrgLimits(admin: AdminClient, orgId: string): Promi
     config.plans.find((p) => p.key === plan)?.limits ??
     DEFAULT_PLAN_LIMITS[plan as keyof typeof DEFAULT_PLAN_LIMITS] ??
     DEFAULT_PLAN_LIMITS.starter;
-  const flags = (ps?.feature_flags ?? {}) as Record<string, unknown>;
   const ov = flags[overrideKey(orgId)] as Partial<PlanLimits> | undefined;
   if (trialOver && !(ov && typeof ov === "object")) {
     return { plan, overridden: false, monthlyDms: 0, maxRules: 0 };
@@ -67,14 +74,17 @@ export async function countMonthlySent(admin: AdminClient, orgId: string) {
   return count ?? 0;
 }
 
-export async function countActiveRules(admin: AdminClient, orgId: string, excludeId?: string) {
+export async function countActiveRules(admin: AdminClient, orgId: string, excludeId?: string, options: { strictReads?: boolean } = {}) {
   let q = admin
     .from("automation_rules")
     .select("id", { count: "exact", head: true })
     .eq("organization_id", orgId)
     .eq("is_active", true);
   if (excludeId) q = q.neq("id", excludeId);
-  const { count } = await q;
+  const { count, error } = await q;
+  if (options.strictReads && (error || typeof count !== "number" || !Number.isSafeInteger(count) || count < 0)) {
+    throw new Error("Active rule usage unavailable. Refresh to retry.");
+  }
   return count ?? 0;
 }
 
