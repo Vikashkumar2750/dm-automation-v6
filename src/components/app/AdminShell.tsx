@@ -36,7 +36,7 @@ const navGroups: { label: string; items: NavItem[] }[] = [
   { label: "Workspaces & Users", items: [{ label: "Workspaces", to: "/admin/organizations", icon: Building2 }, { label: "Users", to: "/admin/users", icon: Users }, { label: "Social Accounts", to: "/admin/accounts", icon: Share2 }] },
   { label: "Operations", items: [{ label: "Automations", to: "/admin/automations", icon: Workflow }, { label: "Messages", to: "/admin/messages", icon: MessageSquare }, { label: "Inquiries", to: "/admin/inquiries", icon: LifeBuoy }] },
   { label: "Monitoring & Health", items: [{ label: "Live Alerts", to: "/admin/alerts", icon: Siren }, { label: "Jobs & Queue", to: "/admin/jobs", icon: Gauge }, { label: "Webhooks", to: "/admin/webhooks", icon: Webhook }, { label: "API Health", to: "/admin/health", icon: Activity }] },
-  { label: "Platform Management", items: [{ label: "Plans & Billing", to: "/admin/plans", icon: CreditCard }, { label: "Security & Audit", to: "/admin/audit", icon: FileClock }, { label: "System Settings", to: "/admin/settings", icon: Settings }] },
+  { label: "Platform Management", items: [{ label: "Plans & Billing", to: "/admin/plans", icon: CreditCard }, { label: "Security & Audit", to: "/admin/audit", icon: FileClock }, { label: "System Settings", to: "/admin/settings", icon: Settings }, { label: "Database Backups", to: "/admin/database", icon: Database }] },
   { label: "Content", items: [{ label: "Blog & SEO", to: "/admin/blog", icon: Newspaper }, { label: "Media Library", to: "/admin/media", icon: Images }] },
 ];
 
