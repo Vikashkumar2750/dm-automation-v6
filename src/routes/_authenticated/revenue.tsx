@@ -113,7 +113,7 @@ function Report({ d }: { d: Data }) {
           <div className="space-y-1 text-sm">
             {d.links.slice(0, 30).map((l: any) => (
               <div key={l.id} className="flex flex-wrap items-center justify-between gap-2 border-b border-border py-1.5">
-                <div className="min-w-0 break-words"><p className="font-medium">{d.products.find((p) => p.id === l.product_id)?.name ?? "Payment link (product unavailable)"}</p><p className="text-xs text-muted-foreground">{new Date(l.created_at).toLocaleString()} · {l.platform}</p>{l.paid_at && <p className="text-xs text-muted-foreground">Paid {new Date(l.paid_at).toLocaleString()}</p>}</div>
+                <div className="min-w-0 break-words"><p className="font-medium">{d.products.find((p: { id: string; name: string }) => p.id === l.product_id)?.name ?? "Payment link (product unavailable)"}</p><p className="text-xs text-muted-foreground">{new Date(l.created_at).toLocaleString()} · {l.platform}</p>{l.paid_at && <p className="text-xs text-muted-foreground">Paid {new Date(l.paid_at).toLocaleString()}</p>}</div>
                 <span className="shrink-0 font-semibold">{formatInr(l.amount_paise)}</span>
                 <StatusBadge tone={l.status === "paid" ? "success" : "neutral"}>{l.status === "paid" ? "Paid" : l.provider === "manual" ? "Sent (own link)" : "Waiting"}</StatusBadge>
               </div>
