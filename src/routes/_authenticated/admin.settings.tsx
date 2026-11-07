@@ -18,6 +18,9 @@ import { FlowsAdminPanel } from "@/components/app/FlowsAdminPanel";
 import { AiAgentAdminPanel } from "@/components/app/AiAgentAdminPanel";
 import { SiteSettingsPanel } from "@/components/app/SiteSettingsPanel";
 import { getPlatformSettings, updatePlatformSettings } from "@/lib/admin.functions";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { RetainedSettingsTab } from "@/components/app/RetainedSettingsTab";
+import { RefreshCw } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/admin/settings")({
   head: () => ({
@@ -47,11 +50,15 @@ function SystemSettingsPage() {
   const save = useServerFn(updatePlatformSettings);
   const queryClient = useQueryClient();
 
-  const { data } = useQuery({
+  const settings = useQuery({
     queryKey: ["platform-settings"],
     queryFn: () => fetchSettings(),
     retry: false,
   });
+  const { data } = settings;
+  const [tab, setTab] = useState("operations");
+  const [visited, setVisited] = useState(["operations"]);
+  const tabProps = { active: tab, visited };
 
   const [banner, setBanner] = useState("");
   useEffect(() => {
@@ -80,7 +87,12 @@ function SystemSettingsPage() {
       <PageHeader
         title="System Settings"
         description="Platform-wide controls. Changes here affect every workspace."
+        actions={<Button variant="outline" size="icon" aria-label="Refresh system settings" title="Refresh system settings" onClick={() => void settings.refetch()} disabled={settings.isFetching}><RefreshCw className={settings.isFetching ? "size-4 animate-spin" : "size-4"} /></Button>}
       />
+      {settings.isError && <div role="alert" className="flex flex-wrap items-center justify-between gap-3 border-l-2 border-warning bg-warning-soft px-4 py-3 text-sm"><span>System settings could not be refreshed.</span><Button variant="outline" size="sm" onClick={() => void settings.refetch()}>Try again</Button></div>}
+      <Tabs value={tab} onValueChange={(value) => { setTab(value); setVisited((previous) => previous.includes(value) ? previous : [...previous, value]); }} className="min-w-0">
+        <TabsList aria-label="System settings sections" className="mb-4 w-full justify-start">{[["operations", "Operations & Safety"], ["publishing", "Publishing"], ["automation", "Automation"], ["ai", "AI Providers"], ["site", "Site & Tracking"], ["email", "Email & Account Access"]].map(([value, label]) => <TabsTrigger key={value} value={value ?? ""}>{label}</TabsTrigger>)}</TabsList>
+      <RetainedSettingsTab value="operations" {...tabProps}>
 
       <Panel title="Global sending">
         <div className="flex flex-wrap items-center justify-between gap-4">
@@ -92,10 +104,12 @@ function SystemSettingsPage() {
           </div>
           <div className="flex items-center gap-3">
             <StatusBadge tone={data?.global_send_paused ? "danger" : "success"}>
-              {data?.global_send_paused ? "Paused" : "Running"}
+              {!data ? "Unavailable" : data.global_send_paused ? "Paused" : "Running"}
             </StatusBadge>
             <Switch
               checked={Boolean(data?.global_send_paused)}
+              aria-label="Pause all automated sending"
+              disabled={!data || mutation.isPending}
               onCheckedChange={(v) => mutation.mutate({ globalSendPaused: v })}
             />
           </div>
@@ -117,9 +131,10 @@ function SystemSettingsPage() {
               className="mt-2"
             />
           </div>
-          <Button onClick={() => mutation.mutate({ incidentBanner: banner })}>Save</Button>
+          <Button disabled={!data || mutation.isPending} onClick={() => mutation.mutate({ incidentBanner: banner })}>Save</Button>
           <Button
             variant="outline"
+            disabled={!data || mutation.isPending}
             onClick={() => {
               setBanner("");
               mutation.mutate({ incidentBanner: null });
@@ -131,7 +146,9 @@ function SystemSettingsPage() {
       </Panel>
 
       <AdminSafetyCapsPanel orgId={null} />
+      </RetainedSettingsTab>
 
+      <RetainedSettingsTab value="publishing" {...tabProps}>
       <Panel title="Publishing tabs">
         <div className="space-y-4">
           {([{ key: "create_post", label: "Create Post" }, { key: "calendar", label: "Calendar" }] as const).map((feature) => (
@@ -149,7 +166,9 @@ function SystemSettingsPage() {
           ))}
         </div>
       </Panel>
+      </RetainedSettingsTab>
 
+      <RetainedSettingsTab value="automation" {...tabProps}>
       <Panel title="Feature flags">
         <div className="space-y-4">
           {FLAGS.map((f) => (
@@ -159,6 +178,8 @@ function SystemSettingsPage() {
                 <p className="text-sm text-muted-foreground">{f.description}</p>
               </div>
               <Switch
+                aria-label={f.label}
+                disabled={!data || mutation.isPending}
                 checked={Boolean(flags[f.key])}
                 onCheckedChange={(v) =>
                   mutation.mutate({ featureFlags: { ...flags, [f.key]: v } })
@@ -168,15 +189,18 @@ function SystemSettingsPage() {
           ))}
         </div>
       </Panel>
-
-      <AiProvidersPanel />
       <EntryPointsAdminPanel />
       <FlowsAdminPanel />
       <AiAgentAdminPanel />
-
+      </RetainedSettingsTab>
+      <RetainedSettingsTab value="ai" {...tabProps}><AiProvidersPanel /></RetainedSettingsTab>
+      <RetainedSettingsTab value="site" {...tabProps}>
       <SiteSettingsPanel />
-
+      </RetainedSettingsTab>
+      <RetainedSettingsTab value="email" {...tabProps}>
       <EmailAndResetPanels />
+      </RetainedSettingsTab>
+      </Tabs>
     </div>
   );
 }
