@@ -212,6 +212,7 @@ Real Meta + YouTube credentials are available when we reach OAuth phases.
 - [ ] Real payment, email delivery and signed-in Super Admin checks — need live test by owner
 
 ## Remaining-work acceptance — Nov 7
+- [ ] Dependency-security follow-up: repair compatible vulnerable packages, rerun tests and dependency scan; evaluate Zod major-version compatibility separately rather than forcing an unsafe override.
 - [x] Final regression suite: 397 tests passed; preview build OK. Ten public pages checked on desktop/phone: HTTP 200, required metadata, no horizontal overflow or page errors; signed-out Growth redirects to sign-in. These checks do not verify authenticated workflows.
 - [x] Added Growth source-specific, code-only server diagnostics; preserves generic browser errors and all RLS/workspace reads. Actual affected-account failure remains unverified, not fixed by this diagnostic change.
 - [x] Reconciled Railway setup with current scheduler/migration inventory; documented encryption, Instagram secret, sender configuration and managed-Cloud credential limitations.
