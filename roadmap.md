@@ -179,6 +179,7 @@ Real Meta + YouTube credentials are available when we reach OAuth phases.
 - [x] Directory CSV export matches filtered/sorted authorized rows, escapes spreadsheet formulas and separates assigned/effective access; billing labels catalogue prices and assigned plans explicitly with refresh/unavailable handling.
 - [x] Operational presentation audit: verified finalized processing rate, probe-separated webhook filters, sampled/mixed alert labels and explicit unavailable states instead of false healthy zeros.
 - [x] Remaining admin lists: users/accounts/rules/messages have manual refresh, stale/unavailable states and loaded-count labels; automation event counts are explicitly separate from billable journeys.
+- [x] Shared AdminTable stacks labelled cells on phones while retaining desktop tables and rendering each action once; wide controls scroll locally without widening the page.
 - [ ] Next: V6 acceptance audit and signed-in desktop/mobile verification; authenticated export/billing/health checks blocked by no preview auth users.
 - [x] Converter 800MB + clear after download; Super Admin temp cleanup button
 - [x] Coupons: manual Apply + auto-apply (?coupon=), discount from MRP, server re-check
