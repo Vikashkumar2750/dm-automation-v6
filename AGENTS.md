@@ -43,7 +43,7 @@
 - Admin overview derives priorities from its existing protected overview read, labels event samples explicitly, and keeps unsigned probes separate from verified delivery failures — no new delivery calls or misleading health totals.
 - Admin workspace tabs mount on first visit and stay mounted while inactive; key the detail view by workspace ID — preserves unsaved controls without loading every panel on entry or leaking drafts across tenants.
 - System Settings retains visited tab panels; directory filters operate on the existing authorized overview snapshot — presentation improvements preserve drafts and never imply unavailable owner or expiry data.
-- Both sidebar shells share useSidebarGroup for expansion state — one transition implementation keeps user and admin menus consistent without storage or route-driven overrides.
+- useSidebarGroup uses a user-keyed authenticated-layout provider with user/admin scopes — groups survive navigation/drawer remounts without storage or route-driven overrides.
 - Admin directory resolves effective plans with effectiveWorkspacePlan and batches owner profiles; billing shows configured catalogue and paid-order samples, never MRR inferred from assignments — respects Agency expiry and separates grants from recorded payments.
 - Admin directory CSV exports only its already-authorized filtered/sorted snapshot via csvCell; assigned plans and effective inherited access remain separate — downloads must match the visible selection without new tenant reads or spreadsheet formulas.
 - Admin health measures finalized verified events only; absent reads are unavailable, and alerts label mixed capped sources — avoids false health claims and probe-skewed delivery rates.
