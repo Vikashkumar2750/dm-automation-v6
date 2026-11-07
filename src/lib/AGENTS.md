@@ -14,3 +14,4 @@
 - Uploaded product/delivery files live in the private product-files bucket and are saved as "file:<orgId>/..." in delivery_url/button_url; buyers only get short-lived signed links via resolveContentUrl (product-files.server) — no schema change and files never become public.
 - Per-workspace feature switches are checked server-side via workspace-features.server (assertRevenueWritable, workspaceFeaturesFor); UI gates are cosmetic only — hidden/view-only must block writes even from direct calls.
 - Buyer/lead emails live in buyer-emails.server and send only for one event to one recipient, only when the workspace's emails switch is on — never bulk.
+- getRevenue rejects any failed source/settings read after membership verification — unavailable data must not become zero sales, empty products or disconnected payment status.
