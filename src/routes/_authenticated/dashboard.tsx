@@ -20,6 +20,10 @@ import {
   UserCheck,
   Zap,
   Workflow,
+  Circle,
+  ShoppingBag,
+  IndianRupee,
+  Users,
 } from "lucide-react";
 import {
   Area,
@@ -54,6 +58,8 @@ import { getAutomationUsage, listOrgActivityFeed } from "@/lib/automations.funct
 import { listConversations } from "@/lib/inbox.functions";
 import { listPosts } from "@/lib/publishing.functions";
 import { listSocialAccounts } from "@/lib/social-accounts.functions";
+import { getRevenue } from "@/lib/revenue.functions";
+import { summarizeDashboardLeads } from "@/lib/dashboard-summary";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: () => ({
@@ -97,6 +103,14 @@ function Dashboard() {
   const fetchPosts = useServerFn(listPosts);
   const fetchConversations = useServerFn(listConversations);
   const fetchUsage = useServerFn(getAutomationUsage);
+  const fetchRevenue = useServerFn(getRevenue);
+  const revenueEnabled = Boolean(features) && features?.revenue !== "hidden";
+  const revenue = useQuery({
+    queryKey: ["revenue", orgId, "all"],
+    enabled: Boolean(orgId) && revenueEnabled,
+    staleTime: 60_000,
+    queryFn: () => fetchRevenue({ data: { organizationId: orgId ?? "" } }),
+  });
 
   const analytics = useQuery({
     queryKey: ["analytics", orgId, rangeDays],
@@ -147,12 +161,21 @@ function Dashboard() {
   const failedPosts = (posts.data ?? []).filter((post) => post.status === "failed");
   const calendarVisible = features?.calendar !== "hidden" && Boolean(features);
   const postVisible = features?.create_post !== "hidden" && Boolean(features);
-  const isRefreshing = analytics.isFetching || accounts.isFetching || conversations.isFetching;
+  const leadSummary = summarizeDashboardLeads(revenue.data?.leads ?? []);
+  const setupSteps = [
+    { label: "Connect a social account", to: "/social-accounts" as const, complete: accountRows.some((account) => account.status === "connected"), ready: accounts.isSuccess },
+    { label: "Activate an automation", to: "/automations" as const, complete: (a?.totals.activeRules ?? 0) + (a?.totals.activeFlows ?? 0) > 0, ready: analytics.isSuccess },
+    ...(features?.revenue === "enabled" && features?.delivery_pages === "enabled" ? [{ label: "Activate a delivery page", to: "/revenue" as const, complete: (revenue.data?.pages ?? []).some((page: { active: boolean }) => page.active), ready: revenue.isSuccess }] : []),
+  ];
+  const setupReady = setupSteps.every((step) => step.ready);
+  const setupComplete = setupSteps.filter((step) => step.complete).length;
+  const isRefreshing = analytics.isFetching || accounts.isFetching || posts.isFetching || conversations.isFetching || usage.isFetching || activity.isFetching || (revenueEnabled && revenue.isFetching);
   const refreshOverview = () => {
     void analytics.refetch(); void accounts.refetch(); void posts.refetch();
     void conversations.refetch(); void usage.refetch(); void activity.refetch();
+    if (revenueEnabled) void revenue.refetch();
   };
-  const dataError = analytics.isError || accounts.isError || posts.isError || conversations.isError || usage.isError || activity.isError;
+  const dataError = analytics.isError || accounts.isError || posts.isError || conversations.isError || usage.isError || activity.isError || (revenueEnabled && revenue.isError);
 
   return (
     <AppShell>
@@ -206,6 +229,25 @@ function Dashboard() {
           {accounts.isSuccess && analytics.isSuccess && posts.isSuccess && hasAccount && attentionAccounts.length === 0 && (a?.totals.unread ?? 0) === 0 && (!postVisible || failedPosts.length === 0) && <span className="inline-flex items-center gap-2 text-muted-foreground"><CheckCircle2 className="size-4 text-success" />You’re all caught up</span>}
         </div>
       </section>
+      {setupReady && setupComplete < setupSteps.length && (
+        <section aria-label="Workspace setup" className="mb-6 border-b pb-5">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-lg font-semibold">Workspace setup</h2>
+            <span className="text-sm text-muted-foreground">{setupComplete} of {setupSteps.length} complete</span>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            {setupSteps.map((step) => (
+              <Button key={step.to} asChild variant="outline" className="h-auto min-h-10 max-w-full whitespace-normal py-2 text-left">
+                <Link to={step.to}>
+                  {step.complete ? <CheckCircle2 className="size-4 shrink-0 text-success" /> : <Circle className="size-4 shrink-0 text-muted-foreground" />}
+                  {step.label}
+                  {!step.complete && <ArrowRight className="size-4 shrink-0" />}
+                </Link>
+              </Button>
+            ))}
+          </div>
+        </section>
+      )}
       <Dialog open={needAccount} onOpenChange={setNeedAccount}>
         <DialogContent>
           <DialogHeader>
@@ -234,6 +276,27 @@ function Dashboard() {
         <StatCard info="Automations switched on right now: keyword rules plus Flow Builder flows." icon={Workflow} label="Active automations" value={String((a?.totals.activeRules ?? 0) + (a?.totals.activeFlows ?? 0))} sub={`${a?.totals.activeRules ?? 0} rules · ${a?.totals.activeFlows ?? 0} flows`} />
         <StatCard info="Automations that ran and sent something in the selected period. One run counts once, however many steps." icon={Zap} label="Automation runs" value={String(a?.totals.automationRuns ?? 0)} sub={`Last ${rangeDays} days`} />
       </div>
+
+      {revenueEnabled && (
+        <section aria-label="Leads and sales" className="mt-6 border-y py-5">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <h2 className="text-lg font-semibold">Leads & sales</h2>
+            <Button asChild variant="link" className="h-auto p-0"><Link to="/revenue">Sales & Revenue<ArrowRight className="size-4" /></Link></Button>
+          </div>
+          {revenue.isSuccess ? <>
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              <StatCard icon={IndianRupee} label="Collected revenue" value={new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 }).format(revenue.data.funnel.revenuePaise / 100)} sub="Last 30 days · recorded payments" />
+              <StatCard icon={ShoppingBag} label="Successful payments" value={String(revenue.data.funnel.paid)} sub="Last 30 days" />
+              <StatCard icon={Users} label="Completed forms" value={String(leadSummary.completed)} sub="Within latest captured leads" />
+              <StatCard icon={UserCheck} label="Incomplete forms" value={String(leadSummary.incomplete)} sub="Form / OTP / sign-in unfinished" />
+            </div>
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+              <span>Lead summary: latest {leadSummary.captured} captured leads (up to 200); sales: last 30 days.</span>
+              <Button asChild variant="link" size="sm" className="h-auto p-0"><Link to="/contacts">Open contacts<ArrowRight className="size-3" /></Link></Button>
+            </div>
+          </> : <p className="text-sm text-muted-foreground" role="status">{revenue.isError ? "Sales summary is unavailable. Try refreshing the overview." : "Loading sales summary…"}</p>}
+        </section>
+      )}
 
       <div className="mt-4 grid gap-4 xl:grid-cols-3">
         <Panel
