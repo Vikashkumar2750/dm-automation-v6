@@ -70,6 +70,7 @@ import { Route as AuthenticatedAutomationsFlowsRouteImport } from './routes/_aut
 import { Route as AuthenticatedAutomationsSimulatorRouteImport } from './routes/_authenticated/automations_.simulator'
 import { Route as AuthenticatedCreatePostNewRouteImport } from './routes/_authenticated/create-post_.new'
 import { Route as AuthenticatedInviteTokenRouteImport } from './routes/_authenticated/invite.$token'
+import { Route as ApiAdminDbDumpRouteImport } from './routes/api/admin/db-dump'
 import { Route as AuthenticatedAdminOrgOrgIdRouteImport } from './routes/_authenticated/admin.org.$orgId'
 import { Route as AuthenticatedAutomationsActivityRunIdRouteImport } from './routes/_authenticated/automations_.activity_.$runId'
 import { Route as ApiPublicCronDbBackupRouteImport } from './routes/api/public/cron.db-backup'
@@ -418,6 +419,11 @@ const AuthenticatedInviteTokenRoute =
     path: '/invite/$token',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const ApiAdminDbDumpRoute = ApiAdminDbDumpRouteImport.update({
+  id: '/api/admin/db-dump',
+  path: '/api/admin/db-dump',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedAdminOrgOrgIdRoute =
   AuthenticatedAdminOrgOrgIdRouteImport.update({
     id: '/org/$orgId',
@@ -597,6 +603,7 @@ export interface FileRoutesByFullPath {
   '/automations/simulator': typeof AuthenticatedAutomationsSimulatorRoute
   '/create-post/new': typeof AuthenticatedCreatePostNewRoute
   '/invite/$token': typeof AuthenticatedInviteTokenRoute
+  '/api/admin/db-dump': typeof ApiAdminDbDumpRoute
   '/admin/': typeof AuthenticatedAdminIndexRoute
   '/admin/org/$orgId': typeof AuthenticatedAdminOrgOrgIdRoute
   '/automations/activity/$runId': typeof AuthenticatedAutomationsActivityRunIdRoute
@@ -680,6 +687,7 @@ export interface FileRoutesByTo {
   '/automations/simulator': typeof AuthenticatedAutomationsSimulatorRoute
   '/create-post/new': typeof AuthenticatedCreatePostNewRoute
   '/invite/$token': typeof AuthenticatedInviteTokenRoute
+  '/api/admin/db-dump': typeof ApiAdminDbDumpRoute
   '/admin': typeof AuthenticatedAdminIndexRoute
   '/admin/org/$orgId': typeof AuthenticatedAdminOrgOrgIdRoute
   '/automations/activity/$runId': typeof AuthenticatedAutomationsActivityRunIdRoute
@@ -766,6 +774,7 @@ export interface FileRoutesById {
   '/_authenticated/automations_/simulator': typeof AuthenticatedAutomationsSimulatorRoute
   '/_authenticated/create-post_/new': typeof AuthenticatedCreatePostNewRoute
   '/_authenticated/invite/$token': typeof AuthenticatedInviteTokenRoute
+  '/api/admin/db-dump': typeof ApiAdminDbDumpRoute
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
   '/_authenticated/admin/org/$orgId': typeof AuthenticatedAdminOrgOrgIdRoute
   '/_authenticated/automations_/activity_/$runId': typeof AuthenticatedAutomationsActivityRunIdRoute
@@ -852,6 +861,7 @@ export interface FileRouteTypes {
     | '/automations/simulator'
     | '/create-post/new'
     | '/invite/$token'
+    | '/api/admin/db-dump'
     | '/admin/'
     | '/admin/org/$orgId'
     | '/automations/activity/$runId'
@@ -935,6 +945,7 @@ export interface FileRouteTypes {
     | '/automations/simulator'
     | '/create-post/new'
     | '/invite/$token'
+    | '/api/admin/db-dump'
     | '/admin'
     | '/admin/org/$orgId'
     | '/automations/activity/$runId'
@@ -1020,6 +1031,7 @@ export interface FileRouteTypes {
     | '/_authenticated/automations_/simulator'
     | '/_authenticated/create-post_/new'
     | '/_authenticated/invite/$token'
+    | '/api/admin/db-dump'
     | '/_authenticated/admin/'
     | '/_authenticated/admin/org/$orgId'
     | '/_authenticated/automations_/activity_/$runId'
@@ -1063,6 +1075,7 @@ export interface RootRouteChildren {
   PSlugRoute: typeof PSlugRoute
   ToolsWebpConverterRoute: typeof ToolsWebpConverterRoute
   BlogIndexRoute: typeof BlogIndexRoute
+  ApiAdminDbDumpRoute: typeof ApiAdminDbDumpRoute
   ApiPublicCronDbBackupRoute: typeof ApiPublicCronDbBackupRoute
   ApiPublicCronEncryptTokensRoute: typeof ApiPublicCronEncryptTokensRoute
   ApiPublicCronFlowsRoute: typeof ApiPublicCronFlowsRoute
@@ -1514,6 +1527,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedInviteTokenRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/api/admin/db-dump': {
+      id: '/api/admin/db-dump'
+      path: '/api/admin/db-dump'
+      fullPath: '/api/admin/db-dump'
+      preLoaderRoute: typeof ApiAdminDbDumpRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/admin/org/$orgId': {
       id: '/_authenticated/admin/org/$orgId'
       path: '/org/$orgId'
@@ -1801,6 +1821,7 @@ const rootRouteChildren: RootRouteChildren = {
   PSlugRoute: PSlugRoute,
   ToolsWebpConverterRoute: ToolsWebpConverterRoute,
   BlogIndexRoute: BlogIndexRoute,
+  ApiAdminDbDumpRoute: ApiAdminDbDumpRoute,
   ApiPublicCronDbBackupRoute: ApiPublicCronDbBackupRoute,
   ApiPublicCronEncryptTokensRoute: ApiPublicCronEncryptTokensRoute,
   ApiPublicCronFlowsRoute: ApiPublicCronFlowsRoute,
