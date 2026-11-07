@@ -27,7 +27,7 @@ export function PlatformAccountFilter({
 }) {
   const LABEL: Record<string, string> = { instagram: "Instagram", facebook: "Facebook", youtube: "YouTube" };
   return (
-    <div className={`flex min-w-0 flex-nowrap items-center gap-2 ${className}`}>
+    <div className={`flex min-w-0 max-w-full flex-wrap items-center gap-2 ${className}`}>
       <select
         aria-label="Platform"
         value={platform}
