@@ -181,6 +181,7 @@ Real Meta + YouTube credentials are available when we reach OAuth phases.
 - [x] Remaining admin lists: users/accounts/rules/messages have manual refresh, stale/unavailable states and loaded-count labels; automation event counts are explicitly separate from billable journeys.
 - [x] Shared AdminTable stacks labelled cells on phones while retaining desktop tables and rendering each action once; wide controls scroll locally without widening the page.
 - [x] Customer dashboard review: absent metrics/usage show unavailable rather than fabricated zeros; accounts/conversations/posts/activity distinguish missing reads from empty lists; period labels and long text wrapping improved.
+- [x] Inbox/Contacts acceptance review: refresh controls and separate loading/unavailable/stale states for chats, messages and delivery leads; outreach controls wait for confirmed settings and reset between workspaces.
 - [ ] Next: V6 acceptance audit and signed-in desktop/mobile verification; authenticated export/billing/health checks blocked by no preview auth users.
 - [x] Converter 800MB + clear after download; Super Admin temp cleanup button
 - [x] Coupons: manual Apply + auto-apply (?coupon=), discount from MRP, server re-check

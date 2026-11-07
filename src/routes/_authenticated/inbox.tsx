@@ -16,6 +16,7 @@ import {
   Loader2,
   MessageSquareText,
   Send,
+  RefreshCw,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -356,6 +357,7 @@ function InboxPage() {
             Facebook and YouTube in one place.
           </p>
         </div>
+        <Button variant="outline" size="icon" aria-label="Refresh inbox" disabled={conversationsQuery.isFetching || messagesQuery.isFetching || targetQuery.isFetching} onClick={() => { void conversationsQuery.refetch(); if (selected) void messagesQuery.refetch(); if (selectedId) void targetQuery.refetch(); }}><RefreshCw className="size-4" /></Button>
       </div>
 
         {/* Conversation list */}
@@ -409,15 +411,16 @@ function InboxPage() {
               </button>
             </div>
           </div>
-          {conversationsQuery.isLoading ? (
+          {conversationsQuery.isError && <p role="alert" className="px-4 py-3 text-sm text-destructive">Conversations could not be refreshed. Previously loaded results may be out of date.</p>}
+          {!conversationsQuery.data ? (
             <div className="flex items-center justify-center py-16 text-sm text-muted-foreground">
-              <Loader2 className="mr-2 size-4 animate-spin" /> Loading…
+              {conversationsQuery.isError ? "Conversations unavailable. Refresh to retry." : <><Loader2 className="mr-2 size-4 animate-spin" /> Loading…</>}
             </div>
           ) : conversations.length === 0 ? (
             <EmptyState
               icon={InboxIcon}
-              title="No conversations yet"
-              description="Once your webhook is subscribed in the Meta app, incoming DMs and comments appear here in real time."
+              title={search.trim() || platform !== "all" || accountId !== "all" || status !== "all" || unreadOnly ? "No matching conversations" : "No conversations yet"}
+              description={search.trim() || platform !== "all" || accountId !== "all" || status !== "all" || unreadOnly ? "Try a different search or clear your filters." : "Incoming direct messages appear here once your connected account receives them."}
             />
           ) : (
             <ul className="max-h-[60vh] min-h-[240px] divide-y overflow-y-auto lg:max-h-none lg:min-h-0 lg:flex-1">
@@ -503,6 +506,8 @@ function InboxPage() {
                   {selected.status}
                 </StatusBadge>
               </div>
+
+              {messagesQuery.isError && <p role="alert" className="border-b px-4 py-2 text-sm text-destructive">Messages could not be refreshed. Previously loaded messages may be out of date.</p>}
               {selected.bot_paused_until && new Date(selected.bot_paused_until) > new Date() ? (
                 <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-muted/50 px-5 py-2 text-sm">
                   <span className="text-muted-foreground">
@@ -523,9 +528,9 @@ function InboxPage() {
                 ref={threadRef}
                 className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-3 py-3 [scrollbar-color:theme(colors.neutral.700)_transparent] [scrollbar-width:thin]"
               >
-                {messagesQuery.isLoading ? (
+                {!messagesQuery.data ? (
                   <div className="flex items-center justify-center py-10 text-sm text-muted-foreground">
-                    <Loader2 className="mr-2 size-4 animate-spin" /> Loading messages…
+                    {messagesQuery.isError ? "Messages unavailable. Refresh to retry." : <><Loader2 className="mr-2 size-4 animate-spin" /> Loading messages…</>}
                   </div>
                 ) : (
                   (messagesQuery.data ?? []).map((m) => {
