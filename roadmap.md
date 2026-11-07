@@ -176,7 +176,8 @@ Real Meta + YouTube credentials are available when we reach OAuth phases.
 - [ ] Verify directory filters and Settings draft retention signed in (blocked: preview backend has no auth users).
 - [x] Owner/name/email search and effective Agency plan/expiry directory fields; billing separates sampled paid orders from grants and removes fabricated MRR and hardcoded catalogue.
 - [x] Directory CSV export matches filtered/sorted authorized rows, escapes spreadsheet formulas and separates assigned/effective access; billing labels catalogue prices and assigned plans explicitly with refresh/unavailable handling.
-- [ ] Next: V6 acceptance audit and remaining operational accuracy gaps; authenticated export/billing checks blocked by no preview auth users.
+- [x] Operational presentation audit: verified finalized processing rate, probe-separated webhook filters, sampled/mixed alert labels and explicit unavailable states instead of false healthy zeros.
+- [ ] Next: V6 acceptance audit and signed-in desktop/mobile verification; authenticated export/billing/health checks blocked by no preview auth users.
 - [x] Converter 800MB + clear after download; Super Admin temp cleanup button
 - [x] Coupons: manual Apply + auto-apply (?coupon=), discount from MRP, server re-check
 - [x] Per-workspace Super Admin feature switches + health; enforced on server for revenue writes, public pages, checkout, emails

@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { EmptyState, PageHeader, Panel, StatCard, StatusBadge } from "@/components/app/primitives";
 import { cn } from "@/lib/utils";
 import { listAutomationAlerts, type AlertItem } from "@/lib/admin.functions";
+import { alertFeedState } from "@/lib/admin-overview-summary";
 
 export const Route = createFileRoute("/_authenticated/admin/alerts")({
   head: () => ({
@@ -22,7 +23,7 @@ export const Route = createFileRoute("/_authenticated/admin/alerts")({
       { title: "Live Alerts — Techaasvik Operations" },
       {
         name: "description",
-        content: "Every automation break, rejected event and account problem across all workspaces.",
+        content: "Recent automation issues and current account risks across AutoDM workspaces.",
       },
       { property: "og:title", content: "Live Alerts — Techaasvik Operations" },
       {
@@ -94,13 +95,14 @@ function AlertsPage() {
   );
 
   const counts = alerts.data?.counts;
-  const healthy = !alerts.isLoading && (counts?.critical ?? 0) === 0;
+  const feedState = alertFeedState(Boolean(alerts.data), alerts.isLoading, alerts.isError, counts?.total ?? 0, filtered.length);
+  const countValue = (count: number | undefined) => count === undefined ? "—" : count.toLocaleString();
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Live Alerts"
-        description="Anything that breaks, gets rejected or needs a human — across every workspace, as it happens."
+        description="Recent automation events and current account, publishing and safety issues."
         actions={
           <Button
             variant="outline"
@@ -113,40 +115,41 @@ function AlertsPage() {
           </Button>
         }
       />
+      {alerts.isError && <div role="alert" className="border-l-2 border-warning bg-warning-soft px-4 py-3 text-sm">Alerts could not be refreshed{alerts.data ? "; previously loaded results are shown." : ". Try Refresh again."}</div>}
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
           icon={Siren}
-          label="Breaking now"
-          value={String(counts?.critical ?? 0)}
-          sub="Automations that could not run"
+          label="Breaking · loaded results"
+          value={countValue(counts?.critical)}
+          sub="Automation failures and current risks"
         />
         <StatCard
           icon={AlertTriangle}
           label="Needs attention"
-          value={String(counts?.warning ?? 0)}
+          value={countValue(counts?.warning)}
           sub="Expiring access, failed posts"
         />
         <StatCard
           icon={Info}
           label="Informational"
-          value={String(counts?.info ?? 0)}
+          value={countValue(counts?.info)}
           sub="Skipped by rules or guardrails"
         />
         <StatCard
           icon={ShieldAlert}
-          label="Events (24h)"
-          value={String(counts?.total ?? 0)}
+          label="Issues · loaded results"
+          value={countValue(counts?.total)}
           sub={
             alerts.data
               ? `Updated ${new Date(alerts.data.generatedAt).toLocaleTimeString()}`
-              : "Loading"
+              : alerts.isLoading ? "Loading" : "Unavailable"
           }
         />
       </div>
 
       {(alerts.data?.topReasons.length ?? 0) > 0 && (
-        <Panel title="Most common causes (last 24 hours)">
+        <Panel title="Most common event causes (24h sample)">
           <div className="flex flex-wrap gap-2">
             {alerts.data?.topReasons.map((r) => (
               <span
@@ -161,11 +164,15 @@ function AlertsPage() {
       )}
 
       <Panel title="Activity feed">
+        <p className="mb-4 text-xs text-muted-foreground">{alerts.data ? `${filtered.length} matching entries of ${items.length} displayed (maximum 200). ` : ""}Counts combine capped 24-hour event samples with current account, publishing and safety issues; they are not complete 24-hour totals.</p>
         <div className="mb-4 flex flex-wrap gap-2">
           {CATEGORIES.map((c) => (
-            <button
+            <Button
               key={c.key}
               type="button"
+              variant={category === c.key ? "default" : "outline"}
+              size="sm"
+              aria-pressed={category === c.key}
               onClick={() => setCategory(c.key)}
               className={cn(
                 "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
@@ -175,13 +182,16 @@ function AlertsPage() {
               )}
             >
               {c.label}
-            </button>
+            </Button>
           ))}
           <span className="mx-1 hidden h-6 w-px bg-border sm:block" />
           {SEVERITIES.map((s) => (
-            <button
+            <Button
               key={s.key}
               type="button"
+              variant={severity === s.key ? "default" : "outline"}
+              size="sm"
+              aria-pressed={severity === s.key}
               onClick={() => setSeverity(s.key)}
               className={cn(
                 "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
@@ -191,20 +201,20 @@ function AlertsPage() {
               )}
             >
               {s.label}
-            </button>
+            </Button>
           ))}
         </div>
 
-        {alerts.isLoading ? (
+        {feedState === "loading" ? (
           <p className="text-sm text-muted-foreground">Loading activity…</p>
-        ) : filtered.length === 0 ? (
+        ) : feedState === "unavailable" || feedState === "stale" ? <p className="text-sm text-muted-foreground">{feedState === "stale" ? "No entries in the previous results; current alert status is unavailable." : "Alert status unavailable."}</p> : filtered.length === 0 ? (
           <EmptyState
             icon={CheckCircle2}
-            title={healthy ? "Everything is running cleanly" : "Nothing matches this filter"}
+            title={feedState === "empty" ? "No issues in the loaded results" : "Nothing matches this filter"}
             description={
-              healthy
-                ? "No automation failures, rejected events or account problems in the last 24 hours."
-                : "Try a different category or level."
+              feedState === "empty"
+                ? "No issues were returned by the current event samples and account checks."
+                : "Other issues exist in the loaded results. Try a different category or level."
             }
           />
         ) : (
@@ -217,11 +227,11 @@ function AlertsPage() {
                     item.severity === "critical"
                       ? "bg-destructive"
                       : item.severity === "warning"
-                        ? "bg-amber-500"
+                        ? "bg-warning"
                         : "bg-muted-foreground/50",
                   )}
                 />
-                <div className="rounded-xl border bg-card px-4 py-3">
+                <div className="rounded-lg border bg-card px-4 py-3">
                   <div className="flex flex-wrap items-center gap-2">
                     <StatusBadge tone={severityTone(item.severity)}>
                       {severityLabel(item.severity)}
