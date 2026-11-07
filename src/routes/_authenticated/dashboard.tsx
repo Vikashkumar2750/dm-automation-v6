@@ -387,7 +387,7 @@ function Dashboard() {
           ) : (
             <div className="space-y-2">
               {recentThreads.map((c) => (
-                <Link to="/inbox" key={c.id} className="flex items-center gap-3 rounded-lg border px-4 py-3 transition-colors hover:bg-surface-secondary">
+                <Link to="/inbox" search={{ conversation: c.id, workspace: orgId ?? undefined }} key={c.id} className="flex items-center gap-3 rounded-lg border px-4 py-3 transition-colors hover:bg-surface-secondary">
                   <PlatformBadge platform={c.platform} size="sm" />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium">
@@ -427,6 +427,7 @@ function Dashboard() {
               <ul className="space-y-3">
                 {upcoming.map((p) => (
                   <li key={p.id} className="flex items-start gap-3">
+                    <Link to="/calendar" search={{ post: p.id, workspace: orgId ?? undefined }} className="flex min-w-0 flex-1 items-start gap-3 rounded-md p-1 transition-colors hover:bg-surface-secondary">
                     <PlatformBadge platform={p.platform} size="sm" />
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium">{p.caption || "(no caption)"}</p>
@@ -434,6 +435,8 @@ function Dashboard() {
                         {p.scheduled_at ? new Date(p.scheduled_at).toLocaleString() : ""}
                       </p>
                     </div>
+                    <ArrowRight className="size-4 shrink-0 text-muted-foreground" />
+                    </Link>
                   </li>
                 ))}
               </ul>

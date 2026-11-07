@@ -18,8 +18,10 @@ import { listRecentRemotePosts } from "@/lib/automations.functions";
 import { calendarPosts } from "@/lib/calendar-posts";
 import { statusTone } from "./create-post";
 import { formatLabel } from "@/components/app/PostListExtras";
+import { findWorkspaceItem, itemSearch, workspaceItemId } from "@/lib/item-navigation";
 
 export const Route = createFileRoute("/_authenticated/calendar")({
+  validateSearch: (search) => itemSearch(search, "post"),
   head: () => ({
     meta: [
       { title: "Content Calendar — AutoDM by Techaasvik" },
@@ -62,6 +64,9 @@ function CalendarPage() {
   const { activeOrg } = useTenant();
   const queryClient = useQueryClient();
   const orgId = activeOrg?.id ?? "";
+  const routeSearch = Route.useSearch();
+  const navigate = Route.useNavigate();
+  const requestedId = workspaceItemId(routeSearch.post, routeSearch.workspace, orgId);
 
   const fetchPosts = useServerFn(listPosts);
   const fetchRemote = useServerFn(listRecentRemotePosts);
@@ -76,6 +81,7 @@ function CalendarPage() {
   const [platform, setPlatform] = useState("all");
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<ComposerDraft | null>(null);
+  const [openedTarget, setOpenedTarget] = useState("");
 
   const postsQuery = useQuery({
     queryKey: ["posts", orgId],
@@ -117,6 +123,33 @@ function CalendarPage() {
 
   const posts = useMemo(() => calendarPosts(postsQuery.data ?? [], remoteQuery.data?.posts ?? [], orgId)
     .filter((p) => matchesPlatformAccount(p, platform, accountId)), [postsQuery.data, remoteQuery.data, orgId, platform, accountId]);
+  const requestedPost = findWorkspaceItem(postsQuery.data ?? [], requestedId, orgId);
+  useEffect(() => {
+    const key = `${orgId}:${requestedId ?? ""}`;
+    if (!requestedPost || key === openedTarget) return;
+    setOpenedTarget(key);
+    setPlatform("all");
+    setAccountId("all");
+    const at = requestedPost.scheduled_at ?? requestedPost.published_at;
+    if (at && !Number.isNaN(new Date(at).getTime())) {
+      const date = new Date(at);
+      setMonth(new Date(date.getFullYear(), date.getMonth(), 1));
+    }
+    setDraft({ post: requestedPost });
+    setOpen(true);
+  }, [requestedPost, requestedId, orgId, openedTarget]);
+  useEffect(() => {
+    setOpen(false);
+    setDraft(null);
+    setOpenedTarget("");
+  }, [orgId]);
+  const changeOpen = (value: boolean) => {
+    setOpen(value);
+    if (!value && routeSearch.post) {
+      setOpenedTarget("");
+      void navigate({ search: {}, replace: true });
+    }
+  };
 
   const byDay = useMemo(() => {
     const map = new Map<string, Post[]>();
@@ -167,6 +200,7 @@ function CalendarPage() {
         }
       />
 
+      {routeSearch.post && (!requestedId || (postsQuery.isSuccess && !requestedPost)) && <div role="alert" className="mb-4 flex flex-wrap items-center justify-between gap-3 border-l-2 border-warning bg-warning-soft px-4 py-3 text-sm"><span>This post is unavailable in the current workspace.</span><Button variant="outline" size="sm" onClick={() => void navigate({ search: {}, replace: true })}>Back to calendar</Button></div>}
       <Panel
         title={month.toLocaleDateString("en-IN", { month: "long", year: "numeric" })}
         bodyClassName="p-0"
@@ -306,7 +340,7 @@ function CalendarPage() {
       {orgId && (
         <PostComposer
           open={open}
-          onOpenChange={setOpen}
+          onOpenChange={changeOpen}
           organizationId={orgId}
           accounts={accountsQuery.data ?? []}
           draft={draft}

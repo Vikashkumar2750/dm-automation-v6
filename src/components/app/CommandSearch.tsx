@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/command";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/hooks/useTenant";
+import { Button } from "@/components/ui/button";
 
 export type SearchPage = { label: string; to: string };
 
@@ -59,22 +60,23 @@ export function CommandSearch({ pages }: { pages: SearchPage[] }) {
     enabled: open && !!orgId && term.length >= 2,
     staleTime: 30_000,
     queryFn: async () => {
+      if (!orgId) throw new Error("No workspace selected");
       const like = `%${term}%`;
       const [convos, rules, posts] = await Promise.all([
         supabase.from("conversations").select("id, external_user_name, last_message_preview, platform")
-          .eq("organization_id", orgId!).or(`external_user_name.ilike.${like},last_message_preview.ilike.${like}`)
+          .eq("organization_id", orgId).or(`external_user_name.ilike.${like},last_message_preview.ilike.${like}`)
           .order("last_message_at", { ascending: false }).limit(5),
         supabase.from("automation_rules").select("id, name, platform")
-          .eq("organization_id", orgId!).ilike("name", like).limit(5),
+          .eq("organization_id", orgId).ilike("name", like).limit(5),
         supabase.from("posts").select("id, caption, platform, status")
-          .eq("organization_id", orgId!).ilike("caption", like).order("created_at", { ascending: false }).limit(5),
+          .eq("organization_id", orgId).ilike("caption", like).order("created_at", { ascending: false }).limit(5),
       ]);
       const err = convos.error || rules.error || posts.error;
       if (err) throw err;
       return {
-        conversations: (convos.data ?? []).map((c): Hit => ({ id: c.id, label: c.external_user_name || "Unknown contact", sub: `${c.platform} · ${c.last_message_preview ?? ""}`, to: "/inbox" })),
+        conversations: (convos.data ?? []).map((c): Hit => ({ id: c.id, label: c.external_user_name || "Unknown contact", sub: `${c.platform} · ${c.last_message_preview ?? ""}`, to: `/inbox?conversation=${c.id}&workspace=${orgId}` })),
         automations: (rules.data ?? []).map((r): Hit => ({ id: r.id, label: r.name ?? "Untitled automation", sub: r.platform ?? undefined, to: "/automations" })),
-        posts: (posts.data ?? []).map((p): Hit => ({ id: p.id, label: (p.caption || "Untitled post").slice(0, 80), sub: `${p.platform} · ${p.status}`, to: "/calendar" })),
+        posts: (posts.data ?? []).map((p): Hit => ({ id: p.id, label: (p.caption || "Untitled post").slice(0, 80), sub: `${p.platform} · ${p.status}`, to: `/calendar?post=${p.id}&workspace=${orgId}` })),
       };
     },
   });
@@ -85,7 +87,7 @@ export function CommandSearch({ pages }: { pages: SearchPage[] }) {
     try { localStorage.setItem(RECENT_KEY, JSON.stringify(next)); } catch { /* ignore */ }
     setOpen(false);
     setQuery("");
-    navigate({ to });
+    void navigate({ to });
   }
 
   const q = query.trim().toLowerCase();
@@ -101,7 +103,8 @@ export function CommandSearch({ pages }: { pages: SearchPage[] }) {
 
   return (
     <>
-      <button
+      <Button
+        variant="outline"
         type="button"
         onClick={() => setOpen(true)}
         className="relative mx-auto hidden h-10 w-full max-w-lg items-center rounded-lg border bg-surface-secondary pr-3 pl-9 text-left text-sm text-subtle-foreground hover:border-ring focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none md:flex"
@@ -109,10 +112,10 @@ export function CommandSearch({ pages }: { pages: SearchPage[] }) {
         <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
         <span className="flex-1 truncate">Search pages, chats, automations, posts…</span>
         <kbd className="rounded border bg-surface px-1.5 py-0.5 text-[10px] font-medium">Ctrl K</kbd>
-      </button>
-      <button type="button" onClick={() => setOpen(true)} className="inline-flex size-9 items-center justify-center rounded-md hover:bg-surface-secondary md:hidden" aria-label="Search">
+      </Button>
+      <Button variant="ghost" size="icon" type="button" onClick={() => setOpen(true)} className="md:hidden" aria-label="Search">
         <Search className="size-5" />
-      </button>
+      </Button>
 
       <CommandDialog open={open} onOpenChange={setOpen}>
         <CommandInput placeholder="Search pages, chats, automations, posts…" value={query} onValueChange={setQuery} />
