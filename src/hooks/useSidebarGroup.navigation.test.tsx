@@ -19,6 +19,18 @@ describe.each(["user", "admin"] as const)("%s sidebar navigation", (scope) => {
     expect(tree?.root.findByType("button").children).toEqual(["Engage"]);
     await act(async () => { tree?.root.findByType("button").props["onClick"](); });
     expect(tree?.root.findByType("button").children).toEqual(["closed"]);
+    await act(async () => { tree?.root.findByType("button").props["onClick"](); });
+    await act(async () => { tree?.update(<SidebarGroupProvider key="next-session"><Probe scope={scope} /></SidebarGroupProvider>); });
+    expect(tree?.root.findByType("button").children).toEqual(["closed"]);
     await act(async () => { tree?.unmount(); });
   });
+});
+
+it("keeps user and admin expansion separate", async () => {
+  let tree: ReactTestRenderer | undefined;
+  await act(async () => { tree = create(<SidebarGroupProvider><Probe scope="user" /><Probe scope="admin" /></SidebarGroupProvider>); });
+  await act(async () => { tree?.root.findAllByType("button")[0]?.props["onClick"](); });
+  expect(tree?.root.findAllByType("button")[0]?.children).toEqual(["Engage"]);
+  expect(tree?.root.findAllByType("button")[1]?.children).toEqual(["closed"]);
+  await act(async () => { tree?.unmount(); });
 });
