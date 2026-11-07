@@ -197,6 +197,7 @@ Real Meta + YouTube credentials are available when we reach OAuth phases.
 - [x] Usage presentation: unavailable/loading/stale states, rolling activity versus billable monthly runs, workspace defaults separated from effective account caps; refresh controls and local per-account scrolling.
 - [x] Workspace/per-account usage source-read integrity: eleven failed reads now reject safely; confirmed empty reads remain valid and account membership gating unchanged.
 - [ ] Monthly plan-usage read integrity: separate display repair from shared quota enforcement before replacing suppressed source errors/fallback step counts.
+- [ ] Diagnose screenshot Growth Insights unavailable error and repair confirmed source mismatch without suppressing failed reads.
 - [ ] Next: V6 acceptance audit and signed-in desktop/mobile verification; authenticated export/billing/health checks blocked by no preview auth users.
 - [x] Converter 800MB + clear after download; Super Admin temp cleanup button
 - [x] Coupons: manual Apply + auto-apply (?coupon=), discount from MRP, server re-check
