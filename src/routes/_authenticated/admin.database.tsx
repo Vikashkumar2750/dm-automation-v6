@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { Download, Loader2, Play, RefreshCw, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
 import { createBackup, deleteBackup, downloadBackup, listBackups, runAdminSql, saveBackupSchedule } from "@/lib/db-backup.functions";
 
 export const Route = createFileRoute("/_authenticated/admin/database")({
@@ -27,6 +28,46 @@ function saveFile(name: string, text: string) {
   setTimeout(() => URL.revokeObjectURL(url), 2000);
 }
 const kb = (n: number) => (n > 1048576 ? `${(n / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`);
+
+async function downloadPgDump(mode: "full" | "schema" | "data") {
+  const { data } = await supabase.auth.getSession();
+  const res = await fetch("/api/admin/db-dump", {
+    method: "POST",
+    headers: { "content-type": "application/json", authorization: `Bearer ${data.session?.access_token ?? ""}` },
+    body: JSON.stringify({ mode }),
+  });
+  if (!res.ok) throw new Error((await res.text()).slice(0, 300) || `Failed (${res.status})`);
+  const name = /filename="([^"]+)"/.exec(res.headers.get("content-disposition") ?? "")?.[1] ?? `autodm-${mode}.sql`;
+  const url = URL.createObjectURL(await res.blob());
+  const a = document.createElement("a"); a.href = url; a.download = name; a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+}
+
+function PgDumpSection() {
+  const [busy, setBusy] = useState<string | null>(null);
+  const go = async (mode: "full" | "schema" | "data") => {
+    setBusy(mode);
+    try { await downloadPgDump(mode); toast.success("Dump downloaded"); }
+    catch (e) { toast.error(e instanceof Error ? e.message : "Dump failed"); }
+    finally { setBusy(null); }
+  };
+  const btn = (mode: "full" | "schema" | "data", label: string, variant: "default" | "outline" = "outline") => (
+    <Button variant={variant} onClick={() => go(mode)} disabled={!!busy}>
+      {busy === mode ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Download className="mr-1 h-4 w-4" />}{label}
+    </Button>
+  );
+  return (
+    <section className="space-y-3 rounded-lg border bg-card p-4">
+      <h2 className="font-semibold">Full database dump (pg_dump)</h2>
+      <p className="text-sm text-muted-foreground">Real pg_dump using the server's database connection: tables, functions, policies and data for app, user accounts and file records. Uploaded files themselves are not included. Keep the file private — it contains user accounts and secrets.</p>
+      <div className="flex flex-wrap gap-2">
+        {btn("full", "Download full dump", "default")}
+        {btn("schema", "Structure only")}
+        {btn("data", "Data only (incl. users)")}
+      </div>
+    </section>
+  );
+}
 
 function AdminDatabasePage() {
   const qc = useQueryClient();
@@ -80,6 +121,8 @@ function AdminDatabasePage() {
         </div>
         <Button variant="outline" size="sm" onClick={refresh} disabled={q.isFetching}><RefreshCw className="mr-1 h-4 w-4" />Refresh</Button>
       </div>
+
+      <PgDumpSection />
 
       <section className="space-y-3 rounded-lg border bg-card p-4">
         <h2 className="font-semibold">Export</h2>
