@@ -3,7 +3,7 @@ import { PlatformAccountFilter } from "@/components/app/PlatformAccountFilter";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { AlertTriangle, Lightbulb, Sparkles, Trash2, TrendingUp } from "lucide-react";
+import { AlertTriangle, Lightbulb, Sparkles, Trash2, TrendingUp, RefreshCw } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -46,14 +46,16 @@ function GrowthPage() {
 
   return (
     <AppShell>
-      <PageHeader title="Growth insights" description="When to post, what to post, and where your DM funnel leaks." actions={<div className="flex flex-wrap items-center gap-2"><PlatformAccountFilter orgId={orgId ?? null} platform={platform} onPlatformChange={setPlatform} accountId={accountId} onAccountChange={setAccountId} /><GuideButton guide="growth" /></div>} />
+      <PageHeader title="Growth insights" description="When to post, what to post, and where your DM funnel leaks." actions={<div className="flex flex-wrap items-center gap-2"><PlatformAccountFilter orgId={orgId ?? null} platform={platform} onPlatformChange={setPlatform} accountId={accountId} onAccountChange={setAccountId} /><Button variant="outline" size="icon" aria-label="Refresh growth insights" disabled={q.isFetching} onClick={() => void q.refetch()}><RefreshCw className="size-4" /></Button><GuideButton guide="growth" /></div>} />
+      {q.isError && <p role="alert" className="mb-4 text-sm text-destructive">Growth insights could not be refreshed. Previously loaded results may be out of date.</p>}
+      <p className="mb-4 text-xs text-muted-foreground">Audience timing uses up to 10,000 incoming messages across up to 500 loaded conversations. Funnel automation and revenue events are workspace-wide samples, regardless of account selection. Missing source data can appear as zero; these insights are not a delivery-health guarantee.</p>
       {!orgId || !q.data ? (
-        <p className="text-sm text-muted-foreground">{q.error ? (q.error as Error).message : "Loading…"}</p>
+        <p role="status" className="text-sm text-muted-foreground">{q.isError ? "Growth insights unavailable. Refresh to retry." : "Loading growth insights…"}</p>
       ) : (
         <div className="space-y-5">
           <Alerts data={q.data} />
-          <Tabs defaultValue="time">
-            <TabsList className="flex-wrap">
+          <Tabs key={orgId} defaultValue="time">
+            <TabsList className="h-auto max-w-full flex-wrap">
               <TabsTrigger value="time">Best time to post</TabsTrigger>
               <TabsTrigger value="funnel">Funnel heatmap</TabsTrigger>
               <TabsTrigger value="ideas">AI content ideas</TabsTrigger>
@@ -72,9 +74,9 @@ function GrowthPage() {
 
 function Alerts({ data }: { data: Overview }) {
   return (
-    <Panel title="Anomaly alerts" action={<StatusBadge tone={data.anomalies.length ? "warning" : "success"}>{data.anomalies.length ? `${data.anomalies.length} alert(s)` : "All normal"}</StatusBadge>}>
+    <Panel title="Anomaly alerts · loaded samples" action={<StatusBadge tone={data.anomalies.length ? "warning" : "neutral"}>{data.anomalies.length ? `${data.anomalies.length} alert(s)` : "No detected alerts"}</StatusBadge>}>
       {data.anomalies.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Last 24 hours look normal compared with your previous 7 days.</p>
+        <p className="text-sm text-muted-foreground">No anomaly detected in loaded samples for the last 24 hours versus the previous 7 days. This does not confirm all delivery systems are healthy.</p>
       ) : (
         <ul className="space-y-2">
           {data.anomalies.map((a) => (
@@ -300,16 +302,16 @@ function Bench({ orgId, data, manager }: { orgId: string; data: Overview; manage
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="text-left text-xs text-muted-foreground">
-              <tr><th className="py-2">Account</th><th>Followers</th><th>Posts / week</th><th>Avg comments / post</th><th>Engagement</th><th /></tr>
+              <tr><th className="py-2">Account</th><th>Followers</th><th>Posts / week</th><th>Inbound / post (you); comments / post (competitors)</th><th>Ratio to followers</th><th /></tr>
             </thead>
             <tbody>
               {rows.map((r: any) => (
                 <tr key={r.id ?? "you"} className="border-t">
                   <td className="py-2 font-medium">{r.isYou ? "You" : r.name}{r.handle ? <span className="ml-1 text-xs text-muted-foreground">@{r.handle}</span> : null}</td>
-                  <td>{r.followers.toLocaleString("en-IN")}</td>
+                  <td>{r.isYou && !yourFollowers ? "—" : r.followers.toLocaleString("en-IN")}</td>
                   <td>{r.postsPerWeek}</td>
                   <td>{r.avgComments}</td>
-                  <td>{r.engagementRate}%</td>
+                  <td>{r.isYou && !yourFollowers ? "—" : `${r.engagementRate}%`}</td>
                   <td className="text-right">{!r.isYou && manager && <Button size="icon" variant="ghost" aria-label={`Remove ${r.name}`} onClick={() => remove.mutate(r.id)}><Trash2 className="size-4" /></Button>}</td>
                 </tr>
               ))}
@@ -319,7 +321,7 @@ function Bench({ orgId, data, manager }: { orgId: string; data: Overview; manage
         {tips.length > 0 && (
           <ul className="mt-4 space-y-1 text-sm">{tips.map((t) => <li key={t} className="flex gap-2"><TrendingUp className="mt-0.5 size-4 text-primary" />{t}</li>)}</ul>
         )}
-        <p className="mt-3 text-xs text-muted-foreground">Your numbers come from the last 28 days of published posts and received comments/DMs. Competitor numbers are typed in by you from their public profile.</p>
+        <p className="mt-3 text-xs text-muted-foreground">Your ratio includes incoming DMs and comments divided by loaded published posts from the last 28 days; it is not post-level engagement. Competitor figures are manually entered comments, so the two ratios are not directly comparable.</p>
       </Panel>
       {manager && (
         <Panel title="Add a competitor">

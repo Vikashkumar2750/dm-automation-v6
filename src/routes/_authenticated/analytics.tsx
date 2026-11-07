@@ -12,7 +12,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { Bot, MessageSquare, Send, Timer, CheckCircle2, Zap, Workflow } from "lucide-react";
+import { Bot, MessageSquare, Send, Timer, CheckCircle2, Zap, Workflow, RefreshCw } from "lucide-react";
 
 import { AppShell } from "@/components/app/AppShell";
 import {
@@ -58,24 +58,29 @@ function AnalyticsPage() {
   const [platform, setPlatform] = useState<"all" | "instagram" | "facebook" | "youtube">("all");
   const fetchAnalytics = useServerFn(getAnalytics);
 
-  const { data, isLoading } = useQuery({
+  const { data, isError, isFetching, refetch } = useQuery({
     queryKey: ["analytics", activeOrg?.id, rangeDays, accountId, platform],
     enabled: Boolean(activeOrg?.id),
     refetchInterval: 60_000,
-    queryFn: () =>
-      fetchAnalytics({ data: { organizationId: activeOrg!.id, rangeDays, ...(accountId !== "all" ? { socialAccountId: accountId } : {}), ...(platform !== "all" ? { platform } : {}) } }),
+    queryFn: () => {
+      if (!activeOrg) throw new Error("No workspace selected");
+      return fetchAnalytics({ data: { organizationId: activeOrg.id, rangeDays, ...(accountId !== "all" ? { socialAccountId: accountId } : {}), ...(platform !== "all" ? { platform } : {}) } });
+    },
   });
 
   const t = data?.totals;
+  const metric = (value: number | null | undefined) => value == null ? "—" : value.toLocaleString();
+  const unavailable = isError ? "Analytics unavailable. Refresh to retry." : "Loading analytics…";
 
   return (
     <AppShell>
       <PageHeader
         title="Analytics"
-        description="Conversations, reply speed, automation share and publishing results."
+        description={`Message performance: last ${rangeDays} days. Conversation and post statuses reflect current stored records.`}
         actions={
           <div className="flex flex-wrap items-center gap-2">
           <PlatformAccountFilter orgId={activeOrg?.id ?? null} platform={platform} onPlatformChange={setPlatform} accountId={accountId} onAccountChange={setAccountId} />
+          <Button size="icon" variant="outline" aria-label="Refresh analytics" disabled={isFetching} onClick={() => void refetch()}><RefreshCw className="size-4" /></Button>
           <div className="flex items-center gap-1 rounded-lg border border-border p-1">
             {RANGES.map((r) => (
               <Button
@@ -91,35 +96,37 @@ function AnalyticsPage() {
           </div>
         }
       />
+      {isError && <p role="alert" className="mb-4 text-sm text-destructive">Analytics could not be refreshed. Previously loaded results may be out of date.</p>}
+      <p className="mb-4 text-xs text-muted-foreground">Message metrics use up to 10,000 messages in the selected period; these are loaded results, not guaranteed full-history totals. Active rules and flows are workspace-wide.</p>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
           info="All chat threads (DMs and comments) in this workspace, with how many are open or resolved."
           label="Conversations"
-          value={String(t?.conversations ?? 0)}
+          value={metric(t?.conversations)}
           icon={MessageSquare}
-          sub={`${t?.openThreads ?? 0} open · ${t?.resolved ?? 0} resolved`}
+          sub={t ? `${t.openThreads} open · ${t.resolved} resolved · current records` : "Unavailable"}
         />
         <StatCard
           info="Messages and comments people sent you in the selected period."
           label="Messages received"
-          value={String(t?.inbound ?? 0)}
+          value={metric(t?.inbound)}
           icon={MessageSquare}
-          sub={`${t?.unread ?? 0} unread right now`}
+          sub={t ? `${t.unread} unread right now` : "Unavailable"}
         />
         <StatCard
           info="All replies sent in the period — typed by your team (manual) or sent by automations."
           label="Replies sent"
-          value={String(t?.outbound ?? 0)}
+          value={metric(t?.outbound)}
           icon={Send}
-          sub={`${t?.manual ?? 0} manual · ${t?.automated ?? 0} automated`}
+          sub={t ? `${t.manual} manual · ${t.automated} automated` : "Unavailable"}
         />
         <StatCard
           info="Out of all replies sent, the percentage sent automatically."
           label="Automation share"
-          value={`${data?.automationShare ?? 0}%`}
+          value={data ? `${data.automationShare}%` : "—"}
           icon={Bot}
-          sub={`${t?.automationBlocked ?? 0} runs skipped by safety rules`}
+          sub={t ? `${t.automationBlocked} runs skipped by safety rules` : "Unavailable"}
         />
       </div>
 
@@ -127,7 +134,7 @@ function AnalyticsPage() {
         <StatCard
           info="Percentage of people who wrote to you and got at least one reply."
           label="Answered conversations"
-          value={`${data?.responseRate ?? 0}%`}
+          value={data ? `${data.responseRate}%` : "—"}
           icon={CheckCircle2}
           sub="Threads that got at least one reply"
         />
@@ -145,14 +152,14 @@ function AnalyticsPage() {
         <StatCard
           info="Posts published from this tool, plus how many are scheduled or failed."
           label="Posts published"
-          value={String(t?.postsPublished ?? 0)}
+          value={metric(t?.postsPublished)}
           icon={CheckCircle2}
-          sub={`${t?.postsScheduled ?? 0} scheduled · ${t?.postsFailed ?? 0} failed`}
+          sub={t ? `${t.postsScheduled} scheduled · ${t.postsFailed} failed · current records` : "Unavailable"}
         />
         <StatCard
           info="Messages sent automatically by rules, flows or the AI agent in the period."
           label="Automated replies"
-          value={String(t?.automated ?? 0)}
+          value={metric(t?.automated)}
           icon={Bot}
           sub={`Last ${rangeDays} days`}
         />
@@ -162,26 +169,26 @@ function AnalyticsPage() {
         <StatCard
           info="Total automations switched on right now: keyword rules plus Flow Builder flows."
           label="Active automations"
-          value={String((t?.activeRules ?? 0) + (t?.activeFlows ?? 0))}
+          value={t ? metric(t.activeRules + t.activeFlows) : "—"}
           icon={Workflow}
-          sub={`${t?.activeRules ?? 0} rules · ${t?.activeFlows ?? 0} flows`}
+          sub={t ? `${t.activeRules} rules · ${t.activeFlows} flows · workspace-wide` : "Unavailable"}
         />
         <StatCard
           info="How many automations ran and sent something. One run counts once, however many steps it sent."
           label="Automation runs"
-          value={String(t?.automationRuns ?? 0)}
+          value={metric(t?.automationRuns)}
           icon={Zap}
           sub={`Last ${rangeDays} days`}
         />
       </div>
 
       <Panel
-        title="Activity"
+        title={`Activity · last ${rangeDays} days`}
       >
         <div className="h-[280px] w-full min-w-0">
-          {isLoading ? (
+          {!data ? (
             <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-              Loading…
+              {unavailable}
             </div>
           ) : (
             <ResponsiveContainer width="100%" height="100%">
@@ -254,7 +261,7 @@ function AnalyticsPage() {
 
       <div className="grid gap-4 lg:grid-cols-3">
         <Panel title="By platform">
-          {(data?.byPlatform.length ?? 0) === 0 ? (
+          {!data ? <p role="status" className="text-sm text-muted-foreground">{unavailable}</p> : data.byPlatform.length === 0 ? (
             <EmptyState
               icon={MessageSquare}
               title="No conversations yet"
@@ -278,7 +285,7 @@ function AnalyticsPage() {
         </Panel>
 
         <Panel title="By type">
-          {(data?.byChannel.length ?? 0) === 0 ? (
+          {!data ? <p role="status" className="text-sm text-muted-foreground">{unavailable}</p> : data.byChannel.length === 0 ? (
             <EmptyState icon={MessageSquare} title="Nothing yet" description="Types appear once messages arrive." />
           ) : (
             <div className="space-y-3">
@@ -293,7 +300,7 @@ function AnalyticsPage() {
         </Panel>
 
         <Panel title="Top automations">
-          {(data?.topRules.length ?? 0) === 0 ? (
+          {!data ? <p role="status" className="text-sm text-muted-foreground">{unavailable}</p> : data.topRules.length === 0 ? (
             <EmptyState
               icon={MessageSquare}
               title="No automation runs"
@@ -303,8 +310,8 @@ function AnalyticsPage() {
             <div className="space-y-3">
               {data?.topRules.map((r) => (
                 <div key={r.name} className="flex items-center justify-between gap-3 text-sm">
-                  <span className="truncate">{r.name}</span>
-                  <span className="num font-medium">{r.runs}</span>
+                  <span className="min-w-0 break-words">{r.name}</span>
+                  <span className="num shrink-0 font-medium">{r.runs}</span>
                 </div>
               ))}
             </div>
