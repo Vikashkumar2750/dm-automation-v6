@@ -50,31 +50,44 @@ import { AutomationNotificationsProvider, AutomationNotificationBell } from "@/c
 
 type NavItem = { label: string; to: string; icon: LucideIcon; badge?: number; comingSoon?: boolean };
 
-const primaryNav: NavItem[] = [
-  { label: "Dashboard", to: "/dashboard", icon: LayoutDashboard },
-  { label: "Create Post", to: "/create-post", icon: PenSquare },
-  { label: "Calendar", to: "/calendar", icon: CalendarDays },
-  { label: "Inbox", to: "/inbox", icon: Inbox },
-  { label: "Comments", to: "/comments", icon: MessageSquare },
-  { label: "Automations", to: "/automations", icon: Workflow },
-  { label: "Workflows", to: "/workflows", icon: Workflow },
-  { label: "Contacts", to: "/contacts", icon: Users },
-  { label: "Sales & Revenue", to: "/revenue", icon: IndianRupee },
-  { label: "Team desk", to: "/team-desk", icon: Headset },
-  { label: "Analytics", to: "/analytics", icon: BarChart3 },
-  { label: "Social Accounts", to: "/social-accounts", icon: Share2 },
-  { label: "AI Assistant", to: "/ai-assistant", icon: Sparkles },
+type NavGroup = { title: string; items: NavItem[] };
+
+const navGroups: NavGroup[] = [
+  { title: "Overview", items: [{ label: "Dashboard", to: "/dashboard", icon: LayoutDashboard }] },
+  { title: "Engage", items: [
+    { label: "Inbox", to: "/inbox", icon: Inbox },
+    { label: "Comments", to: "/comments", icon: MessageSquare },
+    { label: "Contacts", to: "/contacts", icon: Users },
+  ] },
+  { title: "Automate", items: [
+    { label: "Automations", to: "/automations", icon: Workflow },
+    { label: "Workflows", to: "/workflows", icon: Workflow },
+    { label: "AI Assistant", to: "/ai-assistant", icon: Sparkles },
+  ] },
+  { title: "Publish", items: [
+    { label: "Create Post", to: "/create-post", icon: PenSquare },
+    { label: "Calendar", to: "/calendar", icon: CalendarDays },
+  ] },
+  { title: "Grow & Sell", items: [
+    { label: "Analytics", to: "/analytics", icon: BarChart3 },
+    { label: "Growth Insights", to: "/growth", icon: GrowthIcon },
+    { label: "Sales & Revenue", to: "/revenue", icon: IndianRupee },
+  ] },
+  { title: "Workspace", items: [
+    { label: "Social Accounts", to: "/social-accounts", icon: Share2 },
+    { label: "Team Desk", to: "/team-desk", icon: Headset },
+    { label: "Team", to: "/team", icon: UsersRound },
+    { label: "Account Health", to: "/account-health", icon: ShieldCheck },
+    { label: "Trust & Safety", to: "/trust-safety", icon: ShieldAlert },
+  ] },
+  { title: "Account", items: [
+    { label: "Usage & Limits", to: "/usage", icon: Gauge },
+    { label: "Billing", to: "/billing", icon: CreditCard },
+    { label: "Settings", to: "/settings", icon: Settings },
+  ] },
 ];
 
-const secondaryNav: NavItem[] = [
-  { label: "Account Health", to: "/account-health", icon: ShieldCheck },
-  { label: "Trust & safety", to: "/trust-safety", icon: ShieldAlert },
-  { label: "Growth insights", to: "/growth", icon: GrowthIcon },
-  { label: "Usage & Limits", to: "/usage", icon: Gauge },
-  { label: "Team", to: "/team", icon: UsersRound },
-  { label: "Settings", to: "/settings", icon: Settings },
-  { label: "Billing", to: "/billing", icon: CreditCard },
-];
+const NAV_STATE_KEY = "autodm_nav_collapsed";
 
 function NavLink({ item, active }: { item: NavItem; active: boolean }) {
   const Icon = item.icon;
@@ -108,15 +121,31 @@ function Sidebar({ pathname }: { pathname: string }) {
   const features = useWorkspaceFeatures().data;
   const postMode = features?.create_post ?? status.data?.createPostMode;
   const calMode = features?.calendar ?? status.data?.calendarMode;
-  const navItems = primaryNav.filter((item) => {
+  const visible = (item: NavItem) => {
     if (item.to === "/workflows") return features ? features.workflows === "enabled" : workflowsOn;
     if (item.to === "/create-post") return Boolean(postMode && postMode !== "hidden");
     if (item.to === "/calendar") return Boolean(calMode && calMode !== "hidden");
     if (item.to === "/revenue") return features?.revenue !== "hidden";
     if (item.to === "/team-desk") return features?.team_desk !== "off";
     if (item.to === "/ai-assistant") return features?.ai !== "off";
+    if (item.to === "/growth") return features?.growth !== "off";
     return true;
-  }).map((item) => ({ ...item, comingSoon: item.to === "/create-post" ? postMode === "coming_soon" : item.to === "/calendar" ? calMode === "coming_soon" : false }));
+  };
+  const groups = navGroups
+    .map((g) => ({
+      ...g,
+      items: g.items.filter(visible).map((item) => ({ ...item, comingSoon: item.to === "/create-post" ? postMode === "coming_soon" : item.to === "/calendar" ? calMode === "coming_soon" : false })),
+    }))
+    .filter((g) => g.items.length > 0);
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  useEffect(() => {
+    try { setCollapsed(JSON.parse(localStorage.getItem(NAV_STATE_KEY) || "{}")); } catch { /* ignore */ }
+  }, []);
+  const toggleGroup = (title: string) => setCollapsed((prev) => {
+    const next = { ...prev, [title]: !prev[title] };
+    try { localStorage.setItem(NAV_STATE_KEY, JSON.stringify(next)); } catch { /* ignore */ }
+    return next;
+  });
   const brand = activeOrg?.brandName?.trim() || "AutoDM";
   const logo = activeOrg?.logoUrl?.trim() || "/logo.webp";
   const color = activeOrg?.brandColor?.trim() || null;
@@ -161,18 +190,33 @@ function Sidebar({ pathname }: { pathname: string }) {
         )}
       </div>
 
-      <nav className="flex-1 overflow-y-auto px-3 py-4">
-        <div className="space-y-1">
-          {navItems.map((item) => (
-            <NavLink key={item.to} item={item} active={pathname.startsWith(item.to)} />
-          ))}
-        </div>
-        <div className="my-4 border-t" />
-        <div className="space-y-1">
-          {secondaryNav.filter((item) => item.to !== "/growth" || features?.growth !== "off").map((item) => (
-            <NavLink key={item.to} item={item} active={pathname.startsWith(item.to)} />
-          ))}
-        </div>
+      <nav className="flex-1 overflow-y-auto px-3 py-3" aria-label="Main">
+        {groups.map((g) => {
+          const hasActive = g.items.some((i) => pathname.startsWith(i.to));
+          const isOpen = hasActive || !collapsed[g.title];
+          return (
+            <div key={g.title} className="mb-2">
+              {g.title !== "Overview" && (
+                <button
+                  type="button"
+                  onClick={() => toggleGroup(g.title)}
+                  aria-expanded={isOpen}
+                  className="flex w-full items-center justify-between rounded-md px-3 py-1.5 text-[11px] font-semibold tracking-wider text-subtle-foreground uppercase hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                >
+                  {g.title}
+                  <ChevronDown className={cn("size-3.5 transition-transform", !isOpen && "-rotate-90")} />
+                </button>
+              )}
+              {isOpen && (
+                <div className="space-y-0.5">
+                  {g.items.map((item) => (
+                    <NavLink key={item.to} item={item} active={pathname.startsWith(item.to)} />
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </nav>
 
       {activeOrg && !/^(pro|agency)\b/i.test(activeOrg.plan) && (
