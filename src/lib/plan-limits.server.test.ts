@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { countMonthlySent, resolveOrgLimits } from "./plan-limits.server";
+import { countMonthlySent, readMonthlyRunUsage, resolveOrgLimits } from "./plan-limits.server";
 import { vi } from "vitest";
 
 vi.mock("@/lib/platform-config.server", () => ({ readPlatformConfig: async () => ({ plans: [] }) }));
@@ -30,5 +30,36 @@ describe("plan usage counting", () => {
     const admin = { rpc: async (fn: string) => ({ data: fn === "count_org_runs" ? 1 : null, error: null }) } as never;
     // e.g. one comment that triggered a 3-DM flow → 1
     expect(await countMonthlySent(admin, "org")).toBe(1);
+  });
+});
+
+describe("monthly usage display", () => {
+  it.each([0, 1, 25])("returns confirmed grouped run count %s without reading step rows", async (count) => {
+    const rpc = vi.fn().mockResolvedValue({ data: count, error: null });
+    const from = vi.fn();
+    expect(await readMonthlyRunUsage({ rpc, from } as never, "org")).toBe(count);
+    expect(rpc).toHaveBeenCalledWith("count_org_runs", expect.objectContaining({ _org_id: "org" }));
+    expect(from).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { data: null, error: { message: "private database detail" } },
+    { data: 0, error: { message: "private database detail" } },
+    { data: null, error: null },
+    { data: "1", error: null },
+    { data: -1, error: null },
+    { data: 1.5, error: null },
+    { data: NaN, error: null },
+  ])("rejects unavailable or invalid grouped counts without a step fallback: %j", async (result) => {
+    const from = vi.fn();
+    await expect(readMonthlyRunUsage({ rpc: async () => result, from } as never, "org"))
+      .rejects.toThrow("Monthly plan usage unavailable");
+    expect(from).not.toHaveBeenCalled();
+  });
+
+  it("leaves the existing sending-quota fallback unchanged", async () => {
+    const query = { select: () => query, eq: () => query, gte: async () => ({ count: 3, error: null }) };
+    const admin = { rpc: async () => ({ data: null, error: { message: "RPC unavailable" } }), from: () => query } as never;
+    expect(await countMonthlySent(admin, "org")).toBe(3);
   });
 });
