@@ -125,6 +125,11 @@ function CalendarPage() {
     .filter((p) => matchesPlatformAccount(p, platform, accountId)), [postsQuery.data, remoteQuery.data, orgId, platform, accountId]);
   const requestedPost = findWorkspaceItem(postsQuery.data ?? [], requestedId, orgId);
   useEffect(() => {
+    setOpen(false);
+    setDraft(null);
+    setOpenedTarget("");
+  }, [orgId]);
+  useEffect(() => {
     const key = `${orgId}:${requestedId ?? ""}`;
     if (!requestedPost || key === openedTarget) return;
     setOpenedTarget(key);
@@ -138,11 +143,6 @@ function CalendarPage() {
     setDraft({ post: requestedPost });
     setOpen(true);
   }, [requestedPost, requestedId, orgId, openedTarget]);
-  useEffect(() => {
-    setOpen(false);
-    setDraft(null);
-    setOpenedTarget("");
-  }, [orgId]);
   const changeOpen = (value: boolean) => {
     setOpen(value);
     if (!value && routeSearch.post) {

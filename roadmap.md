@@ -165,7 +165,9 @@ Real Meta + YouTube credentials are available when we reach OAuth phases.
 - [x] V6 dashboard overview: performance-first layout, 7/30-day selector, refresh/retry, quick actions and attention items; feature controls preserved (300 regression tests passed).
 - [ ] Verify dashboard overview signed in on desktop/mobile (blocked: preview backend has no auth users; sign-in required).
 - [x] V6 dashboard increment: source-derived setup milestones and lead/revenue summary using existing workspace reads (302 tests passed; authenticated visual check blocked by no preview auth users).
-- [ ] In progress: item-level conversation/post navigation from dashboard and search; keep URL selection workspace-scoped.
+- [x] Item-level conversation/post navigation from dashboard and search; validated workspace-scoped URL selection (306 tests passed).
+- [ ] Verify exact chat/post opening and browser Back signed in on desktop/mobile (blocked: preview backend has no auth users).
+- [ ] Next: Super Admin Command Centre overview and priority action layout; preserve existing permissions and controls.
 - [x] Converter 800MB + clear after download; Super Admin temp cleanup button
 - [x] Coupons: manual Apply + auto-apply (?coupon=), discount from MRP, server re-check
 - [x] Per-workspace Super Admin feature switches + health; enforced on server for revenue writes, public pages, checkout, emails
