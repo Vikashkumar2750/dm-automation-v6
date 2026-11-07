@@ -346,26 +346,27 @@ function Integrations({ orgId }: { orgId: string }) {
   const base = typeof window !== "undefined" ? window.location.origin : "";
 
   return (
-    <div className="grid gap-4 lg:grid-cols-2">
+    <div className="grid min-w-0 gap-4 lg:grid-cols-2">
       <div className="flex flex-wrap items-center gap-3 lg:col-span-2"><Button size="sm" variant="outline" disabled={q.isFetching} onClick={() => void q.refetch()}><RefreshCw className="size-4" /> Refresh integrations</Button>{q.isError && <p role="alert" className="text-sm text-destructive">Integrations could not be refreshed. Previously loaded results may be out of date.</p>}{!q.data && <p role="status" className="text-sm text-muted-foreground">{q.isError ? "Integrations unavailable." : "Loading integrations…"}</p>}</div>
       {shown && (
         <div className="rounded-md border border-primary bg-primary/5 p-3 text-sm lg:col-span-2">
           Copy this now — it will not be shown again:
-          <div className="mt-2 flex items-center gap-2"><code className="break-all font-mono text-xs">{shown}</code>
-            <Button size="sm" variant="outline" onClick={() => { navigator.clipboard.writeText(shown); toast.success("Copied"); }}><Copy className="h-4 w-4" /></Button>
+          <div className="mt-2 flex min-w-0 flex-wrap items-center gap-2"><code className="w-full min-w-0 break-all font-mono text-xs">{shown}</code>
+            <Button size="sm" variant="outline" aria-label="Copy newly created credential" onClick={() => { navigator.clipboard.writeText(shown); toast.success("Copied"); }}><Copy className="h-4 w-4" /></Button>
             <Button size="sm" variant="ghost" onClick={() => setShown(null)}>Done</Button>
           </div>
         </div>
       )}
       <Panel title="API keys">
         <p className="mb-3 text-xs text-muted-foreground">Read conversations, messages and contacts from your own tools. Send the key in the <code>X-API-Key</code> header to <code className="break-all">{base}/api/public/v1/conversations</code></p>
-        <div className="mb-3 flex gap-2">
-          <Input placeholder="Key name, e.g. Zapier" value={keyName} onChange={(e) => setKeyName(e.target.value)} />
+        <div className="mb-3 flex min-w-0 flex-col gap-2 sm:flex-row">
+          <Input className="min-w-0 flex-1" aria-label="API key name" placeholder="Key name, e.g. Zapier" value={keyName} onChange={(e) => setKeyName(e.target.value)} />
           <Button disabled={!keyName.trim()} onClick={() => run(mkKey({ data: { organizationId: orgId, name: keyName } }), (r) => { setShown(r.key); setKeyName(""); })}>Create</Button>
         </div>
+        {q.data && q.data.keys.length === 0 && <p className="text-sm text-muted-foreground">No API keys created.</p>}
         <ul className="space-y-2 text-sm">
           {(q.data?.keys ?? []).map((k) => (
-            <li key={k.id} className="flex items-center justify-between gap-2 rounded border border-border p-2">
+            <li key={k.id} className="flex min-w-0 flex-wrap items-center justify-between gap-2 rounded border border-border p-2">
               <div className="min-w-0 break-words"><div className="font-medium">{k.name}</div><div className="font-mono text-xs text-muted-foreground">{k.prefix}… · {k.revoked_at ? "revoked" : k.last_used_at ? `used ${new Date(k.last_used_at).toLocaleString()}` : "never used"}</div></div>
               {!k.revoked_at && <Button size="sm" variant="outline" onClick={() => run(rmKey({ data: { organizationId: orgId, id: k.id } }))}>Revoke</Button>}
             </li>
@@ -374,22 +375,23 @@ function Integrations({ orgId }: { orgId: string }) {
       </Panel>
       <Panel title="Outgoing webhooks">
         <p className="mb-3 text-xs text-muted-foreground">New messages are sent to your address every minute, signed with <code>X-AutoDM-Signature</code>.</p>
-        <div className="mb-2 flex gap-2">
-          <Input placeholder="https://hooks.zapier.com/..." value={hookUrl} onChange={(e) => setHookUrl(e.target.value)} />
+        <div className="mb-2 flex min-w-0 flex-col gap-2 sm:flex-row">
+          <Input className="min-w-0 flex-1" aria-label="Outgoing webhook URL" placeholder="https://hooks.zapier.com/..." value={hookUrl} onChange={(e) => setHookUrl(e.target.value)} />
           <Button disabled={!hookUrl.startsWith("https://")} onClick={() => run(mkHook({ data: { organizationId: orgId, url: hookUrl, events: outbound ? ["message.received", "message.sent"] : ["message.received"] } }), (r) => { setShown(r.secret); setHookUrl(""); })}>Add</Button>
         </div>
         <label className="mb-3 flex items-center gap-2 text-xs"><Switch checked={outbound} onCheckedChange={setOutbound} /> Also send our replies (message.sent)</label>
+        {q.data && q.data.hooks.length === 0 && <p className="text-sm text-muted-foreground">No outgoing webhooks configured.</p>}
         <ul className="space-y-2 text-sm">
           {(q.data?.hooks ?? []).map((h) => (
             <li key={h.id} className="space-y-1 rounded border border-border p-2">
-              <div className="flex items-center justify-between gap-2">
-                <span className="truncate font-mono text-xs">{h.url}</span>
-                <div className="flex items-center gap-2">
-                  <Switch checked={h.enabled} onCheckedChange={(v) => run(upHook({ data: { organizationId: orgId, id: h.id, enabled: v } }))} />
+              <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <span className="min-w-0 break-all font-mono text-xs">{h.url}</span>
+                <div className="flex shrink-0 items-center gap-2">
+                  <Switch aria-label={`Enable outgoing webhook ${h.url}`} checked={h.enabled} onCheckedChange={(v) => run(upHook({ data: { organizationId: orgId, id: h.id, enabled: v } }))} />
                   <Button size="sm" variant="ghost" onClick={() => run(upHook({ data: { organizationId: orgId, id: h.id, remove: true } }))}>Delete</Button>
                 </div>
               </div>
-              <div className="text-xs text-muted-foreground">{h.events.join(", ")} · {h.last_sent_at ? `last ${h.last_error ? `failed (${h.last_error})` : "OK"} ${new Date(h.last_sent_at).toLocaleString()}` : "nothing sent yet"}</div>
+              <div className="break-words text-xs text-muted-foreground">{h.events.join(", ")} · {h.last_sent_at ? `last ${h.last_error ? `failed (${h.last_error})` : "OK"} ${new Date(h.last_sent_at).toLocaleString()}` : "nothing sent yet"}</div>
             </li>
           ))}
         </ul>

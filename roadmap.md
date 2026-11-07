@@ -186,6 +186,7 @@ Real Meta + YouTube credentials are available when we reach OAuth phases.
 - [x] Analytics/Growth presentation audit: unavailable metrics instead of fabricated zeros, refresh/stale states, current-record versus date-range labels, sampled funnel scope and honest competitor/anomaly labels.
 - [x] Growth source-read integrity: seven failed-read paths reject instead of returning zero/normal insights; confirmed empty reads and workspace scoping preserved in regression tests.
 - [x] Team Desk/Team presentation: refresh and unavailable/stale states for members, reports, invoices and integrations; drafts reset by workspace/account; manual invoice status labels and wrapping tabs.
+- [x] Team Desk integration controls stack on phones; long webhook URLs/credentials wrap, controls have accessible labels, and confirmed empty key/webhook lists are explicit (signed-in visual verification still blocked).
 - [ ] Next: V6 acceptance audit and signed-in desktop/mobile verification; authenticated export/billing/health checks blocked by no preview auth users.
 - [x] Converter 800MB + clear after download; Super Admin temp cleanup button
 - [x] Coupons: manual Apply + auto-apply (?coupon=), discount from MRP, server re-check
