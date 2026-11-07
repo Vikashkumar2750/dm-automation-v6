@@ -20,4 +20,4 @@
 - WorkspaceAccountFilterProvider lives under the user-keyed authenticated layout and stores session-only workspace selections; account labels reuse social-accounts queries — navigation state never crosses users or auto-switches tenants.
 - Public informational leaf routes use publicPageSchema with escaped JSON-LD; personal buyer/offer routes stay noindex — search metadata must never reveal private tokens or identities.
 - Growth read failures log only fixed source labels and bounded error codes; browser errors stay generic — diagnosis must not expose rows, query URLs or workspace identities.
-- Database backups live in db-backup.* (data-only re-runnable SQL in server-only db_backups; admin_exec_sql/admin_table_dependencies are service_role-only and called after super_admin check, every action audited) — export/import/SQL never reachable by non-admins.
+- Database recovery uses supported owner/Cloud exports; legacy db-backup endpoints and cron fail closed without privileged clients or RPCs — custom dumps omit auth/schema and arbitrary SQL can expose credentials.
