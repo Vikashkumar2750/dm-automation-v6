@@ -122,7 +122,7 @@ function ContactsPage() {
             <PlatformAccountFilter orgId={orgId ?? null} platform={platform} onPlatformChange={(p) => { setPlatform(p); setFilter((f) => ({ ...f, platform: undefined })); }} accountId={accountId} onAccountChange={setAccountId} />
             <GuideButton guide="contacts" />
             <Button variant="outline" size="icon" aria-label="Refresh contacts" disabled={conversations.isFetching || crm.isFetching} onClick={() => { void conversations.refetch(); void crm.refetch(); }}><RefreshCw className="size-4" /></Button>
-            <Button variant="outline" onClick={exportCsv} disabled={visible.length === 0}><Download className="size-4" /> Export CSV</Button>
+            <Button variant="outline" onClick={exportCsv} disabled={visible.length === 0 || !crm.data}><Download className="size-4" /> Export CSV</Button>
             <Button asChild variant="outline"><Link to="/inbox">Open inbox</Link></Button>
           </div>
         }
@@ -144,10 +144,10 @@ function ContactsPage() {
       )}
 
       <Panel
-        title={conversations.data ? `People (${visible.length})` : "People"}
+        title={conversations.data && crm.data ? `People · ${visible.length} matching loaded contacts` : "People"}
         action={
           <div className="flex flex-wrap gap-2">
-            <Input placeholder="Search name or email" value={filter.search ?? ""} onChange={(e) => setFilter({ ...filter, search: e.target.value })} className="h-9 w-44" />
+            <Input aria-label="Search contacts by name or email" placeholder="Search name or email" value={filter.search ?? ""} onChange={(e) => setFilter({ ...filter, search: e.target.value })} className="h-9 w-full min-w-0 sm:w-44" />
             <select className={sel} value={filter.tag ?? ""} onChange={(e) => setFilter({ ...filter, tag: e.target.value || undefined })}>
               <option value="">All tags</option>
               {allTags.map((t) => <option key={t} value={t}>{t}</option>)}
@@ -163,8 +163,9 @@ function ContactsPage() {
           </div>
         }
       >
-        {!conversations.data ? (
-          <p role="status" className="py-6 text-sm text-muted-foreground">{conversations.isError ? "Contacts unavailable. Refresh to retry." : "Loading contacts…"}</p>
+        <p className="mb-3 text-xs text-muted-foreground">Contacts from up to 100 most recently active matching conversations. Filters and CSV apply to this loaded set, not your full contact history.</p>
+        {!conversations.data || !crm.data ? (
+          <p role="status" className="py-6 text-sm text-muted-foreground">{conversations.isError || crm.isError ? "Contact details unavailable. Refresh to retry." : "Loading contacts and details…"}</p>
         ) : visible.length === 0 ? (
           <EmptyState icon={Users} title="No contacts here" description="People appear as soon as they message or comment. Try clearing filters." />
         ) : (
@@ -193,7 +194,7 @@ function ContactsPage() {
 
       <Sheet open={!!open} onOpenChange={(v) => !v && setOpenKey(null)}>
         <SheetContent className="overflow-y-auto sm:max-w-md">
-          {open && orgId && <ContactDetail key={open.key} orgId={orgId} contact={open} crm={crm.data} onSaved={refresh} />}
+          {open && orgId && crm.data && <ContactDetail key={`${orgId}:${open.key}`} orgId={orgId} contact={open} crm={crm.data} onSaved={refresh} />}
         </SheetContent>
       </Sheet>
     </AppShell>
@@ -390,9 +391,9 @@ function ContactDetail({ orgId, contact, crm, onSaved }: {
         </div>
         <div className="grid gap-2">
           <Label>Email</Label>
-          <Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@example.com" />
+          <Input className="w-full min-w-0" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@example.com" />
           <Label>Phone</Label>
-          <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+91 98765 43210" />
+          <Input className="w-full min-w-0" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+91 98765 43210" />
           <Label>Notes</Label>
           <textarea rows={3} className="rounded-md border border-input bg-background px-3 py-2" value={notes} maxLength={2000} onChange={(e) => setNotes(e.target.value)} />
         </div>
@@ -400,7 +401,7 @@ function ContactDetail({ orgId, contact, crm, onSaved }: {
           <Label>Custom fields</Label>
           <div className="mt-2 space-y-2">
             {fields.map(([k, v], i) => (
-              <div key={i} className="grid grid-cols-[1fr_1.4fr_auto] gap-2">
+              <div key={i} className="grid min-w-0 grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_auto] gap-2">
                 <Input value={k} maxLength={40} placeholder="Field (e.g. city)" onChange={(e) => setFields(fields.map((f, j) => (j === i ? [e.target.value, f[1]] : f)))} />
                 <Input value={v} maxLength={300} placeholder="Value" onChange={(e) => setFields(fields.map((f, j) => (j === i ? [f[0], e.target.value] : f)))} />
                 <Button variant="ghost" size="icon" aria-label="Remove field" onClick={() => setFields(fields.filter((_, j) => j !== i))}><X className="size-4" /></Button>
@@ -490,7 +491,7 @@ function PageLeadsPanel({ orgId }: { orgId: string | null }) {
   return (
     <>
       <Panel
-        title={crm.data ? `Delivery page leads (${shownLeads.length})` : "Delivery page leads"}
+        title={crm.data ? `Delivery page leads · ${shownLeads.length} matching loaded leads` : "Delivery page leads"}
         action={
           <div className="flex flex-wrap gap-2">
             <Button size="sm" variant="outline" aria-label="Refresh delivery page leads" disabled={crm.isFetching} onClick={() => void crm.refetch()}><RefreshCw className="size-4" /></Button>
@@ -501,7 +502,7 @@ function PageLeadsPanel({ orgId }: { orgId: string | null }) {
             </select>
             <select className={sel} value={follow} onChange={(e) => setFollow(e.target.value)} aria-label="Filter by follow-up">
               <option value="all">Any follow-up</option>
-              {Object.entries(FOLLOW).map(([k, v]) => <option key={k} value={k}>{v.label} ({counts[k] ?? 0})</option>)}
+              {Object.entries(FOLLOW).map(([k, v]) => <option key={k} value={k}>{v.label}{crm.data ? ` (${counts[k] ?? 0})` : ""}</option>)}
             </select>
             <select className={sel} value={leadPage} onChange={(e) => setLeadPage(e.target.value)} aria-label="Filter leads by page">
               <option value="all">All pages</option>
@@ -511,6 +512,7 @@ function PageLeadsPanel({ orgId }: { orgId: string | null }) {
           </div>
         }
       >
+        <p className="mb-3 text-xs text-muted-foreground">Up to 2,000 latest delivery page leads. Follow-up counts use all loaded leads; filters and exports use the matching loaded leads.</p>
         {crm.isError && <p role="alert" className="mb-3 text-sm text-destructive">Delivery page leads could not be refreshed. Previously loaded results may be out of date.</p>}
         {picked.size > 0 && (
           <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 p-2 text-sm">
@@ -528,7 +530,7 @@ function PageLeadsPanel({ orgId }: { orgId: string | null }) {
         {!crm.data ? (
           <p role="status" className="text-sm text-muted-foreground">{crm.isError ? "Delivery page leads unavailable. Refresh to retry." : "Loading delivery page leads…"}</p>
         ) : shownLeads.length === 0 ? (
-          <p className="text-sm text-muted-foreground">People who fill the form on your delivery pages (Sales &amp; Revenue → Pages) show up here.</p>
+          <p className="text-sm text-muted-foreground">{leadPage !== "all" || stage !== "all" || follow !== "all" ? "No loaded leads match these filters. Try clearing your filters." : "Delivery page form entries and sign-in attempts appear here, including incomplete submissions."}</p>
         ) : (
           <div className="max-h-96 max-w-full overflow-auto">
             <table className="w-full min-w-[920px] text-sm">

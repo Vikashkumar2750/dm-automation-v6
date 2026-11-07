@@ -364,12 +364,13 @@ function InboxPage() {
         <Panel bodyClassName="flex min-h-0 flex-1 flex-col p-0" className={cn("min-h-[480px] lg:col-start-1 lg:row-start-2 lg:min-h-0 lg:overflow-hidden", selectedId && "hidden lg:flex")}>
           <div className="space-y-2 border-b px-4 py-3">
             <div>
-              <p className="text-sm font-semibold">Conversations</p>
+              <p className="text-sm font-semibold">{conversationsQuery.data ? `Conversations · ${conversations.length} loaded` : "Conversations"}</p>
               <p className="text-xs text-muted-foreground">
-                Refreshes automatically every 15 seconds.
+                Up to 100 most recently active matching conversations.
               </p>
             </div>
             <input
+              aria-label="Search conversations by name or message"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search name or message…"
