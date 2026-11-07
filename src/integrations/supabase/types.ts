@@ -1155,6 +1155,48 @@ export type Database = {
           },
         ]
       }
+      db_backups: {
+        Row: {
+          backup_sql: string | null
+          bytes: number
+          created_at: string
+          created_by: string | null
+          drive_file_id: string | null
+          error: string | null
+          id: string
+          kind: string
+          row_count: number
+          status: string
+          table_count: number
+        }
+        Insert: {
+          backup_sql?: string | null
+          bytes?: number
+          created_at?: string
+          created_by?: string | null
+          drive_file_id?: string | null
+          error?: string | null
+          id?: string
+          kind?: string
+          row_count?: number
+          status?: string
+          table_count?: number
+        }
+        Update: {
+          backup_sql?: string | null
+          bytes?: number
+          created_at?: string
+          created_by?: string | null
+          drive_file_id?: string | null
+          error?: string | null
+          id?: string
+          kind?: string
+          row_count?: number
+          status?: string
+          table_count?: number
+        }
+        Relationships: []
+      }
       delivery_page_leads: {
         Row: {
           answers: Json
@@ -2729,6 +2771,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_exec_sql: { Args: { q: string }; Returns: Json }
+      admin_table_dependencies: {
+        Args: never
+        Returns: {
+          depends_on: string
+          table_name: string
+        }[]
+      }
       consume_ai_request: {
         Args: { _limit: number; _user_id: string }
         Returns: number
