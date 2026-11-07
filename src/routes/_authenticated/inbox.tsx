@@ -32,6 +32,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { canEditComment } from "@/lib/comment-moderation";
 import { useTenant } from "@/hooks/useTenant";
 import { useWorkspaceAccountFilter } from "@/hooks/useWorkspaceAccountFilter";
+import { ConnectedAccountLabel } from "@/components/app/ConnectedAccountLabel";
 import {
   listConversations,
   listMessages,
@@ -445,6 +446,7 @@ function InboxPage() {
                           {timeAgo(c.last_message_at)}
                         </span>
                       </div>
+                      <ConnectedAccountLabel orgId={orgId} accountId={c.social_account_id} />
                       <p className="truncate text-xs text-muted-foreground">
                         {c.last_message_preview ?? "—"}
                       </p>
@@ -488,6 +490,7 @@ function InboxPage() {
                     <p className="text-xs text-muted-foreground">
                       {selected.channel === "comment" ? "Comment thread" : "Direct message"}
                     </p>
+                    <ConnectedAccountLabel orgId={orgId} accountId={selected.social_account_id} replying />
                   </div>
                 </div>
                 <div className="flex items-center gap-2">

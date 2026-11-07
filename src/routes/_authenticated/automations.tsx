@@ -553,6 +553,8 @@ function AutomationsPage() {
             <div className="flex items-center justify-center py-16 text-muted-foreground">
               <Loader2 className="size-5 animate-spin" />
             </div>
+          ) : rulesQuery.isError && !rulesQuery.data ? (
+            <div role="alert" className="space-y-3 p-5 text-sm text-destructive"><p>Automation rules unavailable. Your rules have not changed.</p><Button variant="outline" size="sm" onClick={() => void rulesQuery.refetch()}>Try again</Button></div>
           ) : rules.length === 0 ? (
             <div className="p-5">
               <EmptyState
@@ -644,7 +646,8 @@ function AutomationsPage() {
           ].sort((a, b) => b.run.created_at.localeCompare(a.run.created_at));
           return (
             <Panel title="Recent activity" bodyClassName="p-0">
-              {entries.length === 0 ? <div className="p-5"><EmptyState icon={Zap} title="No activity yet" description="Sent, skipped and failed steps appear here." /></div> : <ul className="divide-y">
+              {(runsQuery.isError || flowRunsQuery.isError) && <div role="alert" className="space-y-2 p-4 text-sm text-destructive"><p>Some activity could not be refreshed. Loaded entries may be incomplete.</p><Button variant="outline" size="sm" onClick={() => { void runsQuery.refetch(); void flowRunsQuery.refetch(); }}>Try again</Button></div>}
+              {entries.length === 0 && (runsQuery.isLoading || flowRunsQuery.isLoading) ? <p role="status" className="p-5 text-sm text-muted-foreground">Loading activity…</p> : entries.length === 0 && (runsQuery.isError || flowRunsQuery.isError) ? <p role="status" className="p-5 text-sm text-muted-foreground">Activity unavailable.</p> : entries.length === 0 ? <div className="p-5"><EmptyState icon={Zap} title="No activity yet" description="Sent, skipped and failed steps appear here." /></div> : <ul className="divide-y">
                 {entries.slice(0, 6).map(({ run, source }) => {
                   const sent = run.status === "sent" || run.status === "matched";
                   const ex = sent ? null : explainReason(run.detail);

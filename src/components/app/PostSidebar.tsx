@@ -8,6 +8,8 @@ import { AccountSelect } from "@/components/app/AccountSelect";
 import { Pager, pageSlice } from "@/components/app/Pager";
 import { listRecentRemotePosts, type RemotePostItem } from "@/lib/automations.functions";
 import { listPostCommentCounts } from "@/lib/post-journey.functions";
+import { useWorkspaceAccountFilter } from "@/hooks/useWorkspaceAccountFilter";
+import { Button } from "@/components/ui/button";
 
 export type SidebarPost = RemotePostItem;
 type Platform = "all" | "instagram" | "facebook" | "youtube";
@@ -17,7 +19,7 @@ export function usePosts(orgId: string | null) {
   const fetchCounts = useServerFn(listPostCommentCounts);
   const posts = useQuery({ queryKey: ["remote-posts", orgId], enabled: !!orgId, staleTime: 60_000, queryFn: () => fetchRemote({ data: { organizationId: orgId! } }) });
   const counts = useQuery({ queryKey: ["post-comment-counts", orgId], enabled: !!orgId, refetchInterval: 30_000, queryFn: () => fetchCounts({ data: { organizationId: orgId! } }) });
-  return { posts: posts.data?.posts ?? [], counts: counts.data ?? {}, loading: posts.isLoading };
+  return { posts: posts.data?.posts ?? [], counts: counts.data ?? {}, loading: posts.isLoading, unavailable: posts.isError, retry: () => posts.refetch() };
 }
 
 /** Platform's own total wins (includes old comments); saved comments are the fallback. */
@@ -34,9 +36,8 @@ export function PostSidebar({ orgId, selectedId, onSelect, onPlatformChange, cou
   onPlatformChange?: () => void;
   countLabel?: string;
 }) {
-  const { posts, counts, loading } = usePosts(orgId);
-  const [platform, setPlatform] = useState<Platform>("all");
-  const [accountId, setAccountId] = useState("all");
+  const { posts, counts, loading, unavailable, retry } = usePosts(orgId);
+  const { platform, setPlatform, accountId, setAccountId } = useWorkspaceAccountFilter(orgId);
   const [page, setPage] = useState(1);
   const filtered = useMemo(() => {
     let list = platform === "all" ? posts : posts.filter((p) => p.platform === platform);
@@ -58,8 +59,9 @@ export function PostSidebar({ orgId, selectedId, onSelect, onPlatformChange, cou
       </div>
       <AccountSelect orgId={orgId} platform={platform} value={accountId} onChange={(id) => { onPlatformChange?.(); setAccountId(id); setPage(1); }} className="shrink-0" />
       <div className="min-h-0 space-y-2 lg:flex-1 lg:overflow-y-auto lg:pr-1">
+      {unavailable && <div role="alert" className="space-y-2 text-sm text-destructive"><p>Posts could not be refreshed. Loaded results may be out of date.</p><Button variant="outline" size="sm" onClick={() => void retry()}>Try again</Button></div>}
       {loading ? <Loader2 className="mx-auto my-8 size-5 animate-spin text-muted-foreground" /> : rows.length === 0 ? (
-        <p className="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">No posts found.</p>
+        <p className="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">{unavailable ? "Posts unavailable." : "No matching posts found."}</p>
       ) : rows.map((p) => {
         const c = postCommentCount(p, counts);
         return (

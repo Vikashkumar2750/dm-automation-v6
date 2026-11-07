@@ -289,6 +289,7 @@ function CreatePostPage() {
           </div>
         }
       >
+        {(postsQuery.isError || remoteQuery.isError) && <div role="alert" className="flex flex-wrap items-center justify-between gap-3 p-5 text-sm text-destructive"><span>Some posts could not be refreshed. Loaded results may be out of date.</span><Button variant="outline" size="sm" onClick={() => { void postsQuery.refetch(); void remoteQuery.refetch(); }}>Try again</Button></div>}
         <div className="flex gap-1 overflow-x-auto border-b px-5 py-2">
           {FORMAT_TABS.map((t) => {
             const count = t.key === "all" ? allPosts.length : allPosts.filter((p) => formatKey(p.post_format) === t.key).length;
@@ -303,6 +304,8 @@ function CreatePostPage() {
           <div className="flex items-center justify-center py-16">
             <Loader2 className="size-5 animate-spin text-muted-foreground" />
           </div>
+        ) : (postsQuery.isError || remoteQuery.isError) && posts.length === 0 ? (
+          <p role="status" className="p-5 text-sm text-muted-foreground">Posts unavailable. Refresh to retry.</p>
         ) : posts.length === 0 ? (
           <div className="p-5">
             <EmptyState

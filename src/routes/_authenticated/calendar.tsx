@@ -12,6 +12,7 @@ import { PostComposer, type ComposerDraft } from "@/components/app/PostComposer"
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useTenant } from "@/hooks/useTenant";
+import { useWorkspaceAccountFilter } from "@/hooks/useWorkspaceAccountFilter";
 import { listSocialAccounts } from "@/lib/social-accounts.functions";
 import { listPosts, runDuePosts, type Post } from "@/lib/publishing.functions";
 import { listRecentRemotePosts } from "@/lib/automations.functions";
@@ -200,6 +201,7 @@ function CalendarPage() {
       />
 
       {routeSearch.post && (!requestedId || (postsQuery.isSuccess && !requestedPost)) && <div role="alert" className="mb-4 flex flex-wrap items-center justify-between gap-3 border-l-2 border-warning bg-warning-soft px-4 py-3 text-sm"><span>This post is unavailable in the current workspace.</span><Button variant="outline" size="sm" onClick={() => void navigate({ search: {}, replace: true })}>Back to calendar</Button></div>}
+      {(postsQuery.isError || remoteQuery.isError) && <div role="alert" className="mb-4 flex flex-wrap items-center justify-between gap-3 text-sm text-destructive"><span>Some calendar posts could not be refreshed. Loaded results may be out of date.</span><Button variant="outline" size="sm" onClick={() => { void postsQuery.refetch(); void remoteQuery.refetch(); }}>Refresh posts</Button></div>}
       <Panel
         title={month.toLocaleDateString("en-IN", { month: "long", year: "numeric" })}
         bodyClassName="p-0"

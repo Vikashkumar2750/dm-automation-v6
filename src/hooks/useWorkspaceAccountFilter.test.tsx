@@ -1,8 +1,8 @@
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { WorkspaceAccountFilterProvider, useWorkspaceAccountFilter } from "./useWorkspaceAccountFilter";
 
-globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
 let current: ReturnType<typeof useWorkspaceAccountFilter>;
 function Consumer({ org }: { org: string }) { current = useWorkspaceAccountFilter(org); return null; }
 function Tree({ org, session = "user" }: { org: string; session?: string }) {
