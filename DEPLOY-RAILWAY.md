@@ -129,3 +129,8 @@ PORT=3000 bun dist/server/index.mjs
 
 Track evidence and blockers in `roadmap.md`; implemented is not the same as
 live-verified.
+
+## Database Backups (Super Admin → Database Backups)
+1. Run `docs/sql/railway-db-backups.sql` once on the live database.
+2. Daily scheduler: `POST /api/public/cron/db-backup` with header `x-cron-secret: $CRON_SECRET`. It only backs up when Super Admin turned "Auto backup on".
+3. Optional Google Drive: link the Google Drive connection (env `GOOGLE_DRIVE_API_KEY` + `LOVABLE_API_KEY`), optional `GOOGLE_DRIVE_BACKUP_FOLDER_ID`.

@@ -53,6 +53,7 @@ import { Route as AuthenticatedAdminAlertsRouteImport } from './routes/_authenti
 import { Route as AuthenticatedAdminAuditRouteImport } from './routes/_authenticated/admin.audit'
 import { Route as AuthenticatedAdminAutomationsRouteImport } from './routes/_authenticated/admin.automations'
 import { Route as AuthenticatedAdminBlogRouteImport } from './routes/_authenticated/admin.blog'
+import { Route as AuthenticatedAdminDatabaseRouteImport } from './routes/_authenticated/admin.database'
 import { Route as AuthenticatedAdminHealthRouteImport } from './routes/_authenticated/admin.health'
 import { Route as AuthenticatedAdminInquiriesRouteImport } from './routes/_authenticated/admin.inquiries'
 import { Route as AuthenticatedAdminJobsRouteImport } from './routes/_authenticated/admin.jobs'
@@ -71,6 +72,7 @@ import { Route as AuthenticatedCreatePostNewRouteImport } from './routes/_authen
 import { Route as AuthenticatedInviteTokenRouteImport } from './routes/_authenticated/invite.$token'
 import { Route as AuthenticatedAdminOrgOrgIdRouteImport } from './routes/_authenticated/admin.org.$orgId'
 import { Route as AuthenticatedAutomationsActivityRunIdRouteImport } from './routes/_authenticated/automations_.activity_.$runId'
+import { Route as ApiPublicCronDbBackupRouteImport } from './routes/api/public/cron.db-backup'
 import { Route as ApiPublicCronEncryptTokensRouteImport } from './routes/api/public/cron.encrypt-tokens'
 import { Route as ApiPublicCronFlowsRouteImport } from './routes/api/public/cron.flows'
 import { Route as ApiPublicCronHeartbeatRouteImport } from './routes/api/public/cron.heartbeat'
@@ -318,6 +320,12 @@ const AuthenticatedAdminBlogRoute = AuthenticatedAdminBlogRouteImport.update({
   path: '/blog',
   getParentRoute: () => AuthenticatedAdminRoute,
 } as any)
+const AuthenticatedAdminDatabaseRoute =
+  AuthenticatedAdminDatabaseRouteImport.update({
+    id: '/database',
+    path: '/database',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 const AuthenticatedAdminHealthRoute =
   AuthenticatedAdminHealthRouteImport.update({
     id: '/health',
@@ -422,6 +430,11 @@ const AuthenticatedAutomationsActivityRunIdRoute =
     path: '/automations/activity/$runId',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const ApiPublicCronDbBackupRoute = ApiPublicCronDbBackupRouteImport.update({
+  id: '/api/public/cron/db-backup',
+  path: '/api/public/cron/db-backup',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicCronEncryptTokensRoute =
   ApiPublicCronEncryptTokensRouteImport.update({
     id: '/api/public/cron/encrypt-tokens',
@@ -567,6 +580,7 @@ export interface FileRoutesByFullPath {
   '/admin/audit': typeof AuthenticatedAdminAuditRoute
   '/admin/automations': typeof AuthenticatedAdminAutomationsRoute
   '/admin/blog': typeof AuthenticatedAdminBlogRoute
+  '/admin/database': typeof AuthenticatedAdminDatabaseRoute
   '/admin/health': typeof AuthenticatedAdminHealthRoute
   '/admin/inquiries': typeof AuthenticatedAdminInquiriesRoute
   '/admin/jobs': typeof AuthenticatedAdminJobsRoute
@@ -586,6 +600,7 @@ export interface FileRoutesByFullPath {
   '/admin/': typeof AuthenticatedAdminIndexRoute
   '/admin/org/$orgId': typeof AuthenticatedAdminOrgOrgIdRoute
   '/automations/activity/$runId': typeof AuthenticatedAutomationsActivityRunIdRoute
+  '/api/public/cron/db-backup': typeof ApiPublicCronDbBackupRoute
   '/api/public/cron/encrypt-tokens': typeof ApiPublicCronEncryptTokensRoute
   '/api/public/cron/flows': typeof ApiPublicCronFlowsRoute
   '/api/public/cron/heartbeat': typeof ApiPublicCronHeartbeatRoute
@@ -648,6 +663,7 @@ export interface FileRoutesByTo {
   '/admin/audit': typeof AuthenticatedAdminAuditRoute
   '/admin/automations': typeof AuthenticatedAdminAutomationsRoute
   '/admin/blog': typeof AuthenticatedAdminBlogRoute
+  '/admin/database': typeof AuthenticatedAdminDatabaseRoute
   '/admin/health': typeof AuthenticatedAdminHealthRoute
   '/admin/inquiries': typeof AuthenticatedAdminInquiriesRoute
   '/admin/jobs': typeof AuthenticatedAdminJobsRoute
@@ -667,6 +683,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AuthenticatedAdminIndexRoute
   '/admin/org/$orgId': typeof AuthenticatedAdminOrgOrgIdRoute
   '/automations/activity/$runId': typeof AuthenticatedAutomationsActivityRunIdRoute
+  '/api/public/cron/db-backup': typeof ApiPublicCronDbBackupRoute
   '/api/public/cron/encrypt-tokens': typeof ApiPublicCronEncryptTokensRoute
   '/api/public/cron/flows': typeof ApiPublicCronFlowsRoute
   '/api/public/cron/heartbeat': typeof ApiPublicCronHeartbeatRoute
@@ -732,6 +749,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/audit': typeof AuthenticatedAdminAuditRoute
   '/_authenticated/admin/automations': typeof AuthenticatedAdminAutomationsRoute
   '/_authenticated/admin/blog': typeof AuthenticatedAdminBlogRoute
+  '/_authenticated/admin/database': typeof AuthenticatedAdminDatabaseRoute
   '/_authenticated/admin/health': typeof AuthenticatedAdminHealthRoute
   '/_authenticated/admin/inquiries': typeof AuthenticatedAdminInquiriesRoute
   '/_authenticated/admin/jobs': typeof AuthenticatedAdminJobsRoute
@@ -751,6 +769,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
   '/_authenticated/admin/org/$orgId': typeof AuthenticatedAdminOrgOrgIdRoute
   '/_authenticated/automations_/activity_/$runId': typeof AuthenticatedAutomationsActivityRunIdRoute
+  '/api/public/cron/db-backup': typeof ApiPublicCronDbBackupRoute
   '/api/public/cron/encrypt-tokens': typeof ApiPublicCronEncryptTokensRoute
   '/api/public/cron/flows': typeof ApiPublicCronFlowsRoute
   '/api/public/cron/heartbeat': typeof ApiPublicCronHeartbeatRoute
@@ -816,6 +835,7 @@ export interface FileRouteTypes {
     | '/admin/audit'
     | '/admin/automations'
     | '/admin/blog'
+    | '/admin/database'
     | '/admin/health'
     | '/admin/inquiries'
     | '/admin/jobs'
@@ -835,6 +855,7 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/admin/org/$orgId'
     | '/automations/activity/$runId'
+    | '/api/public/cron/db-backup'
     | '/api/public/cron/encrypt-tokens'
     | '/api/public/cron/flows'
     | '/api/public/cron/heartbeat'
@@ -897,6 +918,7 @@ export interface FileRouteTypes {
     | '/admin/audit'
     | '/admin/automations'
     | '/admin/blog'
+    | '/admin/database'
     | '/admin/health'
     | '/admin/inquiries'
     | '/admin/jobs'
@@ -916,6 +938,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/admin/org/$orgId'
     | '/automations/activity/$runId'
+    | '/api/public/cron/db-backup'
     | '/api/public/cron/encrypt-tokens'
     | '/api/public/cron/flows'
     | '/api/public/cron/heartbeat'
@@ -980,6 +1003,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/audit'
     | '/_authenticated/admin/automations'
     | '/_authenticated/admin/blog'
+    | '/_authenticated/admin/database'
     | '/_authenticated/admin/health'
     | '/_authenticated/admin/inquiries'
     | '/_authenticated/admin/jobs'
@@ -999,6 +1023,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/'
     | '/_authenticated/admin/org/$orgId'
     | '/_authenticated/automations_/activity_/$runId'
+    | '/api/public/cron/db-backup'
     | '/api/public/cron/encrypt-tokens'
     | '/api/public/cron/flows'
     | '/api/public/cron/heartbeat'
@@ -1038,6 +1063,7 @@ export interface RootRouteChildren {
   PSlugRoute: typeof PSlugRoute
   ToolsWebpConverterRoute: typeof ToolsWebpConverterRoute
   BlogIndexRoute: typeof BlogIndexRoute
+  ApiPublicCronDbBackupRoute: typeof ApiPublicCronDbBackupRoute
   ApiPublicCronEncryptTokensRoute: typeof ApiPublicCronEncryptTokensRoute
   ApiPublicCronFlowsRoute: typeof ApiPublicCronFlowsRoute
   ApiPublicCronHeartbeatRoute: typeof ApiPublicCronHeartbeatRoute
@@ -1369,6 +1395,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminBlogRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_authenticated/admin/database': {
+      id: '/_authenticated/admin/database'
+      path: '/database'
+      fullPath: '/admin/database'
+      preLoaderRoute: typeof AuthenticatedAdminDatabaseRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
     '/_authenticated/admin/health': {
       id: '/_authenticated/admin/health'
       path: '/health'
@@ -1494,6 +1527,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/automations/activity/$runId'
       preLoaderRoute: typeof AuthenticatedAutomationsActivityRunIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/api/public/cron/db-backup': {
+      id: '/api/public/cron/db-backup'
+      path: '/api/public/cron/db-backup'
+      fullPath: '/api/public/cron/db-backup'
+      preLoaderRoute: typeof ApiPublicCronDbBackupRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/public/cron/encrypt-tokens': {
       id: '/api/public/cron/encrypt-tokens'
@@ -1637,6 +1677,7 @@ interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminAuditRoute: typeof AuthenticatedAdminAuditRoute
   AuthenticatedAdminAutomationsRoute: typeof AuthenticatedAdminAutomationsRoute
   AuthenticatedAdminBlogRoute: typeof AuthenticatedAdminBlogRoute
+  AuthenticatedAdminDatabaseRoute: typeof AuthenticatedAdminDatabaseRoute
   AuthenticatedAdminHealthRoute: typeof AuthenticatedAdminHealthRoute
   AuthenticatedAdminInquiriesRoute: typeof AuthenticatedAdminInquiriesRoute
   AuthenticatedAdminJobsRoute: typeof AuthenticatedAdminJobsRoute
@@ -1657,6 +1698,7 @@ const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminAuditRoute: AuthenticatedAdminAuditRoute,
   AuthenticatedAdminAutomationsRoute: AuthenticatedAdminAutomationsRoute,
   AuthenticatedAdminBlogRoute: AuthenticatedAdminBlogRoute,
+  AuthenticatedAdminDatabaseRoute: AuthenticatedAdminDatabaseRoute,
   AuthenticatedAdminHealthRoute: AuthenticatedAdminHealthRoute,
   AuthenticatedAdminInquiriesRoute: AuthenticatedAdminInquiriesRoute,
   AuthenticatedAdminJobsRoute: AuthenticatedAdminJobsRoute,
@@ -1759,6 +1801,7 @@ const rootRouteChildren: RootRouteChildren = {
   PSlugRoute: PSlugRoute,
   ToolsWebpConverterRoute: ToolsWebpConverterRoute,
   BlogIndexRoute: BlogIndexRoute,
+  ApiPublicCronDbBackupRoute: ApiPublicCronDbBackupRoute,
   ApiPublicCronEncryptTokensRoute: ApiPublicCronEncryptTokensRoute,
   ApiPublicCronFlowsRoute: ApiPublicCronFlowsRoute,
   ApiPublicCronHeartbeatRoute: ApiPublicCronHeartbeatRoute,
