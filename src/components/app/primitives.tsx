@@ -63,17 +63,17 @@ export function PlatformBadge({
 }) {
   const Icon = platformIcon[platform];
   return (
-    <span className="inline-flex items-center gap-2">
+    <span className="inline-flex min-w-0 max-w-full items-center gap-2">
       <span
         className={cn(
-          "inline-flex items-center justify-center rounded-md border bg-surface-secondary",
+          "inline-flex shrink-0 items-center justify-center rounded-md border bg-surface-secondary",
           platformTone[platform],
           size === "sm" ? "size-6" : "size-9",
         )}
       >
         <Icon className={size === "sm" ? "size-3.5" : "size-5"} />
       </span>
-      {withLabel && <span className="text-sm font-medium">{withLabel}</span>}
+      {withLabel && <span className="min-w-0 break-words text-sm font-medium">{withLabel}</span>}
     </span>
   );
 }
@@ -136,7 +136,7 @@ export function StatCard({
         </span>
         <div className="min-w-0 flex-1">
           <div className="flex items-center justify-between gap-2">
-            <p className="truncate text-sm text-muted-foreground">{label}</p>
+            <p className="min-w-0 break-words text-sm text-muted-foreground">{label}</p>
             {info && (
               <Popover>
                 <PopoverTrigger asChild>

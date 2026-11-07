@@ -149,6 +149,7 @@ function Dashboard() {
   const activityItems = activity.data ?? [];
 
   const a = analytics.data;
+  const metric = (value: number | undefined) => value === undefined ? "—" : value.toLocaleString();
   const [needAccount, setNeedAccount] = useState(false);
   const hasAccount = (accounts.data ?? []).length > 0;
   const accountRows = accounts.data ?? [];
@@ -181,7 +182,7 @@ function Dashboard() {
     <AppShell>
       <PageHeader
         title={`${greeting()}, ${firstName}`}
-        description={`${activeOrg?.name ?? "Your workspace"} · Last ${rangeDays} days`}
+        description={`${activeOrg?.name ?? "Your workspace"} · Performance: last ${rangeDays} days`}
         actions={
           <>
           <Button variant="outline" size="icon" onClick={refreshOverview} disabled={isRefreshing} aria-label="Refresh overview" title="Refresh overview">
@@ -207,7 +208,7 @@ function Dashboard() {
       <AutomationNotificationBanner />
       {dataError && (
         <div role="alert" className="mb-5 flex flex-wrap items-center justify-between gap-3 border-l-2 border-warning bg-warning-soft px-4 py-3 text-sm">
-          <span>Some overview data couldn’t be refreshed.</span>
+          <span>Some overview data couldn’t be refreshed; previously loaded results may be out of date.</span>
           <Button variant="outline" size="sm" onClick={refreshOverview}><RefreshCw className="size-4" />Try again</Button>
         </div>
       )}
@@ -267,14 +268,14 @@ function Dashboard() {
         </ToggleGroup>
       </div>
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard info="All chat threads (DMs and comments) and how many are open." icon={MessagesSquare} label="Conversations" value={String(a?.totals.conversations ?? 0)} sub={`${a?.totals.openThreads ?? 0} open`} />
-        <StatCard info="Messages and comments people sent you in the selected period." icon={MessageSquare} label="Messages received" value={String(a?.totals.inbound ?? 0)} sub={`${a?.totals.unread ?? 0} unread`} />
-        <StatCard info="Replies sent in the selected period, manual and automated." icon={Send} label="Replies sent" value={String(a?.totals.outbound ?? 0)} sub={`${a?.totals.automated ?? 0} automated`} />
-        <StatCard info="Percentage of people who got at least one reply, and the typical time to first reply." icon={UserCheck} label="Answered" value={`${a?.responseRate ?? 0}%`} sub={`Median ${a?.medianFirstResponseMinutes ?? 0} min`} />
-        <StatCard info="Posts published from this tool, plus how many are scheduled." icon={CalendarCheck} label="Posts published" value={String(a?.totals.postsPublished ?? 0)} sub={`${a?.totals.postsScheduled ?? 0} scheduled`} />
-        <StatCard info="Out of all replies sent, the percentage sent automatically." icon={TrendingUp} label="Automation share" value={`${a?.automationShare ?? 0}%`} sub="Of all replies" />
-        <StatCard info="Automations switched on right now: keyword rules plus Flow Builder flows." icon={Workflow} label="Active automations" value={String((a?.totals.activeRules ?? 0) + (a?.totals.activeFlows ?? 0))} sub={`${a?.totals.activeRules ?? 0} rules · ${a?.totals.activeFlows ?? 0} flows`} />
-        <StatCard info="Automations that ran and sent something in the selected period. One run counts once, however many steps." icon={Zap} label="Automation runs" value={String(a?.totals.automationRuns ?? 0)} sub={`Last ${rangeDays} days`} />
+        <StatCard info="All chat threads (DMs and comments) and how many are open." icon={MessagesSquare} label="Conversations" value={metric(a?.totals.conversations)} sub={`${metric(a?.totals.openThreads)} open`} />
+        <StatCard info="Messages and comments people sent you in the selected period." icon={MessageSquare} label="Messages received" value={metric(a?.totals.inbound)} sub={`${metric(a?.totals.unread)} unread`} />
+        <StatCard info="Replies sent in the selected period, manual and automated." icon={Send} label="Replies sent" value={metric(a?.totals.outbound)} sub={`${metric(a?.totals.automated)} automated`} />
+        <StatCard info="Percentage of people who got at least one reply, and the typical time to first reply." icon={UserCheck} label="Answered" value={a ? `${a.responseRate}%` : "—"} sub={`Median ${metric(a?.medianFirstResponseMinutes)} min`} />
+        <StatCard info="Posts published from this tool, plus how many are scheduled." icon={CalendarCheck} label="Posts published" value={metric(a?.totals.postsPublished)} sub={`${metric(a?.totals.postsScheduled)} scheduled`} />
+        <StatCard info="Out of all replies sent, the percentage sent automatically." icon={TrendingUp} label="Automation share" value={a ? `${a.automationShare}%` : "—"} sub="Of all replies" />
+        <StatCard info="Automations switched on right now: keyword rules plus Flow Builder flows." icon={Workflow} label="Active automations" value={a ? metric(a.totals.activeRules + a.totals.activeFlows) : "—"} sub={`${metric(a?.totals.activeRules)} rules · ${metric(a?.totals.activeFlows)} flows`} />
+        <StatCard info="Automations that ran and sent something in the selected period. One run counts once, however many steps." icon={Zap} label="Automation runs" value={metric(a?.totals.automationRuns)} sub={`Last ${rangeDays} days`} />
       </div>
 
       {revenueEnabled && (
@@ -308,7 +309,7 @@ function Dashboard() {
             </Link>
           }
         >
-          <div className="h-64 min-w-0">
+          {!a ? <div className="flex h-64 items-center justify-center text-sm text-muted-foreground" role="status">{analytics.isError ? "Activity data unavailable." : "Loading activity chart…"}</div> : <div className="h-64 min-w-0">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={a?.series ?? []}>
                 <defs>
@@ -329,7 +330,7 @@ function Dashboard() {
                 <Area type="monotone" dataKey="outbound" stroke="var(--color-chart-2)" fill="url(#dashOut)" name="Replied" />
               </AreaChart>
             </ResponsiveContainer>
-          </div>
+          </div>}
         </Panel>
 
         <Panel
@@ -340,7 +341,7 @@ function Dashboard() {
             </Link>
           }
         >
-          {accountRows.length === 0 ? (
+          {!accounts.data ? <p role="status" className="text-sm text-muted-foreground">{accounts.isError ? "Account data unavailable." : "Loading accounts…"}</p> : accountRows.length === 0 ? (
             <EmptyState
               icon={Share2}
               title="No accounts yet"
@@ -378,7 +379,7 @@ function Dashboard() {
             </Link>
           }
         >
-          {recentThreads.length === 0 ? (
+          {!conversations.data ? <p role="status" className="text-sm text-muted-foreground">{conversations.isError ? "Conversation data unavailable." : "Loading conversations…"}</p> : recentThreads.length === 0 ? (
             <EmptyState
               icon={InboxIcon}
               title="No conversations yet"
@@ -417,7 +418,7 @@ function Dashboard() {
               </Link>
             }
           >
-            {upcoming.length === 0 ? (
+            {!posts.data ? <p role="status" className="text-sm text-muted-foreground">{posts.isError ? "Post data unavailable." : "Loading scheduled posts…"}</p> : upcoming.length === 0 ? (
               <EmptyState
                 icon={CalendarCheck}
                 title="Nothing scheduled"
@@ -452,16 +453,17 @@ function Dashboard() {
             }
           >
             <div className="space-y-4">
-              <UsageMeter
+              {usage.data ? <><UsageMeter
                 label="Replies this hour"
-                used={usage.data?.sentLastHour ?? 0}
-                limit={usage.data?.hourlyLimit || 1}
+                used={usage.data.sentLastHour}
+                limit={usage.data.hourlyLimit || 1}
               />
               <UsageMeter
                 label="Replies today"
-                used={usage.data?.sentLastDay ?? 0}
-                limit={usage.data?.dailyLimit || 1}
+                used={usage.data.sentLastDay}
+                limit={usage.data.dailyLimit || 1}
               />
+              </> : <p role="status" className="text-sm text-muted-foreground">{usage.isError ? "Usage data unavailable." : "Loading usage…"}</p>}
               {features?.ai === "enabled" && <Button asChild variant="outline" className="w-full">
                 <Link to="/ai-assistant">
                   <Sparkles className="size-4" />
@@ -474,7 +476,7 @@ function Dashboard() {
           <Panel
             title="Live automation activity"
             action={
-              <span className="flex items-center gap-3">
+              <span className="flex min-w-0 flex-wrap items-center gap-3">
                 {(features ? features.workflows === "enabled" : workflowsOn) && <Link to="/workflows" className="inline-flex items-center gap-1 text-sm font-medium text-primary">
                   Post workflows <ArrowRight className="size-4" />
                 </Link>}
@@ -484,7 +486,7 @@ function Dashboard() {
               </span>
             }
           >
-            {activityItems.length === 0 ? (
+            {!activity.data ? <p role="status" className="text-sm text-muted-foreground">{activity.isError ? "Automation activity unavailable." : "Loading automation activity…"}</p> : activityItems.length === 0 ? (
               <EmptyState
                 icon={Zap}
                 title="No activity yet"
