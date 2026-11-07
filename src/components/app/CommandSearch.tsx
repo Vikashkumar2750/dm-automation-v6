@@ -73,7 +73,7 @@ export function CommandSearch({ pages }: { pages: SearchPage[] }) {
       if (err) throw err;
       return {
         conversations: (convos.data ?? []).map((c): Hit => ({ id: c.id, label: c.external_user_name || "Unknown contact", sub: `${c.platform} · ${c.last_message_preview ?? ""}`, to: "/inbox" })),
-        automations: (rules.data ?? []).map((r): Hit => ({ id: r.id, label: r.name, sub: r.platform, to: "/automations" })),
+        automations: (rules.data ?? []).map((r): Hit => ({ id: r.id, label: r.name ?? "Untitled automation", sub: r.platform ?? undefined, to: "/automations" })),
         posts: (posts.data ?? []).map((p): Hit => ({ id: p.id, label: (p.caption || "Untitled post").slice(0, 80), sub: `${p.platform} · ${p.status}`, to: "/calendar" })),
       };
     },
