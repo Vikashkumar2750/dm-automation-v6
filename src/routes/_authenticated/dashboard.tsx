@@ -149,7 +149,7 @@ function Dashboard() {
   const activityItems = activity.data ?? [];
 
   const a = analytics.data;
-  const metric = (value: number | undefined) => value === undefined ? "—" : value.toLocaleString();
+  const metric = (value: number | null | undefined) => value == null ? "—" : value.toLocaleString();
   const [needAccount, setNeedAccount] = useState(false);
   const hasAccount = (accounts.data ?? []).length > 0;
   const accountRows = accounts.data ?? [];
@@ -271,8 +271,8 @@ function Dashboard() {
         <StatCard info="All chat threads (DMs and comments) and how many are open." icon={MessagesSquare} label="Conversations" value={metric(a?.totals.conversations)} sub={`${metric(a?.totals.openThreads)} open`} />
         <StatCard info="Messages and comments people sent you in the selected period." icon={MessageSquare} label="Messages received" value={metric(a?.totals.inbound)} sub={`${metric(a?.totals.unread)} unread`} />
         <StatCard info="Replies sent in the selected period, manual and automated." icon={Send} label="Replies sent" value={metric(a?.totals.outbound)} sub={`${metric(a?.totals.automated)} automated`} />
-        <StatCard info="Percentage of people who got at least one reply, and the typical time to first reply." icon={UserCheck} label="Answered" value={a ? `${a.responseRate}%` : "—"} sub={`Median ${metric(a?.medianFirstResponseMinutes)} min`} />
-        <StatCard info="Posts published from this tool, plus how many are scheduled." icon={CalendarCheck} label="Posts published" value={metric(a?.totals.postsPublished)} sub={`${metric(a?.totals.postsScheduled)} scheduled`} />
+        <StatCard info="Percentage of people who got at least one reply, and the typical time to first reply." icon={UserCheck} label="Answered" value={a ? `${a.responseRate}%` : "—"} sub={`Last ${rangeDays} days · median ${metric(a?.medianFirstResponseMinutes)} min`} />
+        <StatCard info="Posts published from this tool in the selected period, plus how many are currently scheduled." icon={CalendarCheck} label="Posts published" value={metric(a?.totals.postsPublished)} sub={`Last ${rangeDays} days · ${metric(a?.totals.postsScheduled)} scheduled`} />
         <StatCard info="Out of all replies sent, the percentage sent automatically." icon={TrendingUp} label="Automation share" value={a ? `${a.automationShare}%` : "—"} sub="Of all replies" />
         <StatCard info="Automations switched on right now: keyword rules plus Flow Builder flows." icon={Workflow} label="Active automations" value={a ? metric(a.totals.activeRules + a.totals.activeFlows) : "—"} sub={`${metric(a?.totals.activeRules)} rules · ${metric(a?.totals.activeFlows)} flows`} />
         <StatCard info="Automations that ran and sent something in the selected period. One run counts once, however many steps." icon={Zap} label="Automation runs" value={metric(a?.totals.automationRuns)} sub={`Last ${rangeDays} days`} />
@@ -495,12 +495,12 @@ function Dashboard() {
             ) : (
               <ul className="space-y-3">
                 {activityItems.slice(0, 5).map((item) => (
-                  <li key={item.id} className="flex items-start gap-3">
-                    <StatusBadge tone={item.tone}>{item.kind === "run" ? "rule" : "event"}</StatusBadge>
+                  <li key={item.id} className="flex min-w-0 items-start gap-3">
+                    <span className="shrink-0"><StatusBadge tone={item.tone}>{item.kind === "run" ? "rule" : "event"}</StatusBadge></span>
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium leading-snug">{item.title}</p>
+                      <p className="break-words text-sm font-medium leading-snug">{item.title}</p>
                       {item.hint && (
-                        <p className="text-xs text-muted-foreground">{item.hint}</p>
+                        <p className="break-words text-xs text-muted-foreground">{item.hint}</p>
                       )}
                       <p className="text-xs text-muted-foreground">
                         {new Date(item.at).toLocaleString()}
