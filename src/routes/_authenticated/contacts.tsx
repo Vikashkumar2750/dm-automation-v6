@@ -3,7 +3,7 @@ import { contactLabel } from "@/lib/contact-name";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Download, Users, X } from "lucide-react";
+import { Download, RefreshCw, Users, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -121,11 +121,14 @@ function ContactsPage() {
           <div className="flex min-w-0 flex-wrap gap-2">
             <PlatformAccountFilter orgId={orgId ?? null} platform={platform} onPlatformChange={(p) => { setPlatform(p); setFilter((f) => ({ ...f, platform: undefined })); }} accountId={accountId} onAccountChange={setAccountId} />
             <GuideButton guide="contacts" />
+            <Button variant="outline" size="icon" aria-label="Refresh contacts" disabled={conversations.isFetching || crm.isFetching} onClick={() => { void conversations.refetch(); void crm.refetch(); }}><RefreshCw className="size-4" /></Button>
             <Button variant="outline" onClick={exportCsv} disabled={visible.length === 0}><Download className="size-4" /> Export CSV</Button>
             <Button asChild variant="outline"><Link to="/inbox">Open inbox</Link></Button>
           </div>
         }
       />
+
+      {(conversations.isError || crm.isError) && <p role="alert" className="mb-4 text-sm text-destructive">Some contact details could not be loaded. Previously loaded results may be out of date. Refresh to retry.</p>}
 
       {(crm.data?.segments.length ?? 0) > 0 && (
         <div className="mb-3 flex flex-wrap items-center gap-2">
@@ -141,7 +144,7 @@ function ContactsPage() {
       )}
 
       <Panel
-        title={`People (${visible.length})`}
+        title={conversations.data ? `People (${visible.length})` : "People"}
         action={
           <div className="flex flex-wrap gap-2">
             <Input placeholder="Search name or email" value={filter.search ?? ""} onChange={(e) => setFilter({ ...filter, search: e.target.value })} className="h-9 w-44" />
@@ -160,7 +163,9 @@ function ContactsPage() {
           </div>
         }
       >
-        {visible.length === 0 ? (
+        {!conversations.data ? (
+          <p role="status" className="py-6 text-sm text-muted-foreground">{conversations.isError ? "Contacts unavailable. Refresh to retry." : "Loading contacts…"}</p>
+        ) : visible.length === 0 ? (
           <EmptyState icon={Users} title="No contacts here" description="People appear as soon as they message or comment. Try clearing filters." />
         ) : (
           <div className="space-y-2">
@@ -184,7 +189,7 @@ function ContactsPage() {
         )}
       </Panel>
 
-      {orgId && <OutreachPanel orgId={orgId} allTags={allTags} />}
+      {orgId && <OutreachPanel key={orgId} orgId={orgId} allTags={allTags} />}
 
       <Sheet open={!!open} onOpenChange={(v) => !v && setOpenKey(null)}>
         <SheetContent className="overflow-y-auto sm:max-w-md">
@@ -249,8 +254,19 @@ function OutreachPanel({ orgId, allTags }: { orgId: string; allTags: string[] })
     onError: () => toast.error("Could not send broadcast"),
   });
 
+  if (!outreach.data) return (
+    <div className="mt-6 space-y-4">
+      <PageLeadsPanel orgId={orgId} />
+      <Panel title="Outreach settings">
+        <p role="status" className="text-sm text-muted-foreground">{outreach.isError ? "Outreach settings unavailable." : "Loading outreach settings…"}</p>
+        {outreach.isError && <Button className="mt-3" variant="outline" disabled={outreach.isFetching} onClick={() => void outreach.refetch()}><RefreshCw className="size-4" /> Retry</Button>}
+      </Panel>
+    </div>
+  );
+
   return (
     <div className="mt-6 grid gap-4 lg:grid-cols-3">
+      {outreach.isError && <p role="alert" className="text-sm text-destructive lg:col-span-3">Outreach refresh failed. Previously loaded settings may be out of date.</p>}
       <div className="lg:col-span-3"><PageLeadsPanel orgId={orgId} /></div>
 
       <Panel title="Abandoned-conversation nudge" >
@@ -474,9 +490,10 @@ function PageLeadsPanel({ orgId }: { orgId: string | null }) {
   return (
     <>
       <Panel
-        title={`Delivery page leads (${shownLeads.length})`}
+        title={crm.data ? `Delivery page leads (${shownLeads.length})` : "Delivery page leads"}
         action={
           <div className="flex flex-wrap gap-2">
+            <Button size="sm" variant="outline" aria-label="Refresh delivery page leads" disabled={crm.isFetching} onClick={() => void crm.refetch()}><RefreshCw className="size-4" /></Button>
             <select className={sel} value={stage} onChange={(e) => setStage(e.target.value)} aria-label="Filter leads by stage">
               <option value="all">All stages</option>
               <option value="dropped">Dropped only</option>
@@ -494,6 +511,7 @@ function PageLeadsPanel({ orgId }: { orgId: string | null }) {
           </div>
         }
       >
+        {crm.isError && <p role="alert" className="mb-3 text-sm text-destructive">Delivery page leads could not be refreshed. Previously loaded results may be out of date.</p>}
         {picked.size > 0 && (
           <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 p-2 text-sm">
             <span className="font-medium">{picked.size} selected{picked.size > 20 ? " (first 20 used)" : ""}</span>
@@ -507,7 +525,9 @@ function PageLeadsPanel({ orgId }: { orgId: string | null }) {
             <Button size="sm" variant="ghost" onClick={() => setPicked(new Set())}>Clear</Button>
           </div>
         )}
-        {shownLeads.length === 0 ? (
+        {!crm.data ? (
+          <p role="status" className="text-sm text-muted-foreground">{crm.isError ? "Delivery page leads unavailable. Refresh to retry." : "Loading delivery page leads…"}</p>
+        ) : shownLeads.length === 0 ? (
           <p className="text-sm text-muted-foreground">People who fill the form on your delivery pages (Sales &amp; Revenue → Pages) show up here.</p>
         ) : (
           <div className="max-h-96 max-w-full overflow-auto">
