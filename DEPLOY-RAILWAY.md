@@ -131,6 +131,19 @@ Track evidence and blockers in `roadmap.md`; implemented is not the same as
 live-verified.
 
 ## Database Backups (Super Admin → Database Backups)
-1. Run `docs/sql/railway-db-backups.sql` once on the live database.
-2. Daily scheduler: `POST /api/public/cron/db-backup` with header `x-cron-secret: $CRON_SECRET`. It only backs up when Super Admin turned "Auto backup on".
-3. Optional Google Drive: link the Google Drive connection (env `GOOGLE_DRIVE_API_KEY` + `LOVABLE_API_KEY`), optional `GOOGLE_DRIVE_BACKUP_FOLDER_ID`.
+The legacy custom dump, import, SQL runner and backup cron are retired. Remove any
+scheduler calling `/api/public/cron/db-backup`; authenticated calls return 410.
+Do not re-run the old backup setup scripts to re-enable these endpoints.
+
+For Lovable Cloud, use More → Database → Manage → Settings → Export data.
+Daily snapshots are under More → Database → Manage → Backups; they restore schema
+and data in place. Export first: later writes are lost and the schema also reverts.
+Neither snapshots nor exports include storage files; download those separately.
+For an independently hosted database, use its owner's supported backup tools.
+Existing custom SQL files are data-only copies, not complete recoverable backups.
+Google Drive automated backup integration remains unconfigured.
+
+Inbox relink result `chats_still_unlinked = 1` is a remaining account association,
+not an execution error. Run the read-only `docs/sql/railway-inbox-diagnostic.sql`
+on that same live database and confirm the original account; never guess or delete
+historical conversations to make the count zero.

@@ -233,3 +233,12 @@ Real Meta + YouTube credentials are available when we reach OAuth phases.
 - [x] Backend mismatch freshly confirmed: connected managed database contains growth_competitors but not the affected live auth account; live browser backend requests do not target the connected managed backend. Railway hosts the app, while its independently hosted database is a different backend. No schema change applied to the wrong database.
 - [ ] Skipped: client/admin exports, remaining admin drafts, active safety enforcement and fresh activity/notification delivery. Blocker: current live account is not Super Admin, usable authorized reports are unavailable, and real delivery actions require provider authorization. Hosting secrets/database administration remain inaccessible via GitHub deployment status.
 - [x] Checked the remaining GitHub administration alternative: the repository has one Build workflow (source analysis only), no migration step, and zero repository Actions secrets. No existing authorized live-database repair path was found through this connection; no workflow, secrets, database, provider actions or production data changed. All remaining items above stay explicitly blocked/skipped.
+
+## Database recovery follow-up — Nov 7
+- [x] Screenshot reviewed: relink SQL completed and reports one remaining unlinked chat; it does not prove a full database restore or an SQL failure.
+- [x] Retire incomplete custom dumps, sensitive-table exports, arbitrary SQL/import endpoints and backup cron; preserve existing data, no schema changes. Recovery page points to supported owner/Cloud exports and offers read-only account diagnosis.
+- [x] Regression verification: 398 tests pass across 61 files; latest preview build OK. Live session has expired and redirects to /auth, so Growth and Super Admin recovery UI were not reverified signed in.
+- [ ] Run Inbox diagnostic on the affected independent live database, then confirm the original account before any scoped data repair (blocked: destination database access/result required).
+- [ ] Confirm updated recovery page as authorized Super Admin on the deployed release; remove legacy external backup schedule if configured (blocked: admin/hosting access).
+- [ ] Google Drive scheduling remains unconfigured; do not describe saved settings as an operating backup.
+- [ ] Live Meta/YouTube/Agency actions, notifications/safety, payment→email→private download/unpaid denial, credentials/encryption/scheduler/provider reviews and migration reset remain blocked as listed above.
