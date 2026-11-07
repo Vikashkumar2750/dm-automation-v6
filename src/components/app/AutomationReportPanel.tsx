@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { AlertTriangle, Download, Link2, MessageCircle, Paperclip, Send, Zap } from "lucide-react";
+import { AlertTriangle, Download, Link2, MessageCircle, Paperclip, Send, Zap, RefreshCw } from "lucide-react";
 
 import { Panel, StatCard, StatusBadge } from "@/components/app/primitives";
 import { Button } from "@/components/ui/button";
@@ -84,13 +84,14 @@ export function AutomationReportPanel({ orgId }: { orgId: string }) {
 
   return (
     <Panel
-      title="Automation report"
+      title="Automation report · loaded results"
       action={
         <div className="flex flex-wrap gap-2">
-          <select className={sel} value={period} onChange={(e) => setPeriod(e.target.value as Period)}>
+          <Button size="sm" variant="outline" aria-label="Refresh automation report" disabled={q.isFetching} onClick={() => void q.refetch()}><RefreshCw className="size-4" /></Button>
+          <select aria-label="Automation report period" className={sel} value={period} onChange={(e) => setPeriod(e.target.value as Period)}>
             {Object.entries(PERIODS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
           </select>
-          <select className={sel} value={platform} onChange={(e) => setPlatform(e.target.value as typeof platform)}>
+          <select aria-label="Automation report platform" className={sel} value={platform} onChange={(e) => setPlatform(e.target.value as typeof platform)}>
             <option value="all">All platforms</option><option value="instagram">Instagram</option><option value="facebook">Facebook</option>
           </select>
           <Button size="sm" variant="outline" onClick={download} disabled={!rows.length}>
@@ -99,8 +100,10 @@ export function AutomationReportPanel({ orgId }: { orgId: string }) {
         </div>
       }
     >
+      <p className="mb-3 text-xs text-muted-foreground">This report groups up to 20,000 loaded automation events. Summary cards use the loaded period/platform sample; contact and outcome filters affect the table and CSV only. Counts are not billing usage totals.</p>
+      {q.isError && <p role="alert" className="mb-3 text-sm text-destructive">The automation report could not be refreshed. Previously loaded results may be out of date.</p>}
       {!r ? (
-        <p className="text-sm text-muted-foreground">{q.isError ? "Could not load the report." : "Loading…"}</p>
+        <p role="status" className="text-sm text-muted-foreground">{q.isError ? "Automation report unavailable. Refresh to retry." : "Loading automation report…"}</p>
       ) : (
         <div className="space-y-5">
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -133,7 +136,7 @@ export function AutomationReportPanel({ orgId }: { orgId: string }) {
             <div className="rounded-xl border p-4 text-sm">
               <p className="mb-2 font-medium">Failed by stage</p>
               {r.failedByStage.length === 0 ? (
-                <p className="text-muted-foreground">No failures 🎉</p>
+                <p className="text-muted-foreground">No failures recorded in this loaded sample.</p>
               ) : (
                 r.failedByStage.map((s) => (
                   <div key={s.stage} className="flex justify-between py-0.5">
@@ -145,16 +148,16 @@ export function AutomationReportPanel({ orgId }: { orgId: string }) {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <input className={`${sel} w-48`} placeholder="Search contact…" value={search} onChange={(e) => setSearch(e.target.value)} />
+            <input aria-label="Search automation report contacts" className={`${sel} w-full min-w-0 sm:w-48`} placeholder="Search contact…" value={search} onChange={(e) => setSearch(e.target.value)} />
             {OUTCOMES.map((o) => (
               <Button key={o} size="sm" variant={outcome === o ? "default" : "outline"} className="capitalize" onClick={() => setOutcome(o)}>
                 {o.replace("_", " ")}
               </Button>
             ))}
-            <span className="ml-auto text-xs text-muted-foreground">{rows.length} rows</span>
+            <span className="ml-auto text-xs text-muted-foreground">{rows.length} matching loaded rows</span>
           </div>
 
-          <div className="max-h-[520px] overflow-auto rounded-xl border">
+          {rows.length === 0 ? <p role="status" className="text-sm text-muted-foreground">{search || outcome !== "all" ? "No loaded attempts match these filters." : "No automation attempts recorded in this loaded period."}</p> : <div className="max-h-[520px] min-w-0 max-w-full overflow-auto rounded-xl border">
             <table className="w-full min-w-[980px] text-sm">
               <thead className="sticky top-0 bg-background text-left text-xs uppercase text-muted-foreground">
                 <tr>
@@ -180,8 +183,8 @@ export function AutomationReportPanel({ orgId }: { orgId: string }) {
                 ))}
               </tbody>
             </table>
-            {rows.length > 500 && <p className="p-3 text-xs text-muted-foreground">Showing 500 rows — export CSV for all {rows.length}.</p>}
-          </div>
+            {rows.length > 500 && <p className="p-3 text-xs text-muted-foreground">Showing 500 rows — CSV includes all {rows.length} matching loaded rows, not full history.</p>}
+          </div>}
         </div>
       )}
     </Panel>
