@@ -94,10 +94,12 @@ function NavLink({ item, active }: { item: NavItem; active: boolean }) {
   return (
     <Link
       to={item.to}
+      preload="intent"
+      aria-current={active ? "page" : undefined}
       className={cn(
-        "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+        "dashboard-nav-link flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
         active
-          ? "bg-sidebar-accent text-primary"
+          ? "bg-sidebar-selected text-sidebar-primary"
           : "text-muted-foreground hover:bg-sidebar-accent hover:text-foreground",
       )}
     >
@@ -143,8 +145,8 @@ function Sidebar({ pathname }: { pathname: string }) {
   const color = activeOrg?.brandColor?.trim() || null;
 
   return (
-    <div className="flex h-full flex-col border-r bg-sidebar">
-      <div className="flex items-center gap-3 border-b px-5 py-4">
+    <div className="dashboard-sidebar flex h-full flex-col border-r border-sidebar-border bg-sidebar">
+      <div className="flex items-center gap-3 border-b border-sidebar-border px-5 py-5">
         {loading ? (
           <div className="flex animate-pulse items-center gap-3">
             <span className="size-9 rounded-xl bg-surface-secondary" />
@@ -173,7 +175,7 @@ function Sidebar({ pathname }: { pathname: string }) {
           </span>
         )}
         <div className="min-w-0">
-          <p className="truncate text-sm font-bold">{brand}</p>
+          <p className="truncate text-base font-bold">{brand}</p>
           <p className="truncate text-xs text-subtle-foreground">
             {activeOrg?.name ?? "by Techaasvik"}
           </p>
@@ -182,24 +184,25 @@ function Sidebar({ pathname }: { pathname: string }) {
         )}
       </div>
 
-      <nav className="flex-1 overflow-y-auto px-3 py-3" aria-label="Main">
+      <nav className="min-h-0 flex-1 space-y-2 overflow-y-auto px-3 py-4" aria-label="Main">
         {groups.map((g, index) => {
           const isOpen = openGroup === g.title;
+          const GroupIcon = g.items[0]?.icon ?? LayoutDashboard;
           return (
-            <div key={g.title} className="mb-2">
+            <div key={g.title}>
                 <Button
                   variant="ghost"
                   type="button"
                   onClick={() => toggleGroup(g.title)}
                   aria-expanded={isOpen}
                   aria-controls={`user-nav-${index}`}
-                  className="min-h-10 h-auto w-full justify-between gap-2 whitespace-normal px-3 py-2 text-left text-sm font-semibold leading-5 text-sidebar-foreground hover:text-foreground"
+                  className="dashboard-nav-group min-h-12 h-auto w-full justify-between gap-2 whitespace-normal rounded-lg px-3 py-2 text-left text-sm font-semibold leading-5 text-sidebar-foreground"
                 >
-                  {g.title}
-                  <ChevronDown className={cn("size-4 shrink-0 transition-transform", !isOpen && "-rotate-90")} />
+                  <span className="flex min-w-0 items-center gap-3"><span className="dashboard-group-icon inline-flex size-7 shrink-0 items-center justify-center rounded-md"><GroupIcon className="size-4" /></span><span>{g.title}</span></span>
+                  <ChevronDown className={cn("size-4 shrink-0 transition-transform motion-reduce:transition-none", !isOpen && "-rotate-90")} />
                 </Button>
               {isOpen && (
-                <div id={`user-nav-${index}`} className="space-y-0.5">
+                <div id={`user-nav-${index}`} className="dashboard-nav-children ml-6 mt-1 space-y-1 border-l border-sidebar-border pl-3">
                   {g.items.map((item) => (
                     <NavLink key={item.to} item={item} active={pathname.startsWith(item.to)} />
                   ))}
