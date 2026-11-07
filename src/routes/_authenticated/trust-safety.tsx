@@ -3,7 +3,7 @@ import { AccountSafetyPanel } from "@/components/app/AccountSafetyPanel";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Download, ShieldAlert } from "lucide-react";
+import { Download, ShieldAlert, RefreshCw } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -45,12 +45,14 @@ function TrustSafetyPage() {
 
   return (
     <AppShell>
-      <PageHeader title="Trust & safety" description="Account health, rate-limit guard, policy checks and audit trail." actions={<GuideButton guide="trust-safety" />} />
+      <PageHeader title="Trust & safety" description="Account health, rate-limit guard, policy checks and audit trail." actions={<div className="flex flex-wrap gap-2"><Button variant="outline" size="icon" aria-label="Refresh trust and safety" disabled={q.isFetching} onClick={() => void q.refetch()}><RefreshCw className="size-4" /></Button><GuideButton guide="trust-safety" /></div>} />
+      {q.isError && <p role="alert" className="mb-4 text-sm text-destructive">Trust and safety could not be refreshed. Previously loaded results may be out of date.</p>}
+      <p className="mb-4 text-xs text-muted-foreground">Scores and warnings use loaded records: up to 5,000 send events in 7 days, 2,000 incoming events in 30 days and 200 automation rules. These checks do not guarantee Meta approval or account safety.</p>
       {!orgId || !q.data ? (
-        <p className="text-sm text-muted-foreground">{q.error ? (q.error as Error).message : "Loading…"}</p>
+        <p role="status" className="text-sm text-muted-foreground">{q.isError ? "Trust and safety unavailable. Refresh to retry." : "Loading trust and safety…"}</p>
       ) : (
-        <Tabs defaultValue="health">
-          <TabsList>
+        <Tabs key={orgId} defaultValue="health">
+          <TabsList className="h-auto max-w-full flex-wrap">
             <TabsTrigger value="health">Health score</TabsTrigger>
             <TabsTrigger value="guard">Rate-limit guard</TabsTrigger>
             <TabsTrigger value="policy">Compliance</TabsTrigger>
@@ -82,7 +84,7 @@ function Health({ data }: { data: Overview }) {
             </div>
           </div>
           <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-muted-foreground">
-            {a.reasons.length ? a.reasons.map((r) => <li key={r}>{r}</li>) : <li>No problems found.</li>}
+            {a.reasons.length ? a.reasons.map((r) => <li key={r}>{r}</li>) : <li>No issues detected in loaded records.</li>}
           </ul>
         </Panel>
       ))}
@@ -122,12 +124,12 @@ function Policy({ data }: { data: Overview }) {
   if (!data.policy.length) return <EmptyState icon={ShieldAlert} title="No automations yet" description="Your automations will be checked here once you create them." />;
   const bad = data.policy.filter((p) => p.issues.length);
   return (
-    <Panel title={`Policy check — ${bad.length ? `${bad.length} automation(s) need attention` : "all clear"}`}>
+    <Panel title={`Policy check — ${bad.length ? `${bad.length} automation(s) need attention` : "no issues detected in loaded rules"}`}>
       <div className="divide-y divide-border">
         {data.policy.map((p) => (
           <div key={p.id} className="py-3">
-            <div className="flex items-center gap-2">
-              <span className="font-medium">{p.name}</span>
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
+              <span className="min-w-0 break-words font-medium">{p.name}</span>
               {!p.isActive && <span className="text-xs text-muted-foreground">(off)</span>}
               <StatusBadge tone={p.issues.some((i) => i.severity === "block") ? "danger" : p.issues.length ? "warning" : "success"}>
                 {p.issues.some((i) => i.severity === "block") ? "Breaks policy" : p.issues.length ? "Warning" : "OK"}
@@ -160,9 +162,10 @@ function Audit({ orgId }: { orgId: string }) {
   };
   return (
     <Panel
-      title="Audit trail"
+      title={q.data ? `Audit trail · ${rows.length} loaded changes` : "Audit trail"}
       action={
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <Button size="sm" variant="outline" aria-label="Refresh audit trail" disabled={q.isFetching} onClick={() => void q.refetch()}><RefreshCw className="size-4" /></Button>
           <select className={sel} value={entity} onChange={(e) => setEntity(e.target.value)} aria-label="Filter">
             <option value="">Everything</option>
             {Object.entries(AUDIT_ENTITY_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
@@ -171,7 +174,9 @@ function Audit({ orgId }: { orgId: string }) {
         </div>
       }
     >
-      {q.isLoading ? <p className="text-sm text-muted-foreground">Loading…</p> : !rows.length ? <p className="text-sm text-muted-foreground">No changes recorded yet.</p> : (
+      <p className="mb-3 text-xs text-muted-foreground">Latest 300 matching changes. CSV contains only these loaded records.</p>
+      {q.isError && <p role="alert" className="mb-3 text-sm text-destructive">Audit trail could not be refreshed. Previously loaded results may be out of date.</p>}
+      {!q.data ? <p role="status" className="text-sm text-muted-foreground">{q.isError ? "Audit trail unavailable. Refresh to retry." : "Loading audit trail…"}</p> : !rows.length ? <p className="text-sm text-muted-foreground">No changes recorded in this selection.</p> : (
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="text-left text-xs text-muted-foreground"><tr><th className="py-2">When</th><th>Who</th><th>What</th><th>Fields</th></tr></thead>
