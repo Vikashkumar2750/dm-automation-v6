@@ -19,3 +19,4 @@
 - Billing state verifies workspace/member reads before order reads and rejects source errors; public catalogue uses strict configuration reads — unavailable prices/history cannot become plausible defaults.
 - WorkspaceAccountFilterProvider lives under the user-keyed authenticated layout and stores session-only workspace selections; account labels reuse social-accounts queries — navigation state never crosses users or auto-switches tenants.
 - Public informational leaf routes use publicPageSchema with escaped JSON-LD; personal buyer/offer routes stay noindex — search metadata must never reveal private tokens or identities.
+- Growth read failures log only fixed source labels and bounded error codes; browser errors stay generic — diagnosis must not expose rows, query URLs or workspace identities.
