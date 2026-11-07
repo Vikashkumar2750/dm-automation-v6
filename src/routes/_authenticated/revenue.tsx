@@ -5,7 +5,7 @@ import { AccountSelect } from "@/components/app/AccountSelect";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Copy, IndianRupee, Info, Loader2, Pencil, Plus, Trash2, Upload, Users } from "lucide-react";
+import { Copy, IndianRupee, Info, Loader2, Pencil, Plus, Trash2, Upload, Users, RefreshCw } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -53,12 +53,13 @@ function RevenuePage() {
   const d = q.data;
   return (
     <AppShell>
-      <PageHeader title="Sales & Revenue" description="Sell inside DMs with payment links, coupons and delivery pages." actions={<div className="flex flex-nowrap items-center gap-2"><AccountSelect orgId={orgId ?? null} value={accountId} onChange={setAccountId} className="h-9 w-auto max-w-[240px]" /><GuideButton guide="revenue" /></div>} />
+      <PageHeader title="Sales & Revenue" description="Sell inside DMs with payment links, coupons and delivery pages." actions={<div className="flex min-w-0 flex-wrap items-center gap-2"><AccountSelect orgId={orgId ?? null} value={accountId} onChange={setAccountId} className="h-9 w-auto max-w-[240px]" /><Button variant="outline" size="icon" aria-label="Refresh sales and revenue" disabled={q.isFetching} onClick={() => void q.refetch()}><RefreshCw className="size-4" /></Button><GuideButton guide="revenue" /></div>} />
+      {q.isError && <p role="alert" className="mb-4 text-sm text-destructive">Sales and Revenue could not be refreshed. Previously loaded results may be out of date.</p>}
       {!d ? (
-        <p className="text-sm text-muted-foreground">Loading…</p>
+        <p role="status" className="text-sm text-muted-foreground">{q.isError ? "Sales and Revenue unavailable. Refresh to retry." : "Loading Sales and Revenue…"}</p>
       ) : (
-        <Tabs defaultValue="report">
-          <TabsList className="flex-nowrap">
+        <Tabs key={orgId} defaultValue="report">
+          <TabsList className="h-auto max-w-full flex-wrap">
             <TabsTrigger value="report">Sales report</TabsTrigger>
             <TabsTrigger value="products">Products</TabsTrigger>
             <TabsTrigger value="coupons">Coupons</TabsTrigger>
@@ -91,10 +92,11 @@ function Report({ d }: { d: Data }) {
   const steps = buildFunnel(d.funnel);
   return (
     <div className="space-y-4">
+      <p className="text-xs text-muted-foreground">30-day sales events are workspace-wide and capped at 10,000 loaded events. Account selection filters payment links only. Funnel stages are independent event counts, not a matched buyer conversion rate.</p>
       <div className="grid gap-3 sm:grid-cols-3">
         <Panel title="Revenue (30 days)"><p className="text-2xl font-semibold">{formatInr(d.funnel.revenuePaise)}</p></Panel>
-        <Panel title="Coupons given"><p className="text-2xl font-semibold">{d.funnel.coupons}</p></Panel>
-        <Panel title="Payment reminders sent"><p className="text-2xl font-semibold">{d.funnel.nudges}</p></Panel>
+        <Panel title="Coupons given (30 days)"><p className="text-2xl font-semibold">{d.funnel.coupons}</p></Panel>
+        <Panel title="Payment reminders (30 days)"><p className="text-2xl font-semibold">{d.funnel.nudges}</p></Panel>
       </div>
       <Panel title="Comment → DM → click → sale (30 days)">
         <div className="space-y-2">
@@ -106,13 +108,13 @@ function Report({ d }: { d: Data }) {
           ))}
         </div>
       </Panel>
-      <Panel title="Latest payment links">
+      <Panel title="Latest payment links · showing up to 30 of 100 loaded">
         {d.links.length === 0 ? <p className="text-sm text-muted-foreground">No payment links sent yet.</p> : (
           <div className="space-y-1 text-sm">
             {d.links.slice(0, 30).map((l: any) => (
               <div key={l.id} className="flex flex-wrap items-center justify-between gap-2 border-b border-border py-1.5">
-                <span className="text-muted-foreground">{new Date(l.created_at).toLocaleString()} · {l.platform}</span>
-                <span>{formatInr(l.amount_paise)}</span>
+                <div className="min-w-0 break-words"><p className="font-medium">{d.products.find((p: { id: string; name: string }) => p.id === l.product_id)?.name ?? "Payment link (product unavailable)"}</p><p className="text-xs text-muted-foreground">{new Date(l.created_at).toLocaleString()} · {l.platform}</p>{l.paid_at && <p className="text-xs text-muted-foreground">Paid {new Date(l.paid_at).toLocaleString()}</p>}</div>
+                <span className="shrink-0 font-semibold">{formatInr(l.amount_paise)}</span>
                 <StatusBadge tone={l.status === "paid" ? "success" : "neutral"}>{l.status === "paid" ? "Paid" : l.provider === "manual" ? "Sent (own link)" : "Waiting"}</StatusBadge>
               </div>
             ))}
@@ -156,8 +158,8 @@ function Products({ orgId, items, connected }: { orgId: string; items: any[]; co
         {items.length === 0 ? <EmptyState icon={IndianRupee} title="No products yet" description="Add one, then use the “Send payment link” step in Flow builder." /> : (
           <div className="space-y-2">
             {items.map((p) => (
-              <div key={p.id} className="flex items-center justify-between gap-2 rounded-lg border border-border p-3 text-sm">
-                <div><p className="font-medium">{p.name}</p><p className="text-muted-foreground">{formatInr(p.price_paise)}{p.original_price_paise > p.price_paise ? <s className="ml-1">{formatInr(p.original_price_paise)}</s> : null}{connected ? " · automatic checkout" : p.manual_url ? " · external payment" : ""}</p></div>
+              <div key={p.id} className="flex min-w-0 flex-wrap items-center justify-between gap-2 rounded-lg border border-border p-3 text-sm">
+                <div className="min-w-0 break-words"><p className="font-medium">{p.name}</p><p className="text-muted-foreground">{formatInr(p.price_paise)}{p.original_price_paise > p.price_paise ? <s className="ml-1">{formatInr(p.original_price_paise)}</s> : null}{connected ? " · automatic checkout" : p.manual_url ? " · external payment" : ""}</p></div>
                 <div className="flex items-center gap-2">
                   <Switch checked={p.active} aria-label="Active" onCheckedChange={(v) => save.mutate({ organizationId: orgId, id: p.id, name: p.name, pricePaise: p.price_paise, originalPricePaise: p.original_price_paise ?? null, description: p.description, manualUrl: p.manual_url, deliveryUrl: p.delivery_url ?? null, active: v })} />
                   <Button size="icon" variant="ghost" aria-label="Edit" onClick={() => setF({ id: p.id, name: p.name, price: String(p.price_paise / 100), originalPrice: p.original_price_paise ? String(p.original_price_paise / 100) : "", description: p.description ?? "", manualUrl: p.manual_url ?? "", deliveryUrl: p.delivery_url ?? "" })}><Pencil className="size-4" /></Button>
