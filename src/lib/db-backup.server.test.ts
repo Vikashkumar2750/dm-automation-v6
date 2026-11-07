@@ -1,8 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { rejectLegacyDatabaseOperation } from "./db-backup.server";
+import { orderTables, rowsToSql } from "./db-backup.server";
 
-describe("Retired privileged database operations", () => {
-  it("rejects in-app full exports and arbitrary SQL instead of returning credentials or data", () => {
-    expect(() => rejectLegacyDatabaseOperation()).toThrow("In-app database export, restore and arbitrary SQL are unavailable");
+describe("db backup", () => {
+  it("puts parent tables before children", () => {
+    const o = orderTables([{ table_name: "members", depends_on: "organizations" }, { table_name: "organizations", depends_on: null }]);
+    expect(o.indexOf("organizations")).toBeLessThan(o.indexOf("members"));
+  });
+  it("makes re-runnable inserts that survive dollar signs in data", () => {
+    const s = rowsToSql("posts", [{ id: 1, body: "price $j$ 5" }]);
+    expect(s).toContain("ON CONFLICT DO NOTHING");
+    expect(s).toContain("$jx$");
+  });
+  it("rejects unsafe table names", () => {
+    expect(() => rowsToSql("x; drop", [])).toThrow();
   });
 });
