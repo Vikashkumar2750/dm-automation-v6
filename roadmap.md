@@ -193,7 +193,7 @@ Real Meta + YouTube credentials are available when we reach OAuth phases.
 - [x] Delivery Health presentation: retry/stale states, event/step/sample labels instead of verified-success claims, cautious missing-tap diagnosis, and long trace wrapping; sending unchanged.
 - [x] Automation report presentation: refresh/stale states, 20,000-event sample and billing distinction, filtered versus summary counts, explicit empty selections, and accurate 500-row/CSV labels.
 - [x] Revenue presentation: refresh/stale states, workspace-keyed retained tabs, wrapped phone navigation, 30-day sample/account-scope labels and product names/paid time beside payment amounts.
-- [ ] Revenue source-read integrity: getRevenue currently suppresses individual read errors; requires tested repair before missing source data reliably shows unavailable.
+- [x] Revenue source-read integrity: all eleven source failures reject with a safe unavailable error instead of false zeros/empty/settings-off results; confirmed empty reads and workspace/account scope retained, membership verified before reads.
 - [ ] Next: V6 acceptance audit and signed-in desktop/mobile verification; authenticated export/billing/health checks blocked by no preview auth users.
 - [x] Converter 800MB + clear after download; Super Admin temp cleanup button
 - [x] Coupons: manual Apply + auto-apply (?coupon=), discount from MRP, server re-check

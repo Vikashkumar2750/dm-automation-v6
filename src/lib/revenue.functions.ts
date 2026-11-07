@@ -34,6 +34,7 @@ export const getRevenue = createServerFn({ method: "GET" })
     const ctx = context as Ctx;
     const sb = ctx.supabase;
     const o = data.organizationId;
+    await assertMember(ctx, o);
     const since = new Date(Date.now() - 30 * 86400_000).toISOString();
     const [products, pages, campaigns, settings, links, events, dms, leads, accounts] = await Promise.all([
       sb.from("revenue_products").select("*").eq("organization_id", o).order("created_at"),
@@ -47,10 +48,13 @@ export const getRevenue = createServerFn({ method: "GET" })
       sb.from("delivery_page_leads").select("id, delivery_page_id, answers, created_at").eq("organization_id", o).order("created_at", { ascending: false }).limit(200),
       sb.from("social_accounts").select("id, platform, name, handle, external_id").eq("organization_id", o).order("created_at"),
     ]);
-    await assertMember(ctx, o);
+    if ([products, pages, campaigns, settings, links, events, dms, leads, accounts].some((result) => result.error)) {
+      throw new Error("Sales and Revenue unavailable. Please retry.");
+    }
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: cred } = await supabaseAdmin.from("payment_credentials").select("razorpay_key_id").eq("organization_id", o).maybeSingle();
-    const { data: otpCfg } = await supabaseAdmin.from("whatsapp_otp_settings").select("phone_number_id, template_name").eq("organization_id", o).maybeSingle();
+    const { data: cred, error: credError } = await supabaseAdmin.from("payment_credentials").select("razorpay_key_id").eq("organization_id", o).maybeSingle();
+    const { data: otpCfg, error: otpError } = await supabaseAdmin.from("whatsapp_otp_settings").select("phone_number_id, template_name").eq("organization_id", o).maybeSingle();
+    if (credError || otpError) throw new Error("Sales and Revenue unavailable. Please retry.");
     const ev = (events.data ?? []) as Array<{ kind: string; amount_paise: number | null }>;
     const n = (k: string) => ev.filter((e) => e.kind === k).length;
     return {
