@@ -80,7 +80,7 @@ function Sidebar({ pathname }: { pathname: string }) {
       <nav aria-label="Super Admin navigation" className="flex-1 space-y-4 overflow-y-auto px-3 py-4">
         {navGroups.map((group, index) => {
           const expanded = openGroup === group.label;
-          return <div key={group.label}><Button variant="ghost" onClick={() => toggleGroup(group.label)} aria-expanded={expanded} aria-controls={`admin-nav-${index}`} className="mb-1 h-8 w-full justify-between px-3 text-xs font-semibold text-subtle-foreground"><span>{group.label}</span><ChevronDown className={expanded ? "size-3.5" : "size-3.5 -rotate-90"} /></Button><div id={`admin-nav-${index}`} hidden={!expanded} className="space-y-1">{group.items.map((item) => <NavLink key={item.to} item={item} pathname={pathname} />)}</div></div>;
+          return <div key={group.label}><Button variant="ghost" onClick={() => toggleGroup(group.label)} aria-expanded={expanded} aria-controls={`admin-nav-${index}`} className="mb-1 min-h-10 h-auto w-full justify-between gap-2 whitespace-normal px-3 py-2 text-left text-sm font-semibold leading-5 text-sidebar-foreground"><span>{group.label}</span><ChevronDown className={expanded ? "size-4 shrink-0" : "size-4 shrink-0 -rotate-90"} /></Button><div id={`admin-nav-${index}`} hidden={!expanded} className="space-y-1">{group.items.map((item) => <NavLink key={item.to} item={item} pathname={pathname} />)}</div></div>;
         })}
       </nav>
     </div>

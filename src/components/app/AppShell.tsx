@@ -193,10 +193,10 @@ function Sidebar({ pathname }: { pathname: string }) {
                   onClick={() => toggleGroup(g.title)}
                   aria-expanded={isOpen}
                   aria-controls={`user-nav-${index}`}
-                  className="h-8 w-full justify-between px-3 text-[11px] font-semibold text-subtle-foreground uppercase hover:text-foreground"
+                  className="min-h-10 h-auto w-full justify-between gap-2 whitespace-normal px-3 py-2 text-left text-sm font-semibold leading-5 text-sidebar-foreground hover:text-foreground"
                 >
                   {g.title}
-                  <ChevronDown className={cn("size-3.5 transition-transform", !isOpen && "-rotate-90")} />
+                  <ChevronDown className={cn("size-4 shrink-0 transition-transform", !isOpen && "-rotate-90")} />
                 </Button>
               {isOpen && (
                 <div id={`user-nav-${index}`} className="space-y-0.5">

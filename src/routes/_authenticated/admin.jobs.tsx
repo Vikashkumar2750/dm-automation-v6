@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Gauge } from "lucide-react";
+import { Gauge, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
 import { AdminTable } from "@/components/app/AdminTable";
@@ -28,12 +28,13 @@ function JobsPage() {
   const requeue = useServerFn(requeueAdminJob);
   const queryClient = useQueryClient();
 
-  const { data, isLoading } = useQuery({
+  const jobs = useQuery({
     queryKey: ["admin-jobs"],
     queryFn: () => fetchJobs(),
     retry: false,
     refetchInterval: 30_000,
   });
+  const { data, isLoading } = jobs;
 
   const requeueMutation = useMutation({
     mutationFn: (postId: string) => requeue({ data: { postId } }),
@@ -51,15 +52,17 @@ function JobsPage() {
       <PageHeader
         title="Jobs & Queue"
         description="Scheduled publishing work, stuck jobs and failures."
+        actions={<Button variant="outline" size="icon" aria-label="Refresh publishing jobs" title="Refresh publishing jobs" disabled={jobs.isFetching} onClick={() => void jobs.refetch()}><RefreshCw className={jobs.isFetching ? "size-4 animate-spin" : "size-4"} /></Button>}
       />
-      <Panel title={`${rows.length} jobs in queue`}>
+      {jobs.isError && <div role="alert" className="border-l-2 border-warning bg-warning-soft px-4 py-3 text-sm">Publishing jobs could not be refreshed{data ? "; previously loaded results are shown." : "."}</div>}
+      <Panel title={data ? `${rows.length} loaded publishing jobs (up to 100)` : "Publishing jobs"} description="Scheduled, publishing and failed posts; this limited list is not the total queue depth.">
         {isLoading ? (
           <p className="text-sm text-muted-foreground">Loading…</p>
-        ) : rows.length === 0 ? (
+        ) : !data ? <p className="text-sm text-muted-foreground">Publishing job data unavailable.</p> : rows.length === 0 ? (
           <EmptyState
             icon={Gauge}
-            title="Queue is empty"
-            description="Scheduled and failed posts will appear here."
+            title="No jobs in the loaded results"
+            description="Scheduled, publishing and failed posts appear here."
           />
         ) : (
           <AdminTable
@@ -106,6 +109,7 @@ function JobsPage() {
                     <Button
                       size="sm"
                       variant="outline"
+                      disabled={requeueMutation.isPending}
                       onClick={() => requeueMutation.mutate(j.id)}
                     >
                       Requeue
