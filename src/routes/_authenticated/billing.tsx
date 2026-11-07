@@ -2,7 +2,7 @@ import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Check, CreditCard, ShieldCheck } from "lucide-react";
+import { Check, CreditCard, ShieldCheck, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
 import { AppShell } from "@/components/app/AppShell";
@@ -13,7 +13,7 @@ import { getAutomationUsage } from "@/lib/automations.functions";
 import { listSocialAccounts } from "@/lib/social-accounts.functions";
 import { confirmPlanPayment, createPlanOrder, getBillingState } from "@/lib/billing.functions";
 import { getPublicPlans } from "@/lib/platform-config.functions";
-import { PLANS as DEFAULT_PLANS, formatPaise, planButtonState, type BillingCycle, type PlanKey } from "@/lib/plans";
+import { formatPaise, planButtonState, type BillingCycle, type PlanKey } from "@/lib/plans";
 
 export const Route = createFileRoute("/_authenticated/billing")({
   head: () => ({
@@ -71,7 +71,7 @@ function BillingPage() {
 
   const fetchPlans = useServerFn(getPublicPlans);
   const plansQuery = useQuery({ queryKey: ["public-plans"], queryFn: () => fetchPlans(), retry: false });
-  const PLANS = plansQuery.data ?? DEFAULT_PLANS;
+  const PLANS = plansQuery.data ?? [];
   const fetchUsage = useServerFn(getAutomationUsage);
   const fetchAccounts = useServerFn(listSocialAccounts);
   const fetchBilling = useServerFn(getBillingState);
@@ -81,21 +81,21 @@ function BillingPage() {
   const usage = useQuery({
     queryKey: ["automation-usage", orgId],
     enabled: !!orgId,
-    queryFn: () => fetchUsage({ data: { organizationId: orgId! } }),
+    queryFn: () => { if (!orgId) throw new Error("Workspace unavailable"); return fetchUsage({ data: { organizationId: orgId } }); },
   });
   const accounts = useQuery({
     queryKey: ["social-accounts", orgId],
     enabled: !!orgId,
-    queryFn: () => fetchAccounts({ data: { organizationId: orgId! } }),
+    queryFn: () => { if (!orgId) throw new Error("Workspace unavailable"); return fetchAccounts({ data: { organizationId: orgId } }); },
   });
   const billing = useQuery({
     queryKey: ["billing-state", orgId],
     enabled: !!orgId,
-    queryFn: () => fetchBilling({ data: { organizationId: orgId! } }),
+    queryFn: () => { if (!orgId) throw new Error("Workspace unavailable"); return fetchBilling({ data: { organizationId: orgId } }); },
   });
 
   const currentPlan = billing.data?.plan ?? "starter";
-  const canPay = billing.data?.canPay ?? false;
+  const canPay = !!billing.data?.canPay && !billing.isError && !plansQuery.isError;
 
   async function finish(orderId: string, paymentId?: string, signature?: string) {
     const res = await confirmPayment({
@@ -154,31 +154,32 @@ function BillingPage() {
         title="Billing"
         description="Your plan, what it includes and how much of it you are using."
         actions={
-          <Button asChild variant="outline">
+          <div className="flex flex-wrap gap-2"><Button variant="outline" disabled={!orgId || billing.isFetching || usage.isFetching || accounts.isFetching || plansQuery.isFetching} onClick={() => { void billing.refetch(); void usage.refetch(); void accounts.refetch(); void plansQuery.refetch(); }}><RefreshCw className="size-4" />Refresh</Button><Button asChild variant="outline">
             <Link to="/usage">See usage</Link>
-          </Button>
+          </Button></div>
         }
       />
 
       <div className="space-y-6">
+        {(billing.isError || usage.isError || accounts.isError || plansQuery.isError) && <p role="alert" className="text-sm text-destructive">Some billing information could not be refreshed. Previously loaded values may be out of date; refresh to retry.</p>}
         <div className="grid gap-4 sm:grid-cols-3">
           <StatCard
             icon={CreditCard}
             label="Current plan"
-            value={currentPlan}
-            sub={planExpiryLabel(billing.data?.planExpiresAt ?? null, billing.data?.planSource ?? null)}
+            value={billing.data ? currentPlan : "—"}
+            sub={billing.data ? planExpiryLabel(billing.data.planExpiresAt, billing.data.planSource) : billing.isError ? "Unavailable" : "Loading…"}
           />
           <StatCard
             icon={Check}
             label="Connected accounts"
-            value={String(accounts.data?.length ?? 0)}
-            sub="Instagram, Facebook and YouTube"
+            value={accounts.data ? String(accounts.data.length) : "—"}
+            sub={accounts.data ? "Instagram, Facebook and YouTube" : accounts.isError ? "Unavailable" : "Loading…"}
           />
           <StatCard
             icon={Check}
-            label="Automated replies today"
-            value={String(usage.data?.sentLastDay ?? 0)}
-            sub={`Daily limit ${usage.data?.dailyLimit ?? 0}`}
+            label="Sent steps · last 24 hours"
+            value={usage.data ? String(usage.data.sentLastDay) : "—"}
+            sub={usage.data ? "Workspace activity, not monthly billable runs" : usage.isError ? "Unavailable" : "Loading…"}
           />
         </div>
 
@@ -211,7 +212,7 @@ function BillingPage() {
           </Panel>
         )}
 
-        <div className="grid gap-4 lg:grid-cols-3">
+        {!billing.data || !plansQuery.data ? <p role="status" className="text-sm text-muted-foreground">{billing.isError || plansQuery.isError ? "Plan options unavailable. Refresh to retry." : "Loading plan options…"}</p> : <div className="grid gap-4 lg:grid-cols-3">
           {PLANS.map((p) => {
             const selected = cycles[p.key] ?? p.options[0]?.cycle;
             const option = p.options.find((o) => o.cycle === selected) ?? p.options[0];
@@ -241,16 +242,19 @@ function BillingPage() {
                 {p.options.length > 1 && (
                   <div className="mt-4 flex flex-wrap gap-2">
                     {p.options.map((o) => (
-                      <button
+                      <Button
                         key={o.cycle}
                         type="button"
+                        variant="outline"
+                        size="sm"
+                        aria-pressed={o.cycle === selected}
                         onClick={() => setCycles((c) => ({ ...c, [p.key]: o.cycle }))}
                         className={`rounded-md border px-2.5 py-1 text-xs ${
                           o.cycle === selected ? "border-primary text-primary" : "text-muted-foreground"
                         }`}
                       >
                         {o.label}
-                      </button>
+                      </Button>
                     ))}
                   </div>
                 )}
@@ -265,6 +269,7 @@ function BillingPage() {
                     variant={state === "buy" ? "default" : "outline"}
                     disabled={
                       !canPay ||
+                      busy !== null ||
                       !option ||
                       state === "active" ||
                       state === "locked" ||
@@ -288,7 +293,7 @@ function BillingPage() {
                     Renew button appears 7 days before your plan ends.
                   </p>
                 )}
-                {!canPay && !p.contactOnly && (
+                {!billing.data?.canPay && !p.contactOnly && (
                   <p className="mt-2 text-xs text-muted-foreground">
                     {billing.data?.planSource === "agency_parent"
                       ? "This client workspace is covered by the main Agency account — only the Agency owner pays."
@@ -298,19 +303,21 @@ function BillingPage() {
               </Panel>
             );
           })}
-        </div>
+        </div>}
 
-        <Panel title="Payment history">
-          {(billing.data?.orders ?? []).length === 0 ? (
+        <Panel title="Payment history · latest 10 orders">
+          <p className="mb-3 text-xs text-muted-foreground">Workspace order records, including pending, failed and assigned plans—not a complete payment statement.</p>
+          {!billing.data ? <p role="status" className="text-sm text-muted-foreground">{billing.isError ? "Payment history unavailable. Refresh to retry." : "Loading payment history…"}</p> : billing.data.orders.length === 0 ? (
             <p className="text-sm text-muted-foreground">No payments yet.</p>
           ) : (
             <ul className="space-y-2 text-sm">
-              {billing.data!.orders.map((o) => (
-                <li key={o.id} className="flex items-center justify-between rounded-lg border px-3 py-2">
-                  <span className="capitalize">
+              {billing.data.orders.map((o) => (
+                <li key={o.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border px-3 py-2">
+                  <span className="min-w-0 break-words capitalize">
                     {o.plan} · {String(o.billing_cycle).replace(/_/g, " ")}
+                    <span className="mt-1 block text-xs text-muted-foreground normal-case">{o.paid_at ? "Paid" : "Created"} · {new Date(o.paid_at ?? o.created_at).toLocaleDateString("en-IN")}</span>
                   </span>
-                  <span className="flex items-center gap-3">
+                  <span className="flex flex-wrap items-center gap-3">
                     <span className="num">{formatPaise(o.amount_paise)}</span>
                     <StatusBadge tone={o.status === "paid" ? "success" : "warning"}>
                       {o.mode === "grant" ? "given by Techaasvik" : o.status}

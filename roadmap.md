@@ -198,6 +198,7 @@ Real Meta + YouTube credentials are available when we reach OAuth phases.
 - [x] Workspace/per-account usage source-read integrity: eleven failed reads now reject safely; confirmed empty reads remain valid and account membership gating unchanged.
 - [x] Monthly grouped-run display rejects failed/invalid RPC counts without a sent-step fallback; shared sending-quota enforcement unchanged (focused regression tests added).
 - [x] Monthly usage display rejects failed workspace/settings/Agency-parent/active-rule reads and missing workspaces; catalogue and overrides share one confirmed settings snapshot, shared enforcement defaults unchanged.
+- [x] Customer Billing presentation: refresh/unavailable states, no unconfirmed Starter/zero/default catalogue display, rolling activity labels, latest-10 order scope/dates and mobile wrapping; payment implementation unchanged.
 - [ ] Diagnose screenshot Growth Insights unavailable error: current Cloud columns and authenticated SELECT grants verified; same-user reproduction blocked because requesting user has no matching preview account, and external deployed logs/session are unavailable.
 - [ ] Next: V6 acceptance audit and signed-in desktop/mobile verification; authenticated export/billing/health checks blocked by no preview auth users.
 - [x] Converter 800MB + clear after download; Super Admin temp cleanup button
