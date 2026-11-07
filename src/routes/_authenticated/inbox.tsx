@@ -44,8 +44,11 @@ import {
   type ConversationRow,
 } from "@/lib/inbox.functions";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import { findWorkspaceItem, itemSearch, workspaceItemId } from "@/lib/item-navigation";
 
 export const Route = createFileRoute("/_authenticated/inbox")({
+  validateSearch: (search) => itemSearch(search, "conversation"),
   head: () => ({
     meta: [
       { title: "Unified Inbox — AutoDM by Techaasvik" },
@@ -135,7 +138,10 @@ function InboxPage() {
   const { activeOrg } = useTenant();
   const orgId = activeOrg?.id;
   const queryClient = useQueryClient();
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const routeSearch = Route.useSearch();
+  const navigate = Route.useNavigate();
+  const selectedId = workspaceItemId(routeSearch.conversation, routeSearch.workspace, orgId);
+  const closeConversation = () => { void navigate({ search: {} }); };
   const [draft, setDraft] = useState("");
   const [commentMode, setCommentMode] = useState<"public" | "private">("public");
   const [platform, setPlatform] = useState<Platform | "all">("all");
@@ -199,12 +205,24 @@ function InboxPage() {
   });
 
   const conversations = (conversationsQuery.data ?? []).filter((c) => matchesPlatformAccount(c, platform, accountId));
+  const targetQuery = useQuery({
+    queryKey: ["conversation-target", orgId, selectedId],
+    enabled: Boolean(orgId && selectedId),
+    queryFn: async () => {
+      if (!orgId || !selectedId) return null;
+      const result = await supabase.from("conversations")
+        .select("id, organization_id, social_account_id, platform, external_user_id, external_user_name, channel, status, last_message_at, last_message_preview, unread_count, bot_paused_until, bot_paused_by")
+        .eq("organization_id", orgId).eq("id", selectedId).maybeSingle();
+      if (result.error) throw result.error;
+      return result.data;
+    },
+  });
   useEffect(() => {
-    setSelectedId(null);
     setDraft("");
-  }, [orgId, platform, accountId]);
+  }, [orgId, platform, accountId, selectedId]);
+  const target = targetQuery.data && matchesPlatformAccount(targetQuery.data, platform, accountId) ? targetQuery.data : undefined;
   const selected: ConversationRow | undefined =
-    selectedId ? conversations.find((c) => c.id === selectedId) : conversations[0];
+    selectedId ? findWorkspaceItem(conversations, selectedId, orgId) ?? target : routeSearch.conversation ? undefined : conversations[0];
 
   const messagesQuery = useQuery({
     queryKey: ["messages", selected?.id],
@@ -320,10 +338,10 @@ function InboxPage() {
   });
 
   function openConversation(id: string) {
-    setSelectedId(id);
+    void navigate({ search: { conversation: id, workspace: orgId } });
     markReadFn({ data: { conversationId: id } }).then(() =>
       queryClient.invalidateQueries({ queryKey: ["conversations", orgId] }),
-    );
+    ).catch(() => toast.error("Could not mark this conversation as read."));
   }
 
   return (
@@ -355,10 +373,10 @@ function InboxPage() {
               placeholder="Search name or message…"
               className="h-8 w-full rounded-md border bg-background px-2.5 text-xs outline-none focus:ring-2 focus:ring-ring"
             />
-            <AccountSelect orgId={orgId ?? null} platform={platform} value={accountId} onChange={setAccountId} />
+            <AccountSelect orgId={orgId ?? null} platform={platform} value={accountId} onChange={(id) => { setAccountId(id); closeConversation(); }} />
             <FilterChips
               value={platform}
-              onChange={(p) => { setPlatform(p); setAccountId("all"); }}
+              onChange={(p) => { setPlatform(p); setAccountId("all"); closeConversation(); }}
               options={[
                 { value: "all", label: "All platforms" },
                 { value: "instagram", label: "Instagram" },
@@ -448,15 +466,16 @@ function InboxPage() {
             <div className="flex flex-1 items-center justify-center py-16">
               <EmptyState
                 icon={MessageSquareText}
-                title="Pick a conversation"
-                description="Select a conversation on the left to read the thread and reply."
+                title={routeSearch.conversation ? targetQuery.isFetching ? "Loading conversation…" : "Conversation unavailable" : "Pick a conversation"}
+                description={routeSearch.conversation ? "This conversation must be available in your current workspace and account selection." : "Select a conversation on the left to read the thread and reply."}
+                action={routeSearch.conversation ? <Button variant="outline" onClick={closeConversation}>Back to conversations</Button> : undefined}
               />
             </div>
           ) : (
             <>
               <div className="grid min-w-0 gap-3 border-b px-3 py-2 sm:flex sm:flex-wrap sm:items-center sm:justify-between sm:px-5">
                 <div className="flex min-w-0 items-center gap-3">
-                  <Button variant="ghost" size="icon" className="shrink-0 lg:hidden" aria-label="Back to conversations" onClick={() => setSelectedId(null)}><ArrowLeft className="size-4" /></Button>
+                  <Button variant="ghost" size="icon" className="shrink-0 lg:hidden" aria-label="Back to conversations" onClick={closeConversation}><ArrowLeft className="size-4" /></Button>
                   <PlatformBadge platform={selected.platform} />
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold">

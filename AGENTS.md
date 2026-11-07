@@ -39,3 +39,4 @@
 - Publishing tab visibility uses boolean feature_flags resolved through publishing-availability; PublishingPageGate covers list, calendar and new-post pages before mounting their content, while scheduled jobs and Meta automation remain unchanged — rollout controls must not cancel existing work.
 - Dashboard overview reuses workspace-scoped queries and useWorkspaceFeatures for shortcuts; only real source metrics are shown — presentation changes must not add delivery calls or invent business counts.
 - Dashboard setup derives milestones from confirmed source reads; sales reuses the Revenue query and explicitly separates its fixed event window from the capped lead sample — prevents invented completion or misleading totals.
+- Item links carry a workspace ID and validated item ID; resolve only against active-workspace reads and never auto-switch workspaces — prevents stale search links from selecting another tenant's chat or post.
