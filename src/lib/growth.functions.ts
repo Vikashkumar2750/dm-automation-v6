@@ -34,16 +34,21 @@ export const getGrowthOverview = createServerFn({ method: "GET" })
       sb.from("growth_competitors").select("*").eq("organization_id", org).order("created_at"),
       sb.from("social_accounts").select("id").eq("organization_id", org),
     ]);
+    // Failed reads must never become plausible zero or healthy-looking insights.
+    for (const result of [convs, runs, rev, posts, competitors, accounts]) {
+      if (result.error) throw new Error("Growth insights unavailable. Refresh to retry.");
+    }
     const convIds = (convs.data ?? []).map((c) => c.id);
     let inbound: string[] = [];
     if (convIds.length) {
-      const { data: msgs } = await sb
+      const { data: msgs, error } = await sb
         .from("messages")
         .select("created_at")
         .in("conversation_id", convIds.slice(0, 500))
         .eq("direction", "inbound")
         .gte("created_at", since(60 * DAY))
         .limit(10000);
+      if (error) throw new Error("Growth insights unavailable. Refresh to retry.");
       inbound = (msgs ?? []).map((m) => m.created_at as string);
     }
 
