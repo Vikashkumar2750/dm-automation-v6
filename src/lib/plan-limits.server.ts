@@ -45,6 +45,15 @@ export function monthStartIso(now = new Date()) {
   return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
 }
 
+/** Display only: never substitute sent-step rows for distinct billable runs. */
+export async function readMonthlyRunUsage(admin: AdminClient, orgId: string) {
+  const { data, error } = await admin.rpc("count_org_runs" as never, { _org_id: orgId, _since: monthStartIso() } as never);
+  if (error || typeof data !== "number" || !Number.isSafeInteger(data) || data < 0) {
+    throw new Error("Monthly plan usage unavailable. Refresh to retry.");
+  }
+  return data;
+}
+
 /** Plan usage: one automation run = 1, however many steps/DMs it sent (rows grouped by run_key). */
 export async function countMonthlySent(admin: AdminClient, orgId: string) {
   const { data, error } = await admin.rpc("count_org_runs" as never, { _org_id: orgId, _since: monthStartIso() } as never);
