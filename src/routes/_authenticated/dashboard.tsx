@@ -165,7 +165,7 @@ function Dashboard() {
   const setupSteps = [
     { label: "Connect a social account", to: "/social-accounts" as const, complete: accountRows.some((account) => account.status === "connected"), ready: accounts.isSuccess },
     { label: "Activate an automation", to: "/automations" as const, complete: (a?.totals.activeRules ?? 0) + (a?.totals.activeFlows ?? 0) > 0, ready: analytics.isSuccess },
-    ...(features?.revenue === "enabled" && features?.delivery_pages === "on" ? [{ label: "Activate a delivery page", to: "/revenue" as const, complete: (revenue.data?.pages ?? []).some((page: { active: boolean }) => page.active), ready: revenue.isSuccess }] : []),
+    ...(features?.revenue === "enabled" && features?.delivery_pages === "enabled" ? [{ label: "Activate a delivery page", to: "/revenue" as const, complete: (revenue.data?.pages ?? []).some((page: { active: boolean }) => page.active), ready: revenue.isSuccess }] : []),
   ];
   const setupReady = setupSteps.every((step) => step.ready);
   const setupComplete = setupSteps.filter((step) => step.complete).length;
