@@ -185,6 +185,7 @@ Real Meta + YouTube credentials are available when we reach OAuth phases.
 - [x] Inbox/Contacts count audit: label 100-conversation and 2,000-lead samples; explain filtered/exported sets, await CRM details before contact counts/export, and constrain contact fields on phones.
 - [x] Analytics/Growth presentation audit: unavailable metrics instead of fabricated zeros, refresh/stale states, current-record versus date-range labels, sampled funnel scope and honest competitor/anomaly labels.
 - [x] Growth source-read integrity: seven failed-read paths reject instead of returning zero/normal insights; confirmed empty reads and workspace scoping preserved in regression tests.
+- [x] Team Desk/Team presentation: refresh and unavailable/stale states for members, reports, invoices and integrations; drafts reset by workspace/account; manual invoice status labels and wrapping tabs.
 - [ ] Next: V6 acceptance audit and signed-in desktop/mobile verification; authenticated export/billing/health checks blocked by no preview auth users.
 - [x] Converter 800MB + clear after download; Super Admin temp cleanup button
 - [x] Coupons: manual Apply + auto-apply (?coupon=), discount from MRP, server re-check

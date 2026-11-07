@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Copy, Mail, Trash2, UsersRound } from "lucide-react";
+import { Copy, Mail, Trash2, UsersRound, RefreshCw } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -156,7 +156,9 @@ function TeamPage() {
       <PageHeader
         title="Team"
         description="Invite teammates and control what each role can do."
+        actions={<Button variant="outline" size="icon" aria-label="Refresh team" disabled={members.isFetching || invites.isFetching} onClick={refresh}><RefreshCw className="size-4" /></Button>}
       />
+      {(members.isError || invites.isError) && <p role="alert" className="mb-4 text-sm text-destructive">Team or invite details could not be refreshed. Previously loaded results may be out of date.</p>}
 
       {canManage && (
         <Panel title="Invite a teammate" className="mb-6">
@@ -168,7 +170,7 @@ function TeamPage() {
               inviteMutation.mutate();
             }}
           >
-            <div className="min-w-[220px] flex-1">
+            <div className="min-w-0 basis-[220px] flex-1">
               <Label htmlFor="invite-email">Work email</Label>
               <Input
                 id="invite-email"
@@ -261,7 +263,7 @@ function TeamPage() {
           <div className="p-5">
             <EmptyState
               icon={UsersRound}
-              title={members.isLoading ? "Loading team…" : "No teammates yet"}
+              title={members.isError ? "Team unavailable" : members.isLoading ? "Loading team…" : "No teammates yet"}
               description="Invite the people who will handle messages, automations and publishing."
             />
           </div>
