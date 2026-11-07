@@ -1,9 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
-import { Activity, AlertTriangle, Send, Timer } from "lucide-react";
+import { Activity, AlertTriangle, Send, Timer, RefreshCw } from "lucide-react";
 
 import { Panel, StatCard, StatusBadge } from "@/components/app/primitives";
+import { Button } from "@/components/ui/button";
 import { getDeliveryHealth } from "@/lib/webhooks.functions";
 
 const STEP_LABEL: Record<string, string> = {
@@ -36,9 +37,9 @@ function Funnel({ title, steps }: { title: string; steps: [string, number][] }) 
       <ol className="space-y-2">
         {steps.map(([label, n], i) => (
           <li key={label} className="text-sm">
-            <div className="flex justify-between">
-              <span>{i + 1}. {label}</span>
-              <span className="font-medium">{n}</span>
+            <div className="flex min-w-0 justify-between gap-3">
+              <span className="min-w-0 break-words">{i + 1}. {label}</span>
+              <span className="shrink-0 font-medium">{n}</span>
             </div>
             <div className="mt-1 h-1.5 rounded bg-surface-secondary">
               <div className="h-1.5 rounded bg-primary" style={{ width: first ? `${Math.min(100, (n / first) * 100)}%` : "0%" }} />
@@ -62,50 +63,52 @@ export function DeliveryHealth({ orgId }: { orgId: string }) {
   const h = q.data;
   const outSent = h?.outbound.reduce((s, o) => s + o.sent, 0) ?? 0;
   const outFailed = h?.outbound.reduce((s, o) => s + o.failed, 0) ?? 0;
-  const f = h?.funnel;
 
   return (
     <Panel
       title="Delivery health"
       action={
-        <div className="flex gap-2 text-sm">
-          <select className="rounded-md border bg-background px-2 py-1" value={platform} onChange={(e) => setPlatform(e.target.value as typeof platform)}>
+        <div className="flex flex-wrap gap-2 text-sm">
+          <Button variant="outline" size="sm" aria-label="Refresh delivery health" disabled={q.isFetching} onClick={() => void q.refetch()}><RefreshCw className="size-4" /></Button>
+          <select aria-label="Delivery health platform" className="rounded-md border bg-background px-2 py-1" value={platform} onChange={(e) => setPlatform(e.target.value as typeof platform)}>
             <option value="all">All</option><option value="instagram">Instagram</option><option value="facebook">Facebook</option>
           </select>
-          <select className="rounded-md border bg-background px-2 py-1" value={hours} onChange={(e) => setHours(Number(e.target.value))}>
+          <select aria-label="Delivery health period" className="rounded-md border bg-background px-2 py-1" value={hours} onChange={(e) => setHours(Number(e.target.value))}>
             <option value={24}>Last 24h</option><option value={168}>Last 7 days</option>
           </select>
         </div>
       }
     >
+      <p className="mb-3 text-xs text-muted-foreground">Loaded samples: up to 5,000 incoming events, 5,000 automation events and 50 follow checks. Automation events remain workspace-wide when a platform is selected. These are not full-history totals or verified delivery rates.</p>
+      {q.isError && <p role="alert" className="mb-3 text-sm text-destructive">Delivery health could not be refreshed. Previously loaded results may be out of date.</p>}
       {!h ? (
-        <p className="text-sm text-muted-foreground">{q.isError ? "Could not load health data." : "Loading…"}</p>
+        <p role="status" className="text-sm text-muted-foreground">{q.isError ? "Delivery health unavailable. Refresh to retry." : "Loading delivery health…"}</p>
       ) : (
         <div className="space-y-5">
           {h.tapsMissing && (
             <div className="flex gap-2 rounded-lg border border-warning bg-warning/10 p-3 text-sm">
               <AlertTriangle className="size-4 shrink-0 text-warning" />
               <span>
-                Buttons are being sent but <b>no button taps are reaching us</b>. This is a Meta setting, not the automation: make sure the tester has a role in the Meta app, <b>messaging_postbacks</b> is ticked for Instagram and Page webhooks, and the app is Live.
+                Openers are recorded but <b>no button taps appear in the loaded sample</b>. Confirm a real tester tapped a button, then check Meta app roles and <b>messaging_postbacks</b> subscriptions. This signal alone does not establish the cause.
               </span>
             </div>
           )}
           <div className="rounded-xl border p-4 text-sm">
-            <div className="mb-3 flex items-center justify-between gap-3">
-              <p className="font-medium">Live real-event trace</p>
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+              <p className="font-medium">Incoming event trace · up to 50 loaded events</p>
               <StatusBadge tone="info">Refreshes every 30s</StatusBadge>
             </div>
             {h.traces.length === 0 ? (
-              <p className="text-muted-foreground">No real webhook events in this period.</p>
+              <p className="text-muted-foreground">No incoming events in this loaded sample. This does not confirm delivery health.</p>
             ) : (
               <div className="space-y-2">
                 {h.traces.map((trace) => (
-                  <div key={trace.id} className="grid gap-1 rounded border px-3 py-2 sm:grid-cols-[150px_1fr_auto] sm:items-center">
+                  <div key={trace.id} className="grid min-w-0 gap-1 rounded border px-3 py-2 sm:grid-cols-[150px_minmax(0,1fr)_auto] sm:items-center">
                     <div>
-                      <p className="font-medium">{trace.eventType}</p>
-                      <p className="font-mono text-xs text-muted-foreground">Trace {trace.correlationId}</p>
+                      <p className="break-words font-medium">{trace.eventType}</p>
+                      <p className="break-all font-mono text-xs text-muted-foreground">Trace {trace.correlationId}</p>
                     </div>
-                    <p className="text-xs text-muted-foreground">{traceLabel(trace.detail)}</p>
+                    <p className="min-w-0 break-words text-xs text-muted-foreground">{traceLabel(trace.detail)}</p>
                     <div className="flex items-center gap-2">
                       <StatusBadge tone={trace.outcome === "processed" ? "success" : trace.outcome === "failed" ? "danger" : "warning"}>{trace.outcome}</StatusBadge>
                       <span className="text-xs text-muted-foreground">{new Date(trace.at).toLocaleTimeString()}</span>
@@ -116,15 +119,15 @@ export function DeliveryHealth({ orgId }: { orgId: string }) {
             )}
           </div>
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <StatCard icon={Activity} label="Incoming events OK" value={pct(h.inbound.ok, h.inbound.total)} sub={`${h.inbound.total} events`} />
-            <StatCard icon={Send} label="Outgoing success" value={pct(outSent, outSent + outFailed)} sub={`${outFailed} failed`} />
-            <StatCard icon={Timer} label="Waiting gates" value={String(h.gates.filter((g) => g.status === "waiting").length)} sub="Users mid-flow" />
-            <StatCard icon={Activity} label="Conversion" value={pct(f!.finalDms, f!.openers)} sub="Opener → final link" />
+            <StatCard icon={Activity} label="Incoming events not marked failed" value={pct(h.inbound.ok, h.inbound.total)} sub={h.inbound.total ? `${h.inbound.total} loaded events · includes unfinished statuses` : "No incoming activity in sample"} />
+            <StatCard icon={Send} label="Outgoing step success · sample" value={pct(outSent, outSent + outFailed)} sub={outSent + outFailed ? `${outFailed} failed steps · workspace-wide` : "No outgoing steps in sample"} />
+            <StatCard icon={Timer} label="Waiting gates · loaded" value={String(h.gates.filter((g) => g.status === "waiting").length)} sub="From up to 50 follow checks" />
+            <StatCard icon={Activity} label="Final DMs / openers · sample" value={pct(h.funnel.finalDms, h.funnel.openers)} sub="Independent event counts, not buyer conversion" />
           </div>
 
           <div className="grid gap-3 md:grid-cols-2">
-            <Funnel title="Follower path" steps={[["Opener sent", f!.openers], ["Button tapped", f!.taps], ["Follower verified", f!.followerDirect]]} />
-            <Funnel title="Non-follower path" steps={[["Opener sent", f!.openers], ["Button tapped", f!.taps], ["Follow prompt sent", f!.followPrompts], ["Confirmed & delivered", f!.confirmedAfterFollow]]} />
+            <Funnel title="Follower path · sampled events" steps={[["Opener sent", h.funnel.openers], ["Button tapped", h.funnel.taps], ["Follower verified", h.funnel.followerDirect]]} />
+            <Funnel title="Non-follower path · sampled events" steps={[["Opener sent", h.funnel.openers], ["Button tapped", h.funnel.taps], ["Follow prompt sent", h.funnel.followPrompts], ["Confirmed & delivered", h.funnel.confirmedAfterFollow]]} />
           </div>
 
           <div className="grid gap-3 md:grid-cols-2">
@@ -145,14 +148,14 @@ export function DeliveryHealth({ orgId }: { orgId: string }) {
                     <span>{STEP_LABEL[o.step] ?? o.step}</span>
                     <span>{o.sent} sent{o.failed ? <span className="text-danger"> · {o.failed} failed</span> : null}</span>
                   </div>
-                  {o.topError && <p className="truncate text-xs text-danger">{o.topError}</p>}
+                  {o.topError && <p className="break-words text-xs text-destructive">{o.topError}</p>}
                 </div>
               ))}
             </div>
           </div>
 
           <div className="text-sm">
-            <p className="mb-2 font-medium">Retry history</p>
+            <p className="mb-2 font-medium">Retry history · showing up to 15 loaded follow checks</p>
             {h.gates.length === 0 ? <p className="text-muted-foreground">No follow checks in this period.</p> : (
               <div className="space-y-1">
                 {h.gates.slice(0, 15).map((g) => (
