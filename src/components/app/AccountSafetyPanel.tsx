@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Loader2 } from "lucide-react";
+import { Loader2, RefreshCw } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -18,27 +18,28 @@ export function AccountSafetyPanel({ orgId, editable = false, planLimit }: { org
   const q = useQuery({ queryKey: ["account-safety", orgId], queryFn: () => fetchIt({ data: { organizationId: orgId } }), refetchInterval: 60_000 });
   const d = q.data;
   return (
-    <Panel title="Per account" bodyClassName="p-0">
+    <Panel title="Per account" bodyClassName="p-0" action={<Button variant="outline" size="icon" aria-label="Refresh per-account usage" disabled={q.isFetching} onClick={() => void q.refetch()}><RefreshCw className="size-4" /></Button>}>
+      {q.isError && <p role="alert" className="px-5 pt-4 text-sm text-destructive">Per-account usage could not be refreshed. Previously loaded values may be out of date.</p>}
       {!d ? (
         <p className="p-5 text-sm text-muted-foreground">{q.isError ? "Couldn't load per-account usage." : "Loading…"}</p>
       ) : d.accounts.length === 0 ? (
         <p className="p-5 text-sm text-muted-foreground">No connected accounts yet.</p>
       ) : (
-        <div className="overflow-x-auto">
+        <div className="min-w-0 max-w-full overflow-x-auto">
           <table className="w-full min-w-[640px] text-sm">
             <thead className="text-left text-xs text-muted-foreground">
               <tr className="border-b">
                 <th className="px-4 py-2 font-medium">Account</th>
                 <th className="px-4 py-2 font-medium">Runs this month</th>
-                <th className="px-4 py-2 font-medium">This hour</th>
-                <th className="px-4 py-2 font-medium">Today</th>
+                <th className="px-4 py-2 font-medium">Last hour</th>
+                <th className="px-4 py-2 font-medium">Last 24 hours</th>
                 {editable && <th className="px-4 py-2 font-medium">Limits</th>}
               </tr>
             </thead>
             <tbody className="divide-y">
               {d.accounts.map((a) => (
                 <tr key={a.id}>
-                  <td className="px-4 py-3"><div className="flex items-center gap-2"><PlatformBadge platform={a.platform as SocialPlatform} size="sm" /><span className="truncate">{a.handle ? `@${a.handle.replace(/^@/, "")}` : a.name}</span></div></td>
+                  <td className="px-4 py-3"><div className="flex items-center gap-2"><PlatformBadge platform={a.platform as SocialPlatform} size="sm" /><span className="max-w-48 truncate" title={a.handle ?? a.name}>{a.handle ? `@${a.handle.replace(/^@/, "")}` : a.name}</span></div></td>
                   <td className="num px-4 py-3">{a.runsThisMonth}{planLimit ? <span className="text-muted-foreground"> · {Math.round((a.runsThisMonth / planLimit) * 100)}% of plan</span> : null}</td>
                   <td className={`num px-4 py-3 ${tone(a.sentThisHour, a.limits.hourly)}`}>{a.sentThisHour} / {a.limits.hourly}</td>
                   <td className={`num px-4 py-3 ${tone(a.sentToday, a.limits.daily)}`}>{a.sentToday} / {a.limits.daily}</td>

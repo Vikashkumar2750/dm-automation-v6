@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { AccountSafetyPanel } from "@/components/app/AccountSafetyPanel";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Gauge, PauseCircle, Send, ShieldAlert, SkipForward } from "lucide-react";
+import { Gauge, PauseCircle, Send, ShieldAlert, SkipForward, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
 import { AppShell } from "@/components/app/AppShell";
@@ -82,7 +82,8 @@ function UsagePage() {
     <AppShell>
       <PageHeader
         title="Usage & Limits"
-        description="How many automated replies went out, and how close you are to your safety limits."
+        description="Workspace activity, monthly plan usage and per-account safety limits."
+        actions={<Button size="sm" variant="outline" disabled={!orgId || usage.isFetching || settings.isFetching || planUsage.isFetching} onClick={() => { void usage.refetch(); void settings.refetch(); void planUsage.refetch(); void queryClient.invalidateQueries({ queryKey: ["account-safety", orgId] }); }}><RefreshCw className="size-4" />Refresh</Button>}
       />
 
       {!orgId ? (
@@ -91,6 +92,8 @@ function UsagePage() {
         </Panel>
       ) : (
         <div className="space-y-6">
+          {(usage.isError || settings.isError || planUsage.isError) && <p role="alert" className="text-sm text-destructive">Some usage or settings could not be refreshed. Previously loaded values may be out of date; refresh to retry.</p>}
+          <p className="text-xs text-muted-foreground">Activity below counts workspace-wide sent/skipped/failed steps over rolling 1-hour and 24-hour windows—not billable automation journeys. Monthly quota counts distinct runs across all connected accounts.</p>
           {(autoPaused || s?.is_paused) && (
             <Panel title="Automations paused">
               <div className="flex flex-wrap items-center justify-between gap-3">
@@ -100,7 +103,7 @@ function UsagePage() {
                     : `Paused automatically: ${u?.autoPauseReason ?? "traffic spike"}.`}
                 </p>
                 {autoPaused && (
-                  <Button onClick={() => resumeMutation.mutate()} disabled={resumeMutation.isPending}>
+                  <Button onClick={() => resumeMutation.mutate()} disabled={resumeMutation.isPending || usage.isError || settings.isError || !s}>
                     <PauseCircle className="size-4" />
                     Resume now
                   </Button>
@@ -110,16 +113,17 @@ function UsagePage() {
           )}
 
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <StatCard icon={Send} label="Sent this hour" value={String(u?.sentLastHour ?? 0)} sub={`Limit ${u?.hourlyLimit ?? 0}`} />
-            <StatCard icon={Send} label="Sent today" value={String(u?.sentLastDay ?? 0)} sub={`Limit ${u?.dailyLimit ?? 0}`} />
-            <StatCard icon={SkipForward} label="Skipped today" value={String(u?.skippedLastDay ?? 0)} sub="Safety rules or caps" />
-            <StatCard icon={ShieldAlert} label="Failed today" value={String(u?.failedLastDay ?? 0)} sub={`${u?.inboundLastHour ?? 0} events this hour`} />
+            <StatCard icon={Send} label="Sent · last hour" value={u ? String(u.sentLastHour) : "—"} sub={u ? "Workspace sent steps" : usage.isError ? "Unavailable" : "Loading…"} />
+            <StatCard icon={Send} label="Sent · last 24 hours" value={u ? String(u.sentLastDay) : "—"} sub={u ? "Workspace sent steps" : usage.isError ? "Unavailable" : "Loading…"} />
+            <StatCard icon={SkipForward} label="Skipped · last 24 hours" value={u ? String(u.skippedLastDay) : "—"} sub="Safety rules or caps" />
+            <StatCard icon={ShieldAlert} label="Failed · last 24 hours" value={u ? String(u.failedLastDay) : "—"} sub={u ? `${u.inboundLastHour} events in last hour` : "Events unavailable"} />
           </div>
 
           <Panel title="Your plan this month">
+            {!pu ? <p role="status" className="text-sm text-muted-foreground">{planUsage.isError ? "Monthly plan usage unavailable." : "Loading monthly plan usage…"}</p> : <>
             <div className="grid gap-5 sm:grid-cols-2">
               {pu?.monthlyDms == null ? (
-                <p className="text-sm">DMs this month: <span className="num font-medium">{pu?.dmsThisMonth ?? 0}</span> (unlimited)</p>
+                <p className="text-sm">Automation runs this month: <span className="num font-medium">{pu.dmsThisMonth}</span> (unlimited)</p>
               ) : (
                 <UsageMeter label="Automation runs this month (1 run = 1, however many steps)" used={pu.dmsThisMonth} limit={pu.monthlyDms || 1} unit="runs" />
               )}
@@ -129,16 +133,20 @@ function UsagePage() {
                 <UsageMeter label="Active rules" used={pu.activeRules} limit={pu.maxRules || 1} unit="rules" />
               )}
             </div>
+            </>}
           </Panel>
 
-          <Panel title="Against your limits">
-            <div className="grid gap-5 sm:grid-cols-2">
-              <UsageMeter label="Hourly sends" used={u?.sentLastHour ?? 0} limit={u?.hourlyLimit || 1} unit="replies" />
-              <UsageMeter label="Daily sends" used={u?.sentLastDay ?? 0} limit={u?.dailyLimit || 1} unit="replies" />
+          <Panel title="Workspace default safety limits">
+            {!u ? <p role="status" className="text-sm text-muted-foreground">{usage.isError ? "Safety defaults unavailable." : "Loading safety defaults…"}</p> : <div className="grid gap-5 sm:grid-cols-2 text-sm">
+              <p>Hourly default: <span className="num font-semibold">{u.hourlyLimit}</span></p>
+              <p>Daily default: <span className="num font-semibold">{u.dailyLimit}</span></p>
             </div>
+            }
+            <p className="mt-3 text-xs text-muted-foreground">Defaults apply per connected account and may be overridden or capped. Effective account limits are shown below; workspace-wide activity is not compared to one account's cap.</p>
           </Panel>
 
           <Panel title="Safety settings">
+            {!s ? <p role="status" className="text-sm text-muted-foreground">{settings.isError ? "Safety settings unavailable." : "Loading safety settings…"}</p> :
             <dl className="grid gap-4 text-sm sm:grid-cols-2 xl:grid-cols-3">
               <div>
                 <dt className="text-muted-foreground">Per-contact daily cap</dt>
@@ -164,13 +172,14 @@ function UsagePage() {
               </div>
               <div>
                 <dt className="text-muted-foreground">Opt-out words</dt>
-                <dd className="font-medium">{s?.opt_out_keywords.join(", ") || "—"}</dd>
+                <dd className="break-words font-medium">{s?.opt_out_keywords.join(", ") || "—"}</dd>
               </div>
               <div>
                 <dt className="text-muted-foreground">Plan</dt>
                 <dd className="font-medium">{activeOrg?.plan ?? "—"}</dd>
               </div>
             </dl>
+            }
           </Panel>
         </div>
       )}
