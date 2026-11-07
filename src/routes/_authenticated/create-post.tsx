@@ -25,6 +25,7 @@ import { Label } from "@/components/ui/label";
 import { FORMAT_TABS, FormatBadge, PostMediaThumb, StatsRow, formatKey, type FormatTab } from "@/components/app/PostListExtras";
 import { useTenant } from "@/hooks/useTenant";
 import { useWorkspaceAccountFilter } from "@/hooks/useWorkspaceAccountFilter";
+import { ConnectedAccountLabel } from "@/components/app/ConnectedAccountLabel";
 import { listSocialAccounts } from "@/lib/social-accounts.functions";
 import { listRecentRemotePosts } from "@/lib/automations.functions";
 import {
@@ -338,6 +339,7 @@ function CreatePostPage() {
                     <PlatformBadge platform={post.platform} size="sm" />
                     <FormatBadge postFormat={post.post_format} />
                   </span>
+                  <ConnectedAccountLabel orgId={orgId} accountId={post.social_account_id} />
                   <p className="mt-1 truncate text-sm font-medium">
                     {captionOf(post)}
                   </p>

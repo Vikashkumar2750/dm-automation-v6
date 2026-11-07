@@ -14,6 +14,8 @@ import {
 } from "@/components/app/primitives";
 import { Button } from "@/components/ui/button";
 import { useTenant } from "@/hooks/useTenant";
+import { useWorkspaceAccountFilter } from "@/hooks/useWorkspaceAccountFilter";
+import { PlatformAccountFilter, matchesPlatformAccount } from "@/components/app/PlatformAccountFilter";
 import { listSocialAccounts } from "@/lib/social-accounts.functions";
 import { listWebhookEvents } from "@/lib/webhooks.functions";
 
@@ -51,6 +53,7 @@ function expiryTone(iso: string | null, platform: "instagram" | "facebook" | "yo
 function AccountHealthPage() {
   const { activeOrg } = useTenant();
   const orgId = activeOrg?.id ?? null;
+  const { platform, setPlatform, accountId, setAccountId } = useWorkspaceAccountFilter(orgId);
 
   const fetchAccounts = useServerFn(listSocialAccounts);
   const fetchEvents = useServerFn(listWebhookEvents);
@@ -68,7 +71,7 @@ function AccountHealthPage() {
     queryFn: () => fetchEvents({ data: { organizationId: orgId! } }),
   });
 
-  const rows = accounts.data ?? [];
+  const rows = (accounts.data ?? []).filter((account) => matchesPlatformAccount({ platform: account.platform, social_account_id: account.id }, platform, accountId));
   const failing = (events.data ?? []).filter((e) => e.signature_valid && e.status === "failed");
   const rejected = (events.data ?? []).filter((e) => !e.signature_valid);
 
@@ -78,7 +81,7 @@ function AccountHealthPage() {
         title="Account Health"
         description="Connection status, permissions and incoming event health for every connected account."
         actions={
-          <div className="flex flex-wrap gap-2"><Button variant="outline" size="icon" aria-label="Refresh account health" disabled={accounts.isFetching || events.isFetching} onClick={() => { void accounts.refetch(); void events.refetch(); }}><RefreshCw className="size-4" /></Button><Button asChild variant="outline">
+          <div className="flex flex-wrap gap-2"><PlatformAccountFilter orgId={orgId} platform={platform} onPlatformChange={setPlatform} accountId={accountId} onAccountChange={setAccountId} /><Button variant="outline" size="icon" aria-label="Refresh account health" disabled={accounts.isFetching || events.isFetching} onClick={() => { void accounts.refetch(); void events.refetch(); }}><RefreshCw className="size-4" /></Button><Button asChild variant="outline">
             <Link to="/social-accounts">Manage accounts</Link>
           </Button></div>
         }

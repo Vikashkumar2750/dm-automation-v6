@@ -127,7 +127,8 @@ function Journeys({ orgId, post }: { orgId: string; post: SidebarPost }) {
       <div className="flex flex-wrap gap-2 text-[11px] text-muted-foreground">
         {(Object.keys(STYLE) as Node["kind"][]).map((k) => <span key={k} className={`flex items-center gap-1 rounded-full border-2 px-2 py-0.5 ${STYLE[k].cls}`}>{STYLE[k].icon}{STYLE[k].label}</span>)}
       </div>
-      {journey.isLoading ? <Loader2 className="mx-auto my-10 size-5 animate-spin text-muted-foreground" /> : lanes.length === 0 ? (
+      {(journey.isError || rules.isError) && <div role="alert" className="space-y-2 text-sm text-destructive"><p>Some journey details could not be refreshed. Loaded results may be incomplete.</p><Button variant="outline" size="sm" onClick={() => { void journey.refetch(); void rules.refetch(); }}>Try again</Button></div>}
+      {journey.isLoading ? <Loader2 className="mx-auto my-10 size-5 animate-spin text-muted-foreground" /> : journey.isError && !journey.data ? <p role="status" className="text-sm text-muted-foreground">Journeys unavailable.</p> : lanes.length === 0 ? (
         <EmptyState icon={Workflow} title="No automation journeys yet" description="When someone comments on this post, its journey appears here." />
       ) : (
         <div className="overflow-x-auto rounded-xl border bg-[radial-gradient(hsl(var(--border))_1px,transparent_1px)] [background-size:18px_18px] p-4">

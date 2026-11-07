@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
-import { Building2, Plus } from "lucide-react";
+import { Building2, Plus, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
 import { AppShell } from "@/components/app/AppShell";
@@ -78,6 +78,7 @@ function SettingsPage() {
     timezone: "Asia/Kolkata",
   });
   const [clientName, setClientName] = useState("");
+  useEffect(() => { setForm({ name: "", brandName: "", logoUrl: "", brandColor: "", supportEmail: "", timezone: "Asia/Kolkata" }); setClientName(""); }, [orgId]);
 
   useEffect(() => {
     const w = workspace.data;
@@ -92,7 +93,7 @@ function SettingsPage() {
     });
   }, [workspace.data]);
 
-  const canEdit = ["owner", "admin"].includes(workspace.data?.my_role ?? "");
+  const canEdit = !workspace.isError && ["owner", "admin"].includes(workspace.data?.my_role ?? "");
   const planExpired =
     !!workspace.data?.plan_expires_at && new Date(workspace.data.plan_expires_at) < new Date();
   const isAgency = workspace.data?.plan === "agency" && !planExpired;
@@ -166,10 +167,13 @@ function SettingsPage() {
       <PageHeader
         title="Settings"
         description="Workspace profile, white-label branding and client workspaces."
+        actions={<Button variant="outline" disabled={workspace.isFetching || clients.isFetching} onClick={() => { void workspace.refetch(); void clients.refetch(); }}><RefreshCw className="size-4" />Refresh</Button>}
       />
+      {(workspace.isError || clients.isError) && <p role="alert" className="text-sm text-destructive">Some settings could not be refreshed. Previously loaded values may be out of date.</p>}
 
       <Panel title="Branding" >
-        {!isAgency && (
+        {!workspace.data && <p role="status" className="mb-4 text-sm text-muted-foreground">{workspace.isError ? "Workspace settings unavailable. Refresh to retry." : "Loading workspace settings…"}</p>}
+        {workspace.data && !isAgency && (
           <div className="mb-4 flex flex-col gap-3 rounded-xl border bg-surface-secondary p-4 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm text-muted-foreground">
               White-label branding (brand name, logo, colour, support email) is available on the
@@ -297,6 +301,7 @@ function SettingsPage() {
         )}
 
         <div className="mt-4 space-y-2">
+          {!clients.data && <p role="status" className="text-sm text-muted-foreground">{clients.isError ? "Client workspaces unavailable. Refresh to retry." : "Loading client workspaces…"}</p>}
           {(clients.data ?? []).map((c) => (
             <div
               key={c.id}
