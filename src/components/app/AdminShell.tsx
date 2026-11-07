@@ -13,6 +13,7 @@ import {
   MessageSquare,
   Menu,
   Settings,
+  Database,
   Share2,
   Siren,
   Users,
