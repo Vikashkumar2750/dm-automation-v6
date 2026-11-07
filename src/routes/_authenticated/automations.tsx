@@ -490,7 +490,7 @@ function AutomationsPage() {
         title="Automations"
         description="Keyword rules that reply to DMs and comments automatically, with cooldowns and daily caps."
         actions={
-          <div className="flex gap-2">
+          <div className="flex min-w-0 max-w-full flex-wrap gap-2">
             {flowsQuery.data?.enabled && (
               <Button asChild variant="outline">
                 <Link to="/automations/flows">Flow builder</Link>
@@ -505,7 +505,7 @@ function AutomationsPage() {
                 <Link to="/automations/simulator">Test console</Link>
               </Button>
             )}
-            <Button onClick={() => setDraft({ ...emptyDraft })} disabled={!orgId}>
+            <Button className="h-auto min-h-9 max-w-full whitespace-normal text-left" onClick={() => setDraft({ ...emptyDraft })} disabled={!orgId}>
               <Plus className="size-4" /> {ruleLimitHit ? `Automation limit reached (${activeCount}/${maxRules})` : "New automation"}
             </Button>
           </div>
