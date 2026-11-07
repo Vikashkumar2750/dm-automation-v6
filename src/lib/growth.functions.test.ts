@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import ts from "typescript";
 import * as growth from "./growth";
@@ -25,7 +25,7 @@ function sourceClient(failedTable?: string) {
         limit: () => q,
         then: (resolve: (result: unknown) => unknown) => Promise.resolve(resolve({
           data: table === failedTable ? null : table === "conversations" ? [{ id: "conversation" }] : [],
-          error: table === failedTable ? { message: "private source error details" } : null,
+          error: table === failedTable ? { code: "42501", message: "private source error details" } : null,
         })),
       };
       return q;
@@ -36,6 +36,16 @@ function sourceClient(failedTable?: string) {
 const overview = getGrowthOverview as unknown as (input: { data: { organizationId: string }; context: { supabase: ReturnType<typeof sourceClient> } }) => Promise<{ sampleSize: number; anomalies: unknown[] }>;
 
 describe("Growth source-read integrity", () => {
+  it.each(["conversations", "automation_runs", "revenue_events", "posts", "growth_competitors", "social_accounts", "messages"])("identifies failed %s reads without logging private details", async (table) => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      await expect(overview({ data: { organizationId: workspace }, context: { supabase: sourceClient(table) } })).rejects.toThrow("Growth insights unavailable");
+      expect(log.mock.calls).toEqual([["growth_overview_read_failed", { source: table, code: "42501" }]]);
+    } finally {
+      log.mockRestore();
+    }
+  });
+
   it.each(["conversations", "automation_runs", "revenue_events", "posts", "growth_competitors", "social_accounts", "messages"])("rejects failed %s reads instead of reporting zero/normal insights", async (table) => {
     await expect(overview({ data: { organizationId: workspace }, context: { supabase: sourceClient(table) } }))
       .rejects.toThrow("Growth insights unavailable");
