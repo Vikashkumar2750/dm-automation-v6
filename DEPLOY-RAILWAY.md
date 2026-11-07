@@ -68,6 +68,14 @@ password-reset emails require separate auth email-provider configuration.
 `0000_product_files_policies.sql`; this is **not a complete application schema
 history**. The runner cannot build every feature table for a fresh backend.
 
+The live Growth failure was reproduced as a missing `growth_competitors` table.
+`docs/sql/railway-growth-repair.sql` is a proposed additive repair for that
+independently hosted backend, with grants and workspace-role policies. Have an
+authorized database operator apply it through the live backend's approved
+migration workflow after a backup; then rerun Growth as the affected account.
+It has not been applied to Railway. The preview already has this table, so a
+preview migration cannot repair the separate live backend.
+
 Before pointing Railway at a fresh database, compare the complete schema export
 and an approved bootstrap against current application requirements. Verify every
 required table, function, grant, policy and private bucket before releasing.

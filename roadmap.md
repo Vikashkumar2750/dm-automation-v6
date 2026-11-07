@@ -201,7 +201,8 @@ Real Meta + YouTube credentials are available when we reach OAuth phases.
 - [x] Customer Billing presentation: refresh/unavailable states, no unconfirmed Starter/zero/default catalogue display, rolling activity labels, latest-10 order scope/dates and mobile wrapping; payment implementation unchanged.
 - [x] Billing source-read integrity (workspace/orders/membership/catalogue), with failed-read tests and membership-before-history checks; payment mutation/delivery unchanged.
 - [x] Remaining-page presentation audit: Connected Accounts, Publishing, Calendar, Comments, Automations, Workflows, Settings and AI have targeted unavailable/retry/draft-reset/mobile fixes. Full suite: 390 tests pass.
-- [ ] Diagnose screenshot Growth Insights unavailable error: current Cloud columns and authenticated SELECT grants verified; same-user reproduction blocked because requesting user has no matching preview account, and external deployed logs/session are unavailable.
+- [x] Reproduced Growth failure on the affected live account: exact RLS reads identify missing public.growth_competitors (PGRST205); all six other Growth sources succeed. Prepared a proposed additive repair in docs/sql/railway-growth-repair.sql; not applied to either backend.
+- [ ] Apply approved Growth repair to live backend and rerun the same signed-in check; blocked by external deployment/database access, not account login.
 - [ ] Signed-in desktop/mobile acceptance, export/billing/health checks (blocked: requesting user's preview account/session unavailable); local presentation audit completed.
 - [x] Converter 800MB + clear after download; Super Admin temp cleanup button
 - [x] Coupons: manual Apply + auto-apply (?coupon=), discount from MRP, server re-check
@@ -216,7 +217,8 @@ Real Meta + YouTube credentials are available when we reach OAuth phases.
 - [x] Final regression suite: 397 tests passed; preview build OK. Ten public pages checked on desktop/phone: HTTP 200, required metadata, no horizontal overflow or page errors; signed-out Growth redirects to sign-in. These checks do not verify authenticated workflows.
 - [x] Added Growth source-specific, code-only server diagnostics; preserves generic browser errors and all RLS/workspace reads. Actual affected-account failure remains unverified, not fixed by this diagnostic change.
 - [x] Reconciled Railway setup with current scheduler/migration inventory; documented encryption, Instagram secret, sender configuration and managed-Cloud credential limitations.
-- [ ] Next: affected user signs in to preview; re-run Growth, customer/admin navigation, mobile layouts, draft retention, filters and exports as that account. Blocker: own-account session mint failed because no auth user matches the requester; do not impersonate another account.
+- [x] Affected live account signed in successfully; Analytics, Revenue, Usage, Billing, Calendar and Settings load on desktop without horizontal overflow. /admin correctly redirects this non-Super-Admin account to /dashboard. Growth missing-table error reproduced; Inbox unavailable states need diagnosis.
+- [ ] Next: apply approved live Growth repair, finish customer mobile/sidebar/filter/export checks and diagnose Inbox; Super Admin verification requires a separately authorized Super Admin account. Preview and live backends are separate.
 - [ ] Live integrations: fresh IG comment/follower taps, moderation/publishing, Agency connections and real-account filters. Blocker: connected provider accounts and Railway deployment access.
 - [ ] Buyer acceptance: authorized test payment → return → receipt/access email → private download, including unpaid denial. Blocker: creator/buyer accounts, payment authorization and verified email sender.
 - [ ] Deployment: configure/rotate secrets, verify encryption backfill and scheduler, apply missing schema through an approved migration, complete Meta/Google reviews. Blocker: external service access and credentials.
