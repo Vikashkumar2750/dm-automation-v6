@@ -2,8 +2,8 @@
 export function itemSearch(value: Record<string, unknown>, key: "conversation" | "post") {
   const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   const id = typeof value[key] === "string" && uuid.test(value[key]) ? value[key] : undefined;
-  const workspace = typeof value.workspace === "string" && uuid.test(value.workspace) ? value.workspace : undefined;
-  return { [key]: id, workspace } as { conversation?: string; post?: string; workspace?: string };
+  const workspace = typeof value['workspace'] === "string" && uuid.test(value['workspace']) ? value['workspace'] : undefined;
+  return { [key]: id, workspace } as { conversation?: string | undefined; post?: string | undefined; workspace?: string | undefined };
 }
 
 export function workspaceItemId(id: string | undefined, workspace: string | undefined, activeWorkspace: string | undefined) {
