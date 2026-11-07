@@ -213,6 +213,7 @@ Real Meta + YouTube credentials are available when we reach OAuth phases.
 - [ ] Real payment, email delivery and signed-in Super Admin checks — need live test by owner
 
 ## Remaining-work acceptance — Nov 7
+- [ ] Finish all currently accessible read-only acceptance in one batch; skip externally blocked work as requested (live deployment, provider actions, payment and admin-only changes remain pending, not completed).
 - [x] Dependency-security follow-up: patched undici/js-yaml/seroval/source-map-js; migrated app validation to Zod 4.6.6 after API review and passing regressions, aligned framework copies. Final scan: no known vulnerabilities in 57 production dependencies; 397 tests pass, preview build OK, four public pages HTTP 200 with no runtime errors. Signed-in compatibility remains blocked by account access.
 - [x] Final regression suite: 397 tests passed; preview build OK. Ten public pages checked on desktop/phone: HTTP 200, required metadata, no horizontal overflow or page errors; signed-out Growth redirects to sign-in. These checks do not verify authenticated workflows.
 - [x] Added Growth source-specific, code-only server diagnostics; preserves generic browser errors and all RLS/workspace reads. Actual affected-account failure remains unverified, not fixed by this diagnostic change.
