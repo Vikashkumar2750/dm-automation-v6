@@ -68,6 +68,10 @@ function DetailTab({ value, active, visited, children }: { value: string; active
 
 function OrgDetailPage() {
   const { orgId } = Route.useParams();
+  return <OrgDetailContent key={orgId} orgId={orgId} />;
+}
+
+function OrgDetailContent({ orgId }: { orgId: string }) {
   const fetchOrg = useServerFn(getAdminOrganization);
   const changePlan = useServerFn(setOrganizationPlan);
   const setPause = useServerFn(setOrganizationAutomationPause);
@@ -366,7 +370,7 @@ function OrgDetailPage() {
         </Panel>
       </DetailTab>
 
-      <DetailTab value="billing" {...tabProps}>
+      </Tabs>
       <Panel title="Danger zone">
         <div className="space-y-3">
           <p className="text-sm text-muted-foreground">
@@ -391,8 +395,6 @@ function OrgDetailPage() {
           </div>
         </div>
       </Panel>
-      </DetailTab>
-      </Tabs>
     </div>
   );
 }
