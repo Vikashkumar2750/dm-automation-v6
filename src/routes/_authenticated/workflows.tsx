@@ -8,6 +8,7 @@ import { EmptyState, PageHeader, PlatformBadge } from "@/components/app/primitiv
 import { PostSidebar, type SidebarPost } from "@/components/app/PostSidebar";
 import { PostThumbnail } from "@/components/app/PostThumbnail";
 import { useTenant } from "@/hooks/useTenant";
+import { Button } from "@/components/ui/button";
 import { useWorkflowsEnabled } from "@/hooks/useWorkflowsEnabled";
 import { listAutomationRules } from "@/lib/automations.functions";
 import { getPostJourney } from "@/lib/post-journey.functions";

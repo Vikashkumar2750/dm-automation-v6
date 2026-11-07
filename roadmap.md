@@ -71,7 +71,7 @@ Real Meta + YouTube credentials are available when we reach OAuth phases.
 ## Current: AI assistant + SEO/Blog plan
 - [x] Dashboard AI assistant uses Super admin AI keys (OpenRouter → NVIDIA → OpenAI → Lovable AI)
 - [x] SEO Phase 1 (part): robots.txt, sitemap.xml, llms.txt
-- [ ] SEO Phase 1 rest: JSON-LD on all public pages, canonical tags
+- [x] SEO public content coverage: canonical links plus appropriate JSON-LD on informational pages/blog/converter; personal transactional pages stay noindex, missing articles noindex.
 - [x] Phase 2–3: public blog + super-admin blog editor with Rank Math-style score
 - [x] Phase 4: AI blog assistant
 - [x] Phase 5: starter draft articles
@@ -91,7 +91,7 @@ Real Meta + YouTube credentials are available when we reach OAuth phases.
 - [x] Phase G: Team desk (shared inbox assignment, approval queue, client reports + CSV, per-client billing invoices, API keys, signed outgoing webhooks); Phase F skipped by user
 - [x] Phase H: Trust & safety (health score, predictive guard, policy checker + compliance centre, audit trail)
 - [x] Next: Phase I
-- [ ] Final user guide covering all features (docs/USER-GUIDE.md, updated after each phase)
+- [x] Update user guide for current navigation, account selection, sample/usage distinctions, buyer access, publishing controls, discoverability and live acceptance checklist; live guide walkthrough still requires an account.
 
 - [x] P2: human takeover, YouTube quota backoff, scheduler heartbeat, P2 reports
 - [ ] Owner: TOKEN_ENCRYPTION_KEY, live IG/FB checklist, App Review, async webhook
@@ -125,9 +125,9 @@ Real Meta + YouTube credentials are available when we reach OAuth phases.
 - [x] Add shared bell notifications and dashboard alerts for skipped/failed automations, with read controls.
 - [x] Prefer reel thumbnails and replace unavailable PostPicker images with clean icons.
 - [ ] Verify notifications with a real signed-in workspace and fresh skipped rule (preview has no auth users; sign-in required).
-- [ ] Add supported comment edit/delete controls with authorization and regression tests.
+- [x] Supported comment edit/delete controls and eight moderation regression tests verified; live Meta action verification remains separate.
 - [ ] Improve phone layouts across customer/admin pages and verify representative workflows.
-- [ ] Add accurate comment re-submission and screencast instructions to Meta App Review guides.
+- [x] Verified comment re-submission/screencast guide covers platform-specific reply/edit/delete, native confirmation, permissions and reviewer checklist.
 - [ ] Owner: verify actual Meta comment changes on the connected test Page/account after deployment.
 - [x] Posts list: Feed/Reel/Story/Carousel tabs + badges, thumbnails, likes/comments/shares/views
 - [x] Posts: Edit button (drafts full edit, live Facebook caption edit) and real delete on Facebook/YouTube (Instagram has no delete API)
@@ -149,8 +149,8 @@ Real Meta + YouTube credentials are available when we reach OAuth phases.
 - [ ] Verify activity borders in the signed-in preview without sending messages (blocked: requesting user has no matching preview account; sign-in required).
 
 ## Multi-account selector (planned, awaiting go-ahead)
-- [ ] Shared "Account" selector (All / one connected account) persisted per workspace, reused by Inbox, Comments, Calendar, Contacts, Sales & Revenue, Team desk, Analytics, AI Assistant, Account Health, Growth insights.
-- [ ] Account badge on every inbox row/comment/post + "Replying as @handle" on reply boxes.
+- [x] Shared session-scoped workspace account/platform selection across Inbox, Comments/Workflows post picker, Calendar, Publishing, Contacts, Sales, Team Desk, Analytics, Account Health and Growth; AI Assistant remains non-account-based.
+- [x] Connected-account labels on Inbox rows/thread and Publishing rows; Comments/post picker show account names and Comments reply panel identifies its account. Signed-in label verification remains blocked.
 - [x] Account picker: Inbox, Comments, Workflows, Calendar, Contacts, Analytics
 - [x] Account picker: Sales & Revenue, Team Desk, Growth (AI Assistant not account-based)
 - [x] Trial Reel option removed from Create Post
@@ -199,7 +199,8 @@ Real Meta + YouTube credentials are available when we reach OAuth phases.
 - [x] Monthly grouped-run display rejects failed/invalid RPC counts without a sent-step fallback; shared sending-quota enforcement unchanged (focused regression tests added).
 - [x] Monthly usage display rejects failed workspace/settings/Agency-parent/active-rule reads and missing workspaces; catalogue and overrides share one confirmed settings snapshot, shared enforcement defaults unchanged.
 - [x] Customer Billing presentation: refresh/unavailable states, no unconfirmed Starter/zero/default catalogue display, rolling activity labels, latest-10 order scope/dates and mobile wrapping; payment implementation unchanged.
-- [ ] Next: Billing source-read integrity (workspace/orders/membership/catalogue), then remaining Settings, Connected Accounts, Publishing, Comments, Automations and AI page acceptance review.
+- [x] Billing source-read integrity (workspace/orders/membership/catalogue), with failed-read tests and membership-before-history checks; payment mutation/delivery unchanged.
+- [x] Remaining-page presentation audit: Connected Accounts, Publishing, Calendar, Comments, Automations, Workflows, Settings and AI have targeted unavailable/retry/draft-reset/mobile fixes. Full suite: 390 tests pass.
 - [ ] Diagnose screenshot Growth Insights unavailable error: current Cloud columns and authenticated SELECT grants verified; same-user reproduction blocked because requesting user has no matching preview account, and external deployed logs/session are unavailable.
 - [ ] Next: V6 acceptance audit and signed-in desktop/mobile verification; authenticated export/billing/health checks blocked by no preview auth users.
 - [x] Converter 800MB + clear after download; Super Admin temp cleanup button

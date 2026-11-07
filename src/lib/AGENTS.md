@@ -16,3 +16,6 @@
 - Buyer/lead emails live in buyer-emails.server and send only for one event to one recipient, only when the workspace's emails switch is on — never bulk.
 - getRevenue rejects any failed source/settings read after membership verification — unavailable data must not become zero sales, empty products or disconnected payment status.
 - getPlanUsage opts into strict plan/rule reads and readMonthlyRunUsage; enforcement callers retain their existing defaults — display failures must not fabricate usage or change sending.
+- Billing state verifies workspace/member reads before order reads and rejects source errors; public catalogue uses strict configuration reads — unavailable prices/history cannot become plausible defaults.
+- WorkspaceAccountFilterProvider lives under the user-keyed authenticated layout and stores session-only workspace selections; account labels reuse social-accounts queries — navigation state never crosses users or auto-switches tenants.
+- Public informational leaf routes use publicPageSchema with escaped JSON-LD; personal buyer/offer routes stay noindex — search metadata must never reveal private tokens or identities.
