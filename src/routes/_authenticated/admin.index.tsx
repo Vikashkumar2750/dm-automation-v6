@@ -124,7 +124,7 @@ function OverviewPage() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <Panel title="Workspace plan distribution">
+        <Panel title="Assigned workspace plan distribution">
           {!data ? <p className="text-sm text-muted-foreground">{isLoading ? "Loading plans…" : "Plan data unavailable."}</p> : data.byPlan.length === 0 ? (
             <p className="text-sm text-muted-foreground">No workspaces yet.</p>
           ) : (
@@ -149,7 +149,7 @@ function OverviewPage() {
         >
           {isLoading ? (
             <p className="text-sm text-muted-foreground">Loading…</p>
-          ) : (data?.organizations.length ?? 0) === 0 ? (
+          ) : !data ? <p className="text-sm text-muted-foreground">Workspace data unavailable.</p> : data.organizations.length === 0 ? (
             <EmptyState
               icon={Building2}
               title="No workspaces yet"

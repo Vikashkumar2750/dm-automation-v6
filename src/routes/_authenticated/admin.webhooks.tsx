@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Webhook } from "lucide-react";
+import { RefreshCw, Webhook } from "lucide-react";
 import { useState } from "react";
 
 import { AdminTable } from "@/components/app/AdminTable";
@@ -23,34 +23,36 @@ export const Route = createFileRoute("/_authenticated/admin/webhooks")({
   component: WebhooksPage,
 });
 
-const FILTERS = ["all", "failed", "bad signature"] as const;
+const FILTERS = ["all", "verified failures", "bad signature"] as const;
 
 function WebhooksPage() {
   const fetchHooks = useServerFn(listAdminWebhooks);
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>("all");
 
-  const { data, isLoading } = useQuery({
+  const query = useQuery({
     queryKey: ["admin-webhooks"],
     queryFn: () => fetchHooks(),
     retry: false,
     refetchInterval: 30_000,
   });
+  const { data, isLoading } = query;
 
   const rows = (data ?? []).filter((h) =>
     filter === "all"
       ? true
-      : filter === "failed"
-        ? h.status === "failed"
+      : filter === "verified failures"
+        ? h.signature_valid && h.status === "failed"
         : !h.signature_valid,
   );
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Webhooks" description="Incoming events from Instagram and Facebook." />
+      <PageHeader title="Webhooks" description="Latest incoming event sample; unsigned probes remain audited separately." actions={<Button variant="outline" size="icon" aria-label="Refresh webhooks" title="Refresh webhooks" disabled={query.isFetching} onClick={() => void query.refetch()}><RefreshCw className={query.isFetching ? "size-4 animate-spin" : "size-4"} /></Button>} />
+      {query.isError && <div role="alert" className="border-l-2 border-warning bg-warning-soft px-4 py-3 text-sm">Events could not be refreshed{data ? "; previously loaded results are shown." : "."}</div>}
       <Panel
-        title={`${rows.length} events`}
+        title={data ? `${rows.length} of ${data.length} sampled events (up to 100)` : "Incoming events"}
         action={
-          <div className="flex gap-1">
+          <div className="flex flex-wrap gap-1">
             {FILTERS.map((f) => (
               <Button
                 key={f}
@@ -67,7 +69,7 @@ function WebhooksPage() {
       >
         {isLoading ? (
           <p className="text-sm text-muted-foreground">Loading…</p>
-        ) : rows.length === 0 ? (
+        ) : !data ? <p className="text-sm text-muted-foreground">Event data unavailable.</p> : rows.length === 0 ? (
           <EmptyState
             icon={Webhook}
             title="No events"
