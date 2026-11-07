@@ -49,9 +49,9 @@ function NavLink({ item, pathname }: { item: NavItem; pathname: string }) {
       preload="intent"
       aria-current={active ? "page" : undefined}
       className={cn(
-        "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+        "dashboard-nav-link flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
         active
-          ? "bg-sidebar-accent text-primary"
+          ? "bg-sidebar-selected text-sidebar-primary"
           : "text-muted-foreground hover:bg-sidebar-accent hover:text-foreground",
       )}
     >
@@ -62,25 +62,26 @@ function NavLink({ item, pathname }: { item: NavItem; pathname: string }) {
 }
 
 function Sidebar({ pathname }: { pathname: string }) {
-  const { openGroup, toggleGroup } = useSidebarGroup();
+  const { openGroup, toggleGroup } = useSidebarGroup("admin");
   return (
-    <div className="flex h-full flex-col border-r bg-sidebar">
-      <div className="flex items-center gap-3 border-b px-5 py-4">
+    <div className="dashboard-sidebar flex h-full flex-col border-r border-sidebar-border bg-sidebar">
+      <div className="flex items-center gap-3 border-b border-sidebar-border px-5 py-5">
         <img
           src="/logo.webp"
           alt="Techaasvik"
           className="size-9 shrink-0 rounded-lg object-contain"
         />
         <div className="min-w-0">
-          <p className="truncate text-sm font-bold">Operations</p>
-          <p className="truncate text-xs text-subtle-foreground">Techaasvik platform</p>
+          <p className="truncate text-base font-bold">AutoDM</p>
+          <p className="truncate text-xs text-muted-foreground">Super Admin · Operations</p>
         </div>
       </div>
 
-      <nav aria-label="Super Admin navigation" className="flex-1 space-y-4 overflow-y-auto px-3 py-4">
+      <nav aria-label="Super Admin navigation" className="min-h-0 flex-1 space-y-2 overflow-y-auto px-3 py-4">
         {navGroups.map((group, index) => {
           const expanded = openGroup === group.label;
-          return <div key={group.label}><Button variant="ghost" onClick={() => toggleGroup(group.label)} aria-expanded={expanded} aria-controls={`admin-nav-${index}`} className="mb-1 min-h-10 h-auto w-full justify-between gap-2 whitespace-normal px-3 py-2 text-left text-sm font-semibold leading-5 text-sidebar-foreground"><span>{group.label}</span><ChevronDown className={expanded ? "size-4 shrink-0" : "size-4 shrink-0 -rotate-90"} /></Button><div id={`admin-nav-${index}`} hidden={!expanded} className="space-y-1">{group.items.map((item) => <NavLink key={item.to} item={item} pathname={pathname} />)}</div></div>;
+          const GroupIcon = group.items[0]?.icon ?? LayoutDashboard;
+          return <div key={group.label}><Button variant="ghost" onClick={() => toggleGroup(group.label)} aria-expanded={expanded} aria-controls={`admin-nav-${index}`} className="dashboard-nav-group min-h-12 h-auto w-full justify-between gap-2 whitespace-normal rounded-lg px-3 py-2 text-left text-sm font-semibold leading-5 text-sidebar-foreground"><span className="flex min-w-0 items-center gap-3"><span className="dashboard-group-icon inline-flex size-7 shrink-0 items-center justify-center rounded-md"><GroupIcon className="size-4" /></span><span>{group.label}</span></span><ChevronDown className={cn("size-4 shrink-0 transition-transform motion-reduce:transition-none", !expanded && "-rotate-90")} /></Button><div id={`admin-nav-${index}`} hidden={!expanded} className="dashboard-nav-children ml-6 mt-1 space-y-1 border-l border-sidebar-border pl-3">{group.items.map((item) => <NavLink key={item.to} item={item} pathname={pathname} />)}</div></div>;
         })}
       </nav>
     </div>

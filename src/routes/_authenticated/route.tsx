@@ -1,6 +1,7 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 
 import { supabase } from "@/integrations/supabase/client";
+import { SidebarGroupProvider } from "@/hooks/useSidebarGroup";
 
 // Remember the super-admin answer so clicking between pages never waits on the same
 // check. A cached answer is used instantly and quietly refreshed in the background.
@@ -46,5 +47,10 @@ export const Route = createFileRoute("/_authenticated")({
 
     return { user };
   },
-  component: () => <Outlet />,
+  component: AuthenticatedLayout,
 });
+
+function AuthenticatedLayout() {
+  const { user } = Route.useRouteContext();
+  return <SidebarGroupProvider key={user.id}><Outlet /></SidebarGroupProvider>;
+}
