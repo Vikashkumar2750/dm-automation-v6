@@ -227,7 +227,7 @@ function Dashboard() {
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard info="All chat threads (DMs and comments) and how many are open." icon={MessagesSquare} label="Conversations" value={String(a?.totals.conversations ?? 0)} sub={`${a?.totals.openThreads ?? 0} open`} />
         <StatCard info="Messages and comments people sent you in the selected period." icon={MessageSquare} label="Messages received" value={String(a?.totals.inbound ?? 0)} sub={`${a?.totals.unread ?? 0} unread`} />
-        <StatCard info="Replies sent in the last 7 days, manual and automated." icon={Send} label="Replies sent" value={String(a?.totals.outbound ?? 0)} sub={`${a?.totals.automated ?? 0} automated`} />
+        <StatCard info="Replies sent in the selected period, manual and automated." icon={Send} label="Replies sent" value={String(a?.totals.outbound ?? 0)} sub={`${a?.totals.automated ?? 0} automated`} />
         <StatCard info="Percentage of people who got at least one reply, and the typical time to first reply." icon={UserCheck} label="Answered" value={`${a?.responseRate ?? 0}%`} sub={`Median ${a?.medianFirstResponseMinutes ?? 0} min`} />
         <StatCard info="Posts published from this tool, plus how many are scheduled." icon={CalendarCheck} label="Posts published" value={String(a?.totals.postsPublished ?? 0)} sub={`${a?.totals.postsScheduled ?? 0} scheduled`} />
         <StatCard info="Out of all replies sent, the percentage sent automatically." icon={TrendingUp} label="Automation share" value={`${a?.automationShare ?? 0}%`} sub="Of all replies" />
