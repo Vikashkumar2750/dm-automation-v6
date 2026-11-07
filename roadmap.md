@@ -162,6 +162,7 @@ Real Meta + YouTube credentials are available when we reach OAuth phases.
 - [x] Add instagram_business_manage_comments scope + test comments button
 
 ## Master plan (Nov 2026) status
+- [ ] Increase sidebar group heading readability in both dashboards and finish queue presentation accuracy checks.
 - [x] User and Super Admin sidebar groups default closed; opening one closes the other, using shared tested state transitions.
 - [x] V6 dashboard overview: performance-first layout, 7/30-day selector, refresh/retry, quick actions and attention items; feature controls preserved (300 regression tests passed).
 - [ ] Verify dashboard overview signed in on desktop/mobile (blocked: preview backend has no auth users; sign-in required).
