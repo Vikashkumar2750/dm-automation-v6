@@ -171,7 +171,9 @@ Real Meta + YouTube credentials are available when we reach OAuth phases.
 - [ ] Verify Command Centre signed in as Super Admin on desktop/mobile (blocked: preview backend has no auth users).
 - [x] Super Admin menu grouped into six domains; workspace details organized into nine tabs with existing controls preserved.
 - [ ] Verify admin groups, tab switching and unsaved drafts signed in (blocked: preview backend has no auth users).
-- [ ] Next: Super Admin organizations directory usability and System Settings organization.
+- [x] Workspace directory: name/slug search, plan/status filters, sorting and retry; System Settings: retained grouped tabs and guarded loading controls.
+- [ ] Verify directory filters and Settings draft retention signed in (blocked: preview backend has no auth users).
+- [ ] Next: review remaining V6 acceptance gaps, including owner/expiry directory data and billing clarity, before further changes.
 - [x] Converter 800MB + clear after download; Super Admin temp cleanup button
 - [x] Coupons: manual Apply + auto-apply (?coupon=), discount from MRP, server re-check
 - [x] Per-workspace Super Admin feature switches + health; enforced on server for revenue writes, public pages, checkout, emails

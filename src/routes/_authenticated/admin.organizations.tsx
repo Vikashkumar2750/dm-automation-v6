@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Building2 } from "lucide-react";
+import { Building2, RefreshCw, Search } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -9,6 +9,7 @@ import { AdminTable } from "@/components/app/AdminTable";
 import { EmptyState, PageHeader, Panel, StatusBadge } from "@/components/app/primitives";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { filterAdminWorkspaces } from "@/lib/admin-directory";
 import {
   Select,
   SelectContent,
@@ -52,13 +53,17 @@ function OrganizationsPage() {
   const setPause = useServerFn(setOrganizationAutomationPause);
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
+  const [plan, setPlan] = useState("all");
+  const [status, setStatus] = useState("all");
+  const [sort, setSort] = useState("newest");
   const [drafts, setDrafts] = useState<Record<string, { plan: string; months: string }>>({});
 
-  const { data, isLoading } = useQuery({
+  const overview = useQuery({
     queryKey: ["platform-overview"],
     queryFn: () => fetchOverview(),
     retry: false,
   });
+  const { data, isLoading } = overview;
 
   const invalidate = () =>
     void queryClient.invalidateQueries({ queryKey: ["platform-overview"] });
@@ -87,37 +92,45 @@ function OrganizationsPage() {
     onError: () => toast.error("Could not update the workspace"),
   });
 
-  const rows = (data?.organizations ?? []).filter((o) =>
-    o.name.toLowerCase().includes(search.trim().toLowerCase()),
-  );
+  const rows = filterAdminWorkspaces(data?.organizations ?? [], search, plan, status, sort);
+  const filtered = Boolean(search.trim() || plan !== "all" || status !== "all");
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Organizations"
-        description="Tenant management: plans, usage and automation kill switch."
+        title="Workspaces"
+        description="Workspace plans, account totals and automation status."
+        actions={<Button variant="outline" size="icon" aria-label="Refresh workspaces" title="Refresh workspaces" disabled={overview.isFetching} onClick={() => void overview.refetch()}><RefreshCw className={overview.isFetching ? "size-4 animate-spin" : "size-4"} /></Button>}
       />
+      {overview.isError && <div role="alert" className="flex flex-wrap items-center justify-between gap-3 border-l-2 border-warning bg-warning-soft px-4 py-3 text-sm"><span>Workspace list could not be refreshed.</span><Button variant="outline" size="sm" onClick={() => void overview.refetch()}>Try again</Button></div>}
 
       <Panel
-        title={`${rows.length} workspaces`}
+        title={data ? `${rows.length} of ${data.organizations.length} workspaces` : "Workspaces"}
         action={
-          <div className="flex items-center gap-2">
+          <div className="flex w-full min-w-0 flex-wrap items-center gap-2">
+          <div className="relative w-full sm:w-56"><Search className="pointer-events-none absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search workspaces"
-            className="h-9 w-56"
+            placeholder="Name or slug"
+            aria-label="Search workspace name or slug"
+            className="h-9 w-full pl-8"
           />
+          </div>
+          <Select value={plan} onValueChange={setPlan}><SelectTrigger aria-label="Filter workspace plan" className="h-9 w-36"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">All plans</SelectItem>{PLANS.map((value) => <SelectItem key={value} value={value}>{value}</SelectItem>)}</SelectContent></Select>
+          <Select value={status} onValueChange={setStatus}><SelectTrigger aria-label="Filter automation status" className="h-9 w-40"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Any status</SelectItem><SelectItem value="active">Automation active</SelectItem><SelectItem value="paused">Automation paused</SelectItem></SelectContent></Select>
+          <Select value={sort} onValueChange={setSort}><SelectTrigger aria-label="Sort workspaces" className="h-9 w-36"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="newest">Newest first</SelectItem><SelectItem value="name">Name A–Z</SelectItem><SelectItem value="accounts">Most accounts</SelectItem></SelectContent></Select>
+          {filtered && <Button variant="ghost" size="sm" onClick={() => { setSearch(""); setPlan("all"); setStatus("all"); }}>Clear filters</Button>}
           </div>
         }
       >
         {isLoading ? (
           <p className="text-sm text-muted-foreground">Loading…</p>
-        ) : rows.length === 0 ? (
+        ) : !data ? <p className="text-sm text-muted-foreground">Workspace data unavailable.</p> : rows.length === 0 ? (
           <EmptyState
             icon={Building2}
-            title="No workspaces"
-            description="Workspaces appear here as soon as people sign up."
+            title={filtered ? "No matching workspaces" : "No workspaces"}
+            description={filtered ? "Try another name, plan or automation status." : "Workspaces appear here as soon as people sign up."}
           />
         ) : (
           <AdminTable
@@ -133,6 +146,7 @@ function OrganizationsPage() {
                     className="font-medium hover:underline"
                   >
                     {o.name}
+                    <span className="block text-xs text-muted-foreground">{o.slug}</span>
                     <span className="block text-xs text-muted-foreground">
                       {new Date(o.created_at).toLocaleDateString()}
                     </span>
@@ -202,6 +216,7 @@ function OrganizationsPage() {
                     <Button
                       size="sm"
                       variant="outline"
+                      disabled={pauseMutation.isPending}
                       onClick={() =>
                         pauseMutation.mutate({
                           organizationId: o.id,
