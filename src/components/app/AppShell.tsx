@@ -42,6 +42,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { useTenant } from "@/hooks/useTenant";
+import { useSidebarGroup } from "@/hooks/useSidebarGroup";
 import { useWorkspaceFeatures } from "@/hooks/useWorkspaceFeatures";
 import { useWorkflowsEnabled } from "@/hooks/useWorkflowsEnabled";
 import { supabase } from "@/integrations/supabase/client";
@@ -87,8 +88,6 @@ const navGroups: NavGroup[] = [
     { label: "Settings", to: "/settings", icon: Settings },
   ] },
 ];
-
-const NAV_STATE_KEY = "autodm_nav_collapsed";
 
 function NavLink({ item, active }: { item: NavItem; active: boolean }) {
   const Icon = item.icon;
@@ -138,15 +137,7 @@ function Sidebar({ pathname }: { pathname: string }) {
       items: g.items.filter(visible).map((item) => ({ ...item, comingSoon: item.to === "/create-post" ? postMode === "coming_soon" : item.to === "/calendar" ? calMode === "coming_soon" : false })),
     }))
     .filter((g) => g.items.length > 0);
-  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
-  useEffect(() => {
-    try { setCollapsed(JSON.parse(localStorage.getItem(NAV_STATE_KEY) || "{}")); } catch { /* ignore */ }
-  }, []);
-  const toggleGroup = (title: string) => setCollapsed((prev) => {
-    const next = { ...prev, [title]: !prev[title] };
-    try { localStorage.setItem(NAV_STATE_KEY, JSON.stringify(next)); } catch { /* ignore */ }
-    return next;
-  });
+  const { openGroup, toggleGroup } = useSidebarGroup();
   const brand = activeOrg?.brandName?.trim() || "AutoDM";
   const logo = activeOrg?.logoUrl?.trim() || "/logo.webp";
   const color = activeOrg?.brandColor?.trim() || null;
@@ -192,24 +183,23 @@ function Sidebar({ pathname }: { pathname: string }) {
       </div>
 
       <nav className="flex-1 overflow-y-auto px-3 py-3" aria-label="Main">
-        {groups.map((g) => {
-          const hasActive = g.items.some((i) => pathname.startsWith(i.to));
-          const isOpen = hasActive || !collapsed[g.title];
+        {groups.map((g, index) => {
+          const isOpen = openGroup === g.title;
           return (
             <div key={g.title} className="mb-2">
-              {g.title !== "Overview" && (
-                <button
+                <Button
+                  variant="ghost"
                   type="button"
                   onClick={() => toggleGroup(g.title)}
                   aria-expanded={isOpen}
-                  className="flex w-full items-center justify-between rounded-md px-3 py-1.5 text-[11px] font-semibold tracking-wider text-subtle-foreground uppercase hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                  aria-controls={`user-nav-${index}`}
+                  className="h-8 w-full justify-between px-3 text-[11px] font-semibold text-subtle-foreground uppercase hover:text-foreground"
                 >
                   {g.title}
                   <ChevronDown className={cn("size-3.5 transition-transform", !isOpen && "-rotate-90")} />
-                </button>
-              )}
+                </Button>
               {isOpen && (
-                <div className="space-y-0.5">
+                <div id={`user-nav-${index}`} className="space-y-0.5">
                   {g.items.map((item) => (
                     <NavLink key={item.to} item={item} active={pathname.startsWith(item.to)} />
                   ))}

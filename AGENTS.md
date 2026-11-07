@@ -43,3 +43,4 @@
 - Admin overview derives priorities from its existing protected overview read, labels event samples explicitly, and keeps unsigned probes separate from verified delivery failures — no new delivery calls or misleading health totals.
 - Admin workspace tabs mount on first visit and stay mounted while inactive; key the detail view by workspace ID — preserves unsaved controls without loading every panel on entry or leaking drafts across tenants.
 - System Settings retains visited tab panels; directory filters operate on the existing authorized overview snapshot — presentation improvements preserve drafts and never imply unavailable owner or expiry data.
+- Both sidebar shells share useSidebarGroup for expansion state — one transition implementation keeps user and admin menus consistent without storage or route-driven overrides.
