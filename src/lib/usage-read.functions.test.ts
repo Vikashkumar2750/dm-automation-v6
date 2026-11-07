@@ -8,9 +8,9 @@ function handler(file: string, exportName: string, end: string) {
   const start = source.indexOf(".handler(", source.indexOf(`export const ${exportName}`)) + ".handler(".length;
   const body = source.slice(start, source.indexOf(end, start)).replace(/\);\s*$/, ";")
     .replace('await import("@/integrations/supabase/client.server")', "({ supabaseAdmin: admin })")
-    .replace('await import("@/lib/plan-limits.server")', "({ monthStartIso })");
+    .replace('await import("@/lib/plan-limits.server")', "({ monthStartIso: monthStart })");
   const js = ts.transpileModule(`return ${body}`, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.None } }).outputText;
-  return new Function("admin", "monthStartIso", "effectiveAccountLimits", "resolveCaps", js);
+  return new Function("admin", "monthStart", "effectiveAccountLimits", "resolveCaps", js);
 }
 
 const workspace = "5d554ef6-101b-4bc6-9272-5ee6fa31a9ba";
