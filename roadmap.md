@@ -237,6 +237,7 @@ Real Meta + YouTube credentials are available when we reach OAuth phases.
 ## Database recovery follow-up — Nov 7
 - [x] Screenshot reviewed: relink SQL completed and reports one remaining unlinked chat; it does not prove a full database restore or an SQL failure.
 - [x] Retire incomplete custom dumps, sensitive-table exports, arbitrary SQL/import endpoints and backup cron; preserve existing data, no schema changes. Recovery page points to supported owner/Cloud exports and offers read-only account diagnosis.
+- [x] Regression verification: 398 tests pass across 61 files; latest preview build OK. Live session has expired and redirects to /auth, so Growth and Super Admin recovery UI were not reverified signed in.
 - [ ] Run Inbox diagnostic on the affected independent live database, then confirm the original account before any scoped data repair (blocked: destination database access/result required).
 - [ ] Confirm updated recovery page as authorized Super Admin on the deployed release; remove legacy external backup schedule if configured (blocked: admin/hosting access).
 - [ ] Google Drive scheduling remains unconfigured; do not describe saved settings as an operating backup.
