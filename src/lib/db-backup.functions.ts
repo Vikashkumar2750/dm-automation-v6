@@ -86,5 +86,5 @@ export const runAdminSql = createServerFn({ method: "POST" })
     await audit(admin, c.userId, data.source === "import" ? "db_sql.import" : "db_sql.run", { bytes: data.sql.length, preview: data.sql.slice(0, 200) });
     const { data: res, error } = await admin.rpc("admin_exec_sql", { q: data.sql });
     if (error) return { ok: false as const, error: error.message as string };
-    return { ok: true as const, result: res as { rows?: Record<string, unknown>[]; affected?: number } };
+    return { ok: true as const, result: JSON.parse(JSON.stringify(res ?? {})) as { rows?: string[]; affected?: number } };
   });

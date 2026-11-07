@@ -106,7 +106,7 @@ export async function uploadToDrive(name: string, content: string): Promise<stri
   const boundary = "autodm" + Math.random().toString(36).slice(2);
   const meta: Record<string, unknown> = { name, mimeType: "application/sql" };
   const folder = process.env["GOOGLE_DRIVE_BACKUP_FOLDER_ID"];
-  if (folder) meta.parents = [folder];
+  if (folder) meta["parents"] = [folder];
   const body = `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(meta)}\r\n--${boundary}\r\nContent-Type: application/sql\r\n\r\n${content}\r\n--${boundary}--`;
   const res = await fetch("https://connector-gateway.lovable.dev/google_drive/upload/drive/v3/files?uploadType=multipart", {
     method: "POST",
