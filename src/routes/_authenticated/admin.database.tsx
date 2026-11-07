@@ -64,7 +64,7 @@ function AdminDatabasePage() {
     if (!isRead && !confirm("This will change the database. Take a backup first. Continue?")) return;
     setBusy(source);
     try {
-      const r = await runSql({ data: { sql: text, source } });
+      const r = (await runSql({ data: { sql: text, source } })) as { ok: false; error: string } | { ok: true; result: { rows?: unknown[]; affected?: number } };
       if (!r.ok) { setResult(`Error: ${r.error}`); toast.error("SQL failed — nothing was changed"); }
       else { setResult(r.result.rows ? JSON.stringify(r.result.rows, null, 2) : `Done. Rows affected: ${r.result.affected ?? 0}`); toast.success(source === "import" ? "Import finished" : "SQL ran"); }
     } catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); }
