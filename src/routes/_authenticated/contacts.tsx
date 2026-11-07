@@ -38,7 +38,7 @@ export const Route = createFileRoute("/_authenticated/contacts")({
   component: ContactsPage,
 });
 
-const sel = "h-9 rounded-md border border-input bg-background px-2 text-sm";
+const sel = "h-9 min-w-0 max-w-full rounded-md border border-input bg-background px-2 text-sm";
 type Row = CrmContact & { externalUserId: string; threads: number; unread: number; lastPreview: string | null; channels: Set<string> };
 
 function ContactsPage() {
@@ -268,7 +268,7 @@ function OutreachPanel({ orgId, allTags }: { orgId: string; allTags: string[] })
   return (
     <div className="mt-6 grid gap-4 lg:grid-cols-3">
       {outreach.isError && <p role="alert" className="text-sm text-destructive lg:col-span-3">Outreach refresh failed. Previously loaded settings may be out of date.</p>}
-      <div className="lg:col-span-3"><PageLeadsPanel orgId={orgId} /></div>
+      <div className="min-w-0 max-w-full lg:col-span-3"><PageLeadsPanel orgId={orgId} /></div>
 
       <Panel title="Abandoned-conversation nudge" >
         <p className="mb-3 text-xs text-muted-foreground">
