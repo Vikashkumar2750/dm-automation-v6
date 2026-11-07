@@ -202,7 +202,7 @@ Real Meta + YouTube credentials are available when we reach OAuth phases.
 - [x] Billing source-read integrity (workspace/orders/membership/catalogue), with failed-read tests and membership-before-history checks; payment mutation/delivery unchanged.
 - [x] Remaining-page presentation audit: Connected Accounts, Publishing, Calendar, Comments, Automations, Workflows, Settings and AI have targeted unavailable/retry/draft-reset/mobile fixes. Full suite: 390 tests pass.
 - [x] Reproduced Growth failure on the affected live account: exact RLS reads identify missing public.growth_competitors (PGRST205); all six other Growth sources succeed. Prepared a proposed additive repair in docs/sql/railway-growth-repair.sql; not applied to either backend.
-- [ ] Apply approved Growth repair to live backend and rerun the same signed-in check; blocked by external deployment/database access, not account login.
+- [x] Growth repair was applied by the owner and the live Growth page was confirmed loading in the subsequent session.
 - [ ] Signed-in desktop/mobile acceptance, export/billing/health checks (blocked: requesting user's preview account/session unavailable); local presentation audit completed.
 - [x] Converter 800MB + clear after download; Super Admin temp cleanup button
 - [x] Coupons: manual Apply + auto-apply (?coupon=), discount from MRP, server re-check
@@ -235,7 +235,8 @@ Real Meta + YouTube credentials are available when we reach OAuth phases.
 - [x] Checked the remaining GitHub administration alternative: the repository has one Build workflow (source analysis only), no migration step, and zero repository Actions secrets. No existing authorized live-database repair path was found through this connection; no workflow, secrets, database, provider actions or production data changed. All remaining items above stay explicitly blocked/skipped.
 
 ## Database recovery follow-up — Nov 7
-- [ ] Current continuation: remove callable legacy partial-backup operations, disable their cron, require SQL audit success without storing query contents, and verify affected tests/page access.
+- [x] Current continuation: removed callable legacy partial-backup operations and retired their cron (authenticated requests return 410); SQL audit must save before execution and contains no query text. SQL always asks for confirmation, clears stale results and reports failures without asserting rollback.
+- [ ] Verify cleaned Database Backups page and SQL audit on deployed Railway release (requires current authorized live session; no destructive SQL or full restore performed).
 - [x] Screenshot reviewed: relink SQL completed and reports one remaining unlinked chat; it does not prove a full database restore or an SQL failure.
 - [x] Retire incomplete custom dumps, sensitive-table exports, arbitrary SQL/import endpoints and backup cron; preserve existing data, no schema changes. Recovery page points to supported owner/Cloud exports and offers read-only account diagnosis.
 - [x] Regression verification: 398 tests pass across 61 files; latest preview build OK. Live session has expired and redirects to /auth, so Growth and Super Admin recovery UI were not reverified signed in.

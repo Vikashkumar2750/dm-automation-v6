@@ -24,6 +24,7 @@ export const Route = createFileRoute("/_authenticated/admin/database")({
 
 async function downloadPgDump(mode: "full" | "schema" | "data") {
   const { data } = await supabase.auth.getSession();
+  if (!data.session) throw new Error("Sign in again before downloading a database dump.");
   const res = await fetch("/api/admin/db-dump", {
     method: "POST",
     headers: { "content-type": "application/json", authorization: `Bearer ${data.session?.access_token ?? ""}` },
@@ -71,15 +72,15 @@ function AdminDatabasePage() {
   const execute = async () => {
     const text = sql;
     if (!text.trim()) return;
-    const isRead = /^\s*(select|with|table|values|explain)\s/i.test(text);
-    if (!isRead && !confirm("This will change the database. Download a full dump first. Continue?")) return;
+    if (!confirm("SQL may change the database, including statements beginning with SELECT or WITH. Keep a full dump before continuing. Run this SQL?")) return;
     setBusy(true);
+    setResult("");
     try {
       const r = (await runSql({ data: { sql: text, source: "editor" } })) as { ok: false; error: string } | { ok: true; result: { rows?: unknown[]; affected?: number } };
-      if (!r.ok) { setResult(`Error: ${r.error}`); toast.error("SQL failed — nothing was changed"); }
+      if (!r.ok) { setResult(`Error: ${r.error}`); toast.error("SQL failed — review the error before retrying"); }
       else { setResult(r.result.rows ? JSON.stringify(r.result.rows, null, 2) : `Done. Rows affected: ${r.result.affected ?? 0}`); toast.success("SQL ran"); }
-    } catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); }
-    setBusy(false);
+    } catch (e) { const message = e instanceof Error ? e.message : "Failed"; setResult(`Error: ${message}`); toast.error(message); }
+    finally { setBusy(false); }
   };
 
   return (
@@ -99,7 +100,7 @@ function AdminDatabasePage() {
       <section className="space-y-3 rounded-lg border bg-card p-4">
         <h2 className="font-semibold">Run SQL</h2>
         <p className="text-sm text-muted-foreground">SELECT shows up to 500 rows. Other statements change data — download a full dump first.</p>
-        <textarea value={sql} onChange={(e) => setSql(e.target.value)} rows={8} placeholder="select count(*) from organizations;" className="w-full rounded-md border bg-background p-2 font-mono text-xs" />
+        <textarea aria-label="SQL query" disabled={busy} value={sql} onChange={(e) => setSql(e.target.value)} rows={8} placeholder="select count(*) from organizations;" className="w-full rounded-md border bg-background p-2 font-mono text-xs" />
         <Button onClick={execute} disabled={busy || !sql.trim()}>{busy ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Play className="mr-1 h-4 w-4" />}Run</Button>
         {result && <pre className="max-h-96 overflow-auto rounded-md bg-muted p-2 text-xs">{result}</pre>}
       </section>
