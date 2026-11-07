@@ -4,6 +4,10 @@ import { useServerFn } from "@tanstack/react-start";
 import { useWorkflowsEnabled } from "@/hooks/useWorkflowsEnabled";
 import {
   ArrowRight,
+  AlertCircle,
+  CheckCircle2,
+  PenSquare,
+  RefreshCw,
   CalendarCheck,
   Inbox as InboxIcon,
   MessageSquare,
@@ -43,6 +47,8 @@ import {
 } from "@/components/app/primitives";
 import { Button } from "@/components/ui/button";
 import { useTenant } from "@/hooks/useTenant";
+import { useWorkspaceFeatures } from "@/hooks/useWorkspaceFeatures";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { getAnalytics } from "@/lib/analytics.functions";
 import { getAutomationUsage, listOrgActivityFeed } from "@/lib/automations.functions";
 import { listConversations } from "@/lib/inbox.functions";
@@ -81,6 +87,8 @@ function greeting() {
 function Dashboard() {
   const { profile, activeOrg } = useTenant();
   const workflowsOn = useWorkflowsEnabled();
+  const features = useWorkspaceFeatures().data;
+  const [rangeDays, setRangeDays] = useState(7);
   const orgId = activeOrg?.id ?? null;
   const firstName = profile.name.split(" ")[0] || "there";
 
@@ -91,38 +99,38 @@ function Dashboard() {
   const fetchUsage = useServerFn(getAutomationUsage);
 
   const analytics = useQuery({
-    queryKey: ["analytics", orgId, 7],
+    queryKey: ["analytics", orgId, rangeDays],
     enabled: !!orgId,
     refetchInterval: 60_000,
-    queryFn: () => fetchAnalytics({ data: { organizationId: orgId!, rangeDays: 7 } }),
+    queryFn: () => fetchAnalytics({ data: { organizationId: orgId ?? "", rangeDays } }),
   });
   const accounts = useQuery({
     queryKey: ["social-accounts", orgId],
     enabled: !!orgId,
-    queryFn: () => fetchAccounts({ data: { organizationId: orgId! } }),
+    queryFn: () => fetchAccounts({ data: { organizationId: orgId ?? "" } }),
   });
   const posts = useQuery({
     queryKey: ["posts", orgId],
     enabled: !!orgId,
-    queryFn: () => fetchPosts({ data: { organizationId: orgId! } }),
+    queryFn: () => fetchPosts({ data: { organizationId: orgId ?? "" } }),
   });
   const conversations = useQuery({
     queryKey: ["conversations", orgId, "dashboard"],
     enabled: !!orgId,
     refetchInterval: 60_000,
-    queryFn: () => fetchConversations({ data: { organizationId: orgId! } }),
+    queryFn: () => fetchConversations({ data: { organizationId: orgId ?? "" } }),
   });
   const usage = useQuery({
     queryKey: ["automation-usage", orgId],
     enabled: !!orgId,
-    queryFn: () => fetchUsage({ data: { organizationId: orgId! } }),
+    queryFn: () => fetchUsage({ data: { organizationId: orgId ?? "" } }),
   });
   const fetchActivity = useServerFn(listOrgActivityFeed);
   const activity = useQuery({
     queryKey: ["org-activity", orgId],
     enabled: !!orgId,
     refetchInterval: 30_000,
-    queryFn: () => fetchActivity({ data: { organizationId: orgId! } }),
+    queryFn: () => fetchActivity({ data: { organizationId: orgId ?? "" } }),
   });
   const activityItems = activity.data ?? [];
 
@@ -132,17 +140,31 @@ function Dashboard() {
   const accountRows = accounts.data ?? [];
   const upcoming = (posts.data ?? [])
     .filter((p) => p.status === "scheduled" && p.scheduled_at)
-    .sort((x, y) => (x.scheduled_at! < y.scheduled_at! ? -1 : 1))
+    .sort((x, y) => (x.scheduled_at ?? "").localeCompare(y.scheduled_at ?? ""))
     .slice(0, 5);
-  const recentThreads = (conversations.data ?? []).slice(0, 9);
+  const recentThreads = (conversations.data ?? []).slice(0, 5);
+  const attentionAccounts = accountRows.filter((account) => account.status !== "connected");
+  const failedPosts = (posts.data ?? []).filter((post) => post.status === "failed");
+  const calendarVisible = features?.calendar !== "hidden" && Boolean(features);
+  const postVisible = features?.create_post !== "hidden" && Boolean(features);
+  const isRefreshing = analytics.isFetching || accounts.isFetching || conversations.isFetching;
+  const refreshOverview = () => {
+    void analytics.refetch(); void accounts.refetch(); void posts.refetch();
+    void conversations.refetch(); void usage.refetch(); void activity.refetch();
+  };
+  const dataError = analytics.isError || accounts.isError || posts.isError || conversations.isError || usage.isError || activity.isError;
 
   return (
     <AppShell>
       <PageHeader
         title={`${greeting()}, ${firstName}`}
-        description="Last 7 days across your connected accounts."
+        description={`${activeOrg?.name ?? "Your workspace"} · Last ${rangeDays} days`}
         actions={
-          hasAccount ? (
+          <>
+          <Button variant="outline" size="icon" onClick={refreshOverview} disabled={isRefreshing} aria-label="Refresh overview" title="Refresh overview">
+            <RefreshCw className={isRefreshing ? "size-4 animate-spin" : "size-4"} />
+          </Button>
+          {hasAccount ? (
             <Button asChild>
               <Link to="/automations" search={{ new: true }}>
                 <Plus className="size-4" />
@@ -154,14 +176,36 @@ function Dashboard() {
               <Plus className="size-4" />
               Create new automation
             </Button>
-          )
+          )}
+          </>
         }
       />
 
       <AutomationNotificationBanner />
-      <Panel title="Automation templates" className="mb-6">
-        <TemplateSlider canCreate={hasAccount} onNeedAccount={() => setNeedAccount(true)} />
-      </Panel>
+      {dataError && (
+        <div role="alert" className="mb-5 flex flex-wrap items-center justify-between gap-3 border-l-2 border-warning bg-warning-soft px-4 py-3 text-sm">
+          <span>Some overview data couldn’t be refreshed.</span>
+          <Button variant="outline" size="sm" onClick={refreshOverview}><RefreshCw className="size-4" />Try again</Button>
+        </div>
+      )}
+      <section aria-label="Quick actions" className="mb-6 flex flex-wrap gap-2 border-y py-4">
+        <Button asChild variant="outline"><Link to="/inbox"><InboxIcon className="size-4" />Open inbox</Link></Button>
+        {postVisible && <Button asChild variant="outline"><Link to="/create-post"><PenSquare className="size-4" />Create post{features?.create_post === "coming_soon" && <span className="text-xs text-muted-foreground">Coming soon</span>}</Link></Button>}
+        <Button asChild variant="outline"><Link to="/social-accounts"><Share2 className="size-4" />Connect account</Link></Button>
+        {features?.revenue === "enabled" && <Button asChild variant="outline"><Link to="/revenue"><TrendingUp className="size-4" />Sales & Revenue</Link></Button>}
+      </section>
+      <section aria-label="Needs attention" className="mb-6">
+        <div className="mb-3 flex items-center gap-2">
+          <AlertCircle className="size-4 text-warning" /><h2 className="text-lg font-semibold">Needs attention</h2>
+        </div>
+        <div className="flex flex-wrap gap-x-6 gap-y-3 border-b pb-4 text-sm">
+          {!hasAccount && accounts.isSuccess && <Button asChild variant="link" className="h-auto p-0"><Link to="/social-accounts">Connect your first account<ArrowRight className="size-4" /></Link></Button>}
+          {attentionAccounts.length > 0 && <Button asChild variant="link" className="h-auto p-0 text-warning"><Link to="/social-accounts">{attentionAccounts.length} account{attentionAccounts.length === 1 ? "" : "s"} need attention<ArrowRight className="size-4" /></Link></Button>}
+          {(a?.totals.unread ?? 0) > 0 && <Button asChild variant="link" className="h-auto p-0"><Link to="/inbox">{a?.totals.unread} unread messages<ArrowRight className="size-4" /></Link></Button>}
+          {postVisible && failedPosts.length > 0 && <Button asChild variant="link" className="h-auto p-0 text-danger"><Link to="/create-post">{failedPosts.length} failed posts<ArrowRight className="size-4" /></Link></Button>}
+          {accounts.isSuccess && analytics.isSuccess && posts.isSuccess && hasAccount && attentionAccounts.length === 0 && (a?.totals.unread ?? 0) === 0 && (!postVisible || failedPosts.length === 0) && <span className="inline-flex items-center gap-2 text-muted-foreground"><CheckCircle2 className="size-4 text-success" />You’re all caught up</span>}
+        </div>
+      </section>
       <Dialog open={needAccount} onOpenChange={setNeedAccount}>
         <DialogContent>
           <DialogHeader>
@@ -173,15 +217,22 @@ function Dashboard() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-lg font-semibold">Workspace performance</h2>
+        <ToggleGroup type="single" value={String(rangeDays)} onValueChange={(value) => { if (value) setRangeDays(Number(value)); }} aria-label="Analytics period" variant="outline">
+          <ToggleGroupItem value="7" aria-label="Last 7 days">7 days</ToggleGroupItem>
+          <ToggleGroupItem value="30" aria-label="Last 30 days">30 days</ToggleGroupItem>
+        </ToggleGroup>
+      </div>
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard info="All chat threads (DMs and comments) and how many are open." icon={MessagesSquare} label="Conversations" value={String(a?.totals.conversations ?? 0)} sub={`${a?.totals.openThreads ?? 0} open`} />
-        <StatCard info="Messages and comments people sent you in the last 7 days." icon={MessageSquare} label="Messages received" value={String(a?.totals.inbound ?? 0)} sub={`${a?.totals.unread ?? 0} unread`} />
-        <StatCard info="Replies sent in the last 7 days, manual and automated." icon={Send} label="Replies sent" value={String(a?.totals.outbound ?? 0)} sub={`${a?.totals.automated ?? 0} automated`} />
+        <StatCard info="Messages and comments people sent you in the selected period." icon={MessageSquare} label="Messages received" value={String(a?.totals.inbound ?? 0)} sub={`${a?.totals.unread ?? 0} unread`} />
+        <StatCard info="Replies sent in the selected period, manual and automated." icon={Send} label="Replies sent" value={String(a?.totals.outbound ?? 0)} sub={`${a?.totals.automated ?? 0} automated`} />
         <StatCard info="Percentage of people who got at least one reply, and the typical time to first reply." icon={UserCheck} label="Answered" value={`${a?.responseRate ?? 0}%`} sub={`Median ${a?.medianFirstResponseMinutes ?? 0} min`} />
         <StatCard info="Posts published from this tool, plus how many are scheduled." icon={CalendarCheck} label="Posts published" value={String(a?.totals.postsPublished ?? 0)} sub={`${a?.totals.postsScheduled ?? 0} scheduled`} />
         <StatCard info="Out of all replies sent, the percentage sent automatically." icon={TrendingUp} label="Automation share" value={`${a?.automationShare ?? 0}%`} sub="Of all replies" />
         <StatCard info="Automations switched on right now: keyword rules plus Flow Builder flows." icon={Workflow} label="Active automations" value={String((a?.totals.activeRules ?? 0) + (a?.totals.activeFlows ?? 0))} sub={`${a?.totals.activeRules ?? 0} rules · ${a?.totals.activeFlows ?? 0} flows`} />
-        <StatCard info="Automations that ran and sent something in the last 7 days. One run counts once, however many steps." icon={Zap} label="Automation runs" value={String(a?.totals.automationRuns ?? 0)} sub="Last 7 days" />
+        <StatCard info="Automations that ran and sent something in the selected period. One run counts once, however many steps." icon={Zap} label="Automation runs" value={String(a?.totals.automationRuns ?? 0)} sub={`Last ${rangeDays} days`} />
       </div>
 
       <div className="mt-4 grid gap-4 xl:grid-cols-3">
@@ -210,7 +261,7 @@ function Dashboard() {
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
                 <XAxis dataKey="date" tickLine={false} axisLine={false} fontSize={12} />
                 <YAxis tickLine={false} axisLine={false} fontSize={12} width={32} allowDecimals={false} />
-                <Tooltip />
+                <Tooltip contentStyle={{ background: "var(--color-popover)", borderColor: "var(--color-border)", color: "var(--color-popover-foreground)" }} />
                 <Area type="monotone" dataKey="inbound" stroke="var(--color-chart-1)" fill="url(#dashIn)" name="Received" />
                 <Area type="monotone" dataKey="outbound" stroke="var(--color-chart-2)" fill="url(#dashOut)" name="Replied" />
               </AreaChart>
@@ -240,7 +291,7 @@ function Dashboard() {
           ) : (
             <div className="space-y-3">
               {accountRows.map((acc) => (
-                <div key={acc.id} className="flex items-center gap-3">
+                <div key={acc.id} className="flex min-w-0 flex-wrap items-center justify-between gap-3 border-b pb-3 last:border-0 last:pb-0">
                   <PlatformBadge platform={acc.platform} withLabel={acc.name} />
                   <StatusBadge
                     tone={acc.status === "connected" ? "success" : acc.status === "attention" ? "warning" : "danger"}
@@ -273,7 +324,7 @@ function Dashboard() {
           ) : (
             <div className="space-y-2">
               {recentThreads.map((c) => (
-                <div key={c.id} className="flex items-center gap-3 rounded-xl border px-4 py-3">
+                <Link to="/inbox" key={c.id} className="flex items-center gap-3 rounded-lg border px-4 py-3 transition-colors hover:bg-surface-secondary">
                   <PlatformBadge platform={c.platform} size="sm" />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium">
@@ -284,7 +335,8 @@ function Dashboard() {
                     </p>
                   </div>
                   {c.unread_count > 0 && <StatusBadge tone="info">{c.unread_count}</StatusBadge>}
-                </div>
+                  <ArrowRight className="size-4 shrink-0 text-muted-foreground" />
+                </Link>
               ))}
               <Link to="/inbox" className="inline-flex items-center gap-1 pt-1 text-sm font-medium text-primary">
                 View more <ArrowRight className="size-4" />
@@ -294,11 +346,11 @@ function Dashboard() {
         </Panel>
 
         <div className="space-y-4">
-          <Panel
+          {calendarVisible && <Panel
             title="Upcoming posts"
             action={
               <Link to="/calendar" className="inline-flex items-center gap-1 text-sm font-medium text-primary">
-                Calendar <ArrowRight className="size-4" />
+                {features?.calendar === "coming_soon" ? "Coming soon" : "Calendar"} <ArrowRight className="size-4" />
               </Link>
             }
           >
@@ -323,7 +375,7 @@ function Dashboard() {
                 ))}
               </ul>
             )}
-          </Panel>
+          </Panel>}
 
           <Panel
             title="Automation usage"
@@ -344,12 +396,12 @@ function Dashboard() {
                 used={usage.data?.sentLastDay ?? 0}
                 limit={usage.data?.dailyLimit || 1}
               />
-              <Button asChild variant="outline" className="w-full">
+              {features?.ai === "enabled" && <Button asChild variant="outline" className="w-full">
                 <Link to="/ai-assistant">
                   <Sparkles className="size-4" />
                   Ask the AI assistant
                 </Link>
-              </Button>
+              </Button>}
             </div>
           </Panel>
 
@@ -357,7 +409,7 @@ function Dashboard() {
             title="Live automation activity"
             action={
               <span className="flex items-center gap-3">
-                {workflowsOn && <Link to="/workflows" className="inline-flex items-center gap-1 text-sm font-medium text-primary">
+                {(features ? features.workflows === "enabled" : workflowsOn) && <Link to="/workflows" className="inline-flex items-center gap-1 text-sm font-medium text-primary">
                   Post workflows <ArrowRight className="size-4" />
                 </Link>}
                 <Link to="/automations" className="inline-flex items-center gap-1 text-sm font-medium text-primary">
@@ -398,6 +450,10 @@ function Dashboard() {
           </Panel>
         </div>
       </div>
+      <section className="mt-8 border-t pt-6" aria-labelledby="dashboard-templates-title">
+        <h2 id="dashboard-templates-title" className="mb-4 text-lg font-semibold">Automation templates</h2>
+        <TemplateSlider canCreate={hasAccount} onNeedAccount={() => setNeedAccount(true)} />
+      </section>
     </AppShell>
   );
 }
