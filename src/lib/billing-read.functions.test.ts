@@ -7,7 +7,7 @@ const start = source.indexOf(".handler(async ({ data, context }) => {");
 const body = source.slice(start + ".handler(".length, source.indexOf("\nexport const createPlanOrder"))
   .replace(/\);\s*$/, ";")
   .replace('await import("@/integrations/supabase/client.server")', "({ supabaseAdmin: admin })")
-  .replace('await import("./workspace-entitlements.server")', "({ resolveWorkspaceEntitlements: entitlement })");
+  .replace('await import("./workspace-entitlements.server")', "({ resolveWorkspaceEntitlements: resolveEntitlement })");
 const js = ts.transpileModule(`return ${body}`, { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText;
 function client(failed?: string, member = true) {
   const reads: string[] = [];
@@ -18,7 +18,7 @@ function client(failed?: string, member = true) {
     return q;
   } };
 }
-const handler = new Function("admin", "entitlement", js)({}, async () => ({ plan: "pro", plan_expires_at: null, inherited: false }));
+const handler = new Function("admin", "resolveEntitlement", "DEMO_KEY_IDS", js)({}, async () => ({ plan: "pro", plan_expires_at: null, inherited: false }), []);
 describe("Billing read integrity", () => {
   it.each(["organizations", "organization_members", "plan_orders"])("rejects failed %s reads", async (table) => {
     await expect(handler({ data: { organizationId: "workspace" }, context: { supabase: client(table), userId: "user" } })).rejects.toThrow("Billing unavailable");
