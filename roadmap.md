@@ -235,6 +235,7 @@ Real Meta + YouTube credentials are available when we reach OAuth phases.
 - [x] Checked the remaining GitHub administration alternative: the repository has one Build workflow (source analysis only), no migration step, and zero repository Actions secrets. No existing authorized live-database repair path was found through this connection; no workflow, secrets, database, provider actions or production data changed. All remaining items above stay explicitly blocked/skipped.
 
 ## Database recovery follow-up — Nov 7
+- [ ] Current continuation: remove callable legacy partial-backup operations, disable their cron, require SQL audit success without storing query contents, and verify affected tests/page access.
 - [x] Screenshot reviewed: relink SQL completed and reports one remaining unlinked chat; it does not prove a full database restore or an SQL failure.
 - [x] Retire incomplete custom dumps, sensitive-table exports, arbitrary SQL/import endpoints and backup cron; preserve existing data, no schema changes. Recovery page points to supported owner/Cloud exports and offers read-only account diagnosis.
 - [x] Regression verification: 398 tests pass across 61 files; latest preview build OK. Live session has expired and redirects to /auth, so Growth and Super Admin recovery UI were not reverified signed in.
