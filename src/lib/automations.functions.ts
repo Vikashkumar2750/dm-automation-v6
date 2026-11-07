@@ -530,6 +530,9 @@ export const getAutomationUsage = createServerFn({ method: "GET" })
         .maybeSingle(),
     ]);
 
+    if ([hour, day, skipped, failed, inbound, settings].some((result) => result.error)) {
+      throw new Error("Usage unavailable. Please retry.");
+    }
     return {
       sentLastHour: hour.count ?? 0,
       sentLastDay: day.count ?? 0,

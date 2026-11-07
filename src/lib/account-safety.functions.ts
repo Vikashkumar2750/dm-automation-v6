@@ -27,6 +27,9 @@ export const getAccountSafety = createServerFn({ method: "GET" })
       a.from("platform_settings").select("feature_flags").eq("id", true).maybeSingle(),
       a.from("automation_runs").select("run_key, id, created_at, conversations(social_account_id)").eq("organization_id", org).eq("status", "sent").gte("created_at", monthStartIso()).limit(20000),
     ]);
+    if ([accs, settings, trust, ps, runs].some((result) => result.error)) {
+      throw new Error("Per-account usage unavailable. Please retry.");
+    }
     const ws = {
       hourly: settings.data?.hourly_send_limit ?? 60,
       daily: settings.data?.daily_send_limit ?? 500,
