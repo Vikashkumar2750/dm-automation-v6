@@ -195,7 +195,8 @@ Real Meta + YouTube credentials are available when we reach OAuth phases.
 - [x] Revenue presentation: refresh/stale states, workspace-keyed retained tabs, wrapped phone navigation, 30-day sample/account-scope labels and product names/paid time beside payment amounts.
 - [x] Revenue source-read integrity: all eleven source failures reject with a safe unavailable error instead of false zeros/empty/settings-off results; confirmed empty reads and workspace/account scope retained, membership verified before reads.
 - [x] Usage presentation: unavailable/loading/stale states, rolling activity versus billable monthly runs, workspace defaults separated from effective account caps; refresh controls and local per-account scrolling.
-- [ ] Usage source-read integrity: audit suppressed count/settings errors before confirming failed sources cannot yield false zeros.
+- [x] Workspace/per-account usage source-read integrity: eleven failed reads now reject safely; confirmed empty reads remain valid and account membership gating unchanged.
+- [ ] Monthly plan-usage read integrity: separate display repair from shared quota enforcement before replacing suppressed source errors/fallback step counts.
 - [ ] Next: V6 acceptance audit and signed-in desktop/mobile verification; authenticated export/billing/health checks blocked by no preview auth users.
 - [x] Converter 800MB + clear after download; Super Admin temp cleanup button
 - [x] Coupons: manual Apply + auto-apply (?coupon=), discount from MRP, server re-check
