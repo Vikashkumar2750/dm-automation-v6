@@ -1,4 +1,4 @@
-CREATE TABLE public.db_backups (
+CREATE TABLE IF NOT EXISTS public.db_backups (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   created_at timestamptz NOT NULL DEFAULT now(),
   kind text NOT NULL DEFAULT 'manual',
