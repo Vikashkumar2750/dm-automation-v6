@@ -2,7 +2,7 @@ import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { CreditCard } from "lucide-react";
+import { CreditCard, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
 import { AdminTable } from "@/components/app/AdminTable";
@@ -51,11 +51,12 @@ function PlansPage() {
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
 
-  const { data } = useQuery({
+  const overview = useQuery({
     queryKey: ["platform-overview"],
     queryFn: () => fetchOverview(),
     retry: false,
   });
+  const { data } = overview;
   const orders = useQuery({
     queryKey: ["plan-orders"],
     queryFn: () => fetchOrders(),
@@ -88,7 +89,10 @@ function PlansPage() {
       <PageHeader
         title="Plans & Billing"
         description="Plan mix, entitlements, payments and free plan grants."
+        actions={<Button variant="outline" size="icon" aria-label="Refresh billing" title="Refresh billing" disabled={overview.isFetching || orders.isFetching || config.isFetching} onClick={() => { void overview.refetch(); void orders.refetch(); void config.refetch(); }}><RefreshCw className={overview.isFetching || orders.isFetching || config.isFetching ? "size-4 animate-spin" : "size-4"} /></Button>}
       />
+
+      {(overview.isError || orders.isError || config.isError) && <div role="alert" className="border-l-2 border-warning bg-warning-soft px-4 py-3 text-sm">Some billing data could not be refreshed. Previously loaded records may be out of date.</div>}
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
@@ -101,7 +105,7 @@ function PlansPage() {
           <StatCard
             key={p.plan}
             icon={CreditCard}
-            label={`${p.plan} workspaces`}
+            label={`${p.plan} assigned plans`}
             value={String(p.count)}
             sub={pricing[p.plan]?.price ?? ""}
           />
@@ -164,13 +168,13 @@ function PlansPage() {
             <Input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Partner deal" />
           </div>
         </div>
-        <Button className="mt-4" disabled={!orgId || saving} onClick={onGrant}>
+        <Button className="mt-4" disabled={!orgId || saving || !data} onClick={onGrant}>
           {saving ? "Saving…" : "Give this plan"}
         </Button>
       </Panel>
 
       <Panel title="Recent payments and grants">
-        <p className="mb-4 text-sm text-muted-foreground">{orders.isError ? "Payment records could not be loaded." : `${billing.payments} paid orders · ${billing.grants} grants in the latest 50 records. Grants are excluded from the paid amount; recurring revenue is not calculated from plan assignments.`}</p>
+        <p className="mb-4 text-sm text-muted-foreground">{orders.isError ? "Payment records could not be refreshed." : !orders.data ? "Loading payment records…" : `${billing.payments} paid orders · ${billing.grants} grants in the latest ${orders.data.length} records (maximum 50). Grants are excluded from the paid amount; recurring revenue is not calculated from plan assignments.`}</p>
         <AdminTable
           rows={orders.data ?? []}
           minWidth={720}
@@ -218,11 +222,12 @@ function PlansPage() {
           minWidth={720}
           columns={[
             { header: "Workspace", cell: (o) => <span className="font-medium">{o.name}</span> },
-            { header: "Plan", cell: (o) => <StatusBadge tone="info">{o.plan}</StatusBadge> },
+            { header: "Assigned plan", cell: (o) => <StatusBadge tone="info">{o.plan}</StatusBadge> },
+            { header: "Effective access", cell: (o) => <div><StatusBadge tone="info">{o.effectivePlan ?? o.plan}</StatusBadge>{o.inherited && <p className="mt-1 text-xs text-muted-foreground">Inherited from {o.parentName ?? "Agency"}</p>}</div> },
             { header: "Accounts", cell: (o) => <span className="num">{o.accounts}</span> },
             { header: "Members", cell: (o) => <span className="num">{o.members}</span> },
             {
-              header: "Value",
+              header: "Assigned plan catalogue price",
               cell: (o) => (
                 <span className="num">{pricing[o.plan]?.price ?? "—"}</span>
               ),

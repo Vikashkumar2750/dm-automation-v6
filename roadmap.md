@@ -175,7 +175,8 @@ Real Meta + YouTube credentials are available when we reach OAuth phases.
 - [x] Workspace directory: name/slug search, plan/status filters, sorting and retry; System Settings: retained grouped tabs and guarded loading controls.
 - [ ] Verify directory filters and Settings draft retention signed in (blocked: preview backend has no auth users).
 - [x] Owner/name/email search and effective Agency plan/expiry directory fields; billing separates sampled paid orders from grants and removes fabricated MRR and hardcoded catalogue.
-- [ ] Next: V6 acceptance audit and remaining directory export/operational accuracy gaps.
+- [x] Directory CSV export matches filtered/sorted authorized rows, escapes spreadsheet formulas and separates assigned/effective access; billing labels catalogue prices and assigned plans explicitly with refresh/unavailable handling.
+- [ ] Next: V6 acceptance audit and remaining operational accuracy gaps; authenticated export/billing checks blocked by no preview auth users.
 - [x] Converter 800MB + clear after download; Super Admin temp cleanup button
 - [x] Coupons: manual Apply + auto-apply (?coupon=), discount from MRP, server re-check
 - [x] Per-workspace Super Admin feature switches + health; enforced on server for revenue writes, public pages, checkout, emails
