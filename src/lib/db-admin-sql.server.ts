@@ -1,4 +1,5 @@
-type SqlResult = { rows?: unknown[]; affected?: number };
+type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
+type SqlResult = { rows?: JsonValue[]; affected?: number };
 type SqlAdmin = {
   from: (table: string) => { insert: (record: Record<string, unknown>) => PromiseLike<{ error: unknown }> };
   rpc: (name: string, params: { q: string }) => PromiseLike<{ data: unknown; error: { message: string } | null }>;
