@@ -17,7 +17,7 @@ export type SearchPage = { label: string; to: string };
 
 const RECENT_KEY = "autodm_recent_search";
 
-type Hit = { id: string; label: string; sub?: string; to: string };
+type Hit = { id: string; label: string; sub?: string | undefined; to: string };
 
 function useDebounced<T>(value: T, ms: number) {
   const [v, setV] = useState(value);
