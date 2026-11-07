@@ -48,3 +48,4 @@
 - Admin directory CSV exports only its already-authorized filtered/sorted snapshot via csvCell; assigned plans and effective inherited access remain separate — downloads must match the visible selection without new tenant reads or spreadsheet formulas.
 - Admin health measures finalized verified events only; absent reads are unavailable, and alerts label mixed capped sources — avoids false health claims and probe-skewed delivery rates.
 - AdminTable stacks labelled cells on phones and keeps desktop tables; render each cell once to preserve controls and drafts across resizing.
+- Key Contacts outreach by workspace; await settings before edits to prevent stale drafts and unconfirmed saves.
