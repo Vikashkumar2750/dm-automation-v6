@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { publicPageSchema } from "@/lib/public-page-seo";
 import { LegalPage } from "@/components/app/LegalPage";
 
 import { DisclaimerContent } from "@/components/app/DisclaimerContent";
@@ -11,7 +12,7 @@ export const Route = createFileRoute("/disclaimer")({
     { title }, { name: "description", content: description }, { property: "og:title", content: title },
     { property: "og:description", content: description }, { property: "og:type", content: "article" },
     { name: "twitter:card", content: "summary" },
-  ], links: [{ rel: "canonical", href: "https://autodm.techaasvik.com/disclaimer" }] }), component: Disclaimer,
+  ], links: [{ rel: "canonical", href: "https://autodm.techaasvik.com/disclaimer" }], scripts: publicPageSchema("/disclaimer", title, description) }), component: Disclaimer,
 });
 
 function Disclaimer() {

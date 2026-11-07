@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { publicPageSchema } from "@/lib/public-page-seo";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { CheckCircle2, Mail } from "lucide-react";
@@ -18,7 +19,7 @@ export const Route = createFileRoute("/contact")({
     { title }, { name: "description", content: description },
     { property: "og:title", content: title }, { property: "og:description", content: description },
     { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" },
-  ], links: [{ rel: "canonical", href: "https://autodm.techaasvik.com/contact" }] }),
+  ], links: [{ rel: "canonical", href: "https://autodm.techaasvik.com/contact" }], scripts: publicPageSchema("/contact", title, description, "ContactPage") }),
   component: ContactPage,
 });
 

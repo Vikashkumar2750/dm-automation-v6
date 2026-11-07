@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { publicPageSchema } from "@/lib/public-page-seo";
 
 import { PublicFooter } from "@/components/app/PublicFooter";
 import { PublicHeader } from "@/components/app/PublicHeader";
@@ -16,6 +17,7 @@ export const Route = createFileRoute("/blog/")({
       { name: "twitter:card", content: "summary_large_image" },
     ],
     links: [{ rel: "canonical", href: "https://autodm.techaasvik.com/blog" }],
+    scripts: publicPageSchema("/blog", "AutoDM Blog", "Social media automation guides from AutoDM by Techaasvik.", "CollectionPage"),
   }),
   component: BlogIndex,
 });
