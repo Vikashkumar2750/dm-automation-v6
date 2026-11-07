@@ -21,7 +21,7 @@ export const Route = createFileRoute("/blog/$slug")({
   },
   head: ({ loaderData }) => {
     const p = loaderData?.post;
-    if (!p) return { meta: [{ title: "Article not found — AutoDM" }] };
+    if (!p) return { meta: [{ title: "Article not found — AutoDM" }, { name: "description", content: "This AutoDM article is unavailable." }, { property: "og:title", content: "Article not found — AutoDM" }, { property: "og:description", content: "This AutoDM article is unavailable." }, { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" }, { name: "robots", content: "noindex" }] };
     const title = p.seo_title || p.title;
     const desc = p.meta_description || p.excerpt;
     const url = p.canonical_url || `${SITE}/blog/${p.slug}`;
@@ -59,7 +59,7 @@ export const Route = createFileRoute("/blog/$slug")({
         ...(p.noindex ? [{ name: "robots", content: "noindex" }] : []),
       ],
       links: [{ rel: "canonical", href: url }],
-      scripts: ld.map((j) => ({ type: "application/ld+json", children: JSON.stringify(j) })),
+      scripts: ld.map((j) => ({ type: "application/ld+json", children: JSON.stringify(j).replace(/</g, "\\u003c") })),
     };
   },
   component: BlogPostPage,

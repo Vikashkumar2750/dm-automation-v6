@@ -31,6 +31,8 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { canEditComment } from "@/lib/comment-moderation";
 import { useTenant } from "@/hooks/useTenant";
+import { useWorkspaceAccountFilter } from "@/hooks/useWorkspaceAccountFilter";
+import { ConnectedAccountLabel } from "@/components/app/ConnectedAccountLabel";
 import {
   listConversations,
   listMessages,
@@ -145,8 +147,7 @@ function InboxPage() {
   const closeConversation = () => { void navigate({ search: {} }); };
   const [draft, setDraft] = useState("");
   const [commentMode, setCommentMode] = useState<"public" | "private">("public");
-  const [platform, setPlatform] = useState<Platform | "all">("all");
-  const [accountId, setAccountId] = useState("all");
+  const { accountId, setAccountId, platform, setPlatform } = useWorkspaceAccountFilter(orgId);
   const [channel, setChannel] = useState<Channel | "all">("all");
   const [status, setStatus] = useState<Status | "all">("all");
   const [unreadOnly, setUnreadOnly] = useState(false);
@@ -445,6 +446,7 @@ function InboxPage() {
                           {timeAgo(c.last_message_at)}
                         </span>
                       </div>
+                      <ConnectedAccountLabel orgId={orgId} accountId={c.social_account_id} />
                       <p className="truncate text-xs text-muted-foreground">
                         {c.last_message_preview ?? "—"}
                       </p>
@@ -488,6 +490,7 @@ function InboxPage() {
                     <p className="text-xs text-muted-foreground">
                       {selected.channel === "comment" ? "Comment thread" : "Direct message"}
                     </p>
+                    <ConnectedAccountLabel orgId={orgId} accountId={selected.social_account_id} replying />
                   </div>
                 </div>
                 <div className="flex items-center gap-2">

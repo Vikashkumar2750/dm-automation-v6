@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { publicPageSchema } from "@/lib/public-page-seo";
 import { ClientOnly } from "@tanstack/react-router";
 import { PublicFooter } from "@/components/app/PublicFooter";
 import { PublicHeader } from "@/components/app/PublicHeader";
@@ -17,6 +18,8 @@ export const Route = createFileRoute("/tools/webp-converter")({
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
+    links: [{ rel: "canonical", href: "https://autodm.techaasvik.com/tools/webp-converter" }],
+    scripts: publicPageSchema("/tools/webp-converter", TITLE, DESC),
   }),
   component: ConverterPage,
 });

@@ -18,6 +18,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Checkbox } from "@/components/ui/checkbox";
 import { Sparkles } from "lucide-react";
 import { useTenant } from "@/hooks/useTenant";
+import { useWorkspaceAccountFilter } from "@/hooks/useWorkspaceAccountFilter";
 import { Pager, pageSlice } from "@/components/app/Pager";
 import { contactsToCsv, pageLeadsToCsv, extractContactInfo, matchesSegment, type CrmContact, type SegmentFilter } from "@/lib/crm";
 import { setLeadFollowUp, draftLeadFollowUps, sendLeadFollowUpEmail, addContactTag, deleteBroadcast, deleteSegment, getCrm, getOutreach, removeContactTag, saveContactProfile, saveNudgeSettings, saveSegment, saveSyncSettings, sendBroadcast } from "@/lib/crm.functions";
@@ -51,8 +52,7 @@ function ContactsPage() {
   const fetchCrm = useServerFn(getCrm);
   const addSeg = useServerFn(saveSegment);
   const delSeg = useServerFn(deleteSegment);
-  const [accountId, setAccountId] = useState("all");
-  const [platform, setPlatform] = useState<"all" | "instagram" | "facebook" | "youtube">("all");
+  const { accountId, setAccountId, platform, setPlatform } = useWorkspaceAccountFilter(orgId);
   const conversations = useQuery({
     queryKey: ["conversations", orgId, "contacts", platform, accountId],
     enabled: !!orgId,

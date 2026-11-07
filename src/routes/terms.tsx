@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { publicPageSchema } from "@/lib/public-page-seo";
 
 import { LegalPage, SUPPORT_EMAIL } from "@/components/app/LegalPage";
 
@@ -17,6 +18,7 @@ export const Route = createFileRoute("/terms")({
       { name: "twitter:card", content: "summary" },
     ],
     links: [{ rel: "canonical", href: "https://autodm.techaasvik.com/terms" }],
+    scripts: publicPageSchema("/terms", title, description),
   }),
   component: Terms,
 });

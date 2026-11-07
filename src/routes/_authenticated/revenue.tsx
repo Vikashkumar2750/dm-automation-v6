@@ -20,6 +20,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useTenant } from "@/hooks/useTenant";
+import { useWorkspaceAccountFilter } from "@/hooks/useWorkspaceAccountFilter";
 import { buildFunnel, formatInr, rupeesToPaise, slugify, withCharges } from "@/lib/revenue";
 import { DeliveryPageView } from "@/components/app/DeliveryPageView";
 import { DELIVERY_TEMPLATES, SAMPLE_BODY, EMAIL_ONLY_FIELDS, STANDARD_LEAD_FIELDS, priceDisplay, DEFAULT_POLICIES, DEFAULT_DISCLAIMER, DEFAULT_EXTRAS, type LeadField, type PageExtras } from "@/lib/delivery-page";
@@ -48,7 +49,7 @@ function RevenuePage() {
   const { activeOrg } = useTenant();
   const orgId = activeOrg?.id ?? null;
   const fetchRev = useServerFn(getRevenue);
-  const [accountId, setAccountId] = useState("all");
+  const { accountId, setAccountId } = useWorkspaceAccountFilter(orgId);
   const q = useQuery({ queryKey: ["revenue", orgId, accountId], enabled: !!orgId, queryFn: () => fetchRev({ data: { organizationId: orgId!, ...(accountId !== "all" ? { socialAccountId: accountId } : {}) } }) });
   const d = q.data;
   return (

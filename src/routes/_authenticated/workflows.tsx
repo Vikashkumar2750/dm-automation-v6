@@ -8,6 +8,7 @@ import { EmptyState, PageHeader, PlatformBadge } from "@/components/app/primitiv
 import { PostSidebar, type SidebarPost } from "@/components/app/PostSidebar";
 import { PostThumbnail } from "@/components/app/PostThumbnail";
 import { useTenant } from "@/hooks/useTenant";
+import { Button } from "@/components/ui/button";
 import { useWorkflowsEnabled } from "@/hooks/useWorkflowsEnabled";
 import { listAutomationRules } from "@/lib/automations.functions";
 import { getPostJourney } from "@/lib/post-journey.functions";
@@ -52,6 +53,7 @@ function WorkflowsPage() {
   const { activeOrg } = useTenant();
   const orgId = activeOrg?.id ?? null;
   const [post, setPost] = useState<SidebarPost | null>(null);
+  const [postWorkspace, setPostWorkspace] = useState<string | null>(null);
   const workflowsOn = useWorkflowsEnabled();
   if (!workflowsOn) {
     return (
@@ -65,8 +67,8 @@ function WorkflowsPage() {
     <AppShell>
       <PageHeader title="Automation workflows" description="Choose a post to see every automation journey on it — comment, rule, bot or manual reply, taps — from left to right." />
       <div className="grid gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
-        <PostSidebar orgId={orgId} selectedId={post?.externalPostId ?? null} onSelect={setPost} onPlatformChange={() => setPost(null)} />
-        {post && orgId ? <Journeys key={post.externalPostId} orgId={orgId} post={post} /> : (
+        <PostSidebar orgId={orgId} selectedId={postWorkspace === orgId ? post?.externalPostId ?? null : null} onSelect={(selected) => { setPostWorkspace(orgId); setPost(selected); }} onPlatformChange={() => setPost(null)} />
+        {post && orgId && postWorkspace === orgId ? <Journeys key={`${orgId}:${post.externalPostId}`} orgId={orgId} post={post} /> : (
           <div className="hidden min-h-[420px] items-center justify-center rounded-xl border border-dashed text-sm text-muted-foreground lg:flex">Select a post to see its workflow journeys.</div>
         )}
       </div>
@@ -127,7 +129,8 @@ function Journeys({ orgId, post }: { orgId: string; post: SidebarPost }) {
       <div className="flex flex-wrap gap-2 text-[11px] text-muted-foreground">
         {(Object.keys(STYLE) as Node["kind"][]).map((k) => <span key={k} className={`flex items-center gap-1 rounded-full border-2 px-2 py-0.5 ${STYLE[k].cls}`}>{STYLE[k].icon}{STYLE[k].label}</span>)}
       </div>
-      {journey.isLoading ? <Loader2 className="mx-auto my-10 size-5 animate-spin text-muted-foreground" /> : lanes.length === 0 ? (
+      {(journey.isError || rules.isError) && <div role="alert" className="space-y-2 text-sm text-destructive"><p>Some journey details could not be refreshed. Loaded results may be incomplete.</p><Button variant="outline" size="sm" onClick={() => { void journey.refetch(); void rules.refetch(); }}>Try again</Button></div>}
+      {journey.isLoading ? <Loader2 className="mx-auto my-10 size-5 animate-spin text-muted-foreground" /> : journey.isError && !journey.data ? <p role="status" className="text-sm text-muted-foreground">Journeys unavailable.</p> : lanes.length === 0 ? (
         <EmptyState icon={Workflow} title="No automation journeys yet" description="When someone comments on this post, its journey appears here." />
       ) : (
         <div className="overflow-x-auto rounded-xl border bg-[radial-gradient(hsl(var(--border))_1px,transparent_1px)] [background-size:18px_18px] p-4">

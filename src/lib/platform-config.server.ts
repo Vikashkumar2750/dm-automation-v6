@@ -58,12 +58,13 @@ export function mergeConfig(raw: unknown): PlatformConfig {
   };
 }
 
-export async function readPlatformConfig(admin: AdminClient): Promise<PlatformConfig> {
-  const { data } = await admin
+export async function readPlatformConfig(admin: AdminClient, options: { strictReads?: boolean } = {}): Promise<PlatformConfig> {
+  const { data, error } = await admin
     .from("platform_settings")
     .select("feature_flags")
     .eq("id", true)
     .maybeSingle();
+  if (options.strictReads && error) throw new Error("Plan catalogue unavailable. Refresh to retry.");
   const flags = (data?.feature_flags ?? {}) as Record<string, unknown>;
   return mergeConfig(flags[CONFIG_KEY]);
 }

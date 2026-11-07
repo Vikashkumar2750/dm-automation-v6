@@ -35,6 +35,7 @@ function CommentsPage() {
   const { activeOrg } = useTenant();
   const orgId = activeOrg?.id ?? null;
   const [post, setPost] = useState<SidebarPost | null>(null);
+  const [postWorkspace, setPostWorkspace] = useState<string | null>(null);
   return (
     <AppShell>
       <PageHeader
@@ -43,8 +44,8 @@ function CommentsPage() {
         actions={<><RefreshButton /><Button asChild variant="outline"><Link to="/inbox">Open inbox</Link></Button></>}
       />
       <div className="grid gap-4 lg:h-[calc(100vh-15rem)] lg:min-h-[480px] lg:grid-cols-[320px_minmax(0,1fr)] [&>*]:lg:min-h-0">
-        <PostSidebar orgId={orgId} selectedId={post?.externalPostId ?? null} onSelect={setPost} onPlatformChange={() => setPost(null)} />
-        {post && orgId ? <PostView key={post.externalPostId} orgId={orgId} post={post} /> : (
+        <PostSidebar orgId={orgId} selectedId={postWorkspace === orgId ? post?.externalPostId ?? null : null} onSelect={(selected) => { setPostWorkspace(orgId); setPost(selected); }} onPlatformChange={() => setPost(null)} />
+        {post && orgId && postWorkspace === orgId ? <PostView key={`${orgId}:${post.externalPostId}`} orgId={orgId} post={post} /> : (
           <div className="hidden min-h-[420px] items-center justify-center rounded-xl border border-dashed text-sm text-muted-foreground lg:flex">Select a post to see its comments.</div>
         )}
       </div>
@@ -211,7 +212,7 @@ function PostView({ orgId, post }: { orgId: string; post: SidebarPost }) {
   const markRemoved = (id: string) => setRemoved((s) => new Set(s).add(id));
   const fetchLive = useServerFn(getLivePostComments);
   const live = useQuery({
-    queryKey: ["post-journey", "live", post.externalPostId],
+    queryKey: ["post-journey", "live", orgId, post.socialAccountId, post.externalPostId],
     enabled: post.platform !== "youtube",
     staleTime: 30_000,
     queryFn: () => fetchLive({ data: { organizationId: orgId, socialAccountId: post.socialAccountId ?? null, platform: post.platform, externalPostId: post.externalPostId } }),
@@ -235,7 +236,7 @@ function PostView({ orgId, post }: { orgId: string; post: SidebarPost }) {
   const targetMsg = msgs.find((m) => m.id === target) ?? null;
   const targetConv = targetMsg ? convs.find((c) => c.id === targetMsg.conversation_id) ?? null : null;
   const send = useMutation({
-    mutationFn: () => reply({ data: { conversationId: targetMsg!.conversation_id, commentMessageId: targetMsg!.id, body, mode: post.platform === "youtube" ? "public" : mode } }),
+    mutationFn: () => { if (!targetMsg) throw new Error("Select a comment first"); return reply({ data: { conversationId: targetMsg.conversation_id, commentMessageId: targetMsg.id, body, mode: post.platform === "youtube" ? "public" : mode } }); },
     onSuccess: () => { setBody(""); toast.success(mode === "public" || post.platform === "youtube" ? "Public reply posted" : "Private reply sent"); void qc.invalidateQueries({ queryKey: ["post-journey", orgId, post.externalPostId] }); },
     onError: (e: Error) => toast.error(e.message.includes("window_expired") ? "Meta allows replies only within 7 days of the comment." : e.message),
   });
@@ -254,7 +255,8 @@ function PostView({ orgId, post }: { orgId: string; post: SidebarPost }) {
             </div>
           ))}
           {live.data?.error && <p className="bg-warning/10 px-4 py-2 text-xs text-warning">Older comments could not be loaded: {live.data.error}</p>}
-          {journey.isLoading ? <Loader2 className="mx-auto my-4 size-5 animate-spin text-muted-foreground" /> : convs.length === 0 && extra.length === 0 ? (
+          {(journey.isError || live.isError) && <div role="alert" className="space-y-2 px-4 py-3 text-sm text-destructive"><p>Some comments could not be refreshed. Loaded comments may be incomplete.</p><Button variant="outline" size="sm" onClick={() => { void journey.refetch(); if (post.platform !== "youtube") void live.refetch(); }}>Try again</Button></div>}
+          {journey.isLoading ? <Loader2 className="mx-auto my-4 size-5 animate-spin text-muted-foreground" /> : (journey.isError || live.isError) && convs.length === 0 && extra.length === 0 ? <p role="status" className="p-4 text-sm text-muted-foreground">Comments unavailable.</p> : convs.length === 0 && extra.length === 0 ? (
             <EmptyState icon={MessageSquare} title="No comments linked yet" description="New comments on this post will show up here." />
           ) : convs.flatMap((c) => msgs
             .filter((m) => m.conversation_id === c.id)
@@ -276,6 +278,7 @@ function PostView({ orgId, post }: { orgId: string; post: SidebarPost }) {
             ))]))}
         </div>
         <div className="space-y-2 border-t p-3">
+          <p className="text-xs text-muted-foreground">Replying as {post.accountName}</p>
           {targetConv ? (
             <>
               <p className="text-xs text-muted-foreground">Replying to <span className="font-medium text-foreground">{targetConv.name ?? "commenter"}</span> <button type="button" className="ml-1 underline" onClick={() => setTarget(null)}>cancel</button></p>

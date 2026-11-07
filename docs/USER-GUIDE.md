@@ -4,7 +4,7 @@
 - **Social Accounts**: connect Instagram, Facebook and YouTube. "Needs reconnect" means sign in again.
 - **Automations (simple mode)**: New rule → pick platform, trigger (New comment / New DM), keywords, replies. Instagram/Facebook can send a DM (with follow gate); YouTube gets public AI replies only.
 - **Inbox / Comments**: read and reply manually (public reply or private DM).
-- **Create Post / Calendar**: publish or schedule to many accounts; feed, reel, story, trial reel; "also publish on story".
+- **Create Post / Calendar**: publish or schedule to many accounts; feed, reel, story and carousel where the platform supports them; "also publish on story".
 - **AI Assistant**: captions and replies; daily limit set by Super Admin.
 - **Usage & Limits / Billing**: plan, trial (3 days, then new automations pause), upgrades.
 
@@ -153,5 +153,30 @@ Left menu → **Growth insights** (read-only; never sends messages or changes In
 - **Anomaly alerts** — last 24h vs your usual day (previous 7 days). Warns when received comments/DMs or sent DMs fall to half or less, or failed sends double.
 - **Best time to post** — busiest day+hour (India time) from 60 days of comments/DMs; needs 10+ to suggest.
 - **Funnel heatmap** — Comment/DM → DM sent → page opened → link clicked → sale, per weekday, with % moving to the next step.
-- **AI content ideas** — 6 ideas with hook, format and comment keyword; uses 1 daily AI request.
+- **AI content ideas** — a downloadable 7-day content plan with hooks, scripts, captions, hashtags and comment keywords; uses a daily AI request.
 - **Competitor benchmark** — type competitor public numbers; compares posts/week and engagement with yours and gives tips.
+
+## Navigation, account selection and reports
+- Sidebar groups start closed. An opened group stays open while moving between pages until you close it or open another group.
+- Account/platform selection is remembered separately for each workspace during the signed-in session across Inbox, Contacts, Comments, Workflows, Publishing, Calendar, Analytics, Growth and Sales account filters. Changing platform resets the chosen account. Signing out resets these selections.
+- Inbox shows the connected account beside each conversation and “Replying as” for the selected thread. Comments show the publishing account. Always confirm the account before replying.
+- Search opens items only in the current workspace; it never silently switches workspaces.
+- Refresh retries unavailable information. A dash means unconfirmed data, not zero. Previously loaded results can remain visible but may be out of date.
+- Counts and CSV exports cover the loaded sample described on each page, not necessarily full history. Funnel stages are independent events, not matched buyer conversion rates.
+- Usage counts distinct automation runs per month; sent steps over the last hour/24 hours are separate activity counts. Safety caps apply per connected account; plan quota applies across the workspace.
+- Billing shows the latest 10 workspace orders, including unpaid orders and assigned plans. Team Desk invoices marked paid are manual records, not independently verified bank settlements.
+
+## Buyer access and publishing availability
+- Products keep paid deliverables separate from external payment links. Private files are released only for confirmed paid purchases using temporary download links.
+- Buyers can reopen purchases using the email access flow. Receipt/access emails depend on the workspace email switch and a working email service.
+- Super Admin can independently set Create Post and Calendar to Enabled, Hidden or Coming soon. These visibility controls do not cancel existing scheduled posts.
+
+## Public-site discoverability
+- Public informational pages carry their own titles, descriptions, canonical links and appropriate structured data. Tracking/verification settings do not edit these page details.
+- Buyer delivery and personal offer pages intentionally remain non-indexable. Never share a personal offer token as a public search link.
+
+## Before going live
+- Verify the signed-in customer and Super Admin views on desktop and phone, including drafts, account filters and exports.
+- Use a real connected test account to check a fresh comment, automated DM, follow confirmation, manual moderation and publishing.
+- Complete a test payment and verify the return, buyer access, receipt email and private file download. A successful simulation does not verify real payments or delivery.
+- Confirm deployment secrets, provider permissions, scheduled jobs and Meta App Review separately. No guide or automated test establishes live provider approval.

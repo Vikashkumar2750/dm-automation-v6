@@ -1,4 +1,5 @@
 import { WorkspaceFeatureGate } from "@/components/app/WorkspaceFeatureGate";
+import { useTenant } from "@/hooks/useTenant";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -51,9 +52,9 @@ export const Route = createFileRoute("/_authenticated/ai-assistant")({
 
 const TONES = ["Friendly", "Professional", "Playful", "Bold", "Calm & helpful"];
 
-function copy(text: string) {
-  void navigator.clipboard.writeText(text);
-  toast.success("Copied");
+async function copy(text: string) {
+  try { await navigator.clipboard.writeText(text); toast.success("Copied"); }
+  catch { toast.error("Could not copy. Please try again."); }
 }
 
 function Options({ options }: { options: string[] }) {
@@ -65,7 +66,7 @@ function Options({ options }: { options: string[] }) {
           key={index}
           className="flex items-start gap-3 rounded-lg border bg-muted/30 p-3"
         >
-          <p className="min-w-0 flex-1 whitespace-pre-wrap text-sm">{option}</p>
+          <p className="min-w-0 flex-1 whitespace-pre-wrap break-words text-sm">{option}</p>
           <Button
             size="icon"
             variant="ghost"
@@ -84,7 +85,7 @@ function CaptionTab() {
   const run = useServerFn(generateCaptions);
   const [topic, setTopic] = useState("");
   const [platform, setPlatform] = useState<"instagram" | "facebook">("instagram");
-  const [tone, setTone] = useState(TONES[0]!);
+  const [tone, setTone] = useState(TONES[0] ?? "Friendly");
   const [withHashtags, setWithHashtags] = useState(true);
   const [options, setOptions] = useState<string[]>([]);
 
@@ -331,6 +332,7 @@ function AutomationTab() {
 }
 
 function AiAssistantPage() {
+  const { activeOrg } = useTenant();
   return (
     <AppShell>
       <PageHeader
@@ -338,8 +340,8 @@ function AiAssistantPage() {
         description="Write captions, draft replies and design automation rules in seconds."
         actions={<AiCreditBadge />}
       />
-      <Tabs defaultValue="captions" className="space-y-4">
-        <TabsList>
+      <Tabs key={activeOrg?.id} defaultValue="captions" className="space-y-4">
+        <TabsList className="h-auto max-w-full flex-wrap">
           <TabsTrigger value="captions">Captions</TabsTrigger>
           <TabsTrigger value="replies">Replies</TabsTrigger>
           <TabsTrigger value="automations">Automations</TabsTrigger>
