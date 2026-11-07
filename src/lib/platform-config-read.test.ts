@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { readPlatformConfig, PLANS as unused } from "./platform-config.server";
+import { readPlatformConfig } from "./platform-config.server";
 
 function client(error: unknown, data: unknown = null) {
   return { from: () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data, error }) }) }) }) } as never;
