@@ -22,7 +22,10 @@ ENV VITE_SUPABASE_PROJECT_ID=$VITE_SUPABASE_PROJECT_ID
 RUN bun run build
 
 # --- runtime stage -----------------------------------------------------------
-FROM oven/bun:1.2 AS runtime
+# Official Postgres 17 image already ships pg_dump (no apt download during build);
+# the Bun binary is copied in so the app runs exactly as before.
+FROM postgres:17-bookworm AS runtime
+COPY --from=oven/bun:1.2 /usr/local/bin/bun /usr/local/bin/bun
 WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3000
@@ -34,4 +37,5 @@ COPY --from=build /app/package.json ./package.json
 COPY --from=build /app/node_modules/postgres ./node_modules/postgres
 
 EXPOSE 3000
+ENTRYPOINT []
 CMD ["sh", "-c", "export CRON_SECRET=\"${CRON_SECRET:-$(head -c 24 /dev/urandom | od -An -tx1 | tr -d \" \\n\")}\" && bun run scripts/migrate.mjs && (bun scripts/scheduler.mjs &) && bun dist/server/index.mjs"]
