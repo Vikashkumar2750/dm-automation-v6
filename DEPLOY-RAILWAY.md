@@ -131,7 +131,7 @@ Track evidence and blockers in `roadmap.md`; implemented is not the same as
 live-verified.
 
 ## Database Backups (Super Admin → Database Backups)
-The legacy custom dump, import, SQL runner and backup cron are retired. Remove any
+The legacy partial dump, import UI and backup cron are retired. Remove any
 scheduler calling `/api/public/cron/db-backup`; authenticated calls return 410.
 Do not re-run the old backup setup scripts to re-enable these endpoints.
 
@@ -139,7 +139,16 @@ For Lovable Cloud, use More → Database → Manage → Settings → Export data
 Daily snapshots are under More → Database → Manage → Backups; they restore schema
 and data in place. Export first: later writes are lost and the schema also reverts.
 Neither snapshots nor exports include storage files; download those separately.
-For an independently hosted database, use its owner's supported backup tools.
+On Railway, the Super Admin page retains the full `pg_dump` download and SQL
+editor. The runtime image includes PostgreSQL 17 tools; `DATABASE_URL` must target
+the same independent database as the application's auth connection. Requests
+require confirmed Super Admin access and a saved, attributable audit event.
+SQL audit records contain metadata only, never the query text.
+Dump downloads cover `public`, `auth` and `storage`; they omit ownership/grants,
+cluster roles, other schemas and uploaded file bytes. They are not a complete
+hosting clone. Restore into a separate compatible test database first; a dump
+completion marker alone does not prove a successful restore. Managed auth/storage
+objects may require the destination provider's supported restoration procedure.
 Existing custom SQL files are data-only copies, not complete recoverable backups.
 Google Drive automated backup integration remains unconfigured.
 
