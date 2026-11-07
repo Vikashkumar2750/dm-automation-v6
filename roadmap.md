@@ -202,10 +202,11 @@ Real Meta + YouTube credentials are available when we reach OAuth phases.
 - [x] Billing source-read integrity (workspace/orders/membership/catalogue), with failed-read tests and membership-before-history checks; payment mutation/delivery unchanged.
 - [x] Remaining-page presentation audit: Connected Accounts, Publishing, Calendar, Comments, Automations, Workflows, Settings and AI have targeted unavailable/retry/draft-reset/mobile fixes. Full suite: 390 tests pass.
 - [ ] Diagnose screenshot Growth Insights unavailable error: current Cloud columns and authenticated SELECT grants verified; same-user reproduction blocked because requesting user has no matching preview account, and external deployed logs/session are unavailable.
-- [ ] Next: V6 acceptance audit and signed-in desktop/mobile verification; authenticated export/billing/health checks blocked by no preview auth users.
+- [ ] Signed-in desktop/mobile acceptance, export/billing/health checks (blocked: requesting user's preview account/session unavailable); local presentation audit completed.
 - [x] Converter 800MB + clear after download; Super Admin temp cleanup button
 - [x] Coupons: manual Apply + auto-apply (?coupon=), discount from MRP, server re-check
 - [x] Per-workspace Super Admin feature switches + health; enforced on server for revenue writes, public pages, checkout, emails
 - [x] Emails: branded receipt, creator sale/lead alerts, lead confirmation, one-by-one follow-up send from Contacts
 - [x] Heading hierarchy (shared panels, page titles, delivery editor); homepage product visuals
+- [x] Public browser checks: seven informational/converter pages have canonical/JSON-LD; Contact renders desktop/mobile without horizontal overflow or page errors.
 - [ ] Real payment, email delivery and signed-in Super Admin checks — need live test by owner

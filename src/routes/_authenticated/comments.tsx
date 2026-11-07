@@ -35,6 +35,7 @@ function CommentsPage() {
   const { activeOrg } = useTenant();
   const orgId = activeOrg?.id ?? null;
   const [post, setPost] = useState<SidebarPost | null>(null);
+  const [postWorkspace, setPostWorkspace] = useState<string | null>(null);
   return (
     <AppShell>
       <PageHeader
@@ -43,8 +44,8 @@ function CommentsPage() {
         actions={<><RefreshButton /><Button asChild variant="outline"><Link to="/inbox">Open inbox</Link></Button></>}
       />
       <div className="grid gap-4 lg:h-[calc(100vh-15rem)] lg:min-h-[480px] lg:grid-cols-[320px_minmax(0,1fr)] [&>*]:lg:min-h-0">
-        <PostSidebar orgId={orgId} selectedId={post?.externalPostId ?? null} onSelect={setPost} onPlatformChange={() => setPost(null)} />
-        {post && orgId ? <PostView key={post.externalPostId} orgId={orgId} post={post} /> : (
+        <PostSidebar orgId={orgId} selectedId={postWorkspace === orgId ? post?.externalPostId ?? null : null} onSelect={(selected) => { setPostWorkspace(orgId); setPost(selected); }} onPlatformChange={() => setPost(null)} />
+        {post && orgId && postWorkspace === orgId ? <PostView key={`${orgId}:${post.externalPostId}`} orgId={orgId} post={post} /> : (
           <div className="hidden min-h-[420px] items-center justify-center rounded-xl border border-dashed text-sm text-muted-foreground lg:flex">Select a post to see its comments.</div>
         )}
       </div>

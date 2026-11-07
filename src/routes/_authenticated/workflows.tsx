@@ -53,6 +53,7 @@ function WorkflowsPage() {
   const { activeOrg } = useTenant();
   const orgId = activeOrg?.id ?? null;
   const [post, setPost] = useState<SidebarPost | null>(null);
+  const [postWorkspace, setPostWorkspace] = useState<string | null>(null);
   const workflowsOn = useWorkflowsEnabled();
   if (!workflowsOn) {
     return (
@@ -66,8 +67,8 @@ function WorkflowsPage() {
     <AppShell>
       <PageHeader title="Automation workflows" description="Choose a post to see every automation journey on it — comment, rule, bot or manual reply, taps — from left to right." />
       <div className="grid gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
-        <PostSidebar orgId={orgId} selectedId={post?.externalPostId ?? null} onSelect={setPost} onPlatformChange={() => setPost(null)} />
-        {post && orgId ? <Journeys key={post.externalPostId} orgId={orgId} post={post} /> : (
+        <PostSidebar orgId={orgId} selectedId={postWorkspace === orgId ? post?.externalPostId ?? null : null} onSelect={(selected) => { setPostWorkspace(orgId); setPost(selected); }} onPlatformChange={() => setPost(null)} />
+        {post && orgId && postWorkspace === orgId ? <Journeys key={`${orgId}:${post.externalPostId}`} orgId={orgId} post={post} /> : (
           <div className="hidden min-h-[420px] items-center justify-center rounded-xl border border-dashed text-sm text-muted-foreground lg:flex">Select a post to see its workflow journeys.</div>
         )}
       </div>
