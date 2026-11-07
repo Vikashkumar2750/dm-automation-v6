@@ -189,6 +189,7 @@ Real Meta + YouTube credentials are available when we reach OAuth phases.
 - [x] Team Desk integration controls stack on phones; long webhook URLs/credentials wrap, controls have accessible labels, and confirmed empty key/webhook lists are explicit (signed-in visual verification still blocked).
 - [x] Account Health/Trust & Safety presentation: refresh, unavailable/stale states, sampled audit/policy labels, and unsigned requests separated from verified delivery failures; safety controls unchanged.
 - [x] Delivery Health presentation: retry/stale states, event/step/sample labels instead of verified-success claims, cautious missing-tap diagnosis, and long trace wrapping; sending unchanged.
+- [x] Automation report presentation: refresh/stale states, 20,000-event sample and billing distinction, filtered versus summary counts, explicit empty selections, and accurate 500-row/CSV labels.
 - [ ] Next: V6 acceptance audit and signed-in desktop/mobile verification; authenticated export/billing/health checks blocked by no preview auth users.
 - [x] Converter 800MB + clear after download; Super Admin temp cleanup button
 - [x] Coupons: manual Apply + auto-apply (?coupon=), discount from MRP, server re-check
