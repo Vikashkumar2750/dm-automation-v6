@@ -162,6 +162,7 @@ Real Meta + YouTube credentials are available when we reach OAuth phases.
 - [x] Add instagram_business_manage_comments scope + test comments button
 
 ## Master plan (Nov 2026) status
+- [ ] V6 dashboard overview: prioritize performance, quick actions, attention items and responsive lists; preserve workspace feature controls.
 - [x] Converter 800MB + clear after download; Super Admin temp cleanup button
 - [x] Coupons: manual Apply + auto-apply (?coupon=), discount from MRP, server re-check
 - [x] Per-workspace Super Admin feature switches + health; enforced on server for revenue writes, public pages, checkout, emails
