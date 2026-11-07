@@ -19,6 +19,7 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useTenant } from "@/hooks/useTenant";
+import { useWorkspaceAccountFilter } from "@/hooks/useWorkspaceAccountFilter";
 import { sendReply } from "@/lib/inbox.functions";
 import type { SocialPlatform } from "@/lib/social";
 import { listTeam } from "@/lib/team.functions";
@@ -54,8 +55,7 @@ function TeamDeskPage() {
   const orgId = activeOrg?.id ?? null;
   const fetchDesk = useServerFn(getTeamDesk);
   const fetchTeam = useServerFn(listTeam);
-  const [accountId, setAccountId] = useState("all");
-  const [platform, setPlatform] = useState<"all" | "instagram" | "facebook" | "youtube">("all");
+  const { accountId, setAccountId, platform, setPlatform } = useWorkspaceAccountFilter(orgId);
   const desk = useQuery({ queryKey: ["team-desk", orgId, accountId, platform], enabled: !!orgId, refetchInterval: 30_000, queryFn: () => fetchDesk({ data: { organizationId: orgId!, ...(accountId !== "all" ? { socialAccountId: accountId } : {}), ...(platform !== "all" ? { platform } : {}) } }) });
   const team = useQuery({ queryKey: ["team", orgId], enabled: !!orgId, queryFn: () => fetchTeam({ data: { organizationId: orgId! } }) });
   const names = useMemo(() => Object.fromEntries((team.data ?? []).map((m) => [m.user_id, m.name || m.email])), [team.data]);

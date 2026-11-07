@@ -31,6 +31,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { canEditComment } from "@/lib/comment-moderation";
 import { useTenant } from "@/hooks/useTenant";
+import { useWorkspaceAccountFilter } from "@/hooks/useWorkspaceAccountFilter";
 import {
   listConversations,
   listMessages,
@@ -145,8 +146,7 @@ function InboxPage() {
   const closeConversation = () => { void navigate({ search: {} }); };
   const [draft, setDraft] = useState("");
   const [commentMode, setCommentMode] = useState<"public" | "private">("public");
-  const [platform, setPlatform] = useState<Platform | "all">("all");
-  const [accountId, setAccountId] = useState("all");
+  const { accountId, setAccountId, platform, setPlatform } = useWorkspaceAccountFilter(orgId);
   const [channel, setChannel] = useState<Channel | "all">("all");
   const [status, setStatus] = useState<Status | "all">("all");
   const [unreadOnly, setUnreadOnly] = useState(false);

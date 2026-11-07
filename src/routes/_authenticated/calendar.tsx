@@ -77,8 +77,7 @@ function CalendarPage() {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
   });
-  const [accountId, setAccountId] = useState("all");
-  const [platform, setPlatform] = useState("all");
+  const { accountId, setAccountId, platform, setPlatform } = useWorkspaceAccountFilter(orgId);
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<ComposerDraft | null>(null);
   const [openedTarget, setOpenedTarget] = useState("");
@@ -229,6 +228,8 @@ function CalendarPage() {
           <div className="flex items-center justify-center py-16">
             <Loader2 className="size-5 animate-spin text-muted-foreground" />
           </div>
+        ) : postsQuery.isError && !postsQuery.data ? (
+          <div role="alert" className="flex flex-wrap items-center justify-between gap-3 p-5 text-sm text-destructive"><span>Calendar posts unavailable. Your schedule has not changed.</span><Button variant="outline" size="sm" disabled={postsQuery.isFetching} onClick={() => void postsQuery.refetch()}>Try again</Button></div>
         ) : (
           <div className="overflow-x-auto">
             <div className="min-w-[680px]">

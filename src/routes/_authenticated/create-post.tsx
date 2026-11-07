@@ -24,6 +24,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { FORMAT_TABS, FormatBadge, PostMediaThumb, StatsRow, formatKey, type FormatTab } from "@/components/app/PostListExtras";
 import { useTenant } from "@/hooks/useTenant";
+import { useWorkspaceAccountFilter } from "@/hooks/useWorkspaceAccountFilter";
 import { listSocialAccounts } from "@/lib/social-accounts.functions";
 import { listRecentRemotePosts } from "@/lib/automations.functions";
 import {
@@ -91,8 +92,7 @@ function CreatePostPage() {
   const [liveEdit, setLiveEdit] = useState<{ post: Post; caption: string } | null>(null);
   const [ytEdit, setYtEdit] = useState<{ post: Post; title: string; description: string; tags: string } | null>(null);
   const editYt = useServerFn(editYouTubeDetails);
-  const [platformFilter, setPlatformFilter] = useState<"all" | "instagram" | "facebook" | "youtube">("all");
-  const [accountFilter, setAccountFilter] = useState("all");
+  const { platform: platformFilter, setPlatform: setPlatformFilter, accountId: accountFilter, setAccountId: setAccountFilter } = useWorkspaceAccountFilter(orgId);
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [range, setRange] = useState<"all" | "7" | "30" | "custom">("all");

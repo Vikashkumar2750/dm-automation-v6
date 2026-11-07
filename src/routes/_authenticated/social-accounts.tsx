@@ -365,6 +365,8 @@ function SocialAccountsPage() {
           <div className="flex items-center justify-center py-12 text-sm text-muted-foreground">
             <Loader2 className="mr-2 size-4 animate-spin" /> Loading accounts…
           </div>
+        ) : accountsQuery.isError && !accountsQuery.data ? (
+          <div role="alert" className="flex flex-wrap items-center justify-between gap-3 px-5 py-6 text-sm text-destructive"><span>Connected accounts unavailable. Your connections have not changed.</span><Button variant="outline" size="sm" disabled={accountsQuery.isFetching} onClick={() => void accountsQuery.refetch()}>Try again</Button></div>
         ) : accounts.length === 0 ? (
           <EmptyState
             icon={Plug}

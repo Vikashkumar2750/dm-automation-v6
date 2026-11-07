@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useTenant } from "@/hooks/useTenant";
+import { useWorkspaceAccountFilter } from "@/hooks/useWorkspaceAccountFilter";
 import { benchmarkTips, engagementRate, FUNNEL_STAGES, hourLabel, WEEKDAYS } from "@/lib/growth";
 import { autofillProfile, deleteCompetitor, generateContentPlan, getGrowthOverview, getProfileSources, saveCompetitor, type PlanDay } from "@/lib/growth.functions";
 import { AI_USAGE_KEY, AiCreditBadge } from "@/components/app/AiCreditBadge";
@@ -38,8 +39,7 @@ function GrowthPage() {
   const { activeOrg } = useTenant();
   const orgId = activeOrg?.id ?? null;
   const fetchOverview = useServerFn(getGrowthOverview);
-  const [accountId, setAccountId] = useState("all");
-  const [platform, setPlatform] = useState<"all" | "instagram" | "facebook" | "youtube">("all");
+  const { accountId, setAccountId, platform, setPlatform } = useWorkspaceAccountFilter(orgId);
   const q = useQuery({ queryKey: ["growth", orgId, accountId, platform], enabled: !!orgId, refetchInterval: 300_000, queryFn: () => fetchOverview({ data: { organizationId: orgId!, ...(accountId !== "all" ? { socialAccountId: accountId } : {}), ...(platform !== "all" ? { platform } : {}) } }) });
   const role = activeOrg?.role;
   const manager = role === "owner" || role === "admin" || role === "manager";
@@ -48,7 +48,7 @@ function GrowthPage() {
     <AppShell>
       <PageHeader title="Growth insights" description="When to post, what to post, and where your DM funnel leaks." actions={<div className="flex flex-wrap items-center gap-2"><PlatformAccountFilter orgId={orgId ?? null} platform={platform} onPlatformChange={setPlatform} accountId={accountId} onAccountChange={setAccountId} /><Button variant="outline" size="icon" aria-label="Refresh growth insights" disabled={q.isFetching} onClick={() => void q.refetch()}><RefreshCw className="size-4" /></Button><GuideButton guide="growth" /></div>} />
       {q.isError && <p role="alert" className="mb-4 text-sm text-destructive">Growth insights could not be refreshed. Previously loaded results may be out of date.</p>}
-      <p className="mb-4 text-xs text-muted-foreground">Audience timing uses up to 10,000 incoming messages across up to 500 loaded conversations. Funnel automation and revenue events are workspace-wide samples, regardless of account selection. Missing source data can appear as zero; these insights are not a delivery-health guarantee.</p>
+      <p className="mb-4 text-xs text-muted-foreground">Audience timing uses up to 10,000 incoming messages across up to 500 loaded conversations. Funnel automation and revenue events are workspace-wide samples, regardless of account selection. Failed reads are unavailable, not zero; these insights are not a delivery-health guarantee.</p>
       {!orgId || !q.data ? (
         <p role="status" className="text-sm text-muted-foreground">{q.isError ? "Growth insights unavailable. Refresh to retry." : "Loading growth insights…"}</p>
       ) : (

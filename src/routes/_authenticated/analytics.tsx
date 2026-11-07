@@ -24,6 +24,7 @@ import {
 } from "@/components/app/primitives";
 import { Button } from "@/components/ui/button";
 import { useTenant } from "@/hooks/useTenant";
+import { useWorkspaceAccountFilter } from "@/hooks/useWorkspaceAccountFilter";
 import { getAnalytics } from "@/lib/analytics.functions";
 import { AutomationReportPanel } from "@/components/app/AutomationReportPanel";
 
@@ -54,8 +55,7 @@ const RANGES = [7, 30, 90] as const;
 function AnalyticsPage() {
   const { activeOrg } = useTenant();
   const [rangeDays, setRangeDays] = useState<number>(30);
-  const [accountId, setAccountId] = useState("all");
-  const [platform, setPlatform] = useState<"all" | "instagram" | "facebook" | "youtube">("all");
+  const { accountId, setAccountId, platform, setPlatform } = useWorkspaceAccountFilter(activeOrg?.id);
   const fetchAnalytics = useServerFn(getAnalytics);
 
   const { data, isError, isFetching, refetch } = useQuery({
