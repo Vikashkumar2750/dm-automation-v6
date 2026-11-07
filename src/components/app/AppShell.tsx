@@ -45,6 +45,7 @@ import { useTenant } from "@/hooks/useTenant";
 import { useWorkspaceFeatures } from "@/hooks/useWorkspaceFeatures";
 import { useWorkflowsEnabled } from "@/hooks/useWorkflowsEnabled";
 import { supabase } from "@/integrations/supabase/client";
+import { CommandSearch } from "@/components/app/CommandSearch";
 import { PageReadyGate } from "@/components/app/PageReadyGate";
 import { AutomationNotificationsProvider, AutomationNotificationBell } from "@/components/app/AutomationNotifications";
 
@@ -283,13 +284,8 @@ function TopBar({ onMenu }: { onMenu: () => void }) {
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <div className="relative mx-auto hidden w-full max-w-lg md:block">
-        <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-subtle-foreground" />
-        <input
-          type="search"
-          placeholder="Search posts, conversations, contacts..."
-          className="h-10 w-full rounded-lg border bg-surface-secondary pr-4 pl-9 text-sm outline-none placeholder:text-subtle-foreground focus:border-ring"
-        />
+      <div className="mx-auto flex w-full max-w-lg justify-end md:justify-center">
+        <CommandSearch pages={navGroups.flatMap((g) => g.items.map((i) => ({ label: i.label, to: i.to })))} />
       </div>
 
       <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-2">
