@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Building2, RefreshCw, Search } from "lucide-react";
+import { Building2, Download, RefreshCw, Search } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -9,7 +9,7 @@ import { AdminTable } from "@/components/app/AdminTable";
 import { EmptyState, PageHeader, Panel, StatusBadge } from "@/components/app/primitives";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { filterAdminWorkspaces } from "@/lib/admin-directory";
+import { adminWorkspacesToCsv, filterAdminWorkspaces } from "@/lib/admin-directory";
 import {
   Select,
   SelectContent,
@@ -96,12 +96,25 @@ function OrganizationsPage() {
   const rows = filterAdminWorkspaces(data?.organizations ?? [], search, plan, status, sort, expiry);
   const filtered = Boolean(search.trim() || plan !== "all" || status !== "all" || expiry !== "all");
 
+  function exportWorkspaces() {
+    if (!data || rows.length === 0) return;
+    const url = URL.createObjectURL(new Blob(["\uFEFF", adminWorkspacesToCsv(rows)], { type: "text/csv;charset=utf-8" }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `autodm-workspaces-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    toast.success(`${rows.length} workspaces exported`);
+  }
+
   return (
     <div className="space-y-6">
       <PageHeader
         title="Workspaces"
         description="Workspace plans, account totals and automation status."
-        actions={<Button variant="outline" size="icon" aria-label="Refresh workspaces" title="Refresh workspaces" disabled={overview.isFetching} onClick={() => void overview.refetch()}><RefreshCw className={overview.isFetching ? "size-4 animate-spin" : "size-4"} /></Button>}
+        actions={<div className="flex items-center gap-2"><Button variant="outline" size="sm" disabled={!data || rows.length === 0} onClick={exportWorkspaces}><Download className="size-4" />Export CSV</Button><Button variant="outline" size="icon" aria-label="Refresh workspaces" title="Refresh workspaces" disabled={overview.isFetching} onClick={() => void overview.refetch()}><RefreshCw className={overview.isFetching ? "size-4 animate-spin" : "size-4"} /></Button></div>}
       />
       {overview.isError && <div role="alert" className="flex flex-wrap items-center justify-between gap-3 border-l-2 border-warning bg-warning-soft px-4 py-3 text-sm"><span>Workspace list could not be refreshed.</span><Button variant="outline" size="sm" onClick={() => void overview.refetch()}>Try again</Button></div>}
 
