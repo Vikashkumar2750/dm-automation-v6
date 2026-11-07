@@ -41,3 +41,4 @@
 - Dashboard setup derives milestones from confirmed source reads; sales reuses the Revenue query and explicitly separates its fixed event window from the capped lead sample — prevents invented completion or misleading totals.
 - Item links carry a workspace ID and validated item ID; resolve only against active-workspace reads and never auto-switch workspaces — prevents stale search links from selecting another tenant's chat or post.
 - Admin overview derives priorities from its existing protected overview read, labels event samples explicitly, and keeps unsigned probes separate from verified delivery failures — no new delivery calls or misleading health totals.
+- Admin workspace tabs mount on first visit and stay mounted while inactive; key the detail view by workspace ID — preserves unsaved controls without loading every panel on entry or leaking drafts across tenants.

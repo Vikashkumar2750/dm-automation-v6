@@ -18,6 +18,7 @@ import {
   Users,
   Webhook,
   Workflow,
+  ChevronDown,
   type LucideIcon,
 } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
@@ -29,37 +30,23 @@ import { PageReadyGate } from "@/components/app/PageReadyGate";
 
 type NavItem = { label: string; to: string; icon: LucideIcon; exact?: boolean };
 
-const opsNav: NavItem[] = [
-  { label: "Overview", to: "/admin", icon: LayoutDashboard, exact: true },
-  { label: "Organizations", to: "/admin/organizations", icon: Building2 },
-  { label: "Users", to: "/admin/users", icon: Users },
-  { label: "Social Accounts", to: "/admin/accounts", icon: Share2 },
-  { label: "Automations", to: "/admin/automations", icon: Workflow },
-  { label: "Messages", to: "/admin/messages", icon: MessageSquare },
-  { label: "Inquiries", to: "/admin/inquiries", icon: LifeBuoy },
-];
-
-const healthNav: NavItem[] = [
-  { label: "Live Alerts", to: "/admin/alerts", icon: Siren },
-  { label: "Jobs & Queue", to: "/admin/jobs", icon: Gauge },
-  { label: "Webhooks", to: "/admin/webhooks", icon: Webhook },
-  { label: "API Health", to: "/admin/health", icon: Activity },
-];
-
-const governNav: NavItem[] = [
-  { label: "Plans & Billing", to: "/admin/plans", icon: CreditCard },
-  { label: "Blog & SEO", to: "/admin/blog", icon: Newspaper },
-  { label: "Media Library", to: "/admin/media", icon: Images },
-  { label: "Security & Audit", to: "/admin/audit", icon: FileClock },
-  { label: "System Settings", to: "/admin/settings", icon: Settings },
+const navGroups: { label: string; items: NavItem[] }[] = [
+  { label: "Command Centre", items: [{ label: "Overview", to: "/admin", icon: LayoutDashboard, exact: true }] },
+  { label: "Workspaces & Users", items: [{ label: "Workspaces", to: "/admin/organizations", icon: Building2 }, { label: "Users", to: "/admin/users", icon: Users }, { label: "Social Accounts", to: "/admin/accounts", icon: Share2 }] },
+  { label: "Operations", items: [{ label: "Automations", to: "/admin/automations", icon: Workflow }, { label: "Messages", to: "/admin/messages", icon: MessageSquare }, { label: "Inquiries", to: "/admin/inquiries", icon: LifeBuoy }] },
+  { label: "Monitoring & Health", items: [{ label: "Live Alerts", to: "/admin/alerts", icon: Siren }, { label: "Jobs & Queue", to: "/admin/jobs", icon: Gauge }, { label: "Webhooks", to: "/admin/webhooks", icon: Webhook }, { label: "API Health", to: "/admin/health", icon: Activity }] },
+  { label: "Platform Management", items: [{ label: "Plans & Billing", to: "/admin/plans", icon: CreditCard }, { label: "Security & Audit", to: "/admin/audit", icon: FileClock }, { label: "System Settings", to: "/admin/settings", icon: Settings }] },
+  { label: "Content", items: [{ label: "Blog & SEO", to: "/admin/blog", icon: Newspaper }, { label: "Media Library", to: "/admin/media", icon: Images }] },
 ];
 
 function NavLink({ item, pathname }: { item: NavItem; pathname: string }) {
   const Icon = item.icon;
-  const active = item.exact ? pathname === item.to : pathname.startsWith(item.to);
+  const active = item.exact ? pathname.replace(/\/$/, "") === item.to : pathname.startsWith(item.to) || (item.to === "/admin/organizations" && pathname.startsWith("/admin/org/"));
   return (
     <Link
       to={item.to}
+      preload="intent"
+      aria-current={active ? "page" : undefined}
       className={cn(
         "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
         active
@@ -74,6 +61,20 @@ function NavLink({ item, pathname }: { item: NavItem; pathname: string }) {
 }
 
 function Sidebar({ pathname }: { pathname: string }) {
+  const [collapsed, setCollapsed] = useState<string[]>([]);
+  useEffect(() => {
+    try {
+      const saved: unknown = JSON.parse(localStorage.getItem("autodm_admin_nav_collapsed") ?? "[]");
+      if (Array.isArray(saved)) setCollapsed(saved.filter((value): value is string => typeof value === "string"));
+    } catch { /* Optional display preference only. */ }
+  }, []);
+  const toggle = (label: string) => {
+    setCollapsed((previous) => {
+      const next = previous.includes(label) ? previous.filter((item) => item !== label) : [...previous, label];
+      try { localStorage.setItem("autodm_admin_nav_collapsed", JSON.stringify(next)); } catch { /* Optional preference. */ }
+      return next;
+    });
+  };
   return (
     <div className="flex h-full flex-col border-r bg-sidebar">
       <div className="flex items-center gap-3 border-b px-5 py-4">
@@ -88,31 +89,12 @@ function Sidebar({ pathname }: { pathname: string }) {
         </div>
       </div>
 
-      <nav className="flex-1 overflow-y-auto px-3 py-4">
-        <p className="px-3 pb-2 text-xs font-semibold tracking-wide text-subtle-foreground uppercase">
-          Platform
-        </p>
-        <div className="space-y-1">
-          {opsNav.map((i) => (
-            <NavLink key={i.to} item={i} pathname={pathname} />
-          ))}
-        </div>
-        <p className="px-3 pt-5 pb-2 text-xs font-semibold tracking-wide text-subtle-foreground uppercase">
-          Health
-        </p>
-        <div className="space-y-1">
-          {healthNav.map((i) => (
-            <NavLink key={i.to} item={i} pathname={pathname} />
-          ))}
-        </div>
-        <p className="px-3 pt-5 pb-2 text-xs font-semibold tracking-wide text-subtle-foreground uppercase">
-          Governance
-        </p>
-        <div className="space-y-1">
-          {governNav.map((i) => (
-            <NavLink key={i.to} item={i} pathname={pathname} />
-          ))}
-        </div>
+      <nav aria-label="Super Admin navigation" className="flex-1 space-y-4 overflow-y-auto px-3 py-4">
+        {navGroups.map((group, index) => {
+          const current = group.items.some((item) => item.exact ? pathname.replace(/\/$/, "") === item.to : pathname.startsWith(item.to) || (item.to === "/admin/organizations" && pathname.startsWith("/admin/org/")));
+          const expanded = current || !collapsed.includes(group.label);
+          return <div key={group.label}><Button variant="ghost" onClick={() => toggle(group.label)} aria-expanded={expanded} aria-controls={`admin-nav-${index}`} className="mb-1 h-8 w-full justify-between px-3 text-xs font-semibold text-subtle-foreground"><span>{group.label}</span><ChevronDown className={expanded ? "size-3.5" : "size-3.5 -rotate-90"} /></Button><div id={`admin-nav-${index}`} hidden={!expanded} className="space-y-1">{group.items.map((item) => <NavLink key={item.to} item={item} pathname={pathname} />)}</div></div>;
+        })}
       </nav>
     </div>
   );
