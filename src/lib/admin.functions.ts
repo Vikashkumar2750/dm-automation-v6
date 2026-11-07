@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { explainReason } from "@/lib/activity-explain";
+import { effectiveWorkspacePlan } from "@/lib/workspace-entitlements";
 
 export type AdminOrgRow = {
   id: string;
@@ -15,6 +16,13 @@ export type AdminOrgRow = {
   conversations: number;
   posts: number;
   automationsPaused: boolean;
+  ownerName?: string | null;
+  ownerEmail?: string | null;
+  planExpiresAt?: string | null;
+  effectivePlan?: string;
+  inherited?: boolean;
+  parentId?: string | null;
+  parentName?: string | null;
 };
 
 export type PlatformOverview = {
@@ -185,14 +193,14 @@ export const getPlatformOverview = createServerFn({ method: "GET" })
 
     const [orgs, members, accounts, convs, posts, profiles, runs, hooks, msgs, settings, platform] =
       await Promise.all([
-        supabaseAdmin.from("organizations").select("id, name, slug, plan, created_at"),
+        supabaseAdmin.from("organizations").select("id, name, slug, plan, created_at, owner_id, parent_organization_id, plan_expires_at, plan_source"),
         supabaseAdmin.from("organization_members").select("organization_id"),
         supabaseAdmin
           .from("social_accounts")
           .select("organization_id, platform, status, token_expires_at"),
         supabaseAdmin.from("conversations").select("id, organization_id"),
         supabaseAdmin.from("posts").select("organization_id, status"),
-        supabaseAdmin.from("profiles").select("id"),
+        supabaseAdmin.from("profiles").select("id, full_name, email"),
         supabaseAdmin.from("automation_runs").select("id").gte("created_at", since),
         supabaseAdmin
           .from("webhook_events")
@@ -230,8 +238,14 @@ export const getPlatformOverview = createServerFn({ method: "GET" })
       (settings.data ?? []).filter((s) => s.is_paused).map((s) => s.organization_id),
     );
 
+    const organizationMap = new Map((orgs.data ?? []).map((org) => [org.id, org]));
+    const ownerMap = new Map((profiles.data ?? []).map((profile) => [profile.id, profile]));
     const orgRows: AdminOrgRow[] = (orgs.data ?? [])
-      .map((o) => ({
+      .map((o) => {
+        const parent = o.parent_organization_id ? organizationMap.get(o.parent_organization_id) : undefined;
+        const entitlement = effectiveWorkspacePlan(o, parent ?? null);
+        const owner = ownerMap.get(o.owner_id);
+        return {
         id: o.id,
         name: o.name,
         slug: o.slug,
@@ -242,7 +256,14 @@ export const getPlatformOverview = createServerFn({ method: "GET" })
         conversations: convMap.get(o.id) ?? 0,
         posts: postMap.get(o.id) ?? 0,
         automationsPaused: pausedSet.has(o.id),
-      }))
+        ownerName: owner?.full_name ?? null,
+        ownerEmail: owner?.email ?? null,
+        effectivePlan: entitlement.plan,
+        planExpiresAt: entitlement.plan_expires_at,
+        inherited: entitlement.inherited,
+        parentId: o.parent_organization_id,
+        parentName: parent?.name ?? null,
+      }; })
       .sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
 
     const planMap = new Map<string, number>();
