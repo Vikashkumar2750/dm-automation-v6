@@ -31,14 +31,16 @@ function AdminDatabasePage() {
     </header>
     <section className="space-y-3 border-b pb-6">
       <h2 className="text-lg font-semibold">Complete database export</h2>
-      <p className="text-sm text-muted-foreground">Lovable Cloud: More → Database → Manage → Settings → Export data → Database → Export → Start export.</p>
-      <p className="text-sm text-muted-foreground">The export includes database structure, data and user accounts with password hashes. Storage files, secrets and sign-in provider settings are not included. Download storage files separately from More → Storage.</p>
-      <p className="text-sm text-muted-foreground">For an independently hosted live database, use that database owner's supported export and restore tools. Confirm the destination before importing.</p>
+      <p className="text-sm text-muted-foreground">The live database is hosted on Supabase, so take the full dump from that Supabase project: Project → Database → Backups (download a daily backup), or run the Supabase CLI with the project's connection string:</p>
+      <pre className="overflow-x-auto rounded-md border bg-muted p-3 text-xs">{`supabase db dump --db-url "$DB_URL" -f roles.sql --role-only
+supabase db dump --db-url "$DB_URL" -f schema.sql
+supabase db dump --db-url "$DB_URL" -f data.sql --use-copy --data-only`}</pre>
+      <p className="text-sm text-muted-foreground">Restore all three files in order (roles, schema, data) with psql into the target project. User accounts live in the auth schema and are included in the data dump. Storage files, secrets and sign-in provider settings are not included — download storage buckets separately. Confirm the destination before importing.</p>
       <p role="alert" className="text-sm text-destructive">Legacy in-app SQL exports are not complete backups: user accounts and schema were omitted, and failed rows could be skipped. In-app full exports, imports and arbitrary SQL execution are disabled.</p>
     </section>
     <section className="space-y-3 border-b pb-6">
       <h2 className="text-lg font-semibold">Daily snapshots & restore</h2>
-      <p className="text-sm text-muted-foreground">Lovable Cloud provides one database snapshot per day, retained for up to roughly 14 days. View available timestamps in More → Database → Manage → Backups. Google Drive scheduling is not configured here.</p>
+      <p className="text-sm text-muted-foreground">Supabase paid plans keep daily backups (retention depends on plan); Point-in-Time Recovery is an add-on. View them in the Supabase project under Database → Backups. Google Drive scheduling is not configured here.</p>
       <p className="text-sm text-muted-foreground">Restore targets a daily snapshot in the same project, not an arbitrary time or an individual table. Data written after it is lost, the schema reverts, and the database is unavailable for a few minutes. Export the current state first; storage files are not covered.</p>
     </section>
     <section className="space-y-3">
