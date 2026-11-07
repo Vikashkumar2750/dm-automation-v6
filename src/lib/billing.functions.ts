@@ -31,25 +31,27 @@ export const getBillingState = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) => z.object({ organizationId: z.string().uuid() }).parse(data))
   .handler(async ({ data, context }) => {
-    const { data: org } = await context.supabase
+    const { data: org, error: orgError } = await context.supabase
       .from("organizations")
       .select("id, name, plan, plan_expires_at, plan_source, parent_organization_id")
       .eq("id", data.organizationId)
       .maybeSingle();
-    const { data: orders } = await context.supabase
-      .from("plan_orders")
-      .select("id, plan, billing_cycle, amount_paise, status, mode, created_at, paid_at")
-      .eq("organization_id", data.organizationId)
-      .order("created_at", { ascending: false })
-      .limit(10);
-    const { data: me } = await context.supabase
+    const { data: me, error: memberError } = await context.supabase
       .from("organization_members")
       .select("role")
       .eq("organization_id", data.organizationId)
       .eq("user_id", context.userId)
       .maybeSingle();
 
+    if (orgError || memberError) throw new Error("Billing unavailable. Refresh to retry.");
     if (!org || !me) throw new Error("not_a_member");
+    const { data: orders, error: ordersError } = await context.supabase
+      .from("plan_orders")
+      .select("id, plan, billing_cycle, amount_paise, status, mode, created_at, paid_at")
+      .eq("organization_id", data.organizationId)
+      .order("created_at", { ascending: false })
+      .limit(10);
+    if (ordersError) throw new Error("Billing unavailable. Refresh to retry.");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { resolveWorkspaceEntitlements } = await import("./workspace-entitlements.server");
     const entitlement = await resolveWorkspaceEntitlements(supabaseAdmin, org);

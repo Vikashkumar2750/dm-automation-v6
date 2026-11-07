@@ -18,7 +18,7 @@ function client(failed?: string, member = true) {
     return q;
   } };
 }
-const handler = new Function("admin", "resolveEntitlement", "DEMO_KEY_IDS", js)({}, async () => ({ plan: "pro", plan_expires_at: null, inherited: false }), []);
+const handler = new Function("admin", "resolveEntitlement", "DEMO_KEY_IDS", "process", js)({}, async () => ({ plan: "pro", plan_expires_at: null, inherited: false }), [], { env: {} });
 describe("Billing read integrity", () => {
   it.each(["organizations", "organization_members", "plan_orders"])("rejects failed %s reads", async (table) => {
     await expect(handler({ data: { organizationId: "workspace" }, context: { supabase: client(table), userId: "user" } })).rejects.toThrow("Billing unavailable");

@@ -82,14 +82,9 @@ export const savePlatformConfig = createServerFn({ method: "POST" })
 
 /** Public: the plan catalogue shown on the billing page. */
 export const getPublicPlans = createServerFn({ method: "GET" }).handler(async () => {
-  try {
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { readPlatformConfig } = await import("@/lib/platform-config.server");
-    return (await readPlatformConfig(supabaseAdmin)).plans;
-  } catch {
-    const { PLANS } = await import("@/lib/plans");
-    return PLANS;
-  }
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { readPlatformConfig } = await import("@/lib/platform-config.server");
+  return (await readPlatformConfig(supabaseAdmin, { strictReads: true })).plans;
 });
 
 /** Public, rate-limited forgot-password request. Always answers the same way. */
