@@ -140,6 +140,7 @@ function Sidebar({ pathname }: { pathname: string }) {
     }))
     .filter((g) => g.items.length > 0);
   const { openGroup, toggleGroup } = useSidebarGroup();
+  const navigateTo = useNavigate();
   const brand = activeOrg?.brandName?.trim() || "AutoDM";
   const logo = activeOrg?.logoUrl?.trim() || "/logo.webp";
   const color = activeOrg?.brandColor?.trim() || null;
@@ -193,7 +194,13 @@ function Sidebar({ pathname }: { pathname: string }) {
                 <Button
                   variant="ghost"
                   type="button"
-                  onClick={() => toggleGroup(g.title)}
+                  onClick={() => {
+                    const opening = !isOpen;
+                    toggleGroup(g.title);
+                    const first = g.items[0];
+                    const inGroup = g.items.some((i) => pathname === i.to || pathname.startsWith(`${i.to}/`));
+                    if (opening && first && !inGroup) void navigateTo({ to: first.to as never });
+                  }}
                   aria-expanded={isOpen}
                   aria-controls={`user-nav-${index}`}
                   className="dashboard-nav-group min-h-12 h-auto w-full justify-between gap-2 whitespace-normal rounded-lg px-3 py-2 text-left text-sm font-semibold leading-5 text-sidebar-foreground"

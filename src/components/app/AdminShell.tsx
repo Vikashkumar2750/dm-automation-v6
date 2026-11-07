@@ -63,6 +63,7 @@ function NavLink({ item, pathname }: { item: NavItem; pathname: string }) {
 
 function Sidebar({ pathname }: { pathname: string }) {
   const { openGroup, toggleGroup } = useSidebarGroup("admin");
+  const navigateTo = useNavigate();
   return (
     <div className="dashboard-sidebar flex h-full flex-col border-r border-sidebar-border bg-sidebar">
       <div className="flex items-center gap-3 border-b border-sidebar-border px-5 py-5">
@@ -81,7 +82,7 @@ function Sidebar({ pathname }: { pathname: string }) {
         {navGroups.map((group, index) => {
           const expanded = openGroup === group.label;
           const GroupIcon = group.items[0]?.icon ?? LayoutDashboard;
-          return <div key={group.label}><Button variant="ghost" onClick={() => toggleGroup(group.label)} aria-expanded={expanded} aria-controls={`admin-nav-${index}`} className="dashboard-nav-group min-h-12 h-auto w-full justify-between gap-2 whitespace-normal rounded-lg px-3 py-2 text-left text-sm font-semibold leading-5 text-sidebar-foreground"><span className="flex min-w-0 items-center gap-3"><span className="dashboard-group-icon inline-flex size-7 shrink-0 items-center justify-center rounded-md"><GroupIcon className="size-4" /></span><span>{group.label}</span></span><ChevronDown className={cn("size-4 shrink-0 transition-transform motion-reduce:transition-none", !expanded && "-rotate-90")} /></Button><div id={`admin-nav-${index}`} hidden={!expanded} className="dashboard-nav-children ml-6 mt-1 space-y-1 border-l border-sidebar-border pl-3">{group.items.map((item) => <NavLink key={item.to} item={item} pathname={pathname} />)}</div></div>;
+          return <div key={group.label}><Button variant="ghost" onClick={() => { const opening = !expanded; toggleGroup(group.label); const first = group.items[0]; const inGroup = group.items.some((i) => pathname === i.to || pathname.startsWith(`${i.to}/`)); if (opening && first && !inGroup) void navigateTo({ to: first.to as never }); }} aria-expanded={expanded} aria-controls={`admin-nav-${index}`} className="dashboard-nav-group min-h-12 h-auto w-full justify-between gap-2 whitespace-normal rounded-lg px-3 py-2 text-left text-sm font-semibold leading-5 text-sidebar-foreground"><span className="flex min-w-0 items-center gap-3"><span className="dashboard-group-icon inline-flex size-7 shrink-0 items-center justify-center rounded-md"><GroupIcon className="size-4" /></span><span>{group.label}</span></span><ChevronDown className={cn("size-4 shrink-0 transition-transform motion-reduce:transition-none", !expanded && "-rotate-90")} /></Button><div id={`admin-nav-${index}`} hidden={!expanded} className="dashboard-nav-children ml-6 mt-1 space-y-1 border-l border-sidebar-border pl-3">{group.items.map((item) => <NavLink key={item.to} item={item} pathname={pathname} />)}</div></div>;
         })}
       </nav>
     </div>
