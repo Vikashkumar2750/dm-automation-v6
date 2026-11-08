@@ -66,12 +66,12 @@ export const runSelfCheck = createServerFn({ method: "POST" })
     });
 
     // 5. Webhook delivery backlog/failures
-    const wh = await admin.from("outgoing_webhooks").select("active,last_status,failure_count");
+    const wh = await admin.from("outgoing_webhooks").select("enabled,last_status,last_error");
     if (wh.error) {
       results.push({ id: "webhook-delivery", area: "Webhooks", label: "Outgoing webhook delivery", status: "fail", detail: "Webhook settings unavailable" });
     } else {
-      const rows = (wh.data ?? []) as { active?: boolean; last_status?: number | null; failure_count?: number | null }[];
-      const failing = rows.filter((r) => r.active && ((r.failure_count ?? 0) > 0 || (r.last_status ?? 200) >= 400)).length;
+      const rows = (wh.data ?? []) as { enabled?: boolean; last_status?: number | null; last_error?: string | null }[];
+      const failing = rows.filter((r) => r.enabled && (r.last_error || (r.last_status ?? 200) >= 400)).length;
       results.push({
         id: "webhook-delivery", area: "Webhooks", label: "Outgoing webhook delivery",
         status: failing ? "warn" : "pass",
