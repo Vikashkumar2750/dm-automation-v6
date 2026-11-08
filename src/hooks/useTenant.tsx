@@ -1,9 +1,10 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState, useSyncExternalStore } from "react";
+import { useCallback, useSyncExternalStore } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 
 import { supabase } from "@/integrations/supabase/client";
 import { getTenantOrganizations } from "@/lib/workspace.functions";
+import { createTenantSelection } from "./tenant-selection";
 
 export type OrgRole = "owner" | "admin" | "manager" | "agent" | "viewer";
 
@@ -22,6 +23,7 @@ export type Organization = {
 };
 
 const ACTIVE_ORG_KEY = "dmfiy.active_org";
+const tenantSelection = createTenantSelection();
 
 // One shared session for the whole tab. Every component reads the same value, so a
 // page opened later gets the signed-in user instantly instead of starting "logged out"
@@ -165,8 +167,20 @@ export function useTenant() {
     },
   });
 
-  const [activeOrgId, setActiveOrgId] = useState<string | null>(() =>
-    typeof window === "undefined" ? null : window.localStorage.getItem(ACTIVE_ORG_KEY),
+  const userId = user?.id;
+  const subscribeSelection = useCallback((listener: () => void) => {
+    const unsubscribe = tenantSelection.subscribe(listener);
+    if (userId && !tenantSelection.has(userId)) {
+      let saved: string | null = null;
+      try { saved = window.localStorage.getItem(`${ACTIVE_ORG_KEY}.${userId}`) ?? window.localStorage.getItem(ACTIVE_ORG_KEY); } catch { /* Storage is optional. */ }
+      tenantSelection.set(userId, saved);
+    }
+    return unsubscribe;
+  }, [userId]);
+  const activeOrgId = useSyncExternalStore(
+    subscribeSelection,
+    () => userId ? tenantSelection.get(userId) : null,
+    () => null,
   );
 
   const organizations = orgs.data ?? [];
@@ -174,9 +188,9 @@ export function useTenant() {
     organizations.find((o) => o.id === activeOrgId) ?? organizations[0] ?? null;
 
   function switchOrg(id: string) {
-    setActiveOrgId(id);
-    window.localStorage.setItem(ACTIVE_ORG_KEY, id);
-    queryClient.invalidateQueries();
+    if (!userId || !organizations.some((org) => org.id === id)) return;
+    tenantSelection.set(userId, id);
+    try { window.localStorage.setItem(`${ACTIVE_ORG_KEY}.${userId}`, id); } catch { /* Selection still works without storage. */ }
   }
 
   const fullName = profile.data?.full_name ?? user?.email ?? "";

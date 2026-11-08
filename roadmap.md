@@ -1,14 +1,16 @@
 # DM FB-IG-YT by Techaasvik — Build Roadmap
 
 ## Consolidated remaining checklist — Nov 8, 06:12 UTC
+- [x] Reproduced live workspace-switch defect: selector changed to ARTH but Revenue kept prior workspace until reload. Replaced per-hook selection with shared user-keyed selection; membership guard remains. Live ARTH reload confirms automatic Razorpay connection; no keys read or changed.
+- [ ] Owner authorized agent-selected Meta targets, deferred YouTube, confirmed ARTH test Razorpay and receipt recipient; publishing blocked by pending permission. Hosting access is redacted screenshots only, not yet supplied. Payment execution paused until current-release workspace switching is verified to prevent wrong-workspace writes.
 - [x] Nov 8 continuation: owner's screenshot confirms deployed Team members tab with owner and invitation controls. Reports/integrations no longer depend on shared-inbox reads; their own failures remain visible. Invitation submission and other tabs are not verified by this screenshot.
 - [x] Re-ran all regression tests: 425 tests across 70 files pass. Browser checks of Dashboard, Team, Team Desk and Database Backups redirect to sign-in with no page errors. These are access checks, not authenticated acceptance.
 - [x] Full dump export confirmed working by the owner; Google Drive explicitly deferred. Growth repair confirmed installed and loading; it is no longer a pending repair.
 - [x] Owner's Nov 8 screenshots confirm live invoice read/save: ₹500 ARTH invoice marked paid; ₹200 Vikas Dhiman invoice added, returned as unpaid, and totals show ₹200 due/₹500 marked paid. This is manual invoice bookkeeping, not verified payment settlement.
 - [ ] Shared inbox, Approvals and API/webhooks live checks — invoice success does not establish installation of their five schema sources after independent-tab changes.
 - [ ] Latest merged Team members, invites/workspace switching, Dashboard/bell, remaining admin drafts/exports/publishing selectors and cross-account/Agency/mobile acceptance — authorized current-release session needed. Self-session mint failed because no requesting-user account matches this preview backend.
-- [ ] Meta/YouTube delivery, follower taps, moderation, publishing, fresh notifications and active safety — disposable approved post/chat targets and connected provider authorization needed.
-- [ ] Payment → receipt/email → private download and unpaid live denial — approved product, amount, recipient and verified sender needed; automated authorization tests pass, no real charge attempted.
+- [ ] Meta delivery/follower taps/moderation/fresh notifications/safety — owner authorized agent-selected targets; live actions remain unperformed while the confirmed workspace-switch defect awaits deployment verification. Publishing permission is unapproved; YouTube testing deferred by owner.
+- [ ] ARTH Razorpay test payment → receipt/email/private download and unpaid live denial — live connection confirmed after reload and recipient supplied; test execution awaits workspace-switch deployment verification and safe test-mode confirmation. No real charge attempted.
 - [ ] Hosting secrets/credential rotation, live encryption backfill and scheduler verification, external legacy backup job removal and older live schema prerequisites — Railway configuration/job-list/database access needed; do not substitute connected Cloud changes.
 - [ ] Copied migration reset — supported safe reset unavailable; no migration journals or production data deleted.
 - [ ] Full restore rehearsal and uploaded-file backup — separate disposable database and authorized storage access needed; SQL dumps do not include file bytes.
