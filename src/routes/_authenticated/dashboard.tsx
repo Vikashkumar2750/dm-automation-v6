@@ -4,7 +4,6 @@ import { useServerFn } from "@tanstack/react-start";
 import { useWorkflowsEnabled } from "@/hooks/useWorkflowsEnabled";
 import {
   ArrowRight,
-  AlertCircle,
   CheckCircle2,
   PenSquare,
   RefreshCw,
@@ -39,7 +38,6 @@ import { useState } from "react";
 import { AppShell } from "@/components/app/AppShell";
 import { TemplateSlider } from "@/components/app/TemplateSlider";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { AutomationNotificationBanner } from "@/components/app/AutomationNotifications";
 import {
   EmptyState,
   PageHeader,
@@ -158,8 +156,6 @@ function Dashboard() {
     .sort((x, y) => (x.scheduled_at ?? "").localeCompare(y.scheduled_at ?? ""))
     .slice(0, 5);
   const recentThreads = (conversations.data ?? []).slice(0, 5);
-  const attentionAccounts = accountRows.filter((account) => account.status !== "connected");
-  const failedPosts = (posts.data ?? []).filter((post) => post.status === "failed");
   const calendarVisible = features?.calendar !== "hidden" && Boolean(features);
   const postVisible = features?.create_post !== "hidden" && Boolean(features);
   const leadSummary = summarizeDashboardLeads(revenue.data?.leads ?? []);
@@ -205,7 +201,6 @@ function Dashboard() {
         }
       />
 
-      <AutomationNotificationBanner />
       {dataError && (
         <div role="alert" className="mb-5 flex flex-wrap items-center justify-between gap-3 border-l-2 border-warning bg-warning-soft px-4 py-3 text-sm">
           <span>Some overview data couldn’t be refreshed; previously loaded results may be out of date.</span>
@@ -217,18 +212,6 @@ function Dashboard() {
         {postVisible && <Button asChild variant="outline"><Link to="/create-post"><PenSquare className="size-4" />Create post{features?.create_post === "coming_soon" && <span className="text-xs text-muted-foreground">Coming soon</span>}</Link></Button>}
         <Button asChild variant="outline"><Link to="/social-accounts"><Share2 className="size-4" />Connect account</Link></Button>
         {features?.revenue === "enabled" && <Button asChild variant="outline"><Link to="/revenue"><TrendingUp className="size-4" />Sales & Revenue</Link></Button>}
-      </section>
-      <section aria-label="Needs attention" className="mb-6">
-        <div className="mb-3 flex items-center gap-2">
-          <AlertCircle className="size-4 text-warning" /><h2 className="text-lg font-semibold">Needs attention</h2>
-        </div>
-        <div className="flex flex-wrap gap-x-6 gap-y-3 border-b pb-4 text-sm">
-          {!hasAccount && accounts.isSuccess && <Button asChild variant="link" className="h-auto p-0"><Link to="/social-accounts">Connect your first account<ArrowRight className="size-4" /></Link></Button>}
-          {attentionAccounts.length > 0 && <Button asChild variant="link" className="h-auto p-0 text-warning"><Link to="/social-accounts">{attentionAccounts.length} account{attentionAccounts.length === 1 ? "" : "s"} need attention<ArrowRight className="size-4" /></Link></Button>}
-          {(a?.totals.unread ?? 0) > 0 && <Button asChild variant="link" className="h-auto p-0"><Link to="/inbox">{a?.totals.unread} unread messages<ArrowRight className="size-4" /></Link></Button>}
-          {postVisible && failedPosts.length > 0 && <Button asChild variant="link" className="h-auto p-0 text-danger"><Link to="/create-post">{failedPosts.length} failed posts<ArrowRight className="size-4" /></Link></Button>}
-          {accounts.isSuccess && analytics.isSuccess && posts.isSuccess && hasAccount && attentionAccounts.length === 0 && (a?.totals.unread ?? 0) === 0 && (!postVisible || failedPosts.length === 0) && <span className="inline-flex items-center gap-2 text-muted-foreground"><CheckCircle2 className="size-4 text-success" />You’re all caught up</span>}
-        </div>
       </section>
       {setupReady && setupComplete < setupSteps.length && (
         <section aria-label="Workspace setup" className="mb-6 border-b pb-5">
@@ -260,6 +243,10 @@ function Dashboard() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <section className="mb-6 border-b pb-6" aria-labelledby="dashboard-templates-title">
+        <h2 id="dashboard-templates-title" className="mb-4 text-lg font-semibold">Automation templates</h2>
+        <TemplateSlider canCreate={hasAccount} onNeedAccount={() => setNeedAccount(true)} />
+      </section>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-lg font-semibold">Workspace performance</h2>
         <ToggleGroup type="single" value={String(rangeDays)} onValueChange={(value) => { if (value) setRangeDays(Number(value)); }} aria-label="Analytics period" variant="outline">
@@ -518,10 +505,6 @@ function Dashboard() {
           </Panel>
         </div>
       </div>
-      <section className="mt-8 border-t pt-6" aria-labelledby="dashboard-templates-title">
-        <h2 id="dashboard-templates-title" className="mb-4 text-lg font-semibold">Automation templates</h2>
-        <TemplateSlider canCreate={hasAccount} onNeedAccount={() => setNeedAccount(true)} />
-      </section>
     </AppShell>
   );
 }

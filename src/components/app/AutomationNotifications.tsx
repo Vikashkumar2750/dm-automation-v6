@@ -8,10 +8,15 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { useTenant, useSession } from "@/hooks/useTenant";
 import { listAutomationRuns, listAutomationRules, type AutomationRun } from "@/lib/automations.functions";
 import { activityName, activitySource, explainReason } from "@/lib/activity-explain";
-import { notificationRuns, notificationStorageKey } from "@/lib/automation-notifications";
+import { notificationRuns, notificationStorageKey, workspaceAttention, type WorkspaceAttention } from "@/lib/automation-notifications";
+import { listSocialAccounts } from "@/lib/social-accounts.functions";
+import { listPosts } from "@/lib/publishing.functions";
+import { getAnalytics } from "@/lib/analytics.functions";
+import { useWorkspaceFeatures } from "@/hooks/useWorkspaceFeatures";
 
 type NotificationState = {
   runs: AutomationRun[]; unread: AutomationRun[]; readIds: string[];
+  attention: WorkspaceAttention[]; unreadIds: string[];
   loading: boolean; error: boolean; name: (run: AutomationRun) => string;
   markRead: (ids: string[]) => void; refresh: () => void;
 };
@@ -25,6 +30,23 @@ export function AutomationNotificationsProvider({ children }: { children: ReactN
   const client = useQueryClient();
   const fetchRuns = useServerFn(listAutomationRuns);
   const fetchRules = useServerFn(listAutomationRules);
+  const fetchAccounts = useServerFn(listSocialAccounts);
+  const fetchPosts = useServerFn(listPosts);
+  const fetchAnalytics = useServerFn(getAnalytics);
+  const features = useWorkspaceFeatures().data;
+  const enabled = Boolean(userId && orgId);
+  const accounts = useQuery({
+    queryKey: ["social-accounts", orgId], enabled, staleTime: 30_000, refetchInterval: 60_000,
+    queryFn: () => fetchAccounts({ data: { organizationId: orgId ?? "" } }),
+  });
+  const posts = useQuery({
+    queryKey: ["posts", orgId], enabled: enabled && Boolean(features) && features?.create_post !== "hidden", staleTime: 30_000, refetchInterval: 60_000,
+    queryFn: () => fetchPosts({ data: { organizationId: orgId ?? "" } }),
+  });
+  const analytics = useQuery({
+    queryKey: ["analytics", orgId, 7], enabled, staleTime: 30_000, refetchInterval: 60_000,
+    queryFn: () => fetchAnalytics({ data: { organizationId: orgId ?? "", rangeDays: 7 } }),
+  });
   const [hydrated, setHydrated] = useState(false);
   useEffect(() => setHydrated(true), []);
   const key = userId && orgId ? notificationStorageKey(userId, orgId) : null;
@@ -55,16 +77,23 @@ export function AutomationNotificationsProvider({ children }: { children: ReactN
   const runs = notificationRuns(runsQuery.data ?? [], Date.now());
   const readIds = reads.data ?? [];
   const unread = reads.isSuccess ? runs.filter((run) => !readIds.includes(run.id)) : [];
+  const attention = workspaceAttention({
+    accounts: accounts.isSuccess ? accounts.data : undefined,
+    unread: analytics.isSuccess ? analytics.data?.totals.unread : undefined,
+    posts: posts.isSuccess ? posts.data : undefined,
+    postsVisible: Boolean(features) && features?.create_post !== "hidden",
+  });
+  const unreadIds = reads.isSuccess ? [...unread.map((run) => run.id), ...attention.filter((item) => !readIds.includes(item.id)).map((item) => item.id)] : [];
   const markRead = (ids: string[]) => {
     if (!key) return;
     const saved = [...new Set([...(client.getQueryData<string[]>(["notification-reads", key]) ?? []), ...ids])].slice(-2000);
     client.setQueryData(["notification-reads", key], saved);
     try { localStorage.setItem(key, JSON.stringify(saved)); } catch { /* Session read state remains available. */ }
   };
-  return <Notifications.Provider value={{ runs, unread, readIds,
-    loading: runsQuery.isLoading || reads.isLoading, error: runsQuery.isError,
+  return <Notifications.Provider value={{ runs, unread, readIds, attention, unreadIds,
+    loading: runsQuery.isLoading || reads.isLoading || accounts.isLoading || analytics.isLoading || posts.isLoading, error: runsQuery.isError || accounts.isError || analytics.isError || posts.isError,
     name: (run) => activityName(run, (id) => rulesQuery.data?.find((r) => r.id === id)?.name ?? "Deleted rule"),
-    markRead, refresh: () => { void runsQuery.refetch(); },
+    markRead, refresh: () => { void runsQuery.refetch(); void accounts.refetch(); void analytics.refetch(); if (features?.create_post !== "hidden" && features) void posts.refetch(); },
   }}>{children}</Notifications.Provider>;
 }
 
@@ -73,18 +102,30 @@ export function AutomationNotificationBell() {
   if (!state) return null;
   return <Popover>
     <PopoverTrigger asChild>
-      <Button variant="ghost" size="icon" className="relative" aria-label={`Notifications${state.unread.length ? `, ${state.unread.length} unread` : ""}`}>
+      <Button variant="ghost" size="icon" className="relative" aria-label={`Notifications${state.unreadIds.length ? `, ${state.unreadIds.length} unread` : ""}`}>
         <Bell className="size-5" />
-        {state.unread.length > 0 && <span className="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-warning px-1 text-xs font-semibold text-warning-foreground">{state.unread.length > 99 ? "99+" : state.unread.length}</span>}
+        {state.unreadIds.length > 0 && <span className="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-warning px-1 text-xs font-semibold text-warning-foreground">{state.unreadIds.length > 99 ? "99+" : state.unreadIds.length}</span>}
       </Button>
     </PopoverTrigger>
-    <PopoverContent align="end" className="w-96 max-w-[calc(100vw-1.5rem)] p-0" aria-label="Automation notifications">
+    <PopoverContent align="end" className="w-96 max-w-[calc(100vw-1.5rem)] p-0" aria-label="Workspace notifications">
       <div className="flex items-center justify-between gap-2 border-b p-3">
-        <div><h2 className="text-sm font-semibold">Notifications</h2><p className="text-xs text-muted-foreground">Recent skips & failures · last 24 hours</p></div>
-        <Button variant="ghost" size="icon" title="Mark all as read" aria-label="Mark all as read" disabled={!state.unread.length} onClick={() => state.markRead(state.unread.map((r) => r.id))}><CheckCheck className="size-4" /></Button>
+        <div><h2 className="text-sm font-semibold">Notifications</h2><p className="text-xs text-muted-foreground">Workspace attention & recent automation alerts</p></div>
+        <Button variant="ghost" size="icon" title="Mark all as read" aria-label="Mark all as read" disabled={!state.unreadIds.length} onClick={() => state.markRead(state.unreadIds)}><CheckCheck className="size-4" /></Button>
       </div>
       <div className="max-h-96 overflow-y-auto">
-        {state.loading ? <p className="p-4 text-sm text-muted-foreground">Loading notifications…</p> : state.error ? <div className="p-4"><p className="text-sm text-destructive">Notifications couldn’t load.</p><Button variant="ghost" size="sm" onClick={state.refresh}><RefreshCw className="size-4" />Retry</Button></div> : !state.runs.length ? <p className="p-4 text-sm text-muted-foreground">No recent skips or failures.</p> : state.runs.map((run) => {
+        {state.attention.map((item) => {
+          const unread = !state.readIds.includes(item.id);
+          const title = item.kind === "messages" ? `${item.count} unread messages` : item.kind === "posts" ? `${item.count} failed post${item.count === 1 ? "" : "s"}` : item.count ? `${item.count} account${item.count === 1 ? "" : "s"} need attention` : "Connect your first account";
+          return <div key={item.id} className={`flex items-start gap-2 border-b p-3 ${unread ? "bg-warning/5" : ""}`}>
+            <AlertTriangle className="mt-1 size-4 shrink-0 text-warning" />
+            <div className="min-w-0 flex-1"><Link to={item.to} className="break-words text-sm font-medium text-primary" onClick={() => state.markRead([item.id])}>{title}</Link></div>
+            <Button size="icon" variant="ghost" aria-label="Mark as read" title={unread ? "Mark as read" : "Read"} disabled={!unread} onClick={() => state.markRead([item.id])}><Check className="size-4" /></Button>
+          </div>;
+        })}
+        {state.error && <div className="p-4"><p className="text-sm text-destructive">Some notifications couldn’t load.</p><Button variant="ghost" size="sm" onClick={state.refresh}><RefreshCw className="size-4" />Retry</Button></div>}
+        {state.loading ? <p className="p-4 text-sm text-muted-foreground">Loading notifications…</p> : !state.runs.length && !state.attention.length && !state.error ? <p className="p-4 text-sm text-muted-foreground">You’re all caught up.</p> : null}
+        {state.runs.length > 0 && <p className="border-b px-3 py-2 text-xs text-muted-foreground">Automation skips & failures · last 24 hours</p>}
+        {state.runs.map((run) => {
           const reason = explainReason(run.detail);
           const unread = !state.readIds.includes(run.id);
           return <div key={run.id} className={`flex items-start gap-2 border-b p-3 ${unread ? "bg-warning/5" : ""}`}>
