@@ -1,5 +1,9 @@
 # DM FB-IG-YT by Techaasvik — Build Roadmap
 
+## Current dashboard request — Nov 8
+- [ ] Move Automation templates above Workspace performance and move attention items to the shared notification bell without changing delivery/security logic.
+- [ ] Run regressions and verify dashboard order, notification links and phone layout; live actions remain blocked by the test targets, payment approval and hosting access listed below.
+
 ## Remix setup (Nov 5)
 - [x] Add independent Super Admin Enabled / Hidden / Coming soon controls for Create Post and Calendar, including direct page visits (4 availability tests and 26 checkout/form tests passed).
 - [ ] Verify Super Admin publishing selectors and customer Coming soon views signed in (blocked: no preview auth account matches the requesting user; sign-in required).
