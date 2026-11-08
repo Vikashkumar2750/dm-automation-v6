@@ -29,6 +29,7 @@ COPY --from=oven/bun:1.2 /usr/local/bin/bun /usr/local/bin/bun
 WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3000
+ENV NITRO_PRESET=node-server
 
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/drizzle ./drizzle
@@ -38,4 +39,4 @@ COPY --from=build /app/node_modules/postgres ./node_modules/postgres
 
 EXPOSE 3000
 ENTRYPOINT []
-CMD ["sh", "-c", "export CRON_SECRET=\"${CRON_SECRET:-$(head -c 24 /dev/urandom | od -An -tx1 | tr -d \" \\n\")}\" && bun run scripts/migrate.mjs && (bun scripts/scheduler.mjs &) && bun dist/server/index.mjs"]
+CMD ["sh", "-c", "export CRON_SECRET=\"${CRON_SECRET:-$(head -c 24 /dev/urandom | od -An -tx1 | tr -d \" \\n\")}\" && bun run scripts/migrate.mjs && (bun scripts/scheduler.mjs &) && (bun scripts/drive-backup-worker.mjs &) && bun dist/server/index.mjs"]

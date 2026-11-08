@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { runAdminSql } from "@/lib/db-backup.functions";
+import { DriveBackupPanel } from "@/components/admin/DriveBackupPanel";
 
 export const Route = createFileRoute("/_authenticated/admin/database")({
   head: () => ({
@@ -91,6 +92,7 @@ function AdminDatabasePage() {
       </div>
 
       <PgDumpSection />
+      <DriveBackupPanel />
 
       <section className="space-y-2 rounded-lg border bg-card p-4">
         <h2 className="font-semibold">Restoring a full dump</h2>
