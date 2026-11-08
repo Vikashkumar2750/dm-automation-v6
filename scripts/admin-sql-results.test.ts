@@ -22,7 +22,9 @@ it('returns commented diagnostic rows through the deployed SQL function without 
     await db.exec('CREATE TABLE counter(value integer); INSERT INTO counter VALUES (0);');
     expect(await executeAuditedSql(admin, 'actor', '-- one change\nUPDATE counter SET value = value + 1;', 'editor')).toEqual({ ok: true, result: { affected: 1 } });
     expect((await db.query('SELECT value FROM counter')).rows).toEqual([{ value: 1 }]);
-    expect((await executeAuditedSql(admin, 'actor', '-- bounded\nSELECT n FROM generate_series(1, 501) AS n;', 'editor')).result?.rows).toHaveLength(500);
+    const bounded = await executeAuditedSql(admin, 'actor', '-- bounded\nSELECT n FROM generate_series(1, 501) AS n;', 'editor');
+    if (!bounded.ok) throw new Error('Expected query rows');
+    expect(bounded.result.rows).toHaveLength(500);
     await db.exec('SET ROLE authenticated');
     await expect(db.query('SELECT admin_exec_sql($1)', ['SELECT 1'])).rejects.toMatchObject({ code: '42501' });
   } finally { await db.close(); }
