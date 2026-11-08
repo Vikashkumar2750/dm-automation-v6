@@ -7,7 +7,8 @@ import { join } from "node:path";
 import { backupDue, driveHeaders, privateFolder, DRIVE_BACKUP_KEY } from "./drive-backup-core.mjs";
 
 const BASE = "https://connector-gateway.lovable.dev/google_drive";
-const dbUrl = process.env.DATABASE_URL;
+// Explicit independent-host opt-in: never dump the managed Cloud backend.
+const dbUrl = process.env.DRIVE_BACKUP_DATABASE_URL;
 const sql = dbUrl ? postgres(dbUrl, { max: 1, onnotice: () => {}, ssl: "prefer" }) : null;
 let busy = false;
 async function command(name, args) {
@@ -63,6 +64,8 @@ async function tick() {
       const file = join(directory, "database.dump");
       await command("pg_dump", ["--format=custom", "--no-owner", "--no-privileges", "--schema=public", "--schema=auth", "--schema=storage", "--file", file, dbUrl]);
       await command("pg_restore", ["--list", file]);
+      // Reading every archive item also detects truncated/corrupt data blocks.
+      await command("pg_restore", ["--file=/dev/null", file]);
       const { size } = await stat(file);
       if (!size || size > 536870912) throw new Error("Backup is empty or exceeds the 512 MB upload limit.");
       const name = `autodm-full-${new Date().toISOString().replace(/[:.]/g, "-")}.dump`;
@@ -92,4 +95,4 @@ async function tick() {
   }
 }
 if (sql) { setTimeout(tick, 20000); setInterval(tick, 60000); }
-else console.warn("[drive-backup] DATABASE_URL unavailable; backup worker disabled");
+else console.warn("[drive-backup] independent backup database not configured; backup worker disabled");

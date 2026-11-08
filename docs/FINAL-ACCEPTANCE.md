@@ -59,6 +59,14 @@ Use a receiver you control, not a public request-logging service: webhook payloa
 
 ## 5. Recovery prerequisites
 
+Google Drive is now linked and its read-only app credential check passed. Manual
+and 6/12/24-hour archive controls are implemented for the independent Railway
+backend; deployment, secure connector credential distribution, explicit
+DRIVE_BACKUP_DATABASE_URL setup and first upload remain pending. See
+DEPLOY-RAILWAY.md. No database contents have been uploaded in this session.
+The archive gets a full pg_restore readability check and uploaded-size check,
+which are useful alternatives before a restore rehearsal, not proof of recovery.
+
 The owner does not currently know whether a receiver or disposable restore database exists. Neither is assumed available. Do not add a public request logger or create a paid database without explicit approval.
 
 - Provide a separate empty, disposable database through secure hosting controls, never in chat. Restore the private full dump there, check tables/data/policies/functions and a separate test sign-in. Never point production at it during rehearsal.
@@ -67,6 +75,6 @@ The owner does not currently know whether a receiver or disposable restore datab
 
 ## Deferred by owner
 
-Password/provider credential rotation, payment-popup handoff screenshot/payment, publishing until approval, YouTube/unlinked chat, Google Drive backups and invitation acceptance. These are not counted as completed or repeatedly requested now.
+Password/provider credential rotation, payment-popup handoff screenshot/payment, publishing until approval, YouTube/unlinked chat and invitation acceptance. These are not counted as completed or repeatedly requested now. Drive implementation is complete; its external deployment and first upload are pending.
 
 When the owner resumes testing, collect one batch of redacted pass/fail outcomes for sections 1–4 and confirm recovery prerequisites. Until then, live acceptance is deferred, not complete. No passwords, keys, raw API responses or customer exports are needed.

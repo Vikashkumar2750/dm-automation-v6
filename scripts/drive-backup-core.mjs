@@ -1,6 +1,11 @@
 export const DRIVE_BACKUP_KEY = "__drive_backup";
 export const BACKUP_INTERVALS = [6, 12, 24];
 export function backupDue(settings, now = Date.now()) {
+  if (settings?.status === "running") {
+    const started = Date.parse(settings.lastAttemptAt ?? "");
+    if (Number.isFinite(started) && now - started < 1800000) return false;
+    return true;
+  }
   if (settings?.requestId && settings.requestId !== settings.completedRequestId) return true;
   if (!settings?.enabled || !BACKUP_INTERVALS.includes(settings.intervalHours)) return false;
   const last = Date.parse(settings.lastAttemptAt ?? "");

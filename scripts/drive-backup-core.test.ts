@@ -8,6 +8,11 @@ describe("private platform Drive backups", () => {
     expect(backupDue({ enabled: false, requestId: "new", completedRequestId: "old" })).toBe(true);
     expect(backupDue({ enabled: false, requestId: "same", completedRequestId: "same" })).toBe(false);
   });
+  it("recovers a crashed running backup after thirty minutes without overlapping a fresh one", () => {
+    const settings = { status: "running", lastAttemptAt: new Date(0).toISOString() };
+    expect(backupDue(settings, 1799999)).toBe(false);
+    expect(backupDue(settings, 1800000)).toBe(true);
+  });
   it.each([6, 12, 24])("enforces the selected %s-hour interval", (hours) => {
     const settings = { enabled: true, intervalHours: hours, lastAttemptAt: new Date(0).toISOString() };
     expect(backupDue(settings, hours * 3600000 - 1)).toBe(false);
