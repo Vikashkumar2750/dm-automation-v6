@@ -1,5 +1,6 @@
 import { TeamMembersPanel } from "@/components/app/TeamMembersPanel";
 import { useWorkspaceFeatures } from "@/hooks/useWorkspaceFeatures";
+import { teamDeskTab } from "@/lib/team-desk-navigation";
 import { Pager, pageSlice } from "@/components/app/Pager";
 import { PlatformAccountFilter } from "@/components/app/PlatformAccountFilter";
 import { csvCell } from "@/lib/csv-safe";
@@ -63,11 +64,11 @@ function TeamDeskWorkspace() {
   const advanced = features.data?.team_desk === "enabled";
   const search = Route.useSearch();
   const navigate = Route.useNavigate();
-  const tab = search.tab === "members" || !advanced ? "members" : ["inbox", "approvals", "reports", "api"].includes(search.tab ?? "") ? search.tab ?? "inbox" : "inbox";
+  const tab = teamDeskTab(search.tab, advanced, canReview(activeOrg?.role));
   return (
     <AppShell>
       <PageHeader title="Team desk" description="Team members, shared inbox, approvals, client reports and integrations." actions={<GuideButton guide="team-desk" />} />
-      <Tabs value={tab} onValueChange={(value) => { void navigate({ search: { tab: value }, replace: true }); }}>
+      <Tabs value={tab} onValueChange={(value) => { void navigate({ search: { tab: value } }); }}>
         <TabsList className="h-auto max-w-full flex-wrap">
           <TabsTrigger value="members">Team members</TabsTrigger>
           {advanced && <><TabsTrigger value="inbox">Shared inbox</TabsTrigger><TabsTrigger value="approvals">Approvals</TabsTrigger><TabsTrigger value="reports">Client reports</TabsTrigger>{canReview(activeOrg?.role) && <TabsTrigger value="api">API & webhooks</TabsTrigger>}</>}
