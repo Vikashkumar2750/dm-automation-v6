@@ -14,9 +14,9 @@ export type WorkspaceAttention = {
 
 /** Only confirmed source reads can produce attention items. */
 export function workspaceAttention(input: {
-  accounts?: { id: string; status: string }[];
-  unread?: number;
-  posts?: { id: string; status: string }[];
+  accounts?: { id: string; status: string }[] | undefined;
+  unread?: number | undefined;
+  posts?: { id: string; status: string }[] | undefined;
   postsVisible: boolean;
 }): WorkspaceAttention[] {
   const items: WorkspaceAttention[] = [];
