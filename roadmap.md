@@ -1,6 +1,8 @@
 # DM FB-IG-YT by Techaasvik — Build Roadmap
 
 ## Current request — implementation first
+- [ ] Nov 8 current request: correct screenshot-confirmed Team Desk self-check failure; distinguish storage/config checks from live acceptance; start Google Drive connection setup. Live assignment/approval, webhook retry, saved-plan reflection and unpaid buyer denial require authorized sessions/controlled inputs.
+- [ ] Google Drive automatic saving requires a configured Drive client and consent; export storage does not replace an isolated restore test or include uploaded file bytes/provider settings.
 - [x] Current redesign: shared user-dashboard typography/spacing/tabs/forms and route presentation audit; focused readability fixes for Workflows, Contacts and Connected Accounts, preserving workflows and workspace isolation. This is shared polish, not a bespoke rebuild of every page.
 - [x] Current redesign: Revenue product/coupon form hierarchy, confirmation actions, payment setup labels and focused seven-section delivery-page builder with actual sticky preview, phone Editor/Preview switch, visited sections and unsaved-navigation protection. Saved-page preview/duplicate actions added; no invented draft/publishing states.
 - [x] Current redesign: tabbed plan catalogue with editable price/duration/features/limits, preview and save/discard state; home and billing derive saved pricing, checkout rejects removed/contact-only options, save invalidates dependent reads. Other open browsers refresh catalogue on the one-minute polling interval.
