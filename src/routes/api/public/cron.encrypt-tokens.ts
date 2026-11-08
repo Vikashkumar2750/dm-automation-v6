@@ -13,8 +13,8 @@ export const Route = createFileRoute("/api/public/cron/encrypt-tokens")({
         try {
           const result = await backfillEncryptedTokens(supabaseAdmin);
           return Response.json(result);
-        } catch (e) {
-          return Response.json({ error: (e as Error).message });
+        } catch {
+          return Response.json({ error: "Encryption verification failed. Check hosting configuration and database access." }, { status: 503 });
         }
       },
     },

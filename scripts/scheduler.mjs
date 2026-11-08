@@ -18,6 +18,7 @@ if (!secret) {
   const post = async (path, body) => {
     const res = await fetch(`http://127.0.0.1:${port}${path}`, {
       method: "POST",
+      signal: AbortSignal.timeout(25000),
       headers: { "x-cron-secret": secret, ...(body ? { "content-type": "application/json" } : {}) },
       ...(body ? { body: JSON.stringify(body) } : {}),
     });
@@ -47,7 +48,8 @@ if (!secret) {
         results.push({ job, status, ms: Date.now() - started });
       }
       try {
-        await post("/api/public/cron/heartbeat", { results });
+        const heartbeat = await post("/api/public/cron/heartbeat", { results });
+        if (heartbeat.status !== 200) throw new Error(`heartbeat status ${heartbeat.status}`);
         failStreak = 0;
       } catch (e) {
         failStreak += 1;
