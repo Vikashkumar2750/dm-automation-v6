@@ -4,7 +4,8 @@
 - [x] Nov 8 continuation: owner's screenshot confirms deployed Team members tab with owner and invitation controls. Reports/integrations no longer depend on shared-inbox reads; their own failures remain visible. Invitation submission and other tabs are not verified by this screenshot.
 - [x] Re-ran all regression tests: 425 tests across 70 files pass. Browser checks of Dashboard, Team, Team Desk and Database Backups redirect to sign-in with no page errors. These are access checks, not authenticated acceptance.
 - [x] Full dump export confirmed working by the owner; Google Drive explicitly deferred. Growth repair confirmed installed and loading; it is no longer a pending repair.
-- [ ] Team Desk combined repair installation and invoice read/save — live database result and authorized invoice test still missing; connected Cloud is not the live database.
+- [x] Owner's Nov 8 screenshots confirm live invoice read/save: ₹500 ARTH invoice marked paid; ₹200 Vikas Dhiman invoice added, returned as unpaid, and totals show ₹200 due/₹500 marked paid. This is manual invoice bookkeeping, not verified payment settlement.
+- [ ] Shared inbox, Approvals and API/webhooks live checks — invoice success does not establish installation of their five schema sources after independent-tab changes.
 - [ ] Latest merged Team members, invites/workspace switching, Dashboard/bell, remaining admin drafts/exports/publishing selectors and cross-account/Agency/mobile acceptance — authorized current-release session needed. Self-session mint failed because no requesting-user account matches this preview backend.
 - [ ] Meta/YouTube delivery, follower taps, moderation, publishing, fresh notifications and active safety — disposable approved post/chat targets and connected provider authorization needed.
 - [ ] Payment → receipt/email → private download and unpaid live denial — approved product, amount, recipient and verified sender needed; automated authorization tests pass, no real charge attempted.
@@ -18,19 +19,19 @@
 ## Team merged into Team Desk — Nov 8
 - [x] Member/invite controls moved into Team Desk's Team members tab; duplicate sidebar/search entry removed and /team redirects to members. Basic team access remains available when advanced tools are off or Desk reads fail; server role checks unchanged.
 - [x] 425 tests across 70 files pass, including merged-tab availability/reviewer tests. Preview build OK; old Team path correctly reaches sign-in on desktop/phone without page errors.
-- [ ] Signed-in merged-tab, invitation, workspace-switch and mobile acceptance requires the deployed update and an authorized session; Team Desk repair/invoice save and all external blockers below remain open. No live writes, messages or charges performed; Google Drive remains deferred.
+- [ ] Invitations, workspace-switch and mobile acceptance need an authorized session; merged members and invoice persistence are confirmed by owner screenshots. No live writes, messages or charges performed by the agent; Google Drive remains deferred.
 
 ## Team Desk complete schema follow-up — Nov 8
 - [x] Prepared combined repair for five screenshot-confirmed missing tables as a single transactional DO statement, compatible with Super Admin Run SQL. Invoice table is already installed per owner's result; no live repair was applied here.
 - [x] Reproduced explicit BEGIN/COMMIT failure (0A000) inside admin_exec_sql; replacement runs twice through the same EXECUTE mechanism and preserves settings. Verified cross-workspace assignment denial and server-only integration tables. Team Desk missing-source reads and integration write failures now reject instead of reporting empty/off/success.
 - [x] Full suite: 421 tests across 69 files pass; latest preview build OK. Actual Team Desk handler tests reject each missing assignments/settings/approvals source and accept confirmed empty reads.
-- [ ] Owner must run combined repair on the live database, then verify all Team Desk tabs and invoice save; live target remains separate from connected Cloud. No messages, payments, keys or webhook endpoints created.
+- [ ] Verify Shared inbox, Approvals and API/webhooks against the live database; independent reports now load and invoice persistence is screenshot-confirmed, but other schema installation is unconfirmed. Live target remains separate from connected Cloud.
 
 ## Team Desk invoice repair — Nov 8
 - [x] Prepared docs/sql/railway-client-invoices-repair.sql: repeatable, transaction-wrapped table/grants/reviewer RLS/client-membership checks/index and optional audit trigger. Add invoice disabled until invoice/client reads succeed. Connected Cloud has all six Team Desk tables; it is not the affected live database and was left unchanged.
 - [x] Isolated PostgreSQL test reproduced missing relation, ran repair twice preserving a ₹500 unpaid invoice, and verified manager read, unrelated-client write denial, agent/other-workspace isolation and anonymous denial. Eight focused tests pass; preview build OK.
 - [x] Owner's SQL-editor result confirms client_invoices installed on the live database. Earlier explicit-transaction script failed in the in-app runner; the new Team Desk repair avoids that incompatibility.
-- [ ] Confirm Team Desk invoice read/save after installing remaining tables; screenshot proves installation only, not invoice CRUD. No automatic migration or history reset performed.
+- [x] Latest owner screenshots confirm invoice creation/readback and manual paid status, including ₹200 unpaid/₹500 marked-paid totals. No automatic migration or history reset performed.
 
 ## Current dashboard request — Nov 8
 - [x] Move Automation templates above Workspace performance; remove standalone attention/banner from dashboard and show account, unread-message and failed-post items in the shared notification bell with scoped read controls. Delivery/security logic unchanged.
