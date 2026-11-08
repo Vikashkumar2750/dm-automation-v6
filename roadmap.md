@@ -1,6 +1,8 @@
 # DM FB-IG-YT by Techaasvik — Build Roadmap
 
 ## Consolidated remaining checklist — Nov 8, 06:12 UTC
+- [x] Reproduced live workspace-switch defect: selector changed to ARTH but Revenue kept prior workspace until reload. Replaced per-hook selection with shared user-keyed selection; membership guard remains. Live ARTH reload confirms automatic Razorpay connection; no keys read or changed.
+- [ ] Owner authorized agent-selected Meta targets, deferred YouTube, confirmed ARTH test Razorpay and receipt recipient; publishing blocked by pending permission. Hosting access is redacted screenshots only, not yet supplied. Payment execution paused until current-release workspace switching is verified to prevent wrong-workspace writes.
 - [x] Nov 8 continuation: owner's screenshot confirms deployed Team members tab with owner and invitation controls. Reports/integrations no longer depend on shared-inbox reads; their own failures remain visible. Invitation submission and other tabs are not verified by this screenshot.
 - [x] Re-ran all regression tests: 425 tests across 70 files pass. Browser checks of Dashboard, Team, Team Desk and Database Backups redirect to sign-in with no page errors. These are access checks, not authenticated acceptance.
 - [x] Full dump export confirmed working by the owner; Google Drive explicitly deferred. Growth repair confirmed installed and loading; it is no longer a pending repair.
