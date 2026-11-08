@@ -49,7 +49,15 @@ describe("Saved plan pricing", () => {
     expect((await findConfiguredOption(client(plans), "pro", "monthly"))?.months).toBe(2);
   });
   it("does not offer fallback checkout when the saved catalogue read fails", async () => {
-    const failing = { from: () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: null, error: { code: "unavailable" } }) }) }) }) } as never;
-    await expect(findConfiguredOption(failing, "pro", "monthly")).rejects.toThrow("Plan catalogue unavailable");
+    const failing = {
+      from: () => ({
+        select: () => ({
+          eq: () => ({ maybeSingle: async () => ({ data: null, error: { code: "unavailable" } }) }),
+        }),
+      }),
+    } as never;
+    await expect(findConfiguredOption(failing, "pro", "monthly")).rejects.toThrow(
+      "Plan catalogue unavailable",
+    );
   });
 });
