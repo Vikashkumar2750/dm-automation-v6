@@ -1,7 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { teamDeskTab } from "./team-desk-navigation";
+import { teamDeskNeedsInbox, teamDeskTab } from "./team-desk-navigation";
 
 describe("merged Team Desk access", () => {
+  it("does not require inbox sources for members, reports or integrations", () => {
+    expect(teamDeskNeedsInbox("members")).toBe(false);
+    expect(teamDeskNeedsInbox("reports")).toBe(false);
+    expect(teamDeskNeedsInbox("api")).toBe(false);
+    expect(teamDeskNeedsInbox("inbox")).toBe(true);
+    expect(teamDeskNeedsInbox("approvals")).toBe(true);
+  });
   it("keeps member management available when advanced tools are off", () => {
     expect(teamDeskTab("inbox", false, true)).toBe("members");
     expect(teamDeskTab("members", false, false)).toBe("members");

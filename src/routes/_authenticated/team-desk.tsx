@@ -1,6 +1,6 @@
 import { TeamMembersPanel } from "@/components/app/TeamMembersPanel";
 import { useWorkspaceFeatures } from "@/hooks/useWorkspaceFeatures";
-import { teamDeskTab } from "@/lib/team-desk-navigation";
+import { teamDeskNeedsInbox, teamDeskTab } from "@/lib/team-desk-navigation";
 import { Pager, pageSlice } from "@/components/app/Pager";
 import { PlatformAccountFilter } from "@/components/app/PlatformAccountFilter";
 import { csvCell } from "@/lib/csv-safe";
@@ -82,6 +82,19 @@ function TeamDeskWorkspace() {
 
 function TeamDeskTools({ tab }: { tab: string }) {
   const { activeOrg } = useTenant();
+  const orgId = activeOrg?.id;
+  if (!orgId) return <p role="status" className="text-sm text-muted-foreground">Loading workspace…</p>;
+  if (!teamDeskNeedsInbox(tab)) {
+    const reviewer = canReview(activeOrg.role);
+    if (tab === "reports") return <><Reports />{reviewer && <ClientBilling orgId={orgId} />}</>;
+    if (tab === "api" && reviewer) return <Integrations orgId={orgId} />;
+    return null;
+  }
+  return <TeamDeskInboxTools tab={tab} />;
+}
+
+function TeamDeskInboxTools({ tab }: { tab: string }) {
+  const { activeOrg } = useTenant();
   const orgId = activeOrg?.id ?? null;
   const fetchDesk = useServerFn(getTeamDesk);
   const fetchTeam = useServerFn(listTeam);
@@ -101,8 +114,6 @@ function TeamDeskTools({ tab }: { tab: string }) {
         <>
           {tab === "inbox" && (team.data ? <SharedInbox key={`${orgId}:${platform}:${accountId}`} orgId={orgId} desk={{ ...desk.data, conversations: desk.data.conversations.filter((c) => platform === "all" || c.platform === platform) }} names={names} members={team.data} /> : <p role="status" className="text-sm text-muted-foreground">{team.isError ? "Teammate details unavailable. Refresh to retry." : "Loading teammate details…"}</p>)}
           {tab === "approvals" && <Approvals orgId={orgId} desk={desk.data} names={names} reviewer={reviewer} />}
-          {tab === "reports" && <><Reports />{reviewer && <ClientBilling orgId={orgId} />}</>}
-          {tab === "api" && reviewer && <Integrations orgId={orgId} />}
         </>
       )}
     </div>
