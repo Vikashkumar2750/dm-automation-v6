@@ -59,11 +59,12 @@ export const savePlatformConfig = createServerFn({ method: "POST" })
     await assertSuperAdmin(context);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { CONFIG_KEY } = await import("@/lib/platform-config.server");
-    const { data: row } = await supabaseAdmin
+    const { data: row, error: readError } = await supabaseAdmin
       .from("platform_settings")
       .select("feature_flags")
       .eq("id", true)
       .maybeSingle();
+    if (readError) throw new Error("Configuration could not be loaded. No changes were saved.");
     const flags = { ...((row?.feature_flags ?? {}) as Record<string, unknown>), [CONFIG_KEY]: data };
     const { error } = await supabaseAdmin
       .from("platform_settings")

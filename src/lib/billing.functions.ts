@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { findPlanOption, type BillingCycle, type PlanKey } from "@/lib/plans";
+import { type BillingCycle, type PlanKey } from "@/lib/plans";
 
 const DEMO_KEY_IDS = ["rzp_test_1DP5mmOlF5G5ag"];
 
@@ -83,9 +83,7 @@ export const createPlanOrder = createServerFn({ method: "POST" })
 
     const { supabaseAdmin: adminForPlans } = await import("@/integrations/supabase/client.server");
     const { findConfiguredOption } = await import("@/lib/platform-config.server");
-    const option =
-      (await findConfiguredOption(adminForPlans, data.plan, data.cycle)) ??
-      findPlanOption(data.plan as PlanKey, data.cycle as BillingCycle);
+    const option = await findConfiguredOption(adminForPlans, data.plan, data.cycle);
     if (!option) throw new Error("invalid_plan_option");
 
     const keyId = process.env["RAZORPAY_KEY_ID"] ?? "";

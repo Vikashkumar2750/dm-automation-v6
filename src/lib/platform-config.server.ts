@@ -1,4 +1,5 @@
 import { PLANS, type PlanDef } from "@/lib/plans";
+import { configuredPlanOption } from "@/lib/plan-presentation";
 
 type AdminClient = import("@supabase/supabase-js").SupabaseClient;
 
@@ -70,8 +71,6 @@ export async function readPlatformConfig(admin: AdminClient, options: { strictRe
 }
 
 export async function findConfiguredOption(admin: AdminClient, plan: string, cycle: string) {
-  const config = await readPlatformConfig(admin);
-  return (
-    config.plans.find((p) => p.key === plan)?.options.find((o) => o.cycle === cycle) ?? null
-  );
+  const config = await readPlatformConfig(admin, { strictReads: true });
+  return configuredPlanOption(config.plans, plan, cycle);
 }
