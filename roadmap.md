@@ -1,6 +1,10 @@
 # DM FB-IG-YT by Techaasvik — Build Roadmap
 
 ## Current request — implementation first
+- [ ] Current redesign: shared user-dashboard typography/spacing and page-by-page audit; preserve existing workflows and workspace isolation.
+- [ ] Current redesign: Revenue products/coupons/payment setup/report and focused delivery-page builder with actual live preview.
+- [ ] Current redesign: explore/edit plan catalogue easily and propagate saved configuration to home, billing and usage/entitlements.
+- [ ] Current redesign: regression tests and available responsive checks; live external acceptance remains deferred.
 - [x] Closed identified actionable webhook gap in both Team Desk and CRM: public-only address/DNS validation at save and delivery, pinned-IP TLS/Host transport, redirects forbidden, no unsafe fallback. Reproduced stored private-address dispatch before the fix; same check now passes.
 - [x] Consolidated remaining work in FINAL-ACCEPTANCE; 485 tests across 79 files pass, preview build OK, content-route metadata scan has no gaps. No live customer actions or provider settings changed.
 - Live acceptance is deferred by owner; it must not be reported as completed.
