@@ -4,7 +4,7 @@ import { afterEach, expect, it, vi } from "vitest";
 vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
 vi.mock("sonner", () => ({ toast: { error: vi.fn() } }));
 vi.mock("@/components/app/BuyerSignIn", () => ({
-  BuyerSignIn: (props: Record<string, unknown>) => <buyer-portal {...props} />,
+  BuyerSignIn: (props: Record<string, unknown>) => <div data-testid="buyer-portal" {...props} />,
   BuyerSignInButton: () => null,
 }));
 vi.mock("@/components/app/DeliveryLeadForm", () => ({
@@ -12,7 +12,7 @@ vi.mock("@/components/app/DeliveryLeadForm", () => ({
   LeadFields: () => null,
 }));
 vi.mock("@/components/ui/dialog", () => ({
-  Dialog: (props: Record<string, unknown>) => <payment-dialog {...props} />,
+  Dialog: (props: Record<string, unknown>) => <div data-testid="payment-dialog" {...props} />,
   DialogContent: () => null,
   DialogHeader: () => null,
   DialogTitle: () => null,
@@ -33,11 +33,11 @@ it("opens the buyer portal when the payment-success dialog is dismissed, retaini
   let tree: ReactTestRenderer | undefined;
   await act(async () => { tree = create(<DeliveryPageView title="Paid test offer" body="" buyerSlug="test" />); });
   expect(stored.get("autodm:buyer:test")).toBe(token);
-  const dialog = tree?.root.findByType("payment-dialog");
-  expect(dialog?.props.open).toBe(true);
-  await act(async () => { dialog?.props.onOpenChange(false); });
-  expect(tree?.root.findByType("payment-dialog").props.open).toBe(false);
-  expect(tree?.root.findByType("buyer-portal").props.open).toBe(true);
+  const dialog = tree?.root.findByProps({ "data-testid": "payment-dialog" });
+  expect(dialog?.props["open"]).toBe(true);
+  await act(async () => { dialog?.props["onOpenChange"](false); });
+  expect(tree?.root.findByProps({ "data-testid": "payment-dialog" }).props["open"]).toBe(false);
+  expect(tree?.root.findByProps({ "data-testid": "buyer-portal" }).props["open"]).toBe(true);
   expect(stored.get("autodm:buyer:test")).toBe(token);
   await act(async () => { tree?.unmount(); });
 });
