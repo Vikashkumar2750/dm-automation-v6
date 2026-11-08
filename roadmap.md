@@ -1,5 +1,10 @@
 # DM FB-IG-YT by Techaasvik — Build Roadmap
 
+## Team merged into Team Desk — Nov 8
+- [x] Member/invite controls moved into Team Desk's Team members tab; duplicate sidebar/search entry removed and /team redirects to members. Basic team access remains available when advanced tools are off or Desk reads fail; server role checks unchanged.
+- [x] 425 tests across 70 files pass, including merged-tab availability/reviewer tests. Preview build OK; old Team path correctly reaches sign-in on desktop/phone without page errors.
+- [ ] Signed-in merged-tab, invitation, workspace-switch and mobile acceptance requires the deployed update and an authorized session; Team Desk repair/invoice save and all external blockers below remain open. No live writes, messages or charges performed; Google Drive remains deferred.
+
 ## Team Desk complete schema follow-up — Nov 8
 - [x] Prepared combined repair for five screenshot-confirmed missing tables as a single transactional DO statement, compatible with Super Admin Run SQL. Invoice table is already installed per owner's result; no live repair was applied here.
 - [x] Reproduced explicit BEGIN/COMMIT failure (0A000) inside admin_exec_sql; replacement runs twice through the same EXECUTE mechanism and preserves settings. Verified cross-workspace assignment denial and server-only integration tables. Team Desk missing-source reads and integration write failures now reject instead of reporting empty/off/success.

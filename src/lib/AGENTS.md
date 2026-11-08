@@ -25,3 +25,4 @@
 - Workspace attention is derived by workspaceAttention from confirmed cached reads in the shared notification provider; read identities include affected records — alerts remain workspace-scoped without delivery changes.
 - External invoice repair preserves rows, reviewer RLS and client membership checks; validate its SQL in an isolated database and never apply to a different connected backend — repairs must preserve tenant isolation.
 - Team Desk schema repairs use a single transactional DO statement for SQL-runner compatibility; source failures reject rather than hiding missing approval/settings/integration tables — recovery must not imply settings-off or successful writes.
+- Team membership UI is shared in TeamMembersPanel under Team Desk; /team redirects to members, independent of advanced Desk availability — merged navigation preserves basic team access and server authorization.

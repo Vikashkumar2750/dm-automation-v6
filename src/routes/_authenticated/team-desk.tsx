@@ -1,4 +1,6 @@
-import { WorkspaceFeatureGate } from "@/components/app/WorkspaceFeatureGate";
+import { TeamMembersPanel } from "@/components/app/TeamMembersPanel";
+import { useWorkspaceFeatures } from "@/hooks/useWorkspaceFeatures";
+import { teamDeskTab } from "@/lib/team-desk-navigation";
 import { Pager, pageSlice } from "@/components/app/Pager";
 import { PlatformAccountFilter } from "@/components/app/PlatformAccountFilter";
 import { csvCell } from "@/lib/csv-safe";
@@ -30,17 +32,18 @@ import {
 } from "@/lib/team-desk.functions";
 
 export const Route = createFileRoute("/_authenticated/team-desk")({
+  validateSearch: (search: Record<string, unknown>): { tab?: string } => (typeof search["tab"] === "string" ? { tab: search["tab"] } : {}),
   head: () => ({
     meta: [
       { title: "Team desk — AutoDM by Techaasvik" },
-      { name: "description", content: "Shared inbox with assignment, reply approvals, client reports, public API and outgoing webhooks." },
+      { name: "description", content: "Manage team members, invitations, shared inbox assignments, approvals, client reports and integrations." },
       { property: "og:title", content: "Team desk — AutoDM by Techaasvik" },
-      { property: "og:description", content: "Team and agency tools for Instagram and Facebook DMs." },
+      { property: "og:description", content: "Workspace members, invitations, shared inbox and agency tools in one Team Desk." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
   }),
-  component: () => <WorkspaceFeatureGate feature="team_desk"><TeamDeskPage /></WorkspaceFeatureGate>,
+  component: TeamDeskPage,
 });
 
 const sel = "h-9 rounded-md border border-input bg-background px-2 text-sm";
@@ -52,37 +55,57 @@ const errMsg = (e: unknown) => {
 
 function TeamDeskPage() {
   const { activeOrg } = useTenant();
+  return <TeamDeskWorkspace key={activeOrg?.id ?? "none"} />;
+}
+
+function TeamDeskWorkspace() {
+  const { activeOrg } = useTenant();
+  const features = useWorkspaceFeatures();
+  const advanced = features.data?.team_desk === "enabled";
+  const search = Route.useSearch();
+  const navigate = Route.useNavigate();
+  const tab = teamDeskTab(search.tab, advanced, canReview(activeOrg?.role));
+  return (
+    <AppShell>
+      <PageHeader title="Team desk" description="Team members, shared inbox, approvals, client reports and integrations." actions={<GuideButton guide="team-desk" />} />
+      <Tabs value={tab} onValueChange={(value) => { void navigate({ search: { tab: value } }); }}>
+        <TabsList className="h-auto max-w-full flex-wrap">
+          <TabsTrigger value="members">Team members</TabsTrigger>
+          {advanced && <><TabsTrigger value="inbox">Shared inbox</TabsTrigger><TabsTrigger value="approvals">Approvals</TabsTrigger><TabsTrigger value="reports">Client reports</TabsTrigger>{canReview(activeOrg?.role) && <TabsTrigger value="api">API & webhooks</TabsTrigger>}</>}
+        </TabsList>
+        <TabsContent value="members"><TeamMembersPanel /></TabsContent>
+        {advanced && tab !== "members" && <TabsContent value={tab}><TeamDeskTools tab={tab} /></TabsContent>}
+      </Tabs>
+    </AppShell>
+  );
+}
+
+function TeamDeskTools({ tab }: { tab: string }) {
+  const { activeOrg } = useTenant();
   const orgId = activeOrg?.id ?? null;
   const fetchDesk = useServerFn(getTeamDesk);
   const fetchTeam = useServerFn(listTeam);
   const { accountId, setAccountId, platform, setPlatform } = useWorkspaceAccountFilter(orgId);
-  const desk = useQuery({ queryKey: ["team-desk", orgId, accountId, platform], enabled: !!orgId, refetchInterval: 30_000, queryFn: () => fetchDesk({ data: { organizationId: orgId!, ...(accountId !== "all" ? { socialAccountId: accountId } : {}), ...(platform !== "all" ? { platform } : {}) } }) });
-  const team = useQuery({ queryKey: ["team", orgId], enabled: !!orgId, queryFn: () => fetchTeam({ data: { organizationId: orgId! } }) });
+  const desk = useQuery({ queryKey: ["team-desk", orgId, accountId, platform], enabled: !!orgId, refetchInterval: 30_000, queryFn: () => { if (!orgId) throw new Error("Workspace required"); return fetchDesk({ data: { organizationId: orgId, ...(accountId !== "all" ? { socialAccountId: accountId } : {}), ...(platform !== "all" ? { platform } : {}) } }); } });
+  const team = useQuery({ queryKey: ["team", orgId], enabled: !!orgId, queryFn: () => { if (!orgId) throw new Error("Workspace required"); return fetchTeam({ data: { organizationId: orgId } }); } });
   const names = useMemo(() => Object.fromEntries((team.data ?? []).map((m) => [m.user_id, m.name || m.email])), [team.data]);
   const reviewer = canReview(desk.data?.role);
-  const pending = (desk.data?.approvals ?? []).filter((a) => a.status === "pending").length;
 
   return (
-    <AppShell>
-      <PageHeader title="Team desk" description="Shared inbox, approvals, client reports and integrations for teams and agencies." actions={<div className="flex flex-wrap items-center gap-2"><PlatformAccountFilter orgId={orgId ?? null} platform={platform} onPlatformChange={setPlatform} accountId={accountId} onAccountChange={setAccountId} /><Button variant="outline" size="icon" aria-label="Refresh Team Desk" disabled={desk.isFetching || team.isFetching} onClick={() => { void desk.refetch(); void team.refetch(); }}><RefreshCw className="size-4" /></Button><GuideButton guide="team-desk" /></div>} />
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-end gap-2"><PlatformAccountFilter orgId={orgId ?? null} platform={platform} onPlatformChange={setPlatform} accountId={accountId} onAccountChange={setAccountId} /><Button variant="outline" size="icon" aria-label="Refresh Team Desk" disabled={desk.isFetching || team.isFetching} onClick={() => { void desk.refetch(); void team.refetch(); }}><RefreshCw className="size-4" /></Button></div>
       {(desk.isError || team.isError) && <p role="alert" className="mb-4 text-sm text-destructive">Team Desk or teammate details could not be refreshed. Previously loaded results may be out of date.</p>}
       {!orgId || !desk.data ? (
         <p role="status" className="text-sm text-muted-foreground">{desk.isError ? "Team Desk unavailable. Refresh to retry." : "Loading Team Desk…"}</p>
       ) : (
-        <Tabs key={orgId} defaultValue="inbox">
-          <TabsList className="h-auto max-w-full flex-wrap">
-            <TabsTrigger value="inbox">Shared inbox</TabsTrigger>
-            <TabsTrigger value="approvals">Approvals{pending ? ` (${pending})` : ""}</TabsTrigger>
-            <TabsTrigger value="reports">Client reports</TabsTrigger>
-            {reviewer && <TabsTrigger value="api">API & webhooks</TabsTrigger>}
-          </TabsList>
-          <TabsContent value="inbox">{team.data ? <SharedInbox key={`${orgId}:${platform}:${accountId}`} orgId={orgId} desk={{ ...desk.data, conversations: desk.data.conversations.filter((c) => platform === "all" || c.platform === platform) }} names={names} members={team.data} /> : <p role="status" className="text-sm text-muted-foreground">{team.isError ? "Teammate details unavailable. Refresh to retry." : "Loading teammate details…"}</p>}</TabsContent>
-          <TabsContent value="approvals"><Approvals orgId={orgId} desk={desk.data} names={names} reviewer={reviewer} /></TabsContent>
-          <TabsContent value="reports"><Reports />{reviewer && <ClientBilling orgId={orgId} />}</TabsContent>
-          {reviewer && <TabsContent value="api"><Integrations orgId={orgId} /></TabsContent>}
-        </Tabs>
+        <>
+          {tab === "inbox" && (team.data ? <SharedInbox key={`${orgId}:${platform}:${accountId}`} orgId={orgId} desk={{ ...desk.data, conversations: desk.data.conversations.filter((c) => platform === "all" || c.platform === platform) }} names={names} members={team.data} /> : <p role="status" className="text-sm text-muted-foreground">{team.isError ? "Teammate details unavailable. Refresh to retry." : "Loading teammate details…"}</p>)}
+          {tab === "approvals" && <Approvals orgId={orgId} desk={desk.data} names={names} reviewer={reviewer} />}
+          {tab === "reports" && <><Reports />{reviewer && <ClientBilling orgId={orgId} />}</>}
+          {tab === "api" && reviewer && <Integrations orgId={orgId} />}
+        </>
       )}
-    </AppShell>
+    </div>
   );
 }
 
