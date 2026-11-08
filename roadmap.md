@@ -9,7 +9,8 @@
 ## Team Desk invoice repair — Nov 8
 - [x] Prepared docs/sql/railway-client-invoices-repair.sql: repeatable, transaction-wrapped table/grants/reviewer RLS/client-membership checks/index and optional audit trigger. Add invoice disabled until invoice/client reads succeed. Connected Cloud has all six Team Desk tables; it is not the affected live database and was left unchanged.
 - [x] Isolated PostgreSQL test reproduced missing relation, ran repair twice preserving a ₹500 unpaid invoice, and verified manager read, unrelated-client write denial, agent/other-workspace isolation and anonymous denial. Eight focused tests pass; preview build OK.
-- [ ] Apply repair to the live database and confirm Team Desk invoice read/save: direct live database access unavailable. Deployment migration directory is protected; no automatic migration was added and no existing history was modified. Owner can run supplied SQL through the authorized live Super Admin SQL editor.
+- [x] Owner's SQL-editor result confirms client_invoices installed on the live database. Earlier explicit-transaction script failed in the in-app runner; the new Team Desk repair avoids that incompatibility.
+- [ ] Confirm Team Desk invoice read/save after installing remaining tables; screenshot proves installation only, not invoice CRUD. No automatic migration or history reset performed.
 
 ## Current dashboard request — Nov 8
 - [x] Move Automation templates above Workspace performance; remove standalone attention/banner from dashboard and show account, unread-message and failed-post items in the shared notification bell with scoped read controls. Delivery/security logic unchanged.
