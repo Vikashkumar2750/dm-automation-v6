@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { type BillingCycle, type PlanKey } from "@/lib/plans";
+import { findPlanOption, type BillingCycle, type PlanKey } from "@/lib/plans";
 
 const DEMO_KEY_IDS = ["rzp_test_1DP5mmOlF5G5ag"];
 
