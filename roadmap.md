@@ -1,5 +1,9 @@
 # DM FB-IG-YT by Techaasvik — Build Roadmap
 
+## Team Desk invoice repair — Nov 8
+- [ ] Repair missing live client_invoices via an idempotent deployment migration plus a manual SQL copy; preserve existing rows and reviewer/workspace isolation. Connected Cloud already contains the table, so do not apply the repair there and claim live success.
+- [ ] Verify migration twice and invoice access isolation locally; live invoice read/save awaits deployment or owner's manual SQL execution.
+
 ## Current dashboard request — Nov 8
 - [x] Move Automation templates above Workspace performance; remove standalone attention/banner from dashboard and show account, unread-message and failed-post items in the shared notification bell with scoped read controls. Delivery/security logic unchanged.
 - [x] Regression suite: 415 tests across 66 files pass; latest preview build OK. New tests verify 12 unread messages route to Inbox, confirmed-empty versus unavailable sources, publishing visibility and affected-record read identities.
