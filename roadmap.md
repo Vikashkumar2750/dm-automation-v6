@@ -1,5 +1,9 @@
 # DM FB-IG-YT by Techaasvik — Build Roadmap
 
+## Team merged into Team Desk — Nov 8
+- [ ] Move member/invite controls into Team Desk, remove duplicate sidebar entry and redirect old Team links; preserve workspace role checks and basic team access when advanced Team Desk tools are off.
+- [ ] Run regression tests and verify the merged page where authorized access is available; external acceptance blockers below remain open.
+
 ## Team Desk complete schema follow-up — Nov 8
 - [x] Prepared combined repair for five screenshot-confirmed missing tables as a single transactional DO statement, compatible with Super Admin Run SQL. Invoice table is already installed per owner's result; no live repair was applied here.
 - [x] Reproduced explicit BEGIN/COMMIT failure (0A000) inside admin_exec_sql; replacement runs twice through the same EXECUTE mechanism and preserves settings. Verified cross-workspace assignment denial and server-only integration tables. Team Desk missing-source reads and integration write failures now reject instead of reporting empty/off/success.
