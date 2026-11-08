@@ -6,6 +6,7 @@ import { Activity, Gauge, RefreshCw, ShieldAlert, Webhook } from "lucide-react";
 import { PageHeader, Panel, StatCard, StatusBadge } from "@/components/app/primitives";
 import { getPlatformOverview, listAdminAccounts } from "@/lib/admin.functions";
 import { OtpDeliveryPanel } from "@/components/app/OtpDeliveryPanel";
+import { SelfCheckPanel } from "@/components/app/SelfCheckPanel";
 import { Button } from "@/components/ui/button";
 import { incomingProcessingRate, summarizeIncomingEvents } from "@/lib/admin-overview-summary";
 
@@ -120,6 +121,7 @@ function HealthPage() {
           </div>
         )}
       </Panel>
+      <SelfCheckPanel />
       <OtpDeliveryPanel />
     </div>
   );
