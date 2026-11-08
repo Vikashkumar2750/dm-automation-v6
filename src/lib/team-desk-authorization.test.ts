@@ -37,7 +37,8 @@ beforeEach(() => { role = "agent"; conversationExists = true; assigneeExists = t
 
 it("rejects a nonmember before returning Team Desk data", async () => {
   role = null;
-  await expect(invoke(getTeamDesk, { organizationId: "workspace" })).rejects.toThrow();
+  await expect(invoke(getTeamDesk, { organizationId: "workspace" })).rejects.toThrow("Workspace membership required");
+  expect(filters.every(([table]) => table === "organization_members")).toBe(true);
 });
 it.each([null, "viewer"])("rejects assignment and draft writes for role %s", async (value) => {
   role = value;

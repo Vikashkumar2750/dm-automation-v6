@@ -27,13 +27,25 @@ async function requireReviewer(ctx: Ctx, organizationId: string) {
   if (!data) throw new Error("Only owners, admins and managers can do this.");
 }
 
+async function requireDeskWriter(ctx: Ctx, organizationId: string) {
+  const role = await myRole(ctx, organizationId);
+  if (!role || role === "viewer") throw new Error("Team write access required.");
+}
+
+async function requireWorkspaceConversation(ctx: Ctx, organizationId: string, conversationId: string) {
+  const { data, error } = await ctx.supabase.from("conversations").select("id")
+    .eq("id", conversationId).eq("organization_id", organizationId).maybeSingle();
+  if (error || !data) throw new Error("Conversation unavailable in this workspace.");
+}
+
 export const getTeamDesk = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => orgInput.extend({ socialAccountId: z.string().uuid().optional(), platform: z.enum(["instagram", "facebook", "youtube"]).optional() }).parse(d))
   .handler(async ({ data, context }) => {
     const sb = context.supabase;
-    const [role, convs, assigns, settings, approvals] = await Promise.all([
-      myRole(context, data.organizationId),
+    const role = await myRole(context, data.organizationId);
+    if (!role) throw new Error("Workspace membership required.");
+    const [convs, assigns, settings, approvals] = await Promise.all([
       sb.from("conversations")
         .select("id, platform, channel, status, external_user_name, external_user_id, last_message_at, last_message_preview, unread_count")
         .eq("organization_id", data.organizationId)
@@ -68,6 +80,13 @@ export const assignConversation = createServerFn({ method: "POST" })
     z.object({ organizationId: z.string().uuid(), conversationId: z.string().uuid(), assignedTo: z.string().uuid().nullable() }).parse(d),
   )
   .handler(async ({ data, context }) => {
+    await requireDeskWriter(context, data.organizationId);
+    await requireWorkspaceConversation(context, data.organizationId, data.conversationId);
+    if (data.assignedTo) {
+      const { data: member, error: memberError } = await context.supabase.from("organization_members")
+        .select("role").eq("organization_id", data.organizationId).eq("user_id", data.assignedTo).maybeSingle();
+      if (memberError || !member) throw new Error("Assignee must belong to this workspace.");
+    }
     const { error } = await context.supabase.from("conversation_assignments").upsert({
       conversation_id: data.conversationId,
       organization_id: data.organizationId,
@@ -99,6 +118,8 @@ export const requestApproval = createServerFn({ method: "POST" })
     z.object({ organizationId: z.string().uuid(), conversationId: z.string().uuid(), body: z.string().trim().min(1).max(1000) }).parse(d),
   )
   .handler(async ({ data, context }) => {
+    await requireDeskWriter(context, data.organizationId);
+    await requireWorkspaceConversation(context, data.organizationId, data.conversationId);
     const { error } = await context.supabase.from("reply_approvals").insert({
       organization_id: data.organizationId,
       conversation_id: data.conversationId,

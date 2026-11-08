@@ -1,6 +1,8 @@
 # DM FB-IG-YT by Techaasvik — Build Roadmap
 
-## Current remaining work — Nov 8, 11:24 UTC (supersedes historical blockers below)
+## Current remaining work — Nov 8, 12:03 UTC (supersedes historical blockers below)
+- [x] Owner confirms Railway deployment complete. Connected managed backend schedule list is empty; this is not the separate live database/Railway scheduler inventory. Existing scheduler excludes db-backup; retired authenticated endpoint returns 410 and cannot create partial backups. Credential/password rotation explicitly deferred by owner.
+- [ ] Current batch: strengthen Team Desk membership, conversation and assignee guards after isolated handler reproductions accepted unauthorized writes; validate regression tests. Live acceptance remains separate from isolated checks.
 - [x] Owner confirms both live hosting secrets configured. Screenshot shows primary/secondary plaintext counts zero for social tokens and payment credentials; no further encryption backfill requested. Screenshot verifies autodm.techaasvik.com sending domain; earlier receipt Delivered evidence retained. Scheduler eight-job success, Revenue and SQL results already confirmed.
 - [x] Complete regression batch: 431 tests passed before webhook changes; all 436 tests across 75 files pass afterward and latest preview build is OK. Same five failing reproductions now pass: source errors reject, redirects forbidden, network diagnostics sanitized, status-write failures reject. No provider actions or live secrets changed; mocked delivery checks are not live receiver acceptance.
 - [ ] Deploy webhook reliability fix to Railway and validate with an owner-controlled HTTPS receiver. Direct-host DNS/private-address protection remains a separate security limitation; redirect blocking does not establish complete SSRF prevention.
