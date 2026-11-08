@@ -23,6 +23,10 @@ import {
   Workflow,
 } from "lucide-react";
 import { useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { getPublicPlans } from "@/lib/platform-config.functions";
+import { planPrice, optionPrice } from "@/lib/plan-presentation";
 
 import { PublicFooter } from "@/components/app/PublicFooter";
 import { PublicHeader } from "@/components/app/PublicHeader";
@@ -34,7 +38,7 @@ const metaPartnerBadge = { url: "/meta-business-partner.png" };
 const pageTitle =
   "AutoDM — Instagram Comment-to-DM Automation, Sales Pages & Unified Inbox";
 const pageDescription =
-  "Auto-reply to Instagram & Facebook comments with DMs, sell via built-in delivery pages with WhatsApp OTP leads, and reply on YouTube — official Meta APIs, from ₹9.";
+  "Auto-reply to Instagram & Facebook comments with DMs, sell via built-in delivery pages with WhatsApp OTP leads, and reply on YouTube — official Meta APIs and workspace-based plans.";
 
 
 const faqs = [
@@ -88,7 +92,7 @@ const comparison: string[][] = [
   ["Drop-off tracking & AI follow-ups", "Yes", "No", "Limited"],
   ["Unified inbox + scheduling", "Yes", "Inbox only", "No"],
   ["Agency client workspaces", "Yes", "Paid add-on", "No"],
-  ["Starting price", "₹9 trial, ₹59/mo", "≈ $15+/mo", "≈ $29+/mo"],
+
 ];
 
 const benefits = [
@@ -158,41 +162,6 @@ const forWho = [
   },
 ];
 
-const plans = [
-  {
-    name: "Free",
-    price: "₹9",
-    cadence: "₹9 for 3 days trial",
-    popular: false,
-    features: [
-      { text: "1× Instagram account", included: true },
-      { text: "1× Facebook page", included: true },
-      { text: "1× YouTube channel", included: true },
-      { text: "AI content analysis", included: true },
-      { text: "DM & comment automation", included: true },
-      { text: "Multi-account publish", included: false },
-      { text: "Priority support", included: false },
-    ],
-    cta: "Start with Free",
-  },
-  {
-    name: "Pro",
-    price: "₹59",
-    cadence: "per month · or ₹299 / 6 months · ₹599 / year",
-    popular: true,
-    features: [
-      { text: "5× Instagram accounts", included: true },
-      { text: "5× Facebook pages", included: true },
-      { text: "5× YouTube channels", included: true },
-      { text: "AI content analysis", included: true },
-      { text: "DM & comment automation", included: true },
-      { text: "Publish to all accounts at once", included: true },
-      { text: "Priority support", included: true },
-    ],
-    cta: "Upgrade to Pro",
-  },
-];
-
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
@@ -230,22 +199,7 @@ export const Route = createFileRoute("/")({
               ],
 
               publisher: { "@type": "Organization", name: "Techaasvik" },
-              offers: [
-                {
-                  "@type": "Offer",
-                  name: "Free",
-                  price: "9",
-                  priceCurrency: "INR",
-                  description: "₹9 for 3 days trial",
-                },
-                {
-                  "@type": "Offer",
-                  name: "Pro",
-                  price: "59",
-                  priceCurrency: "INR",
-                  description: "Per month; ₹299 for 6 months or ₹599 per year",
-                },
-              ],
+
             },
             {
               "@type": "FAQPage",
@@ -265,6 +219,9 @@ export const Route = createFileRoute("/")({
 
 function LandingPage() {
   const navigate = useNavigate();
+  const fetchPlans = useServerFn(getPublicPlans);
+  const catalogue = useQuery({ queryKey: ["public-plans"], queryFn: () => fetchPlans(), retry: false, staleTime: 0, refetchInterval: 60_000 });
+  const plans = catalogue.data ?? [];
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -599,15 +556,16 @@ function LandingPage() {
               Simple pricing that pays for itself
             </h2>
             <p className="mt-3 max-w-2xl text-muted-foreground">
-              Start with a one-time pass, then upgrade when your audience grows. No
-              hidden fees, cancel anytime.
+              Explore the current plans and choose the access that fits your workspace.
             </p>
-            <div className="mt-10 grid gap-6 md:grid-cols-2">
+            {catalogue.isError && <div role="alert" className="mt-6 flex flex-wrap items-center gap-3 text-sm text-destructive">Current pricing could not be refreshed.<Button variant="outline" onClick={() => void catalogue.refetch()}>Retry</Button></div>}
+            {!catalogue.data && !catalogue.isError && <p role="status" className="mt-6 text-muted-foreground">Loading current plans…</p>}
+            <div className="mt-10 grid gap-6 md:grid-cols-3">
               {plans.map((plan) => (
                 <div
-                  key={plan.name}
+                  key={plan.key}
                   className={
-                    plan.popular
+                    (plan.key === "pro")
                       ? "panel relative border-primary/40 bg-surface-secondary p-6"
                       : "panel p-6"
                   }
@@ -615,44 +573,28 @@ function LandingPage() {
                   <div className="flex items-start justify-between gap-4">
                     <div>
                       <h3 className="text-lg font-bold">{plan.name}</h3>
-                      {plan.popular && (
+                      {(plan.key === "pro") && (
                         <p className="mt-0.5 text-sm font-medium text-primary">
                           Most popular
                         </p>
                       )}
                     </div>
                     <div className="text-right">
-                      <p className="num text-3xl font-bold">{plan.price}</p>
+                      <p className="num text-3xl font-bold">{planPrice(plan)}</p>
                     </div>
                   </div>
-                  <p className="mt-2 text-sm text-muted-foreground">{plan.cadence}</p>
+                  <p className="mt-2 text-sm text-muted-foreground">{plan.options.map(optionPrice).join(" · ") || plan.headline}</p>
                   <ul className="mt-6 space-y-2.5">
-                    {plan.features.map((f) => (
-                      <li
-                        key={f.text}
-                        className={
-                          f.included
-                            ? "flex items-center gap-2 text-sm"
-                            : "flex items-center gap-2 text-sm text-subtle-foreground line-through"
-                        }
-                      >
-                        {f.included ? (
-                          <CheckCircle2 className="size-4 shrink-0 text-success" />
-                        ) : (
-                          <span className="inline-block size-4 shrink-0 rounded-full border" />
-                        )}
-                        {f.text}
-                      </li>
-                    ))}
+                    {plan.perks.map((perk, index) => <li key={index} className="flex items-start gap-2 text-sm"><CheckCircle2 className="mt-1 size-4 shrink-0 text-success" />{perk}</li>)}
                   </ul>
                   <Button
                     asChild
                     size="lg"
-                    variant={plan.popular ? "default" : "outline"}
+                    variant={(plan.key === "pro") ? "default" : "outline"}
                     className="mt-8 w-full"
                   >
-                    <Link to="/auth">
-                      {plan.cta}
+                    <Link to={plan.contactOnly ? "/contact" : "/auth"}>
+                      {plan.contactOnly ? "Contact us" : `Choose ${plan.name}`}
                       <ArrowRight className="size-4" />
                     </Link>
                   </Button>

@@ -17,6 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { getPlatformOverview, grantOrganizationPlan, listPlanOrders } from "@/lib/admin.functions";
+import { planPrice } from "@/lib/plan-presentation";
 import { formatPaise } from "@/lib/plans";
 import { PlanEditorPanel } from "@/components/app/PlatformConfigPanels";
 import { getPlatformConfig } from "@/lib/platform-config.functions";
@@ -41,7 +42,7 @@ function PlansPage() {
   const fetchOrders = useServerFn(listPlanOrders);
   const fetchConfig = useServerFn(getPlatformConfig);
   const config = useQuery({ queryKey: ["platform-config"], queryFn: () => fetchConfig(), retry: false });
-  const pricing = Object.fromEntries((config.data?.plans ?? []).map((plan) => [plan.key, { price: plan.headline, entitlements: plan.perks.join(" · ") }]));
+  const pricing = Object.fromEntries((config.data?.plans ?? []).map((plan) => [plan.key, { price: planPrice(plan), entitlements: plan.perks.join(" · ") }]));
   const grantPlan = useServerFn(grantOrganizationPlan);
   const queryClient = useQueryClient();
 

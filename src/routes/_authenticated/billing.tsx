@@ -1,3 +1,4 @@
+import { optionPrice, planPrice } from "@/lib/plan-presentation";
 import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -70,7 +71,7 @@ function BillingPage() {
   const [cycles, setCycles] = useState<Record<string, BillingCycle>>({ pro: "monthly" });
 
   const fetchPlans = useServerFn(getPublicPlans);
-  const plansQuery = useQuery({ queryKey: ["public-plans"], queryFn: () => fetchPlans(), retry: false });
+  const plansQuery = useQuery({ queryKey: ["public-plans"], queryFn: () => fetchPlans(), retry: false, staleTime: 0, refetchInterval: 60_000 });
   const PLANS = plansQuery.data ?? [];
   const fetchUsage = useServerFn(getAutomationUsage);
   const fetchAccounts = useServerFn(listSocialAccounts);
@@ -229,7 +230,7 @@ function BillingPage() {
                   </span>
                 }
               >
-                <p className="num text-2xl font-semibold">{p.headline}</p>
+                <p className="num text-2xl font-semibold">{p.contactOnly || !option ? planPrice(p) : optionPrice(option)}</p>
                 <ul className="mt-4 space-y-2 text-sm text-muted-foreground">
                   {p.perks.map((perk) => (
                     <li key={perk} className="flex items-start gap-2">
@@ -253,7 +254,7 @@ function BillingPage() {
                           o.cycle === selected ? "border-primary text-primary" : "text-muted-foreground"
                         }`}
                       >
-                        {o.label}
+                        {optionPrice(o)}
                       </Button>
                     ))}
                   </div>
