@@ -1,6 +1,7 @@
 # DM FB-IG-YT by Techaasvik — Build Roadmap
 
 ## Current request — implementation first
+- [ ] Nov 8 13:28 request: use confirmed saved Google credentials, finish actionable fixes together and give one manual handoff. Drive workspace connection is now linked and read-only app credential check returns 200; implement Super Admin manual/recurring Railway full-dump upload, without claiming restore or deferred live checks complete.
 - [x] Nov 8 screenshot-confirmed Team Desk self-check failure reproduced: assignments have conversation_id, not id. Fixed actual field probes for assignments/approvals/settings and narrowed diagnostics to observed reads; 32 focused regressions pass, preview build OK.
 - [ ] Live assignment/approval, webhook receipt/retry, saved-plan homepage/checkout reflection and signed-in unpaid denial remain unverified: requesting user's preview session mint failed (no matching account), no controlled receiver supplied. Do not substitute read-only self-checks for these flows.
 - [ ] Google Drive setup started: connector available, no client configured, connection card declined. No Drive integration or automatic saving is operational. Needs configured client/consent; export storage does not replace an isolated restore test or include uploaded file bytes/provider settings.
