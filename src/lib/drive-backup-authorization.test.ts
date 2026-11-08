@@ -6,7 +6,8 @@ import { expect, it, vi } from "vitest";
 function scenario(role = true, roleError = false, auditError = false) {
   const source = readFileSync(new URL("./drive-backup.functions.ts", import.meta.url), "utf8")
     .replace(/^import .*;\s*$/gm, "").replace(/export const /g, "const ")
-    .replace('await import("@/integrations/supabase/client.server")', "({ supabaseAdmin: admin })");
+    .replace('await import("@/integrations/supabase/client.server")', "({ supabaseAdmin: admin })")
+    .replace(/await import\("@\/lib\/drive-oauth.server"\)/g, "({ readDriveConnection: async () => ({ connected: false, email: null, connectedAt: null }), oauthClient: () => null })");
   const js = ts.transpileModule(source + "\nreturn {getDriveBackup, updateDriveBackup};", { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.None } }).outputText;
   const writes = vi.fn();
   const admin = { from(table: string) {
@@ -17,7 +18,7 @@ function scenario(role = true, roleError = false, auditError = false) {
   } };
   const builder = () => { const b = { middleware: () => b, inputValidator: () => b, handler: (fn: unknown) => fn }; return b; };
   const env = { GOOGLE_DRIVE_API_KEY: "test-only", LOVABLE_API_KEY: "test-only", NITRO_PRESET: "node-server", DRIVE_BACKUP_DATABASE_URL: "test-only" };
-  const fns = new Function("createServerFn", "z", "requireSupabaseAuth", "admin", "process", "crypto", js)(builder, z, {}, admin, { env }, { randomUUID: () => "request" });
+  const fns = new Function("getRequest", "createServerFn", "z", "requireSupabaseAuth", "admin", "process", "crypto", js)(() => ({}), builder, z, {}, admin, { env }, { randomUUID: () => "request" });
   const context = { userId: "actor", supabase: { rpc: async () => ({ data: role, error: roleError ? {} : null }) } };
   return { fns, context, writes, env };
 }

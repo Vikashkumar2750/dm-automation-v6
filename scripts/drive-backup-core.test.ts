@@ -33,3 +33,20 @@ describe("private platform Drive backups", () => {
     expect(Object.keys(driveHeaders({ LOVABLE_API_KEY: "test-only", GOOGLE_DRIVE_API_KEY: "test-only" }))).toEqual(["Authorization", "X-Connection-Api-Key"]);
   });
 });
+describe("direct Drive connection", async () => {
+  // @ts-expect-error plain JavaScript
+  const { openSealed, driveTarget } = await import("./drive-backup-core.mjs");
+  const { sealSecret } = await import("../src/lib/token-crypto.server");
+  const key = Buffer.alloc(32, 7).toString("base64");
+  it("opens tokens sealed by the app and refuses without the key", async () => {
+    const sealed = await sealSecret("refresh-xyz", key);
+    expect(await openSealed(sealed, key)).toBe("refresh-xyz");
+    await expect(openSealed(sealed, undefined)).rejects.toThrow("missing");
+  });
+  it("uses Google directly when connected from Super Admin, never the gateway", () => {
+    const t = driveTarget({}, "access-1");
+    expect(t.base).toBe("https://www.googleapis.com");
+    expect(t.headers).toEqual({ Authorization: "Bearer access-1" });
+    expect(() => driveTarget({}, null)).toThrow("not configured");
+  });
+});
