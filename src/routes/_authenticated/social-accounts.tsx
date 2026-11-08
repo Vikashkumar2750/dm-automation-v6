@@ -6,7 +6,13 @@ import { CheckCircle2, Loader2, Plug, RefreshCw, Trash2, TriangleAlert } from "l
 import { toast } from "sonner";
 
 import { AppShell } from "@/components/app/AppShell";
-import { PageHeader, Panel, PlatformBadge, StatusBadge, EmptyState } from "@/components/app/primitives";
+import {
+  PageHeader,
+  Panel,
+  PlatformBadge,
+  StatusBadge,
+  EmptyState,
+} from "@/components/app/primitives";
 import { Button } from "@/components/ui/button";
 import { useTenant } from "@/hooks/useTenant";
 import { EntryPointsCard } from "@/components/app/EntryPointsPanels";
@@ -84,7 +90,10 @@ function SocialAccountsPage() {
   const testComments = useMutation({
     mutationFn: () => testCommentsFn({ data: { organizationId: orgId! } }),
     onSuccess: (rows) => {
-      if (rows.length === 0) { toast("Connect an Instagram account first"); return; }
+      if (rows.length === 0) {
+        toast("Connect an Instagram account first");
+        return;
+      }
       for (const r of rows) {
         if (r.ok) toast.success(`${r.name}: Instagram comments read OK (${r.comments} comments)`);
         else toast.error(`${r.name}: ${r.error}`);
@@ -150,9 +159,12 @@ function SocialAccountsPage() {
   useEffect(() => {
     function onMessage(event: MessageEvent) {
       if (event.origin !== window.location.origin) return;
-      const data = event.data as
-        | { type?: string; result?: string; added?: string | null; limit?: string | null }
-        | null;
+      const data = event.data as {
+        type?: string;
+        result?: string;
+        added?: string | null;
+        limit?: string | null;
+      } | null;
       if (!data || data.type !== "social-connect" || !data.result) return;
       handleConnectResult({
         result: data.result,
@@ -253,8 +265,7 @@ function SocialAccountsPage() {
       <div className="grid gap-4 md:grid-cols-3">
         {platforms.map((platform) => {
           const meta = platformMeta[platform];
-          const ready =
-            meta.provider === "meta" ? readiness?.meta : readiness?.google;
+          const ready = meta.provider === "meta" ? readiness?.meta : readiness?.google;
           const count = accounts.filter((a) => a.platform === platform).length;
           const planName = (activeOrg?.plan ?? "").toLowerCase();
           const limit = planName.startsWith("agency")
@@ -278,10 +289,7 @@ function SocialAccountsPage() {
               <p className="mt-3 text-sm text-muted-foreground">{meta.blurb}</p>
               <ul className="mt-3 space-y-1">
                 {meta.capabilities.map((cap) => (
-                  <li
-                    key={cap}
-                    className="flex items-center gap-2 text-sm text-muted-foreground"
-                  >
+                  <li key={cap} className="flex items-center gap-2 text-sm text-muted-foreground">
                     <CheckCircle2 className="size-3.5 text-success" />
                     {cap}
                   </li>
@@ -294,19 +302,19 @@ function SocialAccountsPage() {
                   </Link>
                 </Button>
               ) : (
-              <Button
-                className="mt-4 w-full"
-                variant={count > 0 ? "outline" : "default"}
-                disabled={pending === platform || loading}
-                onClick={() => handleConnect(platform)}
-              >
-                {pending === platform ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : (
-                  <Plug className="size-4" />
-                )}
-                {count > 0 ? "Connect another" : `Connect ${meta.label}`}
-              </Button>
+                <Button
+                  className="mt-4 w-full"
+                  variant={count > 0 ? "outline" : "default"}
+                  disabled={pending === platform || loading}
+                  onClick={() => handleConnect(platform)}
+                >
+                  {pending === platform ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <Plug className="size-4" />
+                  )}
+                  {count > 0 ? "Connect another" : `Connect ${meta.label}`}
+                </Button>
               )}
             </Panel>
           );
@@ -324,49 +332,63 @@ function SocialAccountsPage() {
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-1">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => testComments.mutate()}
-            disabled={!orgId || testComments.isPending}
-          >
-            {testComments.isPending ? <Loader2 className="size-4 animate-spin" /> : <CheckCircle2 className="size-4" />}
-            Test Instagram comments
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => fixNotifications.mutate()}
-            disabled={!orgId || fixNotifications.isPending}
-          >
-            {fixNotifications.isPending ? (
-              <Loader2 className="size-4 animate-spin" />
-            ) : (
-              <CheckCircle2 className="size-4" />
-            )}
-            Check & repair Meta
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => accountsQuery.refetch()}
-            disabled={accountsQuery.isFetching}
-          >
-            <RefreshCw
-              className={accountsQuery.isFetching ? "size-4 animate-spin" : "size-4"}
-            />
-            Refresh
-          </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => testComments.mutate()}
+              disabled={!orgId || testComments.isPending}
+            >
+              {testComments.isPending ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <CheckCircle2 className="size-4" />
+              )}
+              Test Instagram comments
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => fixNotifications.mutate()}
+              disabled={!orgId || fixNotifications.isPending}
+            >
+              {fixNotifications.isPending ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <CheckCircle2 className="size-4" />
+              )}
+              Check & repair Meta
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => accountsQuery.refetch()}
+              disabled={accountsQuery.isFetching}
+            >
+              <RefreshCw className={accountsQuery.isFetching ? "size-4 animate-spin" : "size-4"} />
+              Refresh
+            </Button>
           </div>
         </div>
-
 
         {accountsQuery.isLoading ? (
           <div className="flex items-center justify-center py-12 text-sm text-muted-foreground">
             <Loader2 className="mr-2 size-4 animate-spin" /> Loading accounts…
           </div>
         ) : accountsQuery.isError && !accountsQuery.data ? (
-          <div role="alert" className="flex flex-wrap items-center justify-between gap-3 px-5 py-6 text-sm text-destructive"><span>Connected accounts unavailable. Your connections have not changed.</span><Button variant="outline" size="sm" disabled={accountsQuery.isFetching} onClick={() => void accountsQuery.refetch()}>Try again</Button></div>
+          <div
+            role="alert"
+            className="flex flex-wrap items-center justify-between gap-3 px-5 py-6 text-sm text-destructive"
+          >
+            <span>Connected accounts unavailable. Your connections have not changed.</span>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={accountsQuery.isFetching}
+              onClick={() => void accountsQuery.refetch()}
+            >
+              Try again
+            </Button>
+          </div>
         ) : accounts.length === 0 ? (
           <EmptyState
             icon={Plug}
@@ -417,7 +439,8 @@ function SocialAccountsPage() {
           <div className="min-w-0">
             <p className="text-sm font-semibold">Live event feed</p>
             <p className="text-xs text-muted-foreground">
-              Comments, messages and mentions arrive here in real time once your account is connected.
+              Comments, messages and mentions arrive here in real time once your account is
+              connected.
             </p>
           </div>
           {webhookConfigQuery.data ? (
@@ -428,7 +451,6 @@ function SocialAccountsPage() {
             )
           ) : null}
         </div>
-
 
         {eventsQuery.isLoading ? (
           <div className="flex items-center justify-center py-10 text-sm text-muted-foreground">

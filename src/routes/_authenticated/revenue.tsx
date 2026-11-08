@@ -1118,7 +1118,10 @@ function Pages({
   const [editing, setEditing] = useState(false);
   const [step, setStep] = useState(0);
   const [visitedSteps, setVisitedSteps] = useState<number[]>([]);
-  const goToStep = (next: number) => { setVisitedSteps((values) => values.includes(step) ? values : [...values, step]); setStep(next); };
+  const goToStep = (next: number) => {
+    setVisitedSteps((values) => (values.includes(step) ? values : [...values, step]));
+    setStep(next);
+  };
   const [mobileView, setMobileView] = useState<"editor" | "preview">("editor");
   const [baseline, setBaseline] = useState("");
   const [imagePreview, setImagePreview] = useState("");
@@ -1383,7 +1386,11 @@ function Pages({
                     aria-current={step === index ? "step" : undefined}
                     onClick={() => goToStep(index)}
                   >
-                    {visitedSteps.includes(index) && step !== index ? <Check className="size-4" aria-label="Visited section" /> : <span>{index + 1}</span>}
+                    {visitedSteps.includes(index) && step !== index ? (
+                      <Check className="size-4" aria-label="Visited section" />
+                    ) : (
+                      <span>{index + 1}</span>
+                    )}
                     {label}
                   </Button>
                 ))}
@@ -1995,7 +2002,9 @@ function Pages({
                           setMobileView("editor");
                           setImagePreview("");
                           if (p.image_path)
-                            void previewDeliveryImage(p.image_path).then(setImagePreview).catch(() => toast.error("Image preview unavailable"));
+                            void previewDeliveryImage(p.image_path)
+                              .then(setImagePreview)
+                              .catch(() => toast.error("Image preview unavailable"));
                         }}
                       >
                         <Copy className="size-4" />

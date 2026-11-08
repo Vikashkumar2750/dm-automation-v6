@@ -682,7 +682,11 @@ function LandingPage() {
                       <p className="num text-3xl font-bold">{planPrice(plan)}</p>
                     </div>
                   </div>
-                  {plan.options.length > 1 && !plan.contactOnly && <p className="mt-2 text-sm text-muted-foreground">{plan.options.slice(1).map(optionPrice).join(" · ")}</p>}
+                  {plan.options.length > 1 && !plan.contactOnly && (
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      {plan.options.slice(1).map(optionPrice).join(" · ")}
+                    </p>
+                  )}
                   <ul className="mt-6 space-y-2.5">
                     {plan.perks.map((perk, index) => (
                       <li key={index} className="flex items-start gap-2 text-sm">
