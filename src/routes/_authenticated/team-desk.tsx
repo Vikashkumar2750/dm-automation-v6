@@ -297,7 +297,7 @@ function ClientBilling({ orgId }: { orgId: string }) {
             <Input placeholder="Period (e.g. October 2026)" value={form.period} onChange={(e) => setForm({ ...form, period: e.target.value })} />
             <Input type="number" min={1} placeholder="Amount ₹" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} />
             <Input placeholder="https://payment-link (optional)" value={form.link} onChange={(e) => setForm({ ...form, link: e.target.value })} />
-            <Button disabled={!form.client || !(Number(form.amount) > 0) || add.isPending} onClick={() => add.mutate()}>Add invoice</Button>
+            <Button disabled={!list.isSuccess || !ws.isSuccess || !form.client || !(Number(form.amount) > 0) || add.isPending} onClick={() => add.mutate()}>Add invoice</Button>
             <Input className="md:col-span-6" placeholder="Note (optional)" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
           </div>
         )}
