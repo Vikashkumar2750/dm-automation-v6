@@ -10,7 +10,7 @@ export function checkPlanCatalogue(plans: PlanDef[]): CheckResult {
     if (p.contactOnly) continue;
     for (const o of p.options ?? []) {
       if (!Number.isFinite(o.amountPaise) || o.amountPaise < 0) problems.push(`${p.name} ${o.label}: invalid price`);
-      if (!Number.isFinite(o.months) || (o.months ?? 0) <= 0) problems.push(`${p.name} ${o.label}: invalid duration`);
+      if (o.months !== null && (!Number.isFinite(o.months) || o.months <= 0)) problems.push(`${p.name} ${o.label}: invalid duration`);
     }
   }
   const keys = plans.map((p) => p.key);
