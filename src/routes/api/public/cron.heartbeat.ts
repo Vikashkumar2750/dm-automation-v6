@@ -15,7 +15,8 @@ export const Route = createFileRoute("/api/public/cron/heartbeat")({
         const body = (await request.json().catch(() => null)) as { results?: { job: string; status: number; ms: number }[] } | null;
         const results = (body?.results ?? []).filter((r) => (SCHEDULER_JOBS as readonly string[]).includes(r.job));
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-        const { data: prev } = await supabaseAdmin.from("scheduler_heartbeats").select("job, consecutive_failures");
+        const { data: prev, error: readError } = await supabaseAdmin.from("scheduler_heartbeats").select("job, consecutive_failures");
+        if (readError) return Response.json({ error: "Scheduler records unavailable" }, { status: 503 });
         const streaks = new Map((prev ?? []).map((p) => [p.job, p.consecutive_failures]));
         const now = new Date().toISOString();
         const rows = results.map((r) => {
@@ -27,7 +28,10 @@ export const Route = createFileRoute("/api/public/cron/heartbeat")({
             ...(ok ? { last_ok_at: now } : {}), updated_at: now,
           };
         });
-        if (rows.length) await supabaseAdmin.from("scheduler_heartbeats").upsert(rows, { onConflict: "job" });
+        if (rows.length) {
+          const { error } = await supabaseAdmin.from("scheduler_heartbeats").upsert(rows, { onConflict: "job" });
+          if (error) return Response.json({ error: "Scheduler heartbeat was not recorded" }, { status: 503 });
+        }
         return Response.json({ recorded: rows.length });
       },
       GET: async ({ request }) => {
@@ -36,7 +40,8 @@ export const Route = createFileRoute("/api/public/cron/heartbeat")({
         if (denied) return denied;
         const { assessScheduler } = await import("@/lib/scheduler-health");
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-        const { data } = await supabaseAdmin.from("scheduler_heartbeats").select("job, last_run_at, last_status, last_duration_ms, consecutive_failures");
+        const { data, error } = await supabaseAdmin.from("scheduler_heartbeats").select("job, last_run_at, last_status, last_duration_ms, consecutive_failures");
+        if (error) return Response.json({ error: "Scheduler records unavailable" }, { status: 503 });
         const health = assessScheduler(data ?? [], Date.now());
         return Response.json(health, { status: health.healthy ? 200 : 503 });
       },
