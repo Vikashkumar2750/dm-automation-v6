@@ -1,6 +1,7 @@
 # DM FB-IG-YT by Techaasvik — Build Roadmap
 
 ## Consolidated remaining checklist — Nov 8, 06:12 UTC
+- [x] Nov 8 continuation: owner's screenshot confirms deployed Team members tab with owner and invitation controls. Reports/integrations no longer depend on shared-inbox reads; their own failures remain visible. Invitation submission and other tabs are not verified by this screenshot.
 - [x] Re-ran all regression tests: 425 tests across 70 files pass. Browser checks of Dashboard, Team, Team Desk and Database Backups redirect to sign-in with no page errors. These are access checks, not authenticated acceptance.
 - [x] Full dump export confirmed working by the owner; Google Drive explicitly deferred. Growth repair confirmed installed and loading; it is no longer a pending repair.
 - [ ] Team Desk combined repair installation and invoice read/save — live database result and authorized invoice test still missing; connected Cloud is not the live database.
