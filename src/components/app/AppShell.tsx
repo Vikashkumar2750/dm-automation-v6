@@ -23,7 +23,6 @@ import {
   ShieldAlert,
   LineChart as GrowthIcon,
   Gauge,
-  UsersRound,
   Settings,
   CreditCard,
   Menu,
@@ -78,7 +77,6 @@ const navGroups: NavGroup[] = [
   { title: "Workspace", items: [
     { label: "Social Accounts", to: "/social-accounts", icon: Share2 },
     { label: "Team Desk", to: "/team-desk", icon: Headset },
-    { label: "Team", to: "/team", icon: UsersRound },
     { label: "Account Health", to: "/account-health", icon: ShieldCheck },
     { label: "Trust & Safety", to: "/trust-safety", icon: ShieldAlert },
   ] },
@@ -128,7 +126,6 @@ function Sidebar({ pathname }: { pathname: string }) {
     if (item.to === "/create-post") return Boolean(postMode && postMode !== "hidden");
     if (item.to === "/calendar") return Boolean(calMode && calMode !== "hidden");
     if (item.to === "/revenue") return features?.revenue !== "hidden";
-    if (item.to === "/team-desk") return features?.team_desk !== "off";
     if (item.to === "/ai-assistant") return features?.ai !== "off";
     if (item.to === "/growth") return features?.growth !== "off";
     return true;

@@ -2,6 +2,10 @@
 
 Team desk is for teams and agencies. Open it from **Team desk** in the left menu.
 
+## Team members
+
+Open **Team members** to see workspace members and roles. Owners and admins can invite teammates, copy or revoke pending invitation links, and manage eligible members. Existing **Team** links now open this tab. Member management remains available when advanced shared-inbox tools are switched off.
+
 ## 1. Shared inbox
 
 **How it works:** all conversations of the workspace in one list. Each chat can be assigned to one teammate so two people never answer the same person.
