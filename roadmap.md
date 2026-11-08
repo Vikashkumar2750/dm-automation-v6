@@ -1,6 +1,7 @@
 # DM FB-IG-YT by Techaasvik — Build Roadmap
 
 ## Consolidated remaining checklist — Nov 8, 07:03 UTC
+- [ ] Nov 8 manual resolution: owner reports a newly created Meta automation works, approves a separate temporary ARTH test offer and invite to smuserd1@gmail.com. Supplied Railway variable-name list lacks CRON_SECRET and TOKEN_ENCRYPTION_KEY; presence/values elsewhere and runtime fallback remain unverified. Prepare offer/invite and give safe hosting steps without requesting secret values.
 - [x] Latest deployment verified signed in: changing techaasvik → ARTH updates Revenue and connected Razorpay setup without reload. Switching back updates dashboard counts and inbox accounts. No keys read or changed.
 - [x] Owner's Meta/test-payment scope reviewed; YouTube and Drive remain deferred. Workspace-switch prerequisite is now satisfied; payment is instead blocked by expired existing offers and unverified test-mode checkout/sender. Hosting screenshots have not been supplied.
 - [x] Nov 8 continuation: owner's screenshot confirms deployed Team members tab with owner and invitation controls. Reports/integrations no longer depend on shared-inbox reads; their own failures remain visible. Invitation submission and other tabs are not verified by this screenshot.
