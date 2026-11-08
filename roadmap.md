@@ -1,16 +1,18 @@
 # DM FB-IG-YT by Techaasvik — Build Roadmap
 
-## Consolidated remaining checklist — Nov 8, 06:12 UTC
-- [x] Reproduced live workspace-switch defect: selector changed to ARTH but Revenue kept prior workspace until reload. Replaced per-hook selection with shared user-keyed selection; membership guard remains. Live ARTH reload confirms automatic Razorpay connection; no keys read or changed.
-- [ ] Owner authorized agent-selected Meta targets, deferred YouTube, confirmed ARTH test Razorpay and receipt recipient; publishing blocked by pending permission. Hosting access is redacted screenshots only, not yet supplied. Payment execution paused until current-release workspace switching is verified to prevent wrong-workspace writes.
+## Consolidated remaining checklist — Nov 8, 07:03 UTC
+- [x] Latest deployment verified signed in: changing techaasvik → ARTH updates Revenue and connected Razorpay setup without reload. Switching back updates dashboard counts and inbox accounts. No keys read or changed.
+- [x] Owner's Meta/test-payment scope reviewed; YouTube and Drive remain deferred. Workspace-switch prerequisite is now satisfied; payment is instead blocked by expired existing offers and unverified test-mode checkout/sender. Hosting screenshots have not been supplied.
 - [x] Nov 8 continuation: owner's screenshot confirms deployed Team members tab with owner and invitation controls. Reports/integrations no longer depend on shared-inbox reads; their own failures remain visible. Invitation submission and other tabs are not verified by this screenshot.
-- [x] Re-ran all regression tests: 425 tests across 70 files pass. Browser checks of Dashboard, Team, Team Desk and Database Backups redirect to sign-in with no page errors. These are access checks, not authenticated acceptance.
+- [x] Re-ran all regression tests: 428 tests across 71 files pass. Live authenticated user and Super Admin browser checks report no page runtime errors.
 - [x] Full dump export confirmed working by the owner; Google Drive explicitly deferred. Growth repair confirmed installed and loading; it is no longer a pending repair.
 - [x] Owner's Nov 8 screenshots confirm live invoice read/save: ₹500 ARTH invoice marked paid; ₹200 Vikas Dhiman invoice added, returned as unpaid, and totals show ₹200 due/₹500 marked paid. This is manual invoice bookkeeping, not verified payment settlement.
-- [ ] Shared inbox, Approvals and API/webhooks live checks — invoice success does not establish installation of their five schema sources after independent-tab changes.
-- [ ] Latest merged Team members, invites/workspace switching, Dashboard/bell, remaining admin drafts/exports/publishing selectors and cross-account/Agency/mobile acceptance — authorized current-release session needed. Self-session mint failed because no requesting-user account matches this preview backend.
-- [ ] Meta delivery/follower taps/moderation/fresh notifications/safety — owner authorized agent-selected targets; live actions remain unperformed while the confirmed workspace-switch defect awaits deployment verification. Publishing permission is unapproved; YouTube testing deferred by owner.
-- [ ] ARTH Razorpay test payment → receipt/email/private download and unpaid live denial — live connection confirmed after reload and recipient supplied; test execution awaits workspace-switch deployment verification and safe test-mode confirmation. No real charge attempted.
+- [x] Live Shared inbox, Approvals, members and API/webhooks render with successful source reads and no unavailable alerts in ARTH. Agency client report loads in techaasvik. No integration keys/webhooks created.
+- [x] Dashboard template ordering and absence of standalone attention verified; bell shows 12 unread messages and clicking navigates to Inbox. Account filters return 6 all / 5 Instagram / 1 Facebook conversations without alerts. Five user phone pages and three admin phone pages fit without horizontal overflow. All 17 admin pages return 200 with expected headings and no page errors.
+- [ ] Invitations/acceptance, assignment/approval writes, API/webhook delivery, admin draft retention/CSV/publishing-selector interactions and remaining Agency/account connection acceptance — need disposable recipient/data or bounded action checks; page reads alone do not verify writes.
+- [x] Authorized reply attempted to owner-controlled @thearthimpact's old Instagram thread: live UI rejects with Meta's 24-hour-window warning; no new message appears. This verifies rejection only, not successful delivery or fresh notification generation.
+- [ ] Meta successful delivery/follower taps/moderation/fresh notifications and cap enforcement — controlled threads are 18–28 days old and cannot establish a fresh interaction; tester-originated comment/DM/taps still needed. Publishing permission remains unapproved; YouTube deferred.
+- [ ] ARTH Razorpay test payment → receipt/email/private download and unpaid live denial — both existing public offers display 'This offer has ended', with no purchase CTA. No offer expiry changed, payment initiated or charge attempted. Need an active disposable offer, observable test mode and sender verification. Paid/unpaid authorization regression tests pass; expired-offer UI is not proof of live unpaid private-content denial.
 - [ ] Hosting secrets/credential rotation, live encryption backfill and scheduler verification, external legacy backup job removal and older live schema prerequisites — Railway configuration/job-list/database access needed; do not substitute connected Cloud changes.
 - [ ] Copied migration reset — supported safe reset unavailable; no migration journals or production data deleted.
 - [ ] Full restore rehearsal and uploaded-file backup — separate disposable database and authorized storage access needed; SQL dumps do not include file bytes.
@@ -21,13 +23,13 @@
 ## Team merged into Team Desk — Nov 8
 - [x] Member/invite controls moved into Team Desk's Team members tab; duplicate sidebar/search entry removed and /team redirects to members. Basic team access remains available when advanced tools are off or Desk reads fail; server role checks unchanged.
 - [x] 425 tests across 70 files pass, including merged-tab availability/reviewer tests. Preview build OK; old Team path correctly reaches sign-in on desktop/phone without page errors.
-- [ ] Invitations, workspace-switch and mobile acceptance need an authorized session; merged members and invoice persistence are confirmed by owner screenshots. No live writes, messages or charges performed by the agent; Google Drive remains deferred.
+- [x] Workspace switching, members rendering and sampled mobile layout verified signed in on current deployment. Invitations/acceptance are still unverified; Google Drive deferred.
 
 ## Team Desk complete schema follow-up — Nov 8
 - [x] Prepared combined repair for five screenshot-confirmed missing tables as a single transactional DO statement, compatible with Super Admin Run SQL. Invoice table is already installed per owner's result; no live repair was applied here.
 - [x] Reproduced explicit BEGIN/COMMIT failure (0A000) inside admin_exec_sql; replacement runs twice through the same EXECUTE mechanism and preserves settings. Verified cross-workspace assignment denial and server-only integration tables. Team Desk missing-source reads and integration write failures now reject instead of reporting empty/off/success.
 - [x] Full suite: 421 tests across 69 files pass; latest preview build OK. Actual Team Desk handler tests reject each missing assignments/settings/approvals source and accept confirmed empty reads.
-- [ ] Verify Shared inbox, Approvals and API/webhooks against the live database; independent reports now load and invoice persistence is screenshot-confirmed, but other schema installation is unconfirmed. Live target remains separate from connected Cloud.
+- [x] Shared inbox, Approvals and API/webhooks now load against live ARTH without missing-source errors; reports load against techaasvik. This establishes read availability, not assignment, approval or external-webhook delivery.
 
 ## Team Desk invoice repair — Nov 8
 - [x] Prepared docs/sql/railway-client-invoices-repair.sql: repeatable, transaction-wrapped table/grants/reviewer RLS/client-membership checks/index and optional audit trigger. Add invoice disabled until invoice/client reads succeed. Connected Cloud has all six Team Desk tables; it is not the affected live database and was left unchanged.
@@ -38,7 +40,7 @@
 ## Current dashboard request — Nov 8
 - [x] Move Automation templates above Workspace performance; remove standalone attention/banner from dashboard and show account, unread-message and failed-post items in the shared notification bell with scoped read controls. Delivery/security logic unchanged.
 - [x] Regression suite: 415 tests across 66 files pass; latest preview build OK. New tests verify 12 unread messages route to Inbox, confirmed-empty versus unavailable sources, publishing visibility and affected-record read identities.
-- [ ] Signed-in dashboard order, notification clicks and phone layout verification: preview session mint failed because no account matches the requesting user; browser reached /auth without page errors. Requires preview sign-in or deployed-release verification. Other live actions still need test targets, payment approval and hosting access listed below.
+- [x] Signed-in live dashboard order, attention bell → Inbox navigation and phone layout verified Nov 8; current scope and remaining external actions are in the consolidated checklist above.
 
 ## Remix setup (Nov 5)
 - [x] Add independent Super Admin Enabled / Hidden / Coming soon controls for Create Post and Calendar, including direct page visits (4 availability tests and 26 checkout/form tests passed).
