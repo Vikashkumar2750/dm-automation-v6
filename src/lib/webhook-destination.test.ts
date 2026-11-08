@@ -24,7 +24,7 @@ it("accepts public IPv4 and IPv6 addresses", () => {
   expect(isPublicWebhookAddress("2606:4700:4700::1111")).toBe(true);
 });
 it("rejects mixed public and private DNS answers before any connection", async () => {
-  vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ Status: 0, Answer: [{ type: 1, data: "1.1.1.1" }, { type: 1, data: "10.0.0.1" }] }))));
+  vi.stubGlobal("fetch", vi.fn().mockImplementation(async () => new Response(JSON.stringify({ Status: 0, Answer: [{ type: 1, data: "1.1.1.1" }, { type: 1, data: "10.0.0.1" }] }))));
   await expect(postWebhook("https://receiver.autodm.dev/events", "private-payload")).rejects.toThrow();
   expect(transport.calls).toHaveLength(0);
 });
@@ -34,7 +34,7 @@ it("fails closed on unavailable DNS", async () => {
   expect(transport.calls).toHaveLength(0);
 });
 it("pins the connection to public IP while preserving TLS identity and host", async () => {
-  const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ Status: 0, Answer: [{ type: 1, data: "1.1.1.1" }] })));
+  const fetchMock = vi.fn().mockImplementation(async () => new Response(JSON.stringify({ Status: 0, Answer: [{ type: 1, data: "1.1.1.1" }] })));
   vi.stubGlobal("fetch", fetchMock);
   await expect(postWebhook("https://receiver.autodm.dev/events?q=1", "payload", { "x-autodm-signature": "fixture" })).resolves.toBe(204);
   expect(transport.calls[0]).toMatchObject({ hostname: "1.1.1.1", servername: "receiver.autodm.dev", path: "/events?q=1", agent: false, rejectUnauthorized: true, headers: { host: "receiver.autodm.dev", "x-autodm-signature": "fixture" } });
@@ -42,7 +42,7 @@ it("pins the connection to public IP while preserving TLS identity and host", as
   expect(transport.bodies).toEqual(["payload"]);
 });
 it("resolves again on delivery and blocks a hostname that changed to private", async () => {
-  const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ Status: 0, Answer: [{ type: 1, data: "1.1.1.1" }] })));
+  const fetchMock = vi.fn().mockImplementation(async () => new Response(JSON.stringify({ Status: 0, Answer: [{ type: 1, data: "1.1.1.1" }] })));
   vi.stubGlobal("fetch", fetchMock);
   await postWebhook("https://receiver.autodm.dev/", "first");
   fetchMock.mockImplementation(async () => new Response(JSON.stringify({ Status: 0, Answer: [{ type: 1, data: "127.0.0.1" }] })));
