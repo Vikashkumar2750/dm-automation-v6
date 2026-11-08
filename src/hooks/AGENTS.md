@@ -1,0 +1,1 @@
+- useTenant uses one user-keyed client selection store for all consumers; validate switches against memberships and keep queries workspace-keyed — the selector and page must change together without stale-workspace writes.
