@@ -40,4 +40,16 @@ describe("Saved plan pricing", () => {
     pro.options = [];
     expect(await findConfiguredOption(client(plans), "pro", "monthly")).toBeNull();
   });
+  it("shares the configured access duration with checkout", async () => {
+    const plans = structuredClone(PLANS);
+    const pro = plans.find((p) => p.key === "pro");
+    if (!pro?.options[0]) throw new Error("Missing fixture");
+    pro.options[0].months = 2;
+    expect(planPrice(pro)).toBe("₹59 / 2 months");
+    expect((await findConfiguredOption(client(plans), "pro", "monthly"))?.months).toBe(2);
+  });
+  it("does not offer fallback checkout when the saved catalogue read fails", async () => {
+    const failing = { from: () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: null, error: { code: "unavailable" } }) }) }) }) } as never;
+    await expect(findConfiguredOption(failing, "pro", "monthly")).rejects.toThrow("Plan catalogue unavailable");
+  });
 });
