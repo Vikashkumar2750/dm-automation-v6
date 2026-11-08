@@ -4,6 +4,7 @@
  * and never touch the locked keyword-rule delivery flow.
  */
 import { conversationNudgeDue } from "@/lib/nudges";
+import { postWebhook } from "./webhook-destination.server";
 
 type AdminClient = import("@supabase/supabase-js").SupabaseClient;
 
@@ -48,16 +49,13 @@ export async function syncContactToWebhook(
   payload: { platform: string; external_user_id: string; email: string | null; phone: string | null },
 ) {
   try {
-    const { data: sync } = await admin.from("crm_sync_settings").select("webhook_url").eq("organization_id", organizationId).eq("enabled", true).maybeSingle();
+    const { data: sync, error } = await admin.from("crm_sync_settings").select("webhook_url").eq("organization_id", organizationId).eq("enabled", true).maybeSingle();
+    if (error) throw new Error("CRM sync settings unavailable.");
     const url = sync?.webhook_url as string | null;
-    if (!url || !/^https:\/\//.test(url)) return;
-    await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ source: "autodm", ...payload, captured_at: new Date().toISOString() }),
-      signal: AbortSignal.timeout(8000),
-    });
-  } catch (e) {
-    console.error("crm webhook sync failed", e);
+    if (!url) return;
+    const status = await postWebhook(url, JSON.stringify({ source: "autodm", ...payload, captured_at: new Date().toISOString() }), {}, 8000);
+    if (status < 200 || status >= 300) throw new Error("CRM sync receiver rejected request.");
+  } catch {
+    console.error("CRM webhook sync failed.");
   }
 }
