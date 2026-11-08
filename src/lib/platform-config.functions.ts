@@ -49,7 +49,7 @@ export const getPlatformConfig = createServerFn({ method: "GET" })
     await assertSuperAdmin(context);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { readPlatformConfig } = await import("@/lib/platform-config.server");
-    return readPlatformConfig(supabaseAdmin);
+    return readPlatformConfig(supabaseAdmin, { strictReads: true });
   });
 
 export const savePlatformConfig = createServerFn({ method: "POST" })
