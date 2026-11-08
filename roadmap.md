@@ -1,8 +1,9 @@
 # DM FB-IG-YT by Techaasvik — Build Roadmap
 
 ## Team Desk invoice repair — Nov 8
-- [ ] Repair missing live client_invoices via an idempotent deployment migration plus a manual SQL copy; preserve existing rows and reviewer/workspace isolation. Connected Cloud already contains the table, so do not apply the repair there and claim live success.
-- [ ] Verify migration twice and invoice access isolation locally; live invoice read/save awaits deployment or owner's manual SQL execution.
+- [x] Prepared docs/sql/railway-client-invoices-repair.sql: repeatable, transaction-wrapped table/grants/reviewer RLS/client-membership checks/index and optional audit trigger. Add invoice disabled until invoice/client reads succeed. Connected Cloud has all six Team Desk tables; it is not the affected live database and was left unchanged.
+- [x] Isolated PostgreSQL test reproduced missing relation, ran repair twice preserving a ₹500 unpaid invoice, and verified manager read, unrelated-client write denial, agent/other-workspace isolation and anonymous denial. Eight focused tests pass; preview build OK.
+- [ ] Apply repair to the live database and confirm Team Desk invoice read/save: direct live database access unavailable. Deployment migration directory is protected; no automatic migration was added and no existing history was modified. Owner can run supplied SQL through the authorized live Super Admin SQL editor.
 
 ## Current dashboard request — Nov 8
 - [x] Move Automation templates above Workspace performance; remove standalone attention/banner from dashboard and show account, unread-message and failed-post items in the shared notification bell with scoped read controls. Delivery/security logic unchanged.
