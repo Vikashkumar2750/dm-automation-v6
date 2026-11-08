@@ -11,7 +11,7 @@ type SqlAdmin = {
 function withoutLeadingComments(sql: string): string {
   let position = 0;
   while (position < sql.length) {
-    if (/\s/.test(sql[position])) { position += 1; continue; }
+    if (/\s/.test(sql.charAt(position))) { position += 1; continue; }
     if (sql.startsWith("--", position)) {
       const end = sql.indexOf("\n", position + 2);
       position = end < 0 ? sql.length : end + 1;
