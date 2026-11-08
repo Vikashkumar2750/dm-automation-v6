@@ -81,7 +81,7 @@
 }
 
 :root {
-  --radius: 0.625rem;
+  --radius: 0.5rem;
 
   --background: oklch(0.984 0.003 247.858);
   --foreground: oklch(0.208 0.042 265.755);
@@ -182,7 +182,7 @@
 @utility panel {
   background-color: var(--color-surface);
   border: 1px solid var(--color-border);
-  border-radius: calc(var(--radius) + 2px);
+  border-radius: var(--radius);
 }
 
 @utility num {
@@ -194,6 +194,18 @@
 .app-content { overflow-wrap: anywhere; }
 .app-content :where(.grid, .panel, [role="tabpanel"], .overflow-x-auto) { min-width: 0; }
 .app-content .overflow-x-auto { max-width: 100%; overscroll-behavior-x: contain; }
+.app-content { line-height: 1.6; letter-spacing: 0; }
+.app-content :where(h1, h2, h3, .tracking-tight) { letter-spacing: 0; }
+.app-content :where(label, [data-slot="label"]) { font-size: 0.875rem; line-height: 1.5; }
+.app-content .dashboard-panel > div > .space-y-2 { gap: 0; }
+.app-content [role="tablist"] { scrollbar-width: thin; overscroll-behavior-x: contain; }
+.revenue-workspace :where(.space-y-2) > :not(:last-child) { margin-bottom: 1rem; }
+.revenue-workspace :where(.space-y-1, .space-y-1\.5) > :not(:last-child) { margin-bottom: 0.5rem; }
+.revenue-workspace :where(.text-xs) { font-size: 0.8125rem; line-height: 1.6; }
+.revenue-workspace :where(input, textarea, select) { min-height: 42px; }
+.revenue-section { border-bottom: 1px solid var(--border); padding-bottom: 1.5rem; }
+.revenue-section:last-child { border-bottom: 0; padding-bottom: 0; }
+.delivery-preview { background: var(--surface-secondary); }
 @media (max-width: 639px) {
   .app-content :where(input:not([type="checkbox"]):not([type="radio"]):not([type="color"]), textarea, select) { min-width: 0; max-width: 100%; font-size: 16px; }
   .app-content :where(button, [role="tab"], select) { min-height: 40px; }

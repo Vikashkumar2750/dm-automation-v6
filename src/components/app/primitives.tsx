@@ -23,11 +23,11 @@ export function Panel({
   bodyClassName?: string;
 }) {
   return (
-    <section className={cn("panel flex min-w-0 flex-col", className)}>
+    <section className={cn("dashboard-panel panel flex min-w-0 flex-col", className)}>
       {(title || action) && (
         <header className="grid min-w-0 gap-3 border-b px-4 py-4 sm:flex sm:items-center sm:justify-between sm:px-6 sm:py-5">
           <div className="min-w-0">
-            <h2 className="min-w-0 break-words text-lg font-semibold tracking-tight text-foreground">{title}</h2>
+            <h2 className="min-w-0 break-words text-lg font-semibold text-foreground sm:text-xl">{title}</h2>
             {description && <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{description}</p>}
           </div>
           {action && <div className="flex min-w-0 flex-wrap items-center gap-2">{action}</div>}
@@ -129,7 +129,7 @@ export function StatCard({
   info?: string;
 }) {
   return (
-    <div className="panel p-4">
+    <div className="panel p-5">
       <div className="flex items-start gap-3">
         <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-surface-secondary text-primary">
           <Icon className="size-4.5" />
@@ -154,7 +154,7 @@ export function StatCard({
               <span className="text-xs font-medium text-success">{delta}</span>
             )}
           </div>
-          {sub && <p className="mt-1 text-xs text-subtle-foreground">{sub}</p>}
+          {sub && <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{sub}</p>}
         </div>
       </div>
     </div>
@@ -231,7 +231,7 @@ export function PageHeader({
   return (
     <div className="mb-8 grid min-w-0 gap-4 sm:flex sm:flex-wrap sm:items-start sm:justify-between">
       <div className="min-w-0">
-        <h1 className="break-words text-2xl font-bold tracking-tight text-foreground sm:text-3xl">{title}</h1>
+        <h1 className="break-words text-2xl font-semibold text-foreground sm:text-3xl">{title}</h1>
         {description && (
           <p className="mt-2 max-w-3xl text-sm leading-relaxed text-muted-foreground sm:text-base">{description}</p>
         )}
