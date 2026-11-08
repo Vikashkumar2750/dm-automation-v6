@@ -23,6 +23,10 @@ import {
   Workflow,
 } from "lucide-react";
 import { useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { getPublicPlans } from "@/lib/platform-config.functions";
+import { planPrice, optionPrice } from "@/lib/plan-presentation";
 
 import { PublicFooter } from "@/components/app/PublicFooter";
 import { PublicHeader } from "@/components/app/PublicHeader";
@@ -31,11 +35,9 @@ import { supabase } from "@/integrations/supabase/client";
 
 const metaPartnerBadge = { url: "/meta-business-partner.png" };
 
-const pageTitle =
-  "AutoDM — Instagram Comment-to-DM Automation, Sales Pages & Unified Inbox";
+const pageTitle = "AutoDM — Instagram Comment-to-DM Automation, Sales Pages & Unified Inbox";
 const pageDescription =
-  "Auto-reply to Instagram & Facebook comments with DMs, sell via built-in delivery pages with WhatsApp OTP leads, and reply on YouTube — official Meta APIs, from ₹9.";
-
+  "Auto-reply to Instagram & Facebook comments with DMs, sell via built-in delivery pages with WhatsApp OTP leads, and reply on YouTube — official Meta APIs and workspace-based plans.";
 
 const faqs = [
   {
@@ -74,10 +76,26 @@ const faqs = [
 ];
 
 const funnel = [
-  { icon: MessageSquare, title: "Viewer comments a keyword", body: "“PRICE”, “LINK” or any word you choose under a reel, post or video." },
-  { icon: Bot, title: "Instant DM + public reply", body: "AutoDM replies in seconds with a message and up to 3 buttons — follow-gate optional." },
-  { icon: ShieldCheck, title: "Delivery page + verified lead", body: "Buyer lands on your sales page, leaves email/phone (WhatsApp OTP) — even drop-offs are captured." },
-  { icon: BarChart3, title: "Paid, delivered, tracked", body: "Razorpay payment, automatic delivery, and every lead stage visible in Contacts." },
+  {
+    icon: MessageSquare,
+    title: "Viewer comments a keyword",
+    body: "“PRICE”, “LINK” or any word you choose under a reel, post or video.",
+  },
+  {
+    icon: Bot,
+    title: "Instant DM + public reply",
+    body: "AutoDM replies in seconds with a message and up to 3 buttons — follow-gate optional.",
+  },
+  {
+    icon: ShieldCheck,
+    title: "Delivery page + verified lead",
+    body: "Buyer lands on your sales page, leaves email/phone (WhatsApp OTP) — even drop-offs are captured.",
+  },
+  {
+    icon: BarChart3,
+    title: "Paid, delivered, tracked",
+    body: "Razorpay payment, automatic delivery, and every lead stage visible in Contacts.",
+  },
 ];
 
 const comparison: string[][] = [
@@ -88,7 +106,6 @@ const comparison: string[][] = [
   ["Drop-off tracking & AI follow-ups", "Yes", "No", "Limited"],
   ["Unified inbox + scheduling", "Yes", "Inbox only", "No"],
   ["Agency client workspaces", "Yes", "Paid add-on", "No"],
-  ["Starting price", "₹9 trial, ₹59/mo", "≈ $15+/mo", "≈ $29+/mo"],
 ];
 
 const benefits = [
@@ -158,41 +175,6 @@ const forWho = [
   },
 ];
 
-const plans = [
-  {
-    name: "Free",
-    price: "₹9",
-    cadence: "₹9 for 3 days trial",
-    popular: false,
-    features: [
-      { text: "1× Instagram account", included: true },
-      { text: "1× Facebook page", included: true },
-      { text: "1× YouTube channel", included: true },
-      { text: "AI content analysis", included: true },
-      { text: "DM & comment automation", included: true },
-      { text: "Multi-account publish", included: false },
-      { text: "Priority support", included: false },
-    ],
-    cta: "Start with Free",
-  },
-  {
-    name: "Pro",
-    price: "₹59",
-    cadence: "per month · or ₹299 / 6 months · ₹599 / year",
-    popular: true,
-    features: [
-      { text: "5× Instagram accounts", included: true },
-      { text: "5× Facebook pages", included: true },
-      { text: "5× YouTube channels", included: true },
-      { text: "AI content analysis", included: true },
-      { text: "DM & comment automation", included: true },
-      { text: "Publish to all accounts at once", included: true },
-      { text: "Priority support", included: true },
-    ],
-    cta: "Upgrade to Pro",
-  },
-];
-
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
@@ -230,22 +212,6 @@ export const Route = createFileRoute("/")({
               ],
 
               publisher: { "@type": "Organization", name: "Techaasvik" },
-              offers: [
-                {
-                  "@type": "Offer",
-                  name: "Free",
-                  price: "9",
-                  priceCurrency: "INR",
-                  description: "₹9 for 3 days trial",
-                },
-                {
-                  "@type": "Offer",
-                  name: "Pro",
-                  price: "59",
-                  priceCurrency: "INR",
-                  description: "Per month; ₹299 for 6 months or ₹599 per year",
-                },
-              ],
             },
             {
               "@type": "FAQPage",
@@ -265,6 +231,15 @@ export const Route = createFileRoute("/")({
 
 function LandingPage() {
   const navigate = useNavigate();
+  const fetchPlans = useServerFn(getPublicPlans);
+  const catalogue = useQuery({
+    queryKey: ["public-plans"],
+    queryFn: () => fetchPlans(),
+    retry: false,
+    staleTime: 0,
+    refetchInterval: 60_000,
+  });
+  const plans = catalogue.data ?? [];
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -289,16 +264,17 @@ function LandingPage() {
                 Turn every reel comment into a paying customer — automatically
               </h1>
               <p className="mt-5 text-lg text-muted-foreground">
-                Someone comments “PRICE” → AutoDM sends the DM in seconds → they open
-                your delivery page, verify, pay and get the product. Comment-to-DM for
-                Instagram &amp; Facebook, smart replies for YouTube, one inbox, built-in
-                sales pages.
+                Someone comments “PRICE” → AutoDM sends the DM in seconds → they open your delivery
+                page, verify, pay and get the product. Comment-to-DM for Instagram &amp; Facebook,
+                smart replies for YouTube, one inbox, built-in sales pages.
               </p>
               <div className="mt-5 flex items-center gap-3">
                 <Instagram className="size-6 text-instagram" aria-label="Instagram" />
                 <Facebook className="size-6 text-facebook" aria-label="Facebook" />
                 <Youtube className="size-6 text-youtube" aria-label="YouTube" />
-                <span className="text-sm text-muted-foreground">Official APIs · Setup in 5 minutes</span>
+                <span className="text-sm text-muted-foreground">
+                  Official APIs · Setup in 5 minutes
+                </span>
               </div>
 
               <div className="mt-8 flex flex-wrap gap-3">
@@ -339,17 +315,44 @@ function LandingPage() {
             </div>
 
             <div className="relative">
-              <div className="anim-orb absolute -top-6 right-4 -z-10 size-56 rounded-full bg-primary/20 blur-3xl" aria-hidden />
-              <div className="anim-orb absolute bottom-0 left-0 -z-10 size-48 rounded-full bg-accent/40 blur-3xl" style={{ animationDelay: "-7s" }} aria-hidden />
+              <div
+                className="anim-orb absolute -top-6 right-4 -z-10 size-56 rounded-full bg-primary/20 blur-3xl"
+                aria-hidden
+              />
+              <div
+                className="anim-orb absolute bottom-0 left-0 -z-10 size-48 rounded-full bg-accent/40 blur-3xl"
+                style={{ animationDelay: "-7s" }}
+                aria-hidden
+              />
               <Tilt3D>
                 <div className="anim-float">
-                  <img src={heroReelDm} alt="A creator's reel asks to comment PRICE; the commenter instantly gets an Instagram DM with a Get instant access button" width={960} height={768} fetchPriority="high" decoding="async" className="w-full drop-shadow-xl" />
+                  <img
+                    src={heroReelDm}
+                    alt="A creator's reel asks to comment PRICE; the commenter instantly gets an Instagram DM with a Get instant access button"
+                    width={960}
+                    height={768}
+                    fetchPriority="high"
+                    decoding="async"
+                    className="w-full drop-shadow-xl"
+                  />
                 </div>
-                <div className="anim-float-slow absolute bottom-6 right-2 rounded-xl border bg-card/90 px-3 py-2 text-xs shadow-lg backdrop-blur" style={{ transform: "translateZ(60px)" }}>
-                  <p className="flex items-center gap-1.5 font-semibold text-foreground"><span className="relative flex size-2"><span className="absolute inline-flex size-full animate-ping rounded-full bg-primary opacity-75" /><span className="relative inline-flex size-2 rounded-full bg-primary" /></span>DM sent in 2 seconds</p>
+                <div
+                  className="anim-float-slow absolute bottom-6 right-2 rounded-xl border bg-card/90 px-3 py-2 text-xs shadow-lg backdrop-blur"
+                  style={{ transform: "translateZ(60px)" }}
+                >
+                  <p className="flex items-center gap-1.5 font-semibold text-foreground">
+                    <span className="relative flex size-2">
+                      <span className="absolute inline-flex size-full animate-ping rounded-full bg-primary opacity-75" />
+                      <span className="relative inline-flex size-2 rounded-full bg-primary" />
+                    </span>
+                    DM sent in 2 seconds
+                  </p>
                   <p className="text-muted-foreground">Quiet hours · per-person cap · opt-out</p>
                 </div>
-                <div className="anim-float absolute -left-8 top-1/2 hidden rounded-xl border bg-card/90 px-3 py-2 text-xs shadow-lg backdrop-blur sm:block" style={{ animationDelay: "-3s" }}>
+                <div
+                  className="anim-float absolute -left-8 top-1/2 hidden rounded-xl border bg-card/90 px-3 py-2 text-xs shadow-lg backdrop-blur sm:block"
+                  style={{ animationDelay: "-3s" }}
+                >
                   <p className="font-semibold text-foreground">₹999 paid · content unlocked</p>
                   <p className="text-muted-foreground">Razorpay checkout</p>
                 </div>
@@ -365,7 +368,8 @@ function LandingPage() {
               From comment to cash in 4 steps — no link-in-bio hunting
             </h2>
             <p className="mt-3 max-w-2xl text-muted-foreground">
-              Other tools stop at the DM. AutoDM carries the buyer all the way to payment and delivery, and shows you where every lead dropped.
+              Other tools stop at the DM. AutoDM carries the buyer all the way to payment and
+              delivery, and shows you where every lead dropped.
             </p>
             <ol className="mt-10 grid gap-4 md:grid-cols-4">
               {funnel.map((f, i) => (
@@ -384,20 +388,57 @@ function LandingPage() {
         <section id="tour" className="border-b">
           <div className="mx-auto max-w-6xl space-y-16 px-6 py-16 lg:py-20">
             <div className="mx-auto max-w-2xl text-center">
-              <p className="text-xs font-bold tracking-widest text-primary uppercase">Feature breakdown</p>
-              <h2 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">See exactly what your followers see</h2>
-              <p className="mt-3 text-muted-foreground">Real screens from every step — comment, DM, inbox, checkout.</p>
+              <p className="text-xs font-bold tracking-widest text-primary uppercase">
+                Feature breakdown
+              </p>
+              <h2 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">
+                See exactly what your followers see
+              </h2>
+              <p className="mt-3 text-muted-foreground">
+                Real screens from every step — comment, DM, inbox, checkout.
+              </p>
             </div>
             {[
-              { img: shotCommentDm, alt: "A reel comment saying LINK gets an automatic DM reply with a link button", title: "Comment “LINK”, get the link in DM", body: "Pick a reel or post, choose a keyword and the DM to send. Every matching comment gets a public reply and a private message with your link — in seconds, around the clock." },
-              { img: shotInbox, alt: "Unified inbox with conversations, contact tags and a revenue chart", title: "Every chat and every rupee in one place", body: "Instagram, Facebook and YouTube conversations land in one inbox. Tag contacts, hand chats to your team and see what each automation earned." },
-              { img: shotYtFb, alt: "A YouTube comment gets an AI channel reply and a Facebook comment gets a Messenger DM with a View offer button", title: "YouTube & Facebook on autopilot too", body: "Smart AI replies answer YouTube comments with your link, and Facebook Page comments trigger a Messenger DM — all from the same workspace, with the same safety limits." },
-              { img: shotDelivery, alt: "A product sales page with coupon applied, a payment success card and an email receipt", title: "Sell, get paid and deliver automatically", body: "Create a delivery page, connect Razorpay once and every buyer gets their own checkout link. Coupons apply on the page, content unlocks after payment and a receipt email goes out." },
+              {
+                img: shotCommentDm,
+                alt: "A reel comment saying LINK gets an automatic DM reply with a link button",
+                title: "Comment “LINK”, get the link in DM",
+                body: "Pick a reel or post, choose a keyword and the DM to send. Every matching comment gets a public reply and a private message with your link — in seconds, around the clock.",
+              },
+              {
+                img: shotInbox,
+                alt: "Unified inbox with conversations, contact tags and a revenue chart",
+                title: "Every chat and every rupee in one place",
+                body: "Instagram, Facebook and YouTube conversations land in one inbox. Tag contacts, hand chats to your team and see what each automation earned.",
+              },
+              {
+                img: shotYtFb,
+                alt: "A YouTube comment gets an AI channel reply and a Facebook comment gets a Messenger DM with a View offer button",
+                title: "YouTube & Facebook on autopilot too",
+                body: "Smart AI replies answer YouTube comments with your link, and Facebook Page comments trigger a Messenger DM — all from the same workspace, with the same safety limits.",
+              },
+              {
+                img: shotDelivery,
+                alt: "A product sales page with coupon applied, a payment success card and an email receipt",
+                title: "Sell, get paid and deliver automatically",
+                body: "Create a delivery page, connect Razorpay once and every buyer gets their own checkout link. Coupons apply on the page, content unlocks after payment and a receipt email goes out.",
+              },
             ].map((x, i) => (
               <Reveal key={x.title} className="grid items-center gap-8 md:grid-cols-2 md:gap-12">
                 <Tilt3D max={6} className={i % 2 ? "md:order-2" : ""}>
-                  <div className={i % 2 ? "anim-float-slow" : "anim-float"} style={{ animationDelay: `-${i * 1.5}s` }}>
-                    <img src={x.img} alt={x.alt} loading="lazy" decoding="async" width={960} height={730} className="w-full drop-shadow-xl" />
+                  <div
+                    className={i % 2 ? "anim-float-slow" : "anim-float"}
+                    style={{ animationDelay: `-${i * 1.5}s` }}
+                  >
+                    <img
+                      src={x.img}
+                      alt={x.alt}
+                      loading="lazy"
+                      decoding="async"
+                      width={960}
+                      height={730}
+                      className="w-full drop-shadow-xl"
+                    />
                   </div>
                 </Tilt3D>
                 <div>
@@ -482,8 +523,8 @@ function LandingPage() {
                 Automation that respects the platforms
               </h2>
               <p className="mt-3 text-muted-foreground">
-                Aggressive tools get accounts restricted. Every new workspace here starts
-                with conservative limits, and you can tighten them further at any time.
+                Aggressive tools get accounts restricted. Every new workspace here starts with
+                conservative limits, and you can tighten them further at any time.
               </p>
               <div className="mt-6">
                 <Button asChild variant="outline" size="lg">
@@ -577,7 +618,10 @@ function LandingPage() {
                     <tr key={row[0]}>
                       <td className="px-4 py-3">{row[0]}</td>
                       {row.slice(1).map((v, i) => (
-                        <td key={i} className={`px-4 py-3 ${i === 0 ? "font-medium text-foreground" : "text-muted-foreground"}`}>
+                        <td
+                          key={i}
+                          className={`px-4 py-3 ${i === 0 ? "font-medium text-foreground" : "text-muted-foreground"}`}
+                        >
                           {v}
                         </td>
                       ))}
@@ -599,60 +643,66 @@ function LandingPage() {
               Simple pricing that pays for itself
             </h2>
             <p className="mt-3 max-w-2xl text-muted-foreground">
-              Start with a one-time pass, then upgrade when your audience grows. No
-              hidden fees, cancel anytime.
+              Explore the current plans and choose the access that fits your workspace.
             </p>
-            <div className="mt-10 grid gap-6 md:grid-cols-2">
+            {catalogue.isError && (
+              <div
+                role="alert"
+                className="mt-6 flex flex-wrap items-center gap-3 text-sm text-destructive"
+              >
+                Current pricing could not be refreshed.
+                <Button variant="outline" onClick={() => void catalogue.refetch()}>
+                  Retry
+                </Button>
+              </div>
+            )}
+            {!catalogue.data && !catalogue.isError && (
+              <p role="status" className="mt-6 text-muted-foreground">
+                Loading current plans…
+              </p>
+            )}
+            <div className="mt-10 grid gap-6 md:grid-cols-3">
               {plans.map((plan) => (
                 <div
-                  key={plan.name}
+                  key={plan.key}
                   className={
-                    plan.popular
+                    plan.key === "pro"
                       ? "panel relative border-primary/40 bg-surface-secondary p-6"
                       : "panel p-6"
                   }
                 >
-                  <div className="flex items-start justify-between gap-4">
+                  <div className="space-y-4">
                     <div>
                       <h3 className="text-lg font-bold">{plan.name}</h3>
-                      {plan.popular && (
-                        <p className="mt-0.5 text-sm font-medium text-primary">
-                          Most popular
-                        </p>
+                      {plan.key === "pro" && (
+                        <p className="mt-0.5 text-sm font-medium text-primary">Most popular</p>
                       )}
                     </div>
-                    <div className="text-right">
-                      <p className="num text-3xl font-bold">{plan.price}</p>
+                    <div>
+                      <p className="num text-3xl font-bold">{planPrice(plan)}</p>
                     </div>
                   </div>
-                  <p className="mt-2 text-sm text-muted-foreground">{plan.cadence}</p>
+                  {plan.options.length > 1 && !plan.contactOnly && (
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      {plan.options.slice(1).map(optionPrice).join(" · ")}
+                    </p>
+                  )}
                   <ul className="mt-6 space-y-2.5">
-                    {plan.features.map((f) => (
-                      <li
-                        key={f.text}
-                        className={
-                          f.included
-                            ? "flex items-center gap-2 text-sm"
-                            : "flex items-center gap-2 text-sm text-subtle-foreground line-through"
-                        }
-                      >
-                        {f.included ? (
-                          <CheckCircle2 className="size-4 shrink-0 text-success" />
-                        ) : (
-                          <span className="inline-block size-4 shrink-0 rounded-full border" />
-                        )}
-                        {f.text}
+                    {plan.perks.map((perk, index) => (
+                      <li key={index} className="flex items-start gap-2 text-sm">
+                        <CheckCircle2 className="mt-1 size-4 shrink-0 text-success" />
+                        {perk}
                       </li>
                     ))}
                   </ul>
                   <Button
                     asChild
                     size="lg"
-                    variant={plan.popular ? "default" : "outline"}
+                    variant={plan.key === "pro" ? "default" : "outline"}
                     className="mt-8 w-full"
                   >
-                    <Link to="/auth">
-                      {plan.cta}
+                    <Link to={plan.contactOnly ? "/contact" : "/auth"}>
+                      {plan.contactOnly ? "Contact us" : `Choose ${plan.name}`}
                       <ArrowRight className="size-4" />
                     </Link>
                   </Button>
@@ -672,9 +722,7 @@ function LandingPage() {
         {/* FAQ */}
         <section id="faq" className="border-b bg-surface">
           <div className="mx-auto max-w-3xl px-6 py-16 lg:py-20">
-            <h2 className="text-3xl font-bold tracking-tight">
-              Frequently asked questions
-            </h2>
+            <h2 className="text-3xl font-bold tracking-tight">Frequently asked questions</h2>
             <div className="mt-8 divide-y rounded-xl border bg-background">
               {faqs.map((f) => (
                 <details key={f.q} className="group p-5">
@@ -695,8 +743,8 @@ function LandingPage() {
               Your next customer is already in your comments
             </h2>
             <p className="mx-auto mt-4 max-w-xl text-lg text-muted-foreground">
-              Set up one automation today and stop losing people who asked a question and
-              never got an answer.
+              Set up one automation today and stop losing people who asked a question and never got
+              an answer.
             </p>
             <div className="mt-8 flex flex-wrap justify-center gap-3">
               <Button asChild size="lg">
@@ -715,9 +763,13 @@ function LandingPage() {
           <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-border bg-card p-6">
             <div>
               <h2 className="text-xl font-semibold">Free tool: WebP &amp; WebM converter</h2>
-              <p className="text-sm text-muted-foreground">Shrink any photo, video or audio for faster pages — right in your browser.</p>
+              <p className="text-sm text-muted-foreground">
+                Shrink any photo, video or audio for faster pages — right in your browser.
+              </p>
             </div>
-            <Button asChild variant="outline"><Link to="/tools/webp-converter">Open converter</Link></Button>
+            <Button asChild variant="outline">
+              <Link to="/tools/webp-converter">Open converter</Link>
+            </Button>
           </div>
         </section>
       </main>

@@ -1,6 +1,10 @@
 # DM FB-IG-YT by Techaasvik — Build Roadmap
 
 ## Current request — implementation first
+- [x] Current redesign: shared user-dashboard typography/spacing/tabs/forms and route presentation audit; focused readability fixes for Workflows, Contacts and Connected Accounts, preserving workflows and workspace isolation. This is shared polish, not a bespoke rebuild of every page.
+- [x] Current redesign: Revenue product/coupon form hierarchy, confirmation actions, payment setup labels and focused seven-section delivery-page builder with actual sticky preview, phone Editor/Preview switch, visited sections and unsaved-navigation protection. Saved-page preview/duplicate actions added; no invented draft/publishing states.
+- [x] Current redesign: tabbed plan catalogue with editable price/duration/features/limits, preview and save/discard state; home and billing derive saved pricing, checkout rejects removed/contact-only options, save invalidates dependent reads. Other open browsers refresh catalogue on the one-minute polling interval.
+- [x] Current redesign: regression suite and public pricing desktop/phone checks pass; content leaf metadata retained. Signed-in editor/admin save acceptance is deferred by owner, not claimed verified.
 - [x] Closed identified actionable webhook gap in both Team Desk and CRM: public-only address/DNS validation at save and delivery, pinned-IP TLS/Host transport, redirects forbidden, no unsafe fallback. Reproduced stored private-address dispatch before the fix; same check now passes.
 - [x] Consolidated remaining work in FINAL-ACCEPTANCE; 485 tests across 79 files pass, preview build OK, content-route metadata scan has no gaps. No live customer actions or provider settings changed.
 - Live acceptance is deferred by owner; it must not be reported as completed.

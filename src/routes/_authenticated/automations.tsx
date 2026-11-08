@@ -690,7 +690,7 @@ function AutomationsPage() {
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="grid gap-2">
-                  <Label>If you receieve a&nbsp;</Label>
+                  <Label>When you receive a</Label>
                   <Select
                     value={draft.trigger}
                     onValueChange={(v) =>

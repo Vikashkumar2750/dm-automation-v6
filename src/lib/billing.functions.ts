@@ -22,7 +22,11 @@ async function assertBillingRole(
   const role = data?.role as string | undefined;
   if (!role || !["owner", "admin"].includes(role)) throw new Error("forbidden");
   // Client workspaces are billed only through the parent Agency workspace.
-  const { data: org } = await supabase.from("organizations").select("parent_organization_id").eq("id", organizationId).maybeSingle();
+  const { data: org } = await supabase
+    .from("organizations")
+    .select("parent_organization_id")
+    .eq("id", organizationId)
+    .maybeSingle();
   if (org?.parent_organization_id) throw new Error("client_workspace_billing_locked");
   return role;
 }
@@ -83,9 +87,7 @@ export const createPlanOrder = createServerFn({ method: "POST" })
 
     const { supabaseAdmin: adminForPlans } = await import("@/integrations/supabase/client.server");
     const { findConfiguredOption } = await import("@/lib/platform-config.server");
-    const option =
-      (await findConfiguredOption(adminForPlans, data.plan, data.cycle)) ??
-      findPlanOption(data.plan as PlanKey, data.cycle as BillingCycle);
+    const option = await findConfiguredOption(adminForPlans, data.plan, data.cycle);
     if (!option) throw new Error("invalid_plan_option");
 
     const keyId = process.env["RAZORPAY_KEY_ID"] ?? "";
@@ -217,7 +219,12 @@ export const confirmPlanPayment = createServerFn({ method: "POST" })
         { headers: { Authorization: `Basic ${btoa(`${keyId}:${secret}`)}` } },
       );
       const payment = res.ok
-        ? ((await res.json()) as { status?: string; order_id?: string; amount?: number; currency?: string })
+        ? ((await res.json()) as {
+            status?: string;
+            order_id?: string;
+            amount?: number;
+            currency?: string;
+          })
         : null;
       if (
         !payment ||
@@ -245,8 +252,11 @@ export const confirmPlanPayment = createServerFn({ method: "POST" })
 
     const { findConfiguredOption } = await import("@/lib/platform-config.server");
     const option =
-      (await findConfiguredOption(supabaseAdmin, order.plan as string, order.billing_cycle as string)) ??
-      findPlanOption(order.plan as PlanKey, order.billing_cycle as BillingCycle);
+      (await findConfiguredOption(
+        supabaseAdmin,
+        order.plan as string,
+        order.billing_cycle as string,
+      )) ?? findPlanOption(order.plan as PlanKey, order.billing_cycle as BillingCycle);
     const { data: org } = await supabaseAdmin
       .from("organizations")
       .select("plan_expires_at")

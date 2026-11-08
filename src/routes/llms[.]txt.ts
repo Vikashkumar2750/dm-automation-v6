@@ -9,7 +9,7 @@ const BODY = `# AutoDM by Techaasvik
 - Follow gate: followers get the link instantly; non-followers are asked to follow first.
 - YouTube: smart, comment-aware public replies (YouTube has no DMs) and video publishing.
 - Unified inbox, scheduling, analytics with CSV export, safety limits.
-- Pricing in INR, with a ₹9 trial for 3 days.
+- Current pricing and plan options are listed on the homepage and workspace Billing page.
 
 ## Pages
 - [Home](https://autodm.techaasvik.com/)
