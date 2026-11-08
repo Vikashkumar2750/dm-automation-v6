@@ -44,21 +44,26 @@ export async function authenticateApiKey(request: Request): Promise<{ organizati
 export async function dispatchOutgoingWebhooks() {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { eventForDirection } = await import("./team-desk");
-  const { data: hooks } = await supabaseAdmin.from("outgoing_webhooks").select("*").eq("enabled", true).limit(200);
+  const { data: hooks, error: hooksError } = await supabaseAdmin.from("outgoing_webhooks").select("*").eq("enabled", true).limit(200);
+  if (hooksError) throw new Error("Webhook configuration unavailable.");
   let sent = 0;
   let failed = 0;
   for (const hook of hooks ?? []) {
-    const { data: msgs } = await supabaseAdmin
+    const { data: msgs, error: messagesError } = await supabaseAdmin
       .from("messages")
       .select("id, conversation_id, direction, body, sender_name, sent_at, created_at, conversations!inner(organization_id, platform, channel, external_user_id, external_user_name)")
       .eq("conversations.organization_id", hook.organization_id)
       .gt("created_at", hook.cursor_at)
       .order("created_at", { ascending: true })
       .limit(50);
+    if (messagesError) throw new Error("Webhook messages unavailable.");
     const rows = (msgs ?? []).filter((m) => hook.events.includes(eventForDirection(m.direction)));
-    const last = msgs?.length ? msgs[msgs.length - 1]!.created_at : null;
+    const last = msgs?.at(-1)?.created_at ?? null;
     if (!rows.length) {
-      if (last) await supabaseAdmin.from("outgoing_webhooks").update({ cursor_at: last }).eq("id", hook.id);
+      if (last) {
+        const { error } = await supabaseAdmin.from("outgoing_webhooks").update({ cursor_at: last }).eq("id", hook.id);
+        if (error) throw new Error("Webhook progress could not be saved.");
+      }
       continue;
     }
     const payload = JSON.stringify({
@@ -83,20 +88,22 @@ export async function dispatchOutgoingWebhooks() {
     try {
       const res = await fetch(hook.url, {
         method: "POST",
+        redirect: "error",
         headers: { "content-type": "application/json", "x-autodm-timestamp": ts, "x-autodm-signature": await hmacHex(hook.secret, `${ts}.${payload}`) },
         body: payload,
         signal: AbortSignal.timeout(10000),
       });
       status = res.status;
       if (!res.ok) error = `HTTP ${res.status}`;
-    } catch (e) {
-      error = (e as Error).message.slice(0, 200);
+    } catch {
+      error = "Webhook request failed.";
     }
     // Advance the cursor only on success so failed batches retry next tick.
-    await supabaseAdmin
+    const { error: writeError } = await supabaseAdmin
       .from("outgoing_webhooks")
-      .update({ last_status: status || null, last_error: error, last_sent_at: new Date().toISOString(), ...(error ? {} : { cursor_at: last! }) })
+      .update({ last_status: status || null, last_error: error, last_sent_at: new Date().toISOString(), ...(!error && last ? { cursor_at: last } : {}) })
       .eq("id", hook.id);
+    if (writeError) throw new Error("Webhook delivery status could not be saved.");
     if (error) failed++;
     else sent += rows.length;
   }

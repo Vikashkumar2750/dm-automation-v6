@@ -29,3 +29,4 @@
 - Team membership UI is shared in TeamMembersPanel under Team Desk; /team redirects to members, independent of advanced Desk availability — merged navigation preserves basic team access and server authorization.
 - Team Desk reports and integrations mount independently of shared-inbox reads — a missing assignment/approval source must not hide unrelated billing or integration tools.
 - SQL runner removes only leading whitespace/comments after auditing the original input and calls the existing RPC once — commented diagnostics return rows without database changes, query-body rewriting or repeated mutations.
+- Outgoing webhook dispatch rejects failed source/progress reads, forbids redirects, and stores generic network failures; failed deliveries retain their cursor — scheduler success must not hide unavailable data or leak receiver details.
