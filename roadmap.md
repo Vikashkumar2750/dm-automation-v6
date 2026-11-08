@@ -1,5 +1,18 @@
 # DM FB-IG-YT by Techaasvik — Build Roadmap
 
+## Current remaining work — Nov 8, 11:24 UTC (supersedes historical blockers below)
+- [x] Owner confirms both live hosting secrets configured. Screenshot shows primary/secondary plaintext counts zero for social tokens and payment credentials; no further encryption backfill requested. Screenshot verifies autodm.techaasvik.com sending domain; earlier receipt Delivered evidence retained. Scheduler eight-job success, Revenue and SQL results already confirmed.
+- [x] Complete existing regression batch: 431 tests passed before webhook changes. Reproduced five webhook failures: source errors accepted as empty/success, redirects allowed, raw network diagnostics stored, status-write failures ignored. Added fail-closed reads/writes, no redirects and safe error text; validation result recorded below after rerun. No provider actions or live secrets changed.
+- [ ] Deploy webhook reliability fix to Railway and validate with an owner-controlled HTTPS receiver. Direct-host DNS/private-address protection remains a separate security limitation; redirect blocking does not establish complete SSRF prevention.
+- [ ] External-only operations: rotate previously exposed credentials without replacing the encryption key; check/remove legacy external db-backup schedules; verify older schema against actual failing features only. Need owner hosting/provider control; no speculative broad schema mutation.
+- [ ] Live acceptance: Team assignment/rejection persistence, API valid/revoked/tenant scope and webhook receipt/retry, admin draft retention/CSV/publishing selectors, Agency inherited benefits/account connect, signed-in unpaid private-file denial. Need live authorized sessions/test receiver/accounts; automated checks are not live acceptance.
+- [ ] Meta follower/non-follower taps, fresh notification, disposable moderation and account-specific safety behavior. Need owner-controlled test identities/posts and bounded sends; never flood contacts to test caps.
+- [ ] Restore rehearsal and uploaded-file backup: need separate empty database and private storage-file export. Production restoration is prohibited for rehearsal.
+- [ ] Meta/Google reviews and shared-password changes: owner/provider actions.
+- Deferred (not completion blockers now): payment-popup live handoff, publishing until permission approved, YouTube/unlinked chat, Google Drive, invitation acceptance.
+- Unavailable safely: copied migration reset; no supported reset facility, no journal/production deletion.
+- Manual batch instructions: docs/FINAL-ACCEPTANCE.md. Do not re-request completed encryption/domain/scheduler evidence.
+
 ## Consolidated remaining checklist — Nov 8, 09:38 UTC
 - [x] Nov 8 10:50 owner-uploaded JSON confirms all eight scheduler jobs last ran at 10:48:10 UTC with HTTP 200 and consecutive_failures=0. Scheduler execution is confirmed at that timestamp; HTTP 200 for encrypt-tokens does not establish encryption enabled or plaintext eliminated. All 431 regression tests pass again. Deployed temporary offer returns 200 with no runtime errors and no public download link; this is signed-out evidence, not authenticated unpaid-access acceptance.
 - [ ] Current request: finish remaining acceptance and guide owner through manual blockers. Next evidence batch: four-column count-only encryption diagnostic, private hosting-variable presence and external job-list confirmation, sender-domain verification. Keep original encryption key if any sealed rows exist. No live configuration or credentials changed here.
