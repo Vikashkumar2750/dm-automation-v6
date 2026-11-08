@@ -7,6 +7,7 @@
 - YouTube quota backoff and scheduler heartbeat stay standalone — reliability never changes Meta delivery.
 - Calendar display merges stored and remote posts through calendar-posts, deduplicating by account plus provider post ID — connected accounts must keep independent publishing history without inserting remote rows.
 - Buyer sign-in on /p pages lives in buyer-access.functions (email code → hashed session token in server-only buyer_login_codes/buyer_sessions); codes go only to emails with an existing lead and replies never reveal that — buyers re-open purchases without creator accounts or email enumeration.
+- Dismissing payment success hands off to BuyerSignIn with the saved buyer token intact; its server-validated library read decides signed-in access — no extra sign-in click or client-only entitlement grant.
 - WhatsApp OTP for lead forms lives in whatsapp-otp.server (SHA-256 hashed codes in server-only lead_otp_codes, Meta credentials encrypted in server-only whatsapp_otp_settings); the browser only ever receives a verification id — codes and tokens must never reach client code.
 - media_assets records uploads (before/after bytes) for /admin/media; web images (delivery, blog) become WebP in-browser, post-media keeps JPEG/MP4 — Meta rejects WebP/WebM.
 - Client workspaces are always owned by the parent Agency's owner (owner_id + owner membership); other creators join as admin, and billing is refused server-side for any workspace with a parent — one payer per Agency, owners can't be removed by client admins.

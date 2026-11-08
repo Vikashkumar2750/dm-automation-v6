@@ -122,10 +122,12 @@ export function DeliveryPageView({ title, body, buttonLabel, buttonHref, imageUr
     if (!buyerSlug) return;
     const m = window.location.hash.match(/^#paid=([a-f0-9]{64}|failed)$/);
     if (!m) return;
+    const token = m[1];
+    if (!token) return;
     history.replaceState(null, "", window.location.pathname + window.location.search);
-    if (m[1] === "failed") { toast.error("We couldn't confirm the payment yet. If money was deducted, check your email or sign in shortly."); return; }
-    localStorage.setItem(`autodm:buyer:${buyerSlug}`, m[1]!);
-    setPaidToken(m[1]!);
+    if (token === "failed") { toast.error("We couldn't confirm the payment yet. If money was deducted, check your email or sign in shortly."); return; }
+    localStorage.setItem(`autodm:buyer:${buyerSlug}`, token);
+    setPaidToken(token);
   }, [buyerSlug]);
   const [paidToken, setPaidToken] = useState<string | null>(null);
   const [opening, setOpening] = useState(false);
@@ -184,7 +186,7 @@ export function DeliveryPageView({ title, body, buttonLabel, buttonHref, imageUr
       {buyerSlug && <>
         <header className="sticky top-0 z-20 border-b border-border bg-background/90 backdrop-blur"><div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-2.5 @xl:px-6"><div className="min-w-0"><span className="block truncate text-sm font-semibold text-foreground">{heading.replace(/\*\*/g, "")}</span><a href="/" className="text-[10px] text-muted-foreground hover:text-primary">Powered by <span className="font-semibold">AutoDM</span> by Techaasvik</a></div><div className="flex shrink-0 items-center gap-2"><div className="hidden @md:block"><SocialLinks links={extras.socials} /></div><BuyerSignInButton onClick={() => setSignIn(true)} /></div></div></header>
         <BuyerSignIn slug={buyerSlug} open={signIn} onOpenChange={setSignIn} creatorName={extras.creatorName} />
-        <Dialog open={!!paidToken} onOpenChange={(v) => { if (!v) setPaidToken(null); }}>
+        <Dialog open={!!paidToken} onOpenChange={(v) => { if (!v) { setPaidToken(null); setSignIn(true); } }}>
           <DialogContent className="max-w-md text-center">
             <div className="mx-auto grid size-14 place-items-center rounded-full bg-primary/10"><CheckCircle2 className="size-8 text-primary" /></div>
             <DialogHeader className="text-center sm:text-center">
