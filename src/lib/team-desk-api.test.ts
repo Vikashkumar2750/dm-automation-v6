@@ -18,11 +18,11 @@ import { authenticateApiKey } from "./team-desk.server";
 
 const source = readFileSync(new URL("../routes/api/public/v1.$resource.ts", import.meta.url), "utf8");
 const body = source.slice(source.indexOf("GET: async") + 5, source.lastIndexOf("},\n    },"))
-  .replace('await import("@/lib/team-desk.server")', "({authenticateApiKey})")
-  .replace('await import("@/lib/team-desk")', "({clampLimit})")
+  .replace('await import("@/lib/team-desk.server")', "({authenticateApiKey:authKey})")
+  .replace('await import("@/lib/team-desk")', "({clampLimit:limitValue})")
   .replace('await import("@/integrations/supabase/client.server")', "({supabaseAdmin:admin})");
 const js = ts.transpileModule(`return (${body});`, { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText;
-const handler = new Function("authenticateApiKey", "clampLimit", "admin", js)(authenticateApiKey, clampLimit, admin);
+const handler = new Function("authKey", "limitValue", "admin", js)(authenticateApiKey, clampLimit, admin);
 const key = "adm_" + "a".repeat(40); // Synthetic test-only key.
 function request(raw = key, resource = "conversations", query = "") {
   return handler({ request: new Request(`https://app.example/api/public/v1/${resource}${query}`, { headers: { "x-api-key": raw } }), params: { resource } });
