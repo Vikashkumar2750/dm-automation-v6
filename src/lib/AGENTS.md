@@ -28,3 +28,4 @@
 - Team Desk schema repairs use a single transactional DO statement for SQL-runner compatibility; source failures reject rather than hiding missing approval/settings/integration tables — recovery must not imply settings-off or successful writes.
 - Team membership UI is shared in TeamMembersPanel under Team Desk; /team redirects to members, independent of advanced Desk availability — merged navigation preserves basic team access and server authorization.
 - Team Desk reports and integrations mount independently of shared-inbox reads — a missing assignment/approval source must not hide unrelated billing or integration tools.
+- SQL runner removes only leading whitespace/comments after auditing the original input and calls the existing RPC once — commented diagnostics return rows without database changes, query-body rewriting or repeated mutations.
