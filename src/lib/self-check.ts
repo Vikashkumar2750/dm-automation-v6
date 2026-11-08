@@ -18,7 +18,7 @@ export function checkPlanCatalogue(plans: PlanDef[]): CheckResult {
   return {
     id: "plans",
     area: "Plans & pricing",
-    label: "Saved plans are valid for homepage and checkout",
+    label: "Saved catalogue prices and durations are valid",
     status: problems.length ? "fail" : plans.length ? "pass" : "warn",
     detail: problems.length ? problems.join("; ") : `${plans.length} plans read from the saved catalogue`,
   };
@@ -30,14 +30,14 @@ export function checkHeartbeats(
   now = Date.now(),
 ): CheckResult {
   if (!rows.length)
-    return { id: "scheduler", area: "Scheduler", label: "Scheduled jobs are running", status: "fail", detail: "No heartbeats recorded" };
+    return { id: "scheduler", area: "Scheduler", label: "Recent scheduler heartbeats", status: "fail", detail: "No heartbeats recorded" };
   const stale = rows.filter((r) => !r.last_run_at || now - Date.parse(r.last_run_at) > 30 * 60_000).map((r) => r.job);
   const failing = rows.filter((r) => (r.consecutive_failures ?? 0) > 0 || (r.last_status ?? 0) >= 400).map((r) => r.job);
   const status: CheckStatus = failing.length ? "fail" : stale.length ? "warn" : "pass";
   return {
     id: "scheduler",
     area: "Scheduler",
-    label: "Scheduled jobs are running",
+    label: "Recent scheduler heartbeats",
     status,
     detail: failing.length
       ? `Failing: ${failing.join(", ")}`

@@ -74,25 +74,30 @@ export const runSelfCheck = createServerFn({ method: "POST" })
       const failing = rows.filter((r) => r.enabled && (r.last_error || (r.last_status ?? 200) >= 400)).length;
       results.push({
         id: "webhook-delivery", area: "Webhooks", label: "Outgoing webhook delivery",
-        status: failing ? "warn" : "pass",
-        detail: rows.length ? `${rows.length} webhooks, ${failing} with recent failures (retried by scheduler)` : "No webhooks configured yet",
+        status: failing || !rows.length || rows.every((r) => !r.enabled || r.last_status == null) ? "warn" : "pass",
+        detail: rows.length ? `${rows.length} webhooks, ${failing} with recent failures; receiver receipt and retry are not verified by this read` : "No webhooks configured; delivery and retry not tested",
       });
     }
 
     // 6. Paid files stay private
     const bucket = await admin.storage.getBucket("product-files");
     results.push({
-      id: "buyer-files", area: "Buyer access", label: "Paid delivery files are private (unpaid buyers denied)",
+      id: "buyer-files", area: "Buyer access", label: "Paid delivery file storage is private",
       status: bucket.error ? "warn" : bucket.data?.public ? "fail" : "pass",
-      detail: bucket.error ? "File storage not created yet" : bucket.data?.public ? "Storage is PUBLIC — anyone can download" : "Storage is private; only signed short-lived links for paid purchases",
+      detail: bucket.error ? "File storage could not be checked" : bucket.data?.public ? "Storage is PUBLIC — anyone can download" : "Private bucket confirmed; signed-in unpaid buyer denial still needs a separate access test",
     });
 
     // 7. Team Desk access rules
-    const rls = await admin.from("conversation_assignments").select("id", { head: true }).limit(1);
+    const teamSources = await Promise.all([
+      admin.from("conversation_assignments").select("conversation_id,assigned_to", { head: true }).limit(1),
+      admin.from("reply_approvals").select("id,status", { head: true }).limit(1),
+      admin.from("team_settings").select("organization_id,require_approval", { head: true }).limit(1),
+    ]);
+    const teamUnavailable = teamSources.some((source) => source.error != null);
     results.push({
-      id: "team-desk", area: "Team Desk", label: "Assignments and approvals are ready",
-      status: rls.error || missing.some((t) => t === "reply_approvals" || t === "team_settings") ? "fail" : "pass",
-      detail: rls.error ? "Assignment table unavailable" : "Tables ready; saves check membership server-side",
+      id: "team-desk", area: "Team Desk", label: "Assignment and approval storage is readable",
+      status: teamUnavailable ? "fail" : "pass",
+      detail: teamUnavailable ? "Assignment, approval or settings fields unavailable" : "Required fields readable; assignment and approval saves have not been exercised by this check",
     });
 
     return { ranAt: new Date().toISOString(), results };
