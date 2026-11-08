@@ -24,8 +24,8 @@ function client() {
       or: () => q, order: () => q, limit: () => q, maybeSingle: () => q,
       upsert: (value: unknown) => { writes(value); return q; }, insert: (value: unknown) => { writes(value); return q; },
       then: (resolve: (value: unknown) => unknown) => Promise.resolve(resolve({ error: null,
-        data: table === "organization_members" ? (conditions.user_id === "assignee" ? (assigneeExists ? { role: "agent" } : null) : role ? { role } : null)
-          : table === "conversations" ? (conditions.id ? (conversationExists ? { id: "chat" } : null) : []) : [],
+        data: table === "organization_members" ? (conditions["user_id"] === "assignee" ? (assigneeExists ? { role: "agent" } : null) : role ? { role } : null)
+          : table === "conversations" ? (conditions["id"] ? (conversationExists ? { id: "chat" } : null) : []) : [],
       })),
     };
     return q;
