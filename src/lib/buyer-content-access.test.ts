@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 const source = readFileSync(new URL("./buyer-access.functions.ts", import.meta.url), "utf8");
 const section = source.slice(source.indexOf("export const getBuyerContent"));
 const body = section.slice(section.indexOf(".handler(") + 9).replace(/\);\s*$/, ";")
-  .replace('await import("@/integrations/supabase/client.server")', "({ supabaseAdmin: admin })")
+  .replace('await import("@/integrations/supabase/client.server")', "({ supabaseAdmin: client })")
   .replace('await import("@/lib/product-files.server")', "({ resolveContentUrl: resolveContent })");
 const executable = ts.transpileModule(`return ${body}`, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.None } }).outputText;
 
@@ -22,7 +22,7 @@ function scenario(paid: boolean, expired = false, pageExists = true) {
     const q = { select: () => q, limit: () => q, eq: (key: string, value: unknown) => { filters.push([table, key, value]); return q; }, maybeSingle: async () => ({ data: rows[table] }) };
     return q;
   } };
-  const handler = new Function("admin", "resolveContent", "sha256", executable)(admin, resolve, async () => "test-only");
+  const handler = new Function("client", "resolveContent", "sha256", executable)(admin, resolve, async () => "test-only");
   return { run: () => handler({ data: { token: "test-only", slug: "guide" } }), filters, resolve };
 }
 
