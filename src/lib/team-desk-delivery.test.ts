@@ -14,7 +14,7 @@ vi.mock("@/integrations/supabase/client.server", () => ({ supabaseAdmin: {
       gt: (...args: unknown[]) => { state.filters.push(args); return q; },
       update: (values: Record<string, unknown>) => { write = true; state.updates.push(values); return q; },
       then: (resolve: (value: unknown) => unknown) => Promise.resolve(resolve({
-        data: write ? null : table === "messages" ? state.messages : [{ id: "hook", organization_id: "workspace", url: "https://receiver.example/events", secret: "test-fixture-only", events: ["message.inbound"], cursor_at: "2026-11-08T10:00:00Z" }],
+        data: write ? null : table === "messages" ? state.messages : [{ id: "hook", organization_id: "workspace", url: "https://receiver.example/events", secret: "test-fixture-only", events: ["message.received"], cursor_at: "2026-11-08T10:00:00Z" }],
         error: (write ? state.writeError : table === "messages" ? state.messagesError : state.hooksError) ? { code: "TEST" } : null,
       })),
     };
