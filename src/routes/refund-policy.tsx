@@ -17,7 +17,7 @@ function RefundPolicy() {
   return <LegalPage title="Refund & Cancellation Policy" updated="27 September 2026">
     <p>This policy applies to purchases made directly for AutoDM by Techaasvik. It should be read with our Terms of Service.</p>
     <h2>Trial and one-time access</h2>
-    <p>The ₹9 three-day trial provides immediate access for the stated period. Because access begins immediately, the trial charge is normally non-refundable once activated, except where required by law or where a duplicate charge occurred.</p>
+    <p>Trial and one-time access use the price and duration displayed at checkout. Because access begins immediately, the charge is normally non-refundable once activated, except where required by law or where a duplicate charge occurred.</p>
     <h2>Subscriptions and cancellation</h2>
     <p>You may cancel a recurring plan before its next renewal. Cancellation stops future renewals; access continues until the end of the paid period. Cancelling does not automatically refund the current period.</p>
     <h2>When a refund may be approved</h2>
