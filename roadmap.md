@@ -1,5 +1,19 @@
 # DM FB-IG-YT by Techaasvik — Build Roadmap
 
+## Consolidated remaining checklist — Nov 8, 06:12 UTC
+- [x] Re-ran all regression tests: 425 tests across 70 files pass. Browser checks of Dashboard, Team, Team Desk and Database Backups redirect to sign-in with no page errors. These are access checks, not authenticated acceptance.
+- [x] Full dump export confirmed working by the owner; Google Drive explicitly deferred. Growth repair confirmed installed and loading; it is no longer a pending repair.
+- [ ] Team Desk combined repair installation and invoice read/save — live database result and authorized invoice test still missing; connected Cloud is not the live database.
+- [ ] Latest merged Team members, invites/workspace switching, Dashboard/bell, remaining admin drafts/exports/publishing selectors and cross-account/Agency/mobile acceptance — authorized current-release session needed. Self-session mint failed because no requesting-user account matches this preview backend.
+- [ ] Meta/YouTube delivery, follower taps, moderation, publishing, fresh notifications and active safety — disposable approved post/chat targets and connected provider authorization needed.
+- [ ] Payment → receipt/email → private download and unpaid live denial — approved product, amount, recipient and verified sender needed; automated authorization tests pass, no real charge attempted.
+- [ ] Hosting secrets/credential rotation, live encryption backfill and scheduler verification, external legacy backup job removal and older live schema prerequisites — Railway configuration/job-list/database access needed; do not substitute connected Cloud changes.
+- [ ] Copied migration reset — supported safe reset unavailable; no migration journals or production data deleted.
+- [ ] Full restore rehearsal and uploaded-file backup — separate disposable database and authorized storage access needed; SQL dumps do not include file bytes.
+- [ ] One unlinked YouTube chat — original account reconnect/authorization needed.
+- [ ] Meta/Google reviews and changing passwords previously shared in chat — account-owner actions needed.
+- [ ] Google Drive automatic backup — deferred by owner, not configured or claimed operational.
+
 ## Team merged into Team Desk — Nov 8
 - [x] Member/invite controls moved into Team Desk's Team members tab; duplicate sidebar/search entry removed and /team redirects to members. Basic team access remains available when advanced tools are off or Desk reads fail; server role checks unchanged.
 - [x] 425 tests across 70 files pass, including merged-tab availability/reviewer tests. Preview build OK; old Team path correctly reaches sign-in on desktop/phone without page errors.
@@ -148,7 +162,7 @@ Real Meta + YouTube credentials are available when we reach OAuth phases.
 - [x] Prefer reel thumbnails and replace unavailable PostPicker images with clean icons.
 - [ ] Verify notifications with a real signed-in workspace and fresh skipped rule (preview has no auth users; sign-in required).
 - [x] Supported comment edit/delete controls and eight moderation regression tests verified; live Meta action verification remains separate.
-- [ ] Improve phone layouts across customer/admin pages and verify representative workflows.
+- [x] Customer/admin phone layout improvements implemented; subsequent loaded-page checks verified Contacts/Automations overflow fixes and sampled Team Desk/Trust & Safety layouts. Remaining current-release representative workflow acceptance is tracked in the consolidated checklist.
 - [x] Verified comment re-submission/screencast guide covers platform-specific reply/edit/delete, native confirmation, permissions and reviewer checklist.
 - [ ] Owner: verify actual Meta comment changes on the connected test Page/account after deployment.
 - [x] Posts list: Feed/Reel/Story/Carousel tabs + badges, thumbnails, likes/comments/shares/views
@@ -241,7 +255,7 @@ Real Meta + YouTube credentials are available when we reach OAuth phases.
 - [x] Added Growth source-specific, code-only server diagnostics; preserves generic browser errors and all RLS/workspace reads. Actual affected-account failure remains unverified, not fixed by this diagnostic change.
 - [x] Reconciled Railway setup with current scheduler/migration inventory; documented encryption, Instagram secret, sender configuration and managed-Cloud credential limitations.
 - [x] Affected live account signed in successfully; Analytics, Revenue, Usage, Billing, Calendar and Settings load on desktop without horizontal overflow. /admin correctly redirects this non-Super-Admin account to /dashboard. Growth missing-table error reproduced; Inbox unavailable states need diagnosis.
-- [ ] Next: apply the live Growth repair through authorized access to the independent live database. GitHub-to-Railway deployment is now verified; no Railway connector is needed for existing automatic code deployments. Super Admin verification still needs an authorized account.
+- [x] Live Growth repair applied by the owner and later live Growth reads confirmed working. GitHub-to-Railway code deployment verified; remaining Super Admin acceptance stays separately open.
 - [x] Live user sidebar stays open after navigation and closes manually; 11 of 12 sampled mobile pages fit without horizontal overflow. Reproduced Automations header overflow at 390px and fixed its local action wrapping; live confirmation needs deployment.
 - [x] Inbox itself loads correctly; two historical conversations show missing connected-account labels, not failed conversation reads. Repair verification needs live database deployment/relink access; no live messages or workspace data changed.
 - [ ] Live integrations: fresh IG comment/follower taps, moderation/publishing, Agency connections and real-account filters. Blocker: connected provider accounts and Railway deployment access.
