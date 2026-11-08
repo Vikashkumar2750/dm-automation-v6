@@ -150,7 +150,34 @@ hosting clone. Restore into a separate compatible test database first; a dump
 completion marker alone does not prove a successful restore. Managed auth/storage
 objects may require the destination provider's supported restoration procedure.
 Existing custom SQL files are data-only copies, not complete recoverable backups.
-Google Drive automated backup integration remains unconfigured.
+### Private Google Drive backups (independent Railway backend only)
+
+The platform owner's Drive connector is linked in Lovable. It is not automatically
+copied to a separate Railway service. Configure `GOOGLE_DRIVE_API_KEY` using the
+connector's secure credential distribution and the matching `LOVABLE_API_KEY` on
+that service; never paste either into chat or source. If secure distribution is
+unavailable, automatic Drive saving remains blocked; Google client ID/secret alone
+cannot authorize uploads.
+
+Set `DRIVE_BACKUP_DATABASE_URL` privately to the **independently hosted app database**
+connection, not Lovable Cloud. This explicit opt-in keeps managed Cloud exports on
+their supported Export data path. The Docker startup launches one separate backup
+companion; it does not alter the eight-job scheduler or reactivate the retired
+`db-backup` endpoint. No new database table or migration is required.
+
+Super Admin → Database Backups → Google Drive backups: request a manual archive,
+or enable a 6/12/24-hour schedule. It is off by default. A database advisory lock
+prevents overlapping copies across app replicas. A private app-created folder is
+required; shared or unreadable permissions stop the backup. Full custom archives
+include public/auth/storage schema and data (not owners/grants, other schemas,
+storage bytes, host secrets or provider configuration). The worker reads the archive
+with pg_restore and confirms uploaded bytes before recording success. Neither check
+is a restore rehearsal. The first real upload and Railway deployment remain unverified.
+Archives are retained without automatic deletion; monitor Drive capacity. Uploads
+over 512 MB are rejected. Failed requests are recorded and scheduled attempts wait
+until the selected interval; a manual retry is available. A crashed running attempt
+is recovered after 30 minutes. Restore custom archives with pg_restore into an
+isolated compatible target, never production for a test.
 
 Inbox relink result `chats_still_unlinked = 1` is a remaining account association,
 not an execution error. Run the read-only `docs/sql/railway-inbox-diagnostic.sql`
