@@ -2,7 +2,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 const state = vi.hoisted(() => ({
   hooksError: false, messagesError: false, writeError: false,
-  url: "https://receiver.example/events",
+  url: "https://receiver.autodm.dev/events",
   updates: [] as Record<string, unknown>[], filters: [] as unknown[][],
   messages: [{ id: "message", conversation_id: "chat", direction: "inbound", body: "test", sent_at: "2026-11-08", created_at: "2026-11-08T11:00:00Z", conversations: { platform: "instagram", channel: "dm", external_user_id: "contact", external_user_name: null } }],
 }));
@@ -22,9 +22,17 @@ vi.mock("@/integrations/supabase/client.server", () => ({ supabaseAdmin: {
     return q;
   },
 } }));
+vi.mock("./webhook-destination.server", async (original) => {
+  const actual = await original<typeof import("./webhook-destination.server")>();
+  return { ...actual, postWebhook: async (url: string, body: string, headers: Record<string, string>) => {
+    actual.webhookDestination(url);
+    const res = await fetch(url, { method: "POST", body, headers, redirect: "error" });
+    return res.status;
+  } };
+});
 import { dispatchOutgoingWebhooks } from "./team-desk.server";
 
-beforeEach(() => { state.url = "https://receiver.example/events"; state.hooksError = false; state.messagesError = false; state.writeError = false; state.updates = []; state.filters = []; });
+beforeEach(() => { state.url = "https://receiver.autodm.dev/events"; state.hooksError = false; state.messagesError = false; state.writeError = false; state.updates = []; state.filters = []; });
 afterEach(() => vi.unstubAllGlobals());
 
 it("blocks an existing private-network destination before sending contact data", async () => {
