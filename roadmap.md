@@ -1,5 +1,9 @@
 # DM FB-IG-YT by Techaasvik — Build Roadmap
 
+## Team Desk complete schema follow-up — Nov 8
+- [ ] Repair five screenshot-confirmed missing tables together; provide a single-statement SQL script compatible with the existing Super Admin runner, without explicit transaction commands.
+- [ ] Reproduce runner transaction failure and verify replacement plus role/workspace isolation in isolated PostgreSQL; stop failed Team Desk reads appearing as empty/settings-off.
+
 ## Team Desk invoice repair — Nov 8
 - [x] Prepared docs/sql/railway-client-invoices-repair.sql: repeatable, transaction-wrapped table/grants/reviewer RLS/client-membership checks/index and optional audit trigger. Add invoice disabled until invoice/client reads succeed. Connected Cloud has all six Team Desk tables; it is not the affected live database and was left unchanged.
 - [x] Isolated PostgreSQL test reproduced missing relation, ran repair twice preserving a ₹500 unpaid invoice, and verified manager read, unrelated-client write denial, agent/other-workspace isolation and anonymous denial. Eight focused tests pass; preview build OK.
