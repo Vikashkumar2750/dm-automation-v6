@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Save, RotateCcw, Check } from "lucide-react";
 import { toast } from "sonner";
 
 import { Panel } from "@/components/app/primitives";
@@ -10,6 +10,8 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { getEmailProviderStatus, getPlatformConfig, savePlatformConfig, sendPlatformTestEmail } from "@/lib/platform-config.functions";
+import { planPrice, optionPrice, PLAN_DEPENDENT_QUERIES } from "@/lib/plan-presentation";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { DEFAULT_PLAN_LIMITS, type BillingCycle, type PlanDef } from "@/lib/plans";
 
 type Config = Awaited<ReturnType<typeof getPlatformConfig>>;
@@ -23,12 +25,11 @@ function useConfig() {
     mutationFn: (c: Config) => save({ data: c as never }),
     onSuccess: () => {
       toast.success("Saved");
-      void qc.invalidateQueries({ queryKey: ["platform-config"] });
-      void qc.invalidateQueries({ queryKey: ["public-plans"] });
+      for (const key of PLAN_DEPENDENT_QUERIES) void qc.invalidateQueries({ queryKey: [key] });
     },
     onError: (e) => toast.error(e instanceof Error ? e.message.slice(0, 160) : "Could not save"),
   });
-  return { config: query.data, mutation };
+  return { config: query.data, mutation, query };
 }
 
 const CYCLES: { value: BillingCycle; label: string }[] = [
@@ -39,33 +40,37 @@ const CYCLES: { value: BillingCycle; label: string }[] = [
 ];
 
 export function PlanEditorPanel() {
-  const { config, mutation } = useConfig();
+  const { config, mutation, query } = useConfig();
+  const [dirty, setDirty] = useState(false);
   const [plans, setPlans] = useState<PlanDef[]>([]);
   useEffect(() => {
-    if (config) setPlans(structuredClone(config.plans));
-  }, [config]);
-  if (!config) return <Panel title="Edit plans"><p className="text-sm text-muted-foreground">Loading…</p></Panel>;
+    if (config && !dirty) setPlans(structuredClone(config.plans));
+  }, [config, dirty]);
+  if (!config) return <Panel title="Plan catalogue"><p className="text-sm text-muted-foreground">{query.isError ? "Plan catalogue unavailable." : "Loading plan catalogue…"}</p>{query.isError && <Button variant="outline" onClick={() => void query.refetch()}>Retry</Button>}</Panel>;
 
-  const update = (i: number, patch: Partial<PlanDef>) =>
+  const update = (i: number, patch: Partial<PlanDef>) => {
+    setDirty(true);
     setPlans((ps) => ps.map((p, idx) => (idx === i ? { ...p, ...patch } : p)));
+  };
 
   return (
-    <Panel title="Edit plans (prices, names, features)">
+    <Panel title="Plan catalogue" description="Saved prices power the homepage and checkout. DM and rule limits apply unless a workspace has an override.">
+      <Tabs defaultValue="starter"><TabsList aria-label="Select plan">{plans.map((p) => <TabsTrigger key={p.key} value={p.key}>{p.name}</TabsTrigger>)}</TabsList>
       <div className="space-y-6">
         {plans.map((p, i) => (
-          <div key={p.key} className="space-y-3 rounded-lg border p-4">
+          <TabsContent forceMount key={p.key} value={p.key} className="data-[state=inactive]:hidden"><div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_280px]"><div className="space-y-6">
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="text-xs text-muted-foreground">
                 Plan name ({p.key})
                 <Input value={p.name} onChange={(e) => update(i, { name: e.target.value })} />
               </label>
               <label className="text-xs text-muted-foreground">
-                Headline price text
+                Plan tagline (display copy)
                 <Input value={p.headline} onChange={(e) => update(i, { headline: e.target.value })} />
               </label>
             </div>
             <label className="block text-xs text-muted-foreground">
-              Features (one per line)
+              Included features (display copy, one per line)
               <Textarea
                 rows={3}
                 value={p.perks.join("\n")}
@@ -101,7 +106,7 @@ export function PlanEditorPanel() {
               })}
             </div>
             <div className="space-y-2">
-              <p className="text-xs font-medium">Price options</p>
+              <p className="text-sm font-semibold">Checkout prices</p>
               {p.options.map((o, oi) => (
                 <div key={oi} className="grid items-end gap-2 sm:grid-cols-[1fr_1.5fr_1fr_1fr_auto]">
                   <select
@@ -128,7 +133,7 @@ export function PlanEditorPanel() {
                     }}
                   />
                   <Input
-                    placeholder="Price ₹"
+                    aria-label="Checkout price in rupees" placeholder="Price ₹"
                     inputMode="decimal"
                     value={String(o.amountPaise / 100)}
                     onChange={(e) => {
@@ -138,7 +143,7 @@ export function PlanEditorPanel() {
                     }}
                   />
                   <Input
-                    placeholder="Months (blank = 3-day trial)"
+                    aria-label="Access duration in months" placeholder="Months (blank = 3-day trial)"
                     inputMode="numeric"
                     value={o.months == null ? "" : String(o.months)}
                     onChange={(e) => {
@@ -170,15 +175,10 @@ export function PlanEditorPanel() {
                 <Plus className="size-4" /> Add price option
               </Button>
             </div>
-          </div>
+          </div><aside className="self-start border-l border-border pl-6"><p className="text-xs font-medium uppercase text-muted-foreground">Plan preview</p><h3 className="mt-3 text-xl font-semibold">{p.name}</h3><p className="mt-2 text-lg font-semibold">{planPrice(p)}</p>{p.headline && <p className="mt-1 text-sm text-muted-foreground">{p.headline}</p>}<ul className="mt-5 space-y-3">{p.perks.map((perk, index) => <li key={index} className="flex gap-2 text-sm"><Check className="mt-1 size-4 shrink-0 text-success" />{perk}</li>)}</ul><div className="mt-5 space-y-2 text-sm">{p.options.map((option, index) => <p key={index}>{optionPrice(option)}</p>)}</div></aside></div></TabsContent>
         ))}
-        <Button disabled={mutation.isPending} onClick={() => mutation.mutate({ ...config, plans })}>
-          {mutation.isPending ? "Saving…" : "Save plans"}
-        </Button>
-        <p className="text-xs text-muted-foreground">
-          Changes show on the billing page immediately. Payments use the saved price.
-        </p>
-      </div>
+        <div className="flex flex-wrap items-center gap-3 border-t border-border pt-5"><Button disabled={mutation.isPending || !dirty} onClick={() => mutation.mutate({ ...config, plans }, { onSuccess: () => setDirty(false) })}><Save className="size-4" />{mutation.isPending ? "Saving…" : "Save all plans"}</Button><Button variant="outline" disabled={!dirty || mutation.isPending} onClick={() => { setPlans(structuredClone(config.plans)); setDirty(false); }}><RotateCcw className="size-4" />Discard changes</Button><span role="status" className="text-sm text-muted-foreground">{dirty ? "Unsaved changes" : "Saved catalogue"}</span></div>
+      </div></Tabs>
     </Panel>
   );
 }
