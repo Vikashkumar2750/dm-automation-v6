@@ -31,7 +31,7 @@ import {
 } from "@/lib/team-desk.functions";
 
 export const Route = createFileRoute("/_authenticated/team-desk")({
-  validateSearch: (search: Record<string, unknown>): { tab?: string } => ({ tab: typeof search["tab"] === "string" ? search["tab"] : undefined }),
+  validateSearch: (search: Record<string, unknown>): { tab?: string } => (typeof search["tab"] === "string" ? { tab: search["tab"] } : {}),
   head: () => ({
     meta: [
       { title: "Team desk — AutoDM by Techaasvik" },
