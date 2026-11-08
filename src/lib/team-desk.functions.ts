@@ -8,20 +8,22 @@ const orgInput = z.object({ organizationId: z.string().uuid() });
 type Ctx = { supabase: any; userId: string };
 
 async function myRole(ctx: Ctx, organizationId: string): Promise<DeskRole | null> {
-  const { data } = await ctx.supabase
+    const { data, error } = await ctx.supabase
     .from("organization_members")
     .select("role")
     .eq("organization_id", organizationId)
     .eq("user_id", ctx.userId)
     .maybeSingle();
+  if (error) throw new Error("Team membership unavailable.");
   return (data?.role as DeskRole) ?? null;
 }
 
 async function requireReviewer(ctx: Ctx, organizationId: string) {
-  const { data } = await ctx.supabase.rpc("current_user_has_org_role", {
+  const { data, error } = await ctx.supabase.rpc("current_user_has_org_role", {
     _org_id: organizationId,
     _roles: ["owner", "admin", "manager"],
   });
+  if (error) throw new Error("Team permissions unavailable.");
   if (!data) throw new Error("Only owners, admins and managers can do this.");
 }
 
@@ -47,6 +49,7 @@ export const getTeamDesk = createServerFn({ method: "GET" })
         .limit(100),
     ]);
     if (convs.error) throw new Error(convs.error.message);
+    if (assigns.error || settings.error || approvals.error) throw new Error("Team Desk data unavailable. Check the workspace setup and retry.");
     const assignment: Record<string, string | null> = {};
     for (const a of assigns.data ?? []) assignment[a.conversation_id] = a.assigned_to;
     return {
@@ -166,6 +169,7 @@ export const listIntegrations = createServerFn({ method: "GET" })
       supabaseAdmin.from("api_keys").select("id, name, prefix, scopes, last_used_at, revoked_at, created_at").eq("organization_id", data.organizationId).order("created_at", { ascending: false }),
       supabaseAdmin.from("outgoing_webhooks").select("id, url, events, enabled, last_status, last_error, last_sent_at, created_at").eq("organization_id", data.organizationId).order("created_at", { ascending: false }),
     ]);
+    if (keys.error || hooks.error) throw new Error("Team integrations unavailable. Check the workspace setup and retry.");
     return { keys: keys.data ?? [], hooks: hooks.data ?? [] };
   });
 
@@ -194,7 +198,8 @@ export const revokeApiKey = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await requireReviewer(context, data.organizationId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    await supabaseAdmin.from("api_keys").update({ revoked_at: new Date().toISOString() }).eq("id", data.id).eq("organization_id", data.organizationId);
+    const { error } = await supabaseAdmin.from("api_keys").update({ revoked_at: new Date().toISOString() }).eq("id", data.id).eq("organization_id", data.organizationId);
+    if (error) throw new Error("API key could not be revoked.");
     return { ok: true };
   });
 
@@ -229,8 +234,9 @@ export const updateWebhook = createServerFn({ method: "POST" })
     await requireReviewer(context, data.organizationId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const q = supabaseAdmin.from("outgoing_webhooks");
-    if (data.remove) await q.delete().eq("id", data.id).eq("organization_id", data.organizationId);
-    else await q.update({ enabled: !!data.enabled }).eq("id", data.id).eq("organization_id", data.organizationId);
+    const result = data.remove ? await q.delete().eq("id", data.id).eq("organization_id", data.organizationId)
+      : await q.update({ enabled: !!data.enabled }).eq("id", data.id).eq("organization_id", data.organizationId);
+    if (result.error) throw new Error("Webhook could not be updated.");
     return { ok: true };
   });
 
