@@ -5,14 +5,15 @@ import { AccountSelect } from "@/components/app/AccountSelect";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Copy, IndianRupee, Info, Loader2, Pencil, Plus, Trash2, Upload, Users, RefreshCw } from "lucide-react";
+import { Copy, IndianRupee, Info, Loader2, Pencil, Plus, Trash2, Upload, Users, RefreshCw, ArrowLeft, ArrowRight, Eye, Monitor, Smartphone, Check, Package, TicketPercent, FileText, CreditCard, Save } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
+import { ConfirmAction } from "@/components/app/ConfirmAction";
 import { AppShell } from "@/components/app/AppShell";
 import { GuideButton } from "@/components/app/GuideButton";
 import { ContentFileField } from "@/components/app/ContentFileField";
-import { EmptyState, PageHeader, Panel, StatusBadge } from "@/components/app/primitives";
+import { EmptyState, PageHeader, Panel, StatusBadge, SectionHeader } from "@/components/app/primitives";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -50,28 +51,29 @@ function RevenuePage() {
   const orgId = activeOrg?.id ?? null;
   const fetchRev = useServerFn(getRevenue);
   const { accountId, setAccountId } = useWorkspaceAccountFilter(orgId);
-  const q = useQuery({ queryKey: ["revenue", orgId, accountId], enabled: !!orgId, queryFn: () => fetchRev({ data: { organizationId: orgId!, ...(accountId !== "all" ? { socialAccountId: accountId } : {}) } }) });
+  const q = useQuery({ queryKey: ["revenue", orgId, accountId], enabled: !!orgId, queryFn: () => fetchRev({ data: { organizationId: orgId ?? "", ...(accountId !== "all" ? { socialAccountId: accountId } : {}) } }) });
   const d = q.data;
   return (
     <AppShell>
-      <PageHeader title="Sales & Revenue" description="Sell inside DMs with payment links, coupons and delivery pages." actions={<div className="flex min-w-0 flex-wrap items-center gap-2"><AccountSelect orgId={orgId ?? null} value={accountId} onChange={setAccountId} className="h-9 w-auto max-w-[240px]" /><Button variant="outline" size="icon" aria-label="Refresh sales and revenue" disabled={q.isFetching} onClick={() => void q.refetch()}><RefreshCw className="size-4" /></Button><GuideButton guide="revenue" /></div>} />
-      {q.isError && <p role="alert" className="mb-4 text-sm text-destructive">Sales and Revenue could not be refreshed. Previously loaded results may be out of date.</p>}
+      <PageHeader title="Sales & Revenue" description="Manage products, discount campaigns, delivery pages and payments." actions={<div className="flex min-w-0 flex-wrap items-center gap-2"><AccountSelect orgId={orgId ?? null} value={accountId} onChange={setAccountId} className="h-9 w-auto max-w-[240px]" /><Button variant="outline" size="icon" aria-label="Refresh sales and revenue" disabled={q.isFetching} onClick={() => void q.refetch()}><RefreshCw className="size-4" /></Button><GuideButton guide="revenue" /></div>} />
+      {q.isError && <div role="alert" className="mb-6 flex flex-wrap items-center justify-between gap-3 border-l-2 border-warning bg-warning-soft p-4 text-sm"><span>{d ? "Refresh failed. Your previous results are still visible and may be out of date." : "Sales & Revenue could not be loaded."}</span><Button variant="outline" disabled={q.isFetching} onClick={() => void q.refetch()}><RefreshCw className="size-4" />Retry</Button></div>}
+      {q.isFetching && d && <p role="status" className="mb-3 text-sm text-muted-foreground">Refreshing results…</p>}
       {!d ? (
         <p role="status" className="text-sm text-muted-foreground">{q.isError ? "Sales and Revenue unavailable. Refresh to retry." : "Loading Sales and Revenue…"}</p>
       ) : (
-        <Tabs key={orgId} defaultValue="report">
+        <Tabs className="revenue-workspace" key={orgId} defaultValue="report">
           <TabsList className="h-auto max-w-full flex-wrap">
-            <TabsTrigger value="report">Sales report</TabsTrigger>
-            <TabsTrigger value="products">Products</TabsTrigger>
-            <TabsTrigger value="coupons">Coupons</TabsTrigger>
-            <TabsTrigger value="pages">Delivery pages</TabsTrigger>
-            <TabsTrigger value="payments">Payments setup</TabsTrigger>
+            <TabsTrigger value="report" className="gap-2"><IndianRupee className="size-4" />Sales report</TabsTrigger>
+            <TabsTrigger value="products" className="gap-2"><Package className="size-4" />Products</TabsTrigger>
+            <TabsTrigger value="coupons" className="gap-2"><TicketPercent className="size-4" />Coupons</TabsTrigger>
+            <TabsTrigger value="pages" className="gap-2"><FileText className="size-4" />Delivery pages</TabsTrigger>
+            <TabsTrigger value="payments" className="gap-2"><CreditCard className="size-4" />Payments setup</TabsTrigger>
           </TabsList>
           <TabsContent forceMount className="data-[state=inactive]:hidden" value="report"><Report d={d} /></TabsContent>
           <TabsContent forceMount className="data-[state=inactive]:hidden" value="products"><Products orgId={orgId ?? ""} items={d.products} connected={!!d.razorpay} /></TabsContent>
-          <TabsContent forceMount className="data-[state=inactive]:hidden" value="coupons"><Coupons orgId={orgId!} items={d.campaigns} /></TabsContent>
-          <TabsContent forceMount className="data-[state=inactive]:hidden" value="pages"><Pages orgId={orgId!} items={d.pages} leads={d.leads} products={d.products} campaigns={d.campaigns} whatsappOtp={d.whatsappOtp} connected={!!d.razorpay} accounts={d.accounts} /></TabsContent>
-          <TabsContent forceMount className="data-[state=inactive]:hidden" value="payments"><Payments orgId={orgId!} d={d} /></TabsContent>
+          <TabsContent forceMount className="data-[state=inactive]:hidden" value="coupons"><Coupons orgId={orgId ?? ""} items={d.campaigns} /></TabsContent>
+          <TabsContent forceMount className="data-[state=inactive]:hidden" value="pages"><Pages orgId={orgId ?? ""} items={d.pages} leads={d.leads} products={d.products} campaigns={d.campaigns} whatsappOtp={d.whatsappOtp} connected={!!d.razorpay} accounts={d.accounts} /></TabsContent>
+          <TabsContent forceMount className="data-[state=inactive]:hidden" value="payments"><Payments orgId={orgId ?? ""} d={d} /></TabsContent>
         </Tabs>
       )}
     </AppShell>
@@ -92,7 +94,8 @@ function useSave<T>(fn: (a: { data: T }) => Promise<unknown>, msg: string) {
 function Report({ d }: { d: Data }) {
   const steps = buildFunnel(d.funnel);
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
+      <SectionHeader title="Sales report" description="Payment activity and independent funnel events from the last 30 days." />
       <p className="text-xs text-muted-foreground">30-day sales events are workspace-wide and capped at 10,000 loaded events. Account selection filters payment links only. Funnel stages are independent event counts, not a matched buyer conversion rate.</p>
       <div className="grid gap-3 sm:grid-cols-3">
         <Panel title="Revenue (30 days)"><p className="text-2xl font-semibold">{formatInr(d.funnel.revenuePaise)}</p></Panel>
@@ -104,7 +107,7 @@ function Report({ d }: { d: Data }) {
           {steps.map((s) => (
             <div key={s.label} className="grid gap-1 rounded-lg border border-border px-3 py-2 text-sm sm:flex sm:items-center sm:justify-between">
               <span>{s.label}</span>
-              <span className="font-semibold">{s.value}{s.rate !== null && <span className="ml-2 text-xs font-normal text-muted-foreground">{s.rate}% of previous</span>}</span>
+              <span className="font-semibold">{s.value}</span>
             </div>
           ))}
         </div>
@@ -138,20 +141,20 @@ function Products({ orgId, items, connected }: { orgId: string; items: any[]; co
       { onSuccess: () => setF(blankP) });
   };
   return (
-    <div className="grid gap-4 lg:grid-cols-2">
+    <div className="space-y-6"><SectionHeader title="Products" description="Products and delivery content shared by your DMs and sales pages." action={<Button onClick={() => { setF(blankP); document.getElementById("product-name")?.focus(); }}><Plus className="size-4" />Add product</Button>} /><div className="grid gap-8 xl:grid-cols-2">
       <Panel title={f.id ? `Edit product: ${f.name}` : "Add product"}>
         <div className="space-y-2">
-          <Chips label="Quick fill" items={PRODUCT_PRESETS.map((p) => p.name)} onPick={(v) => { const p = PRODUCT_PRESETS.find((x) => x.name === v)!; setF({ ...f, name: p.name, price: p.price, originalPrice: p.mrp, description: p.desc }); }} />
-          <Input placeholder="Name (e.g. Recipe e-book)" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />
-          <div className="grid grid-cols-2 gap-2">
+          <Chips label="Quick fill" items={PRODUCT_PRESETS.map((p) => p.name)} onPick={(v) => { const p = PRODUCT_PRESETS.find((x) => x.name === v); if (!p) return; setF({ ...f, name: p.name, price: p.price, originalPrice: p.mrp, description: p.desc }); }} />
+          <Label htmlFor="product-name">Product name *</Label><Input id="product-name" placeholder="Name (e.g. Recipe e-book)" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />
+          <h3 className="border-t border-border pt-5 text-base font-semibold">Pricing</h3><div className="grid grid-cols-2 gap-4">
             <div><Label className="text-xs">Selling price ₹</Label><Input placeholder="999" inputMode="decimal" value={f.price} onChange={(e) => setF({ ...f, price: e.target.value })} /></div>
             <div><Label className="text-xs">MRP ₹ (optional, crossed out)</Label><Input placeholder="1999" inputMode="decimal" value={f.originalPrice} onChange={(e) => setF({ ...f, originalPrice: e.target.value })} /></div>
           </div>
-          <Input placeholder="Short description (optional)" value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} />
-          {connected ? <StatusBadge tone="success">Razorpay connected · Automatic checkout</StatusBadge> : <Input placeholder="External payment link (optional fallback)" value={f.manualUrl} onChange={(e) => setF({ ...f, manualUrl: e.target.value })} />}
+          <Label>Short description</Label><Input placeholder="Short description (optional)" value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} />
+          <p className="text-xs text-muted-foreground">Selling price is charged at checkout. A higher MRP is shown crossed out.</p><h3 className="border-t border-border pt-5 text-base font-semibold">Payment & delivery</h3>{connected ? <StatusBadge tone="success">Razorpay connected · Automatic checkout</StatusBadge> : <Input placeholder="External payment link (optional fallback)" value={f.manualUrl} onChange={(e) => setF({ ...f, manualUrl: e.target.value })} />}
           <Label htmlFor="product-delivery">Content / deliverable link — access after payment</Label>
           <ContentFileField id="product-delivery" orgId={orgId} placeholder="https://… (course, drive or private group)" value={f.deliveryUrl} onChange={(v) => setF({ ...f, deliveryUrl: v })} />
-          <div className="flex gap-2"><Button onClick={submit} disabled={save.isPending}>{f.id ? "Update product" : "Save product"}</Button>{f.id && <Button variant="outline" onClick={() => setF(blankP)}>Cancel</Button>}</div>
+          <div className="flex gap-2"><Button onClick={submit} disabled={save.isPending}><Save className="size-4" />{save.isPending ? "Saving…" : f.id ? "Update product" : "Save product"}</Button>{f.id && <Button variant="outline" onClick={() => setF(blankP)}>Cancel</Button>}</div>
           <p className="text-xs text-muted-foreground">Price and content are shared with linked delivery pages.</p>
         </div>
       </Panel>
@@ -164,14 +167,14 @@ function Products({ orgId, items, connected }: { orgId: string; items: any[]; co
                 <div className="flex items-center gap-2">
                   <Switch checked={p.active} aria-label="Active" onCheckedChange={(v) => save.mutate({ organizationId: orgId, id: p.id, name: p.name, pricePaise: p.price_paise, originalPricePaise: p.original_price_paise ?? null, description: p.description, manualUrl: p.manual_url, deliveryUrl: p.delivery_url ?? null, active: v })} />
                   <Button size="icon" variant="ghost" aria-label="Edit" onClick={() => setF({ id: p.id, name: p.name, price: String(p.price_paise / 100), originalPrice: p.original_price_paise ? String(p.original_price_paise / 100) : "", description: p.description ?? "", manualUrl: p.manual_url ?? "", deliveryUrl: p.delivery_url ?? "" })}><Pencil className="size-4" /></Button>
-                  <Button size="icon" variant="ghost" aria-label="Delete" onClick={() => del.mutate({ organizationId: orgId, id: p.id, table: "revenue_products" })}><Trash2 className="size-4" /></Button>
+                  <ConfirmAction title={`Delete ${p.name}?`} description="This removes the product. Check linked pages and automations before continuing." onConfirm={() => del.mutate({ organizationId: orgId, id: p.id, table: "revenue_products" })}><Button size="icon" variant="ghost" aria-label="Delete product"><Trash2 className="size-4" /></Button></ConfirmAction>
                 </div>
               </div>
             ))}
           </div>
         )}
       </Panel>
-    </div>
+    </div></div>
   );
 }
 
@@ -186,24 +189,21 @@ function Coupons({ orgId, items }: { orgId: string; items: any[] }) {
     kind: f.kind, storeCode: f.kind === "store_code" ? (f.storeCode || f.prefix).toUpperCase() : null,
   }, { onSuccess: () => setF(blankC) });
   return (
-    <div className="grid gap-4 lg:grid-cols-2">
+    <div className="space-y-6"><SectionHeader title="Coupon campaigns" description="Individual DM codes or one shared code for your store." /><div className="grid gap-8 xl:grid-cols-2">
       <Panel title={f.id ? `Edit campaign: ${f.name}` : "New coupon campaign"}>
         <div className="space-y-2">
           <div>
             <Label className="text-xs">Coupon type</Label>
-            <select className={area} value={f.kind} onChange={(e) => setF({ ...f, kind: e.target.value as typeof f.kind })}>
-              <option value="dm_unique">Unique code per person — sent in DM automation</option>
-              <option value="store_code">One shared code — shown on a delivery page</option>
-            </select>
+            <div className="mt-2 grid gap-3 sm:grid-cols-2">{([{ value: "dm_unique", title: "Unique DM coupon", detail: "A separate code for each customer." }, { value: "store_code", title: "Shared store coupon", detail: "One code for your delivery page." }] as const).map((kind) => <Button key={kind.value} variant={f.kind === kind.value ? "default" : "outline"} aria-pressed={f.kind === kind.value} className="h-auto min-h-20 flex-col items-start whitespace-normal p-4 text-left" onClick={() => setF({ ...f, kind: kind.value })}><span>{kind.title}</span><span className="text-xs font-normal">{kind.detail}</span></Button>)}</div>
           </div>
-          <Chips label="Quick fill" items={["Diwali sale", "New Year sale", "Launch week", "Followers special"]} onPick={(v) => { const p = v.split(" ")[0]!.toUpperCase().slice(0, 12); setF({ ...f, name: v, prefix: p, storeCode: f.kind === "store_code" ? `${p}20` : f.storeCode, discount: f.discount || "20% off" }); }} />
-          <Input placeholder="Name (e.g. Diwali sale)" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />
+          <Chips label="Quick fill" items={["Diwali sale", "New Year sale", "Launch week", "Followers special"]} onPick={(v) => { const p = (v.split(" ")[0] ?? "SALE").toUpperCase().slice(0, 12); setF({ ...f, name: v, prefix: p, storeCode: f.kind === "store_code" ? `${p}20` : f.storeCode, discount: f.discount || "20% off" }); }} />
+          <Label>Campaign name *</Label><Input placeholder="Name (e.g. Diwali sale)" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />
           {f.kind === "store_code"
             ? <Input placeholder="Store code (e.g. DIWALI50)" value={f.storeCode} onChange={(e) => setF({ ...f, storeCode: e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, "").slice(0, 30) })} />
             : <Input placeholder="Code start, 2–12 letters/numbers (e.g. DIWALI)" value={f.prefix} onChange={(e) => setF({ ...f, prefix: e.target.value })} />}
           {f.kind === "store_code" && <Input placeholder="Code start for reference, 2–12 letters (e.g. DIWALI)" value={f.prefix} onChange={(e) => setF({ ...f, prefix: e.target.value })} />}
           <Chips items={["DIWALI", "SALE", "VIP", "FLASH", "LAUNCH"]} onPick={(v) => setF({ ...f, prefix: v, storeCode: f.kind === "store_code" ? `${v}20` : f.storeCode })} />
-          <Input placeholder="Discount (e.g. 20% off)" value={f.discount} onChange={(e) => setF({ ...f, discount: e.target.value })} />
+          <Label>Discount *</Label><Input placeholder="Discount (e.g. 20% off)" value={f.discount} onChange={(e) => setF({ ...f, discount: e.target.value })} />
           <Chips items={["10% off", "20% off", "50% off", "₹100 off", "Buy 1 Get 1"]} onPick={(v) => setF({ ...f, discount: v })} />
           <div className="grid grid-cols-2 gap-2">
             <div><Label className="text-xs">Max codes</Label><Input type="number" min={1} value={f.max} onChange={(e) => setF({ ...f, max: e.target.value })} /></div>
@@ -218,14 +218,14 @@ function Coupons({ orgId, items }: { orgId: string; items: any[] }) {
       </Panel>
       <Panel title="Campaigns">
         {items.length === 0 ? <p className="text-sm text-muted-foreground">No campaigns yet.</p> : items.map((c) => (
-          <div key={c.id} className="mb-2 flex items-center justify-between rounded-lg border border-border p-3 text-sm">
+          <div key={c.id} className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border p-3 text-sm">
             <div><p className="font-medium">{c.name} {c.kind === "store_code" && <span className="ml-1 rounded-full bg-muted px-2 py-0.5 text-[10px]">Store code</span>}</p><p className="text-muted-foreground">{c.kind === "store_code" ? c.store_code : `${c.prefix}-XXXXXX`} · {c.discount_label} · max {c.max_codes}{c.expires_at ? ` · ends ${new Date(c.expires_at).toLocaleDateString()}` : ""}</p></div>
             <div className="flex"><Button size="icon" variant="ghost" aria-label="Edit" onClick={() => setF({ id: c.id, name: c.name, prefix: c.prefix ?? "", discount: c.discount_label ?? "", max: String(c.max_codes ?? 500), expires: c.expires_at ? String(c.expires_at).slice(0, 10) : "", kind: c.kind === "store_code" ? "store_code" : "dm_unique", storeCode: c.store_code ?? "", active: c.active !== false })}><Pencil className="size-4" /></Button>
-            <Button size="icon" variant="ghost" aria-label="Delete" onClick={() => del.mutate({ organizationId: orgId, id: c.id, table: "coupon_campaigns" })}><Trash2 className="size-4" /></Button></div>
+            <ConfirmAction title={`Delete ${c.name}?`} description="This campaign will no longer be available for new coupons." onConfirm={() => del.mutate({ organizationId: orgId, id: c.id, table: "coupon_campaigns" })}><Button size="icon" variant="ghost" aria-label="Delete campaign"><Trash2 className="size-4" /></Button></ConfirmAction></div>
           </div>
         ))}
       </Panel>
-    </div>
+    </div></div>
   );
 }
 
@@ -236,6 +236,7 @@ type PageForm = {
   showPrice: boolean; priceOriginal: string; priceOffer: string; discountLabel: string; couponCode: string; couponNote: string;
   extras: PageExtras; productId: string; couponCampaignId: string; otpRequired: boolean;
 };
+const BUILDER_STEPS = ["Page basics", "Visuals & media", "Product & offer", "Lead capture", "Checkout & delivery", "Trust & brand", "Deliverables & policies"];
 const EMPTY_PAGE: PageForm = {
   id: null, title: "", slug: "", originalSlug: "", body: "", buttonLabel: "", buttonUrl: "", imagePath: "", imageAlt: "", showImage: false, countdown: "", expiryAction: "disable_cta",
   expiryMessage: "This offer has ended.", formType: "none", formMode: "optional", fields: STANDARD_LEAD_FIELDS,
@@ -267,7 +268,7 @@ function LeadFieldsEditor({ fields, onChange }: { fields: LeadField[]; onChange:
   const standardKeys = STANDARD_LEAD_FIELDS.map((s) => s.key);
   const set = (i: number, patch: Partial<LeadField>) => onChange(fields.map((x, j) => (j === i ? { ...x, ...patch } : x)));
   const toggleStandard = (key: string, on: boolean) => {
-    if (on) { const s = STANDARD_LEAD_FIELDS.find((x) => x.key === key)!; onChange([...fields, s]); }
+    if (on) { const s = STANDARD_LEAD_FIELDS.find((x) => x.key === key); if (!s) return; onChange([...fields, s]); }
     else onChange(fields.filter((x) => x.key !== key));
   };
   const custom = fields.map((x, i) => ({ x, i })).filter(({ x }) => !standardKeys.includes(x.key));
@@ -277,7 +278,7 @@ function LeadFieldsEditor({ fields, onChange }: { fields: LeadField[]; onChange:
         {STANDARD_LEAD_FIELDS.map((s) => { const i = fields.findIndex((x) => x.key === s.key); const on = i >= 0; return (
           <div key={s.key} className="flex items-center justify-between gap-2 rounded-md border border-border px-2 py-1.5 text-xs">
             <label className="flex items-center gap-2"><Switch checked={on} onCheckedChange={(v) => toggleStandard(s.key, v)} /> {s.label}</label>
-            {on && <label className="flex items-center gap-1 text-muted-foreground"><input type="checkbox" checked={fields[i]!.required} onChange={(e) => set(i, { required: e.target.checked })} /> Required</label>}
+            {on && <label className="flex items-center gap-1 text-muted-foreground"><input type="checkbox" checked={fields[i]?.required ?? false} onChange={(e) => set(i, { required: e.target.checked })} /> Required</label>}
           </div>); })}
       </div>
       {custom.map(({ x, i }) => (
@@ -315,6 +316,10 @@ function Pages({ orgId, items, leads, products, campaigns, whatsappOtp, connecte
   const save = useSave(useServerFn(savePage), "Page saved");
   const del = useSave(useServerFn(deleteRevenueItem), "Deleted");
   const [f, setF] = useState<PageForm>(EMPTY_PAGE);
+  const [editing, setEditing] = useState(false);
+  const [step, setStep] = useState(0);
+  const [mobileView, setMobileView] = useState<"editor" | "preview">("editor");
+  const [baseline, setBaseline] = useState("");
   const [imagePreview, setImagePreview] = useState("");
   const [previewDevice, setPreviewDevice] = useState<"desktop" | "mobile">("desktop");
   const [uploading, setUploading] = useState(false);
@@ -327,7 +332,10 @@ function Pages({ orgId, items, leads, products, campaigns, whatsappOtp, connecte
   const connectedSocials = (): SocialLink[] => accounts.flatMap((a) => { const url = connectedAccountUrl(a); return url ? [{ platform: a.platform as SocialLink["platform"], url, label: a.name }] : []; });
   const withCreator = (p: PageForm): PageForm => { const c = savedCreator(); const socials = c?.socials?.length ? c.socials : connectedSocials(); return { ...p, extras: { ...p.extras, ...(c ? { creatorName: c.creatorName, supportEmail: c.supportEmail } : {}), socials } }; };
   useEffect(() => { setF((v) => (v.id ? v : withCreator(v))); }, [orgId]);
-  const reset = () => { setF(withCreator(EMPTY_PAGE)); setImagePreview(""); };
+  const reset = () => { const blank = withCreator(EMPTY_PAGE); setF(blank); setBaseline(JSON.stringify(blank)); setImagePreview(""); setEditing(false); setStep(0); };
+  const startNew = () => { const blank = withCreator(EMPTY_PAGE); setF(blank); setBaseline(JSON.stringify(blank)); setImagePreview(""); setStep(0); setEditing(true); setMobileView("editor"); };
+  const dirty = editing && JSON.stringify(f) !== baseline;
+  useEffect(() => { if (!dirty) return; const leave = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ""; }; window.addEventListener("beforeunload", leave); return () => window.removeEventListener("beforeunload", leave); }, [dirty]);
   const pickProduct = (id: string) => {
     const pr = products.find((x) => x.id === id);
     if (!pr) { setF({ ...f, productId: "" }); return; }
@@ -342,7 +350,7 @@ function Pages({ orgId, items, leads, products, campaigns, whatsappOtp, connecte
   };
   const storeCampaigns = campaigns.filter((c) => c.active && (!c.expires_at || new Date(c.expires_at) > new Date()));
   const startEdit = async (p: any) => {
-    setF(pageToForm(p)); setImagePreview("");
+    const form = pageToForm(p); setF(form); setBaseline(JSON.stringify(form)); setEditing(true); setStep(0); setMobileView("editor"); setImagePreview("");
     formTop.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     if (p.image_path) { try { setImagePreview(await previewDeliveryImage(p.image_path)); } catch { /* preview only */ } }
   };
@@ -369,11 +377,14 @@ function Pages({ orgId, items, leads, products, campaigns, whatsappOtp, connecte
   };
   const pageLeads = leadsFor ? leads.filter((l) => l.delivery_page_id === leadsFor) : [];
   return (
-    <div className="space-y-4">
-    <div className="grid gap-4 lg:grid-cols-2">
-      <div ref={formTop}>
-      <Panel title={f.id ? `Edit page: ${f.title || "Untitled"}` : "New delivery page"}>
-        <div className="space-y-2">
+    <div className="space-y-6"><SectionHeader title={editing ? f.id ? "Edit delivery page" : "Create delivery page" : "Delivery pages"} description={editing ? "Your changes appear in the preview. Save when the page is ready." : "Manage offers, page links and captured leads."} action={editing ? <ConfirmAction title="Leave this editor?" description={dirty ? "Unsaved changes will be discarded." : "Return to your delivery pages."} onConfirm={reset}><Button variant="outline"><ArrowLeft className="size-4" />All pages</Button></ConfirmAction> : <Button onClick={startNew}><Plus className="size-4" />Create new page</Button>} />
+    {editing && <><div className="flex gap-2 lg:hidden"><Button variant={mobileView === "editor" ? "default" : "outline"} onClick={() => setMobileView("editor")}><Pencil className="size-4" />Editor</Button><Button variant={mobileView === "preview" ? "default" : "outline"} onClick={() => setMobileView("preview")}><Eye className="size-4" />Preview</Button></div>
+    <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+      <div ref={formTop} className={mobileView === "preview" ? "hidden lg:block" : ""}>
+      <nav aria-label="Page builder sections" className="mb-6 flex gap-2 overflow-x-auto pb-2">{BUILDER_STEPS.map((label, index) => <Button key={label} variant={step === index ? "default" : "outline"} size="sm" className="shrink-0 gap-2" aria-current={step === index ? "step" : undefined} onClick={() => setStep(index)}><span>{index + 1}</span>{label}</Button>)}</nav>
+      <Panel title={`${step + 1}. ${BUILDER_STEPS[step]}`}>
+        <div className="space-y-6">
+          <div hidden={step !== 0} className="space-y-4">
           <div>
             <Label className="text-xs">Start from a ready-made design</Label>
             <div className="mt-1 flex flex-wrap gap-1.5">
@@ -385,21 +396,21 @@ function Pages({ orgId, items, leads, products, campaigns, whatsappOtp, connecte
               ))}
             </div>
           </div>
-          <Input placeholder="Title (e.g. Your free guide)" value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} />
-          <Input placeholder="Address (e.g. free-guide)" value={f.slug} onChange={(e) => setF({ ...f, slug: slugify(e.target.value) })} />
+          <Label>Page title *</Label><Input placeholder="Title (e.g. Your free guide)" value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} />
+          <Label>Page address</Label><Input placeholder="Address (e.g. free-guide)" value={f.slug} onChange={(e) => setF({ ...f, slug: slugify(e.target.value) })} />
           {f.id && f.slug !== f.originalSlug && <p className="text-xs text-destructive">Changing the address breaks links you already sent in DMs ({origin}/p/{f.originalSlug}).</p>}
-          <textarea rows={12} className={`${area} font-mono text-xs`} placeholder={"# Big headline\nShort intro line\n\n## Section title\n- Point one\n- Point two\n> Highlighted note\n? Question | Answer"} value={f.body} onChange={(e) => setF({ ...f, body: e.target.value })} />
+          <Label>Headline & content</Label><textarea rows={10} className={`${area} font-mono text-xs`} placeholder={"# Big headline\nShort intro line\n\n## Section title\n- Point one\n- Point two\n> Highlighted note\n? Question | Answer"} value={f.body} onChange={(e) => setF({ ...f, body: e.target.value })} />
           <p className="text-xs text-muted-foreground">
             Formatting: <code># Headline</code> · <code>## Section</code> · <code>- point</code> · <code>&gt; note</code> · <code>? Question | Answer</code> · <code>**bold**</code>. Plain text also looks good.
           </p>
-          <div className="space-y-2 rounded-lg border border-border p-3">
+          </div><div hidden={step !== 1} className="space-y-4">
             <div className="flex items-center justify-between"><Label>Product image</Label><Switch checked={f.showImage} disabled={!f.imagePath} onCheckedChange={(v) => setF({ ...f, showImage: v })} /></div>
             <input ref={imageInput} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={(e) => void uploadImage(e.target.files?.[0])} />
             <div className="flex flex-wrap gap-2"><Button type="button" size="sm" variant="outline" disabled={uploading} onClick={() => imageInput.current?.click()}>{uploading ? <Loader2 className="size-4 animate-spin" /> : <Upload className="size-4" />} {f.imagePath ? "Replace image" : "Upload image"}</Button>{f.imagePath && <Button type="button" size="sm" variant="ghost" onClick={() => { setF({ ...f, imagePath: "", showImage: false, imageAlt: "" }); setImagePreview(""); }}>Remove</Button>}</div>
             <p className="text-xs text-muted-foreground">Any photo works — it is auto-fitted to 16:9 (best: 1920×1080).</p>
             {f.imagePath && <Input placeholder="Image description for accessibility" value={f.imageAlt} onChange={(e) => setF({ ...f, imageAlt: e.target.value })} />}
           </div>
-          <div className="space-y-2 rounded-lg border border-border p-3">
+          <div hidden={step !== 2} className="space-y-4">
             <div className="flex items-center justify-between"><Label>Price &amp; offer</Label><Switch checked={f.showPrice} onCheckedChange={(v) => setF({ ...f, showPrice: v })} /></div>
             <div>
               <Label className="text-xs">Linked product (from Products tab)</Label>
@@ -434,15 +445,15 @@ function Pages({ orgId, items, leads, products, campaigns, whatsappOtp, connecte
               </div>
               <p className="text-xs text-muted-foreground">Linked products determine the checkout price.</p>
             </>}
-          </div>
-          <div className="space-y-2 rounded-lg border border-border p-3">
+          <div className="revenue-section space-y-4">
             <Label>Honest offer countdown (optional)</Label>
             <Input type="datetime-local" value={f.countdown} onChange={(e) => setF({ ...f, countdown: e.target.value })} />
             {f.countdown && <><select className={area} value={f.expiryAction} onChange={(e) => setF({ ...f, expiryAction: e.target.value as typeof f.expiryAction })}><option value="disable_cta">Disable button when ended</option><option value="hide_cta">Hide button when ended</option></select><Input placeholder="Message after expiry" value={f.expiryMessage} onChange={(e) => setF({ ...f, expiryMessage: e.target.value })} /></>}
             <p className="text-xs text-muted-foreground">Uses one fixed deadline. It never restarts for each visitor.</p>
           </div>
-          <ExtrasEditor accounts={accounts} value={f.extras} onChange={(extras) => setF({ ...f, extras })} onSaveCreator={() => { localStorage.setItem(creatorKey, JSON.stringify({ creatorName: f.extras.creatorName?.trim() ?? "", supportEmail: f.extras.supportEmail?.trim() ?? "", socials: cleanSocials(f.extras.socials) })); toast.success("Saved — new pages will be filled automatically"); }} />
-          <div className="space-y-2 rounded-lg border border-border p-3">
+          </div>
+          <div hidden={step !== 5 && step !== 6}><ExtrasEditor section={step === 5 ? "trust" : "policies"} accounts={accounts} value={f.extras} onChange={(extras) => setF({ ...f, extras })} onSaveCreator={() => { localStorage.setItem(creatorKey, JSON.stringify({ creatorName: f.extras.creatorName?.trim() ?? "", supportEmail: f.extras.supportEmail?.trim() ?? "", socials: cleanSocials(f.extras.socials) })); toast.success("Saved — new pages will be filled automatically"); }} /></div>
+          <div hidden={step !== 3} className="space-y-4">
             <Label>Lead form</Label>
             <div className="grid grid-cols-2 gap-2">
               <select className={area} value={f.formType} onChange={(e) => setF({ ...f, formType: e.target.value as PageForm["formType"] })}>
@@ -465,7 +476,7 @@ function Pages({ orgId, items, leads, products, campaigns, whatsappOtp, connecte
             {badLead && <p className="text-xs text-destructive">Give every field a question, and every dropdown at least one option.</p>}
             <p className="text-xs text-muted-foreground">Best default: two quick questions in DM, then an optional detailed form after the offer.</p>
           </div>
-          <div className="space-y-2 rounded-lg border border-border p-3">
+          <div hidden={step !== 4} className="space-y-4">
           <Label>{autoCheckout ? "Automatic checkout" : "Main button — where buyers go"}</Label>
           <p className="text-xs text-muted-foreground">{autoCheckout ? "Razorpay connected — no manual payment link needed." : "Use an external payment link, or a download link for a free resource."}</p>
           <div className="grid grid-cols-2 gap-2">
@@ -489,38 +500,37 @@ function Pages({ orgId, items, leads, products, campaigns, whatsappOtp, connecte
             </div>
           </div>
           </div>
-          <div className="flex gap-2">
-            <Button onClick={submit} disabled={save.isPending || badLead}>{f.id ? "Update page" : "Save page"}</Button>
-            {f.id && <Button variant="outline" onClick={reset}>Cancel</Button>}
-          </div>
-          <p className="text-xs text-muted-foreground">Put the page link in any DM button. Views and button clicks show in the Sales report.</p>
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-5"><Button variant="outline" disabled={step === 0} onClick={() => setStep((value) => value - 1)}><ArrowLeft className="size-4" />Back</Button>{step < 6 ? <Button onClick={() => { if (step === 0 && !f.title.trim()) { toast.error("Enter a page title"); return; } if (step === 3 && badLead) { toast.error("Complete your lead fields"); return; } setStep((value) => value + 1); }}>Next<ArrowRight className="size-4" /></Button> : <Button onClick={submit} disabled={save.isPending || badLead || !f.title.trim()}><Save className="size-4" />{save.isPending ? "Saving…" : "Save page"}</Button>}</div><p role="status" className="text-xs text-muted-foreground">{dirty ? "Unsaved changes" : "No unsaved changes"}</p>
         </div>
       </Panel>
       </div>
+      <div className={`lg:sticky lg:top-6 ${mobileView === "editor" ? "hidden lg:block" : ""}`}><div className="mb-3 flex flex-wrap items-center justify-between gap-2"><p className="text-sm font-semibold">Page preview · not published</p>
+        <div className="inline-flex rounded-lg border border-border p-1">{(["desktop", "mobile"] as const).map((v) => <Button key={v} type="button" size="sm" variant={previewDevice === v ? "default" : "ghost"} onClick={() => setPreviewDevice(v)}>{v === "desktop" ? <><Monitor className="size-4" />Computer</> : <><Smartphone className="size-4" />Mobile</>}</Button>)}</div>
+</div>        <div className={`delivery-preview mx-auto max-h-[calc(100vh-180px)] overflow-auto rounded-lg border border-border ${previewDevice === "mobile" ? "max-w-[390px]" : "w-full"}`}>
+          <DeliveryPageView title={f.title || "Your page title"} body={f.body.trim() ? f.body : SAMPLE_BODY} buttonLabel={f.buttonLabel || "Get access"} buttonHref="#"
+            imageUrl={f.showImage ? imagePreview : null} imagePlaceholder={!(f.showImage && imagePreview)} imageAlt={f.imageAlt} countdownAt={f.countdown ? new Date(f.countdown).toISOString() : null} expiryAction={f.expiryAction} expiryMessage={f.expiryMessage} price={price} key={JSON.stringify(fields)} leadForm={{ preview: true, config: formConfig }} buyerSlug={f.slug || slugify(f.title) || "preview"} />
+        </div>
+      </div>
+    </div></>}
+    {!editing && <>
       <Panel title="Your pages">
         {items.length === 0 ? <p className="text-sm text-muted-foreground">No pages yet.</p> : items.map((p) => { const n = leads.filter((l) => l.delivery_page_id === p.id).length; return (
-          <div key={p.id} className={`mb-2 flex items-center justify-between gap-2 rounded-lg border p-3 text-sm ${f.id === p.id ? "border-primary" : "border-border"}`}>
-            <div className="min-w-0"><p className="font-medium">{p.title}</p><p className="truncate text-muted-foreground">{origin}/p/{p.slug} · {p.views} views{n ? ` · ${n} leads` : ""}</p></div>
+          <div key={p.id} className={`mb-3 flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3 text-sm ${f.id === p.id ? "border-primary" : "border-border"}`}>
+            <div className="min-w-0"><p className="font-medium">{p.title} <StatusBadge tone={p.active ? "success" : "neutral"}>{p.active ? "Active" : "Inactive"}</StatusBadge></p><p className="truncate text-muted-foreground">{origin}/p/{p.slug} · {p.views} views{n ? ` · ${n} leads` : ""}</p></div>
             <div className="flex">
               {<Button size="icon" variant="ghost" aria-label="View leads" title={`View leads (${n})`} onClick={() => setLeadsFor(leadsFor === p.id ? null : p.id)}><Users className="size-4" /></Button>}
               <Button size="icon" variant="ghost" aria-label="Edit page" onClick={() => void startEdit(p)}><Pencil className="size-4" /></Button>
               <Button size="icon" variant="ghost" aria-label="Copy link" onClick={() => { navigator.clipboard.writeText(`${origin}/p/${p.slug}`); toast.success("Link copied"); }}><Copy className="size-4" /></Button>
-              <Button size="icon" variant="ghost" aria-label="Delete" onClick={() => { if (f.id === p.id) reset(); del.mutate({ organizationId: orgId, id: p.id, table: "delivery_pages" }); }}><Trash2 className="size-4" /></Button>
+              <Button size="icon" variant="ghost" aria-label="Duplicate page" title="Duplicate page" onClick={() => { const form = { ...pageToForm(p), id: null, title: `${p.title} copy`, slug: `${p.slug}-copy-${Date.now().toString(36).slice(-4)}`, originalSlug: "" }; setF(form); setBaseline(JSON.stringify(form)); setEditing(true); setStep(0); if (p.image_path) void previewDeliveryImage(p.image_path).then(setImagePreview); }}><Copy className="size-4" /></Button><Button asChild size="icon" variant="ghost" aria-label="Preview saved page"><a href={`${origin}/p/${p.slug}`} target="_blank" rel="noopener noreferrer"><Eye className="size-4" /></a></Button><ConfirmAction title={`Delete ${p.title}?`} description="Existing links to this page will stop working." onConfirm={() => { if (f.id === p.id) reset(); del.mutate({ organizationId: orgId, id: p.id, table: "delivery_pages" }); }}><Button size="icon" variant="ghost" aria-label="Delete page"><Trash2 className="size-4" /></Button></ConfirmAction>
             </div>
           </div>); })}
         {leadsFor && <div className="mt-3 max-h-72 space-y-2 overflow-auto rounded-lg border border-border p-3">{pageLeads.length === 0 && <p className="text-xs text-muted-foreground">No leads on this page yet. Leads also show in Contacts → Delivery page leads.</p>}
           <p className="text-sm font-medium">Leads ({pageLeads.length})</p>
-          {pageLeads.map((l) => { const st = STAGE_BADGE[l.answers["_stage"] ?? "completed"] ?? STAGE_BADGE["completed"]!; return <div key={l.id} className="rounded-md bg-muted p-2 text-xs"><div className="flex items-center justify-between gap-2"><p className="text-muted-foreground">{new Date(l.answers["_updated_at"] ?? l.created_at).toLocaleString()}</p><span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${st.cls}`}>{st.label}</span></div>{Object.entries(l.answers).filter(([k]) => !k.startsWith("_")).map(([k, v]) => <p key={k}><span className="text-muted-foreground">{k}:</span> {v}</p>)}</div>; })}
+          {pageLeads.map((l) => { const st = STAGE_BADGE[l.answers["_stage"] ?? "completed"] ?? STAGE_BADGE["completed"]; return <div key={l.id} className="rounded-md bg-muted p-2 text-xs"><div className="flex items-center justify-between gap-2"><p className="text-muted-foreground">{new Date(l.answers["_updated_at"] ?? l.created_at).toLocaleString()}</p><span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${st.cls}`}>{st.label}</span></div>{Object.entries(l.answers).filter(([k]) => !k.startsWith("_")).map(([k, v]) => <p key={k}><span className="text-muted-foreground">{k}:</span> {v}</p>)}</div>; })}
         </div>}
       </Panel>
-    </div>
-      <Panel title="Live preview">
-        <div className="mb-3 inline-flex rounded-lg border border-border p-1">{(["desktop", "mobile"] as const).map((v) => <Button key={v} type="button" size="sm" variant={previewDevice === v ? "default" : "ghost"} onClick={() => setPreviewDevice(v)}>{v === "desktop" ? "Computer" : "Mobile"}</Button>)}</div>
-        <div className={`mx-auto max-h-[720px] overflow-auto rounded-xl border border-border ${previewDevice === "mobile" ? "max-w-[390px] rounded-[2rem] border-4" : "w-full"}`}>
-          <DeliveryPageView title={f.title || "Your page title"} body={f.body.trim() ? f.body : SAMPLE_BODY} buttonLabel={f.buttonLabel || "Get access"} buttonHref="#"
-            imageUrl={f.showImage ? imagePreview : null} imagePlaceholder={!(f.showImage && imagePreview)} imageAlt={f.imageAlt} countdownAt={f.countdown ? new Date(f.countdown).toISOString() : null} expiryAction={f.expiryAction} expiryMessage={f.expiryMessage} price={price} key={JSON.stringify(fields)} leadForm={{ preview: true, config: formConfig }} buyerSlug={f.slug || slugify(f.title) || "preview"} />
-        </div>
-      </Panel>
+    </>}
+
     </div>
   );
 }
@@ -534,19 +544,19 @@ function Payments({ orgId, d }: { orgId: string; d: Data }) {
   useEffect(() => setS({ enabled: d.settings.nudge_enabled, delay: d.settings.nudge_delay_minutes, text: d.settings.nudge_text }), [d.settings]);
   const hook = `${typeof window !== "undefined" ? window.location.origin : ""}/api/public/webhooks/razorpay/${orgId}`;
   return (
-    <div className="grid gap-4 lg:grid-cols-2">
-      <Panel title="Razorpay">
+    <div className="space-y-6"><SectionHeader title="Payments setup" description="Connect checkout, configure reminders and verify customer phone numbers." /><div className="grid items-start gap-8 xl:grid-cols-2">
+      <Panel title="Razorpay checkout">
         {d.razorpay ? (
           <div className="space-y-3 text-sm">
-            <p>Razorpay connected · Automatic checkout active</p>
+            <StatusBadge tone="success">Connected · Automatic checkout active</StatusBadge>
             <Button variant="outline" onClick={() => removeKeys.mutate({ organizationId: orgId })}>Disconnect</Button>
           </div>
         ) : (
           <div className="space-y-2">
             <p className="text-sm text-muted-foreground">Razorpay Dashboard → Account & Settings → API keys. Money goes straight to your Razorpay account.</p>
-            <Input placeholder="Key ID (rzp_live_… or rzp_test_…)" value={k.keyId} onChange={(e) => setK({ ...k, keyId: e.target.value })} />
-            <Input type="password" placeholder="Key secret" value={k.keySecret} onChange={(e) => setK({ ...k, keySecret: e.target.value })} />
-            <Input type="password" placeholder="Webhook secret (you choose it in Razorpay)" value={k.webhookSecret} onChange={(e) => setK({ ...k, webhookSecret: e.target.value })} />
+            <Label>Razorpay key ID *</Label><Input placeholder="Key ID (rzp_live_… or rzp_test_…)" value={k.keyId} onChange={(e) => setK({ ...k, keyId: e.target.value })} />
+            <Label>Key secret *</Label><Input autoComplete="new-password" type="password" placeholder="Key secret" value={k.keySecret} onChange={(e) => setK({ ...k, keySecret: e.target.value })} />
+            <Label>Webhook secret *</Label><Input autoComplete="new-password" type="password" placeholder="Webhook secret (you choose it in Razorpay)" value={k.webhookSecret} onChange={(e) => setK({ ...k, webhookSecret: e.target.value })} />
             <Button disabled={saveKeys.isPending} onClick={() => saveKeys.mutate({ organizationId: orgId, ...k }, { onSuccess: () => setK({ keyId: "", keySecret: "", webhookSecret: "" }) })}>Connect Razorpay</Button>
           </div>
         )}
@@ -563,11 +573,11 @@ function Payments({ orgId, d }: { orgId: string; d: Data }) {
           <div><Label className="text-xs">Wait (minutes, 15–1200)</Label><Input type="number" min={15} max={1200} value={s.delay} onChange={(e) => setS({ ...s, delay: Number(e.target.value) })} /></div>
           <textarea rows={3} className={area} value={s.text} maxLength={600} onChange={(e) => setS({ ...s, text: e.target.value })} />
           <p className="text-xs text-muted-foreground">Only one reminder per link, and only if the person messaged you in the last 24 hours (Meta rule). Quiet hours and limits apply.</p>
-          <Button onClick={() => saveSet.mutate({ organizationId: orgId, nudgeEnabled: s.enabled, nudgeDelayMinutes: s.delay, nudgeText: s.text })}>Save</Button>
+          <Button disabled={saveSet.isPending} onClick={() => saveSet.mutate({ organizationId: orgId, nudgeEnabled: s.enabled, nudgeDelayMinutes: s.delay, nudgeText: s.text })}>Save</Button>
         </div>
       </Panel>
       <WhatsappOtpPanel orgId={orgId} d={d} />
-    </div>
+    </div></div>
   );
 }
 
@@ -585,8 +595,8 @@ function WhatsappOtpPanel({ orgId, d }: { orgId: string; d: Data }) {
       ) : (
         <div className="space-y-2">
           <p className="text-sm text-muted-foreground">Apne WhatsApp Business (Meta Cloud API) se delivery page ke phone numbers verify karo. Meta Business Suite → WhatsApp → API setup se ye details milengi. Token sirf server par encrypted rehta hai — kabhi browser mein nahi aata.</p>
-          <Input placeholder="Phone number ID (digits only)" inputMode="numeric" value={w.phoneNumberId} onChange={(e) => setW({ ...w, phoneNumberId: e.target.value.replace(/\D/g, "") })} />
-          <Input type="password" placeholder="Permanent access token" value={w.accessToken} onChange={(e) => setW({ ...w, accessToken: e.target.value })} />
+          <Label>WhatsApp phone number ID *</Label><Input placeholder="Phone number ID (digits only)" inputMode="numeric" value={w.phoneNumberId} onChange={(e) => setW({ ...w, phoneNumberId: e.target.value.replace(/\D/g, "") })} />
+          <Label>Access token *</Label><Input autoComplete="new-password" type="password" placeholder="Permanent access token" value={w.accessToken} onChange={(e) => setW({ ...w, accessToken: e.target.value })} />
           <div className="grid grid-cols-2 gap-2">
             <Input placeholder="Authentication template name" value={w.templateName} onChange={(e) => setW({ ...w, templateName: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "") })} />
             <Input placeholder="Language (e.g. en or en_US)" value={w.templateLanguage} onChange={(e) => setW({ ...w, templateLanguage: e.target.value })} />
@@ -672,11 +682,11 @@ function SocialsEditor({ accounts, value, onChange }: { accounts: Data["accounts
 
 const POLICY_LABELS = [["refund", "Refund policy"], ["fulfilment", "Fulfilment policy"], ["privacy", "Privacy policy"], ["terms", "Terms & conditions"]] as const;
 
-function ExtrasEditor({ value, onChange, onSaveCreator, accounts }: { accounts: Data["accounts"]; value: PageExtras; onChange: (v: PageExtras) => void; onSaveCreator: () => void }) {
+function ExtrasEditor({ section, value, onChange, onSaveCreator, accounts }: { section: "trust" | "policies"; accounts: Data["accounts"]; value: PageExtras; onChange: (v: PageExtras) => void; onSaveCreator: () => void }) {
   const d = value.deliverables ?? {}; const pol = value.policies ?? {};
   return (
-    <div className="space-y-6 rounded-xl border border-border p-4 sm:p-5 [&>div+div]:border-t [&>div+div]:border-border [&>div+div]:pt-5">
-      <div className="space-y-2">
+    <div className="space-y-6">
+      <div hidden={section !== "trust"} className="space-y-4">
         <Label className="text-base font-semibold text-foreground">GST & processing fee (added on top of selling price)</Label>
         <div className="flex flex-wrap items-center gap-2">
           {[0, 5, 12, 18, 28].map((g) => (
@@ -689,18 +699,18 @@ function ExtrasEditor({ value, onChange, onSaveCreator, accounts }: { accounts: 
         </label>
         <p className="text-xs text-muted-foreground">Calculated automatically from the product's selling price and shown to buyers as a price breakdown.</p>
       </div>
-      <SocialsEditor accounts={accounts} value={value.socials ?? []} onChange={(socials) => onChange({ ...value, socials })} />
-      <div className="space-y-2">
-        <div className="flex items-center justify-between gap-2"><Label className="text-base font-semibold text-foreground">Creator & support (optional)</Label>
+      <div hidden={section !== "trust"}><SocialsEditor accounts={accounts} value={value.socials ?? []} onChange={(socials) => onChange({ ...value, socials })} /></div>
+      <div hidden={section !== "trust"} className="space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-2"><Label className="text-base font-semibold text-foreground">Creator & support (optional)</Label>
           <Button type="button" size="sm" variant="outline" disabled={!value.creatorName?.trim() && !value.supportEmail?.trim() && !value.socials?.length} onClick={onSaveCreator}>Save for next pages</Button></div>
         <div className="grid gap-2 sm:grid-cols-2">
           <Input placeholder="Creator name (e.g. Techaasvik)" maxLength={80} value={value.creatorName ?? ""} onChange={(e) => onChange({ ...value, creatorName: e.target.value })} />
           <Input type="email" placeholder="Support email" maxLength={120} value={value.supportEmail ?? ""} onChange={(e) => onChange({ ...value, supportEmail: e.target.value })} />
         </div>
       </div>
-      <div className="space-y-2">
+      <div hidden={section !== "policies"} className="space-y-4">
         <Label className="text-base font-semibold text-foreground">"What you'll get" box (optional)</Label>
-        <Chips label="Quick fill" items={DELIVERABLE_PRESETS.map((x) => x[0])} onPick={(v) => { const x = DELIVERABLE_PRESETS.find((y) => y[0] === v)!; onChange({ ...value, deliverables: { count: x[1], format: x[2], size: x[3] } }); }} />
+        <Chips label="Quick fill" items={DELIVERABLE_PRESETS.map((x) => x[0])} onPick={(v) => { const x = DELIVERABLE_PRESETS.find((y) => y[0] === v); if (!x) return; onChange({ ...value, deliverables: { count: x[1], format: x[2], size: x[3] } }); }} />
         <div className="grid gap-2 sm:grid-cols-3">
           <Input placeholder="Items (e.g. 2 resources)" maxLength={40} value={d.count ?? ""} onChange={(e) => onChange({ ...value, deliverables: { ...d, count: e.target.value } })} />
           <Input placeholder="Format (e.g. PDF, Video)" maxLength={40} value={d.format ?? ""} onChange={(e) => onChange({ ...value, deliverables: { ...d, format: e.target.value } })} />
@@ -710,8 +720,8 @@ function ExtrasEditor({ value, onChange, onSaveCreator, accounts }: { accounts: 
         <Chips label="Format" items={["PDF", "MP4 Video", "Canva link", "Audio", "ZIP file", "Google Meet"]} onPick={(v) => onChange({ ...value, deliverables: { ...d, format: v } })} />
         <Chips label="Size" items={["Instant access", "5 MB", "15 MB", "250 MB", "1.5 GB", "30 mins"]} onPick={(v) => onChange({ ...value, deliverables: { ...d, size: v } })} />
       </div>
-      <div className="space-y-2">
-        <div className="flex items-center justify-between gap-2">
+      <div hidden={section !== "policies"} className="space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <Label className="text-base font-semibold text-foreground">Policies & compliance (optional)</Label>
           <Button type="button" size="sm" variant="outline" onClick={() => onChange({ ...value, policies: { ...DEFAULT_POLICIES, ...Object.fromEntries(Object.entries(pol).filter(([, v]) => v)) }, disclaimer: value.disclaimer || DEFAULT_DISCLAIMER })}>Fill standard text</Button>
         </div>
@@ -747,9 +757,6 @@ const PRODUCT_PRESETS = [
 
 function Chips({ items, onPick, label = "Samples" }: { items: string[]; onPick: (v: string) => void; label?: string }) {
   return (
-    <div className="flex flex-wrap items-center gap-1.5">
-      <span className="text-[11px] text-muted-foreground">{label}:</span>
-      {items.map((v) => <button key={v} type="button" onClick={() => onPick(v)} className="rounded-full border border-border bg-muted px-2.5 py-0.5 text-xs text-muted-foreground hover:border-primary hover:text-primary">+ {v}</button>)}
-    </div>
+    <Popover><PopoverTrigger asChild><Button type="button" size="sm" variant="ghost" className="text-muted-foreground"><Plus className="size-4" />{label}</Button></PopoverTrigger><PopoverContent className="max-w-[calc(100vw-2rem)]"><div className="grid gap-1">{items.map((v) => <Button key={v} type="button" variant="ghost" className="justify-start whitespace-normal text-left" onClick={() => onPick(v)}>{v}</Button>)}</div></PopoverContent></Popover>
   );
 }
