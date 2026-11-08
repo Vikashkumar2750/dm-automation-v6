@@ -1,8 +1,9 @@
 # DM FB-IG-YT by Techaasvik — Build Roadmap
 
 ## Team Desk complete schema follow-up — Nov 8
-- [ ] Repair five screenshot-confirmed missing tables together; provide a single-statement SQL script compatible with the existing Super Admin runner, without explicit transaction commands.
-- [ ] Reproduce runner transaction failure and verify replacement plus role/workspace isolation in isolated PostgreSQL; stop failed Team Desk reads appearing as empty/settings-off.
+- [x] Prepared combined repair for five screenshot-confirmed missing tables as a single transactional DO statement, compatible with Super Admin Run SQL. Invoice table is already installed per owner's result; no live repair was applied here.
+- [x] Reproduced explicit BEGIN/COMMIT failure (0A000) inside admin_exec_sql; replacement runs twice through the same EXECUTE mechanism and preserves settings. Verified cross-workspace assignment denial and server-only integration tables. Team Desk missing-source reads and integration write failures now reject instead of reporting empty/off/success.
+- [ ] Owner must run combined repair on the live database, then verify all Team Desk tabs and invoice save; live target remains separate from connected Cloud. No messages, payments, keys or webhook endpoints created.
 
 ## Team Desk invoice repair — Nov 8
 - [x] Prepared docs/sql/railway-client-invoices-repair.sql: repeatable, transaction-wrapped table/grants/reviewer RLS/client-membership checks/index and optional audit trigger. Add invoice disabled until invoice/client reads succeed. Connected Cloud has all six Team Desk tables; it is not the affected live database and was left unchanged.
