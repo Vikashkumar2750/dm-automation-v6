@@ -4,9 +4,9 @@ import { spawn } from "node:child_process";
 import { mkdtemp, stat, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { backupDue, driveHeaders, privateFolder, DRIVE_BACKUP_KEY } from "./drive-backup-core.mjs";
+import { backupDue, privateFolder, DRIVE_BACKUP_KEY, openSealed, driveTarget } from "./drive-backup-core.mjs";
 
-const BASE = "https://connector-gateway.lovable.dev/google_drive";
+let target = null;
 // Explicit independent-host opt-in: never dump the managed Cloud backend.
 const dbUrl = process.env.DRIVE_BACKUP_DATABASE_URL;
 const sql = dbUrl ? postgres(dbUrl, { max: 1, onnotice: () => {}, ssl: "prefer" }) : null;
@@ -20,13 +20,29 @@ async function command(name, args) {
   });
 }
 async function drive(path, init = {}) {
-  const response = await fetch(`${BASE}${path}`, {
+  const response = await fetch(`${target.base}${path}`, {
     ...init, redirect: "error", signal: AbortSignal.timeout(300000),
-    headers: { ...driveHeaders(process.env), ...init.headers },
+    headers: { ...target.headers, ...init.headers },
   });
   // Never print provider bodies: upload errors may contain private metadata.
   if (!response.ok) throw new Error(`Drive request failed (${response.status}). Check connection access.`);
   return response.json();
+}
+async function directAccessToken(db) {
+  const rows = await db`select refresh_token from public.platform_drive_oauth where id = true`.catch(() => []);
+  const sealed = rows[0]?.refresh_token;
+  if (!sealed) return null;
+  const refresh = await openSealed(sealed, process.env.TOKEN_ENCRYPTION_KEY);
+  if (!process.env.GOOGLE_OAUTH_CLIENT_ID || !process.env.GOOGLE_OAUTH_CLIENT_SECRET) throw new Error("Drive sign-in credentials are missing on this host.");
+  const res = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST", redirect: "error", signal: AbortSignal.timeout(20000),
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({ client_id: process.env.GOOGLE_OAUTH_CLIENT_ID, client_secret: process.env.GOOGLE_OAUTH_CLIENT_SECRET, refresh_token: refresh, grant_type: "refresh_token" }),
+  });
+  if (!res.ok) throw new Error("Drive access expired or was revoked. Reconnect Drive in Super Admin.");
+  const { access_token } = await res.json();
+  if (!access_token) throw new Error("Drive access token was not issued.");
+  return access_token;
 }
 async function patch(db, value) {
   await db`update public.platform_settings set feature_flags = jsonb_set(coalesce(feature_flags, '{}'::jsonb), array[${DRIVE_BACKUP_KEY}], coalesce(feature_flags->${DRIVE_BACKUP_KEY}, '{}'::jsonb) || ${db.json(value)}::jsonb), updated_at = now() where id = true`;
@@ -45,7 +61,7 @@ async function tick() {
     const requestId = settings.requestId ?? null;
     await patch(db, { status: "running", lastAttemptAt: new Date().toISOString(), completedRequestId: requestId });
     try {
-      driveHeaders(process.env);
+      target = driveTarget(process.env, await directAccessToken(db));
       // Audit must exist before any database content is exported.
       await db`insert into public.platform_audit_log (actor_user_id, action, target_type, detail) values (${settings.requestedBy ?? null}, 'db_dump.drive_requested', 'database', ${db.json({ scheduled: !requestId || requestId === settings.completedRequestId })})`;
       let folderId = settings.folderId;
