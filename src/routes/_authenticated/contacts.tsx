@@ -271,7 +271,7 @@ function OutreachPanel({ orgId, allTags }: { orgId: string; allTags: string[] })
       <div className="min-w-0 max-w-full lg:col-span-3"><PageLeadsPanel orgId={orgId} /></div>
 
       <Panel title="Abandoned-conversation nudge" >
-        <p className="mb-3 text-xs text-muted-foreground">
+        <p className="mb-4 text-sm text-muted-foreground">
           If someone stops replying mid-conversation, send one gentle follow-up. Only inside Meta's 24-hour window, one nudge per conversation.
         </p>
         <label className="flex items-center gap-2 text-sm">
@@ -287,7 +287,7 @@ function OutreachPanel({ orgId, allTags }: { orgId: string; allTags: string[] })
       </Panel>
 
       <Panel title="Broadcast">
-        <p className="mb-3 text-xs text-muted-foreground">
+        <p className="mb-4 text-sm text-muted-foreground">
           Send one message to everyone (or one tag) who messaged you in the last 24 hours.
         </p>
         <div className="grid gap-2">
@@ -307,7 +307,7 @@ function OutreachPanel({ orgId, allTags }: { orgId: string; allTags: string[] })
           <Button size="sm" onClick={() => sendMut.mutate()} disabled={sendMut.isPending || !bcName.trim() || !bcMessage.trim() || bcBtnHalf || bcBtnBadUrl}>Send broadcast</Button>
         </div>
         {(outreach.data?.broadcasts.length ?? 0) > 0 && (
-          <ul className="mt-3 space-y-1 text-xs text-muted-foreground">
+          <ul className="mt-4 space-y-3 text-sm text-muted-foreground">
             {outreach.data!.broadcasts.map((b) => (
               <li key={b.id} className="flex items-center justify-between gap-2">
                 <span className="truncate">{b.name} — {b.status}, sent {b.sent_count}</span>

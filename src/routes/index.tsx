@@ -671,20 +671,18 @@ function LandingPage() {
                       : "panel p-6"
                   }
                 >
-                  <div className="flex items-start justify-between gap-4">
+                  <div className="space-y-4">
                     <div>
                       <h3 className="text-lg font-bold">{plan.name}</h3>
                       {plan.key === "pro" && (
                         <p className="mt-0.5 text-sm font-medium text-primary">Most popular</p>
                       )}
                     </div>
-                    <div className="text-right">
+                    <div>
                       <p className="num text-3xl font-bold">{planPrice(plan)}</p>
                     </div>
                   </div>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    {plan.options.map(optionPrice).join(" · ") || plan.headline}
-                  </p>
+                  {plan.options.length > 1 && !plan.contactOnly && <p className="mt-2 text-sm text-muted-foreground">{plan.options.slice(1).map(optionPrice).join(" · ")}</p>}
                   <ul className="mt-6 space-y-2.5">
                     {plan.perks.map((perk, index) => (
                       <li key={index} className="flex items-start gap-2 text-sm">

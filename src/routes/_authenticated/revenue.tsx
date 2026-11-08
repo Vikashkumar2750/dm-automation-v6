@@ -1117,6 +1117,8 @@ function Pages({
   const [f, setF] = useState<PageForm>(EMPTY_PAGE);
   const [editing, setEditing] = useState(false);
   const [step, setStep] = useState(0);
+  const [visitedSteps, setVisitedSteps] = useState<number[]>([]);
+  const goToStep = (next: number) => { setVisitedSteps((values) => values.includes(step) ? values : [...values, step]); setStep(next); };
   const [mobileView, setMobileView] = useState<"editor" | "preview">("editor");
   const [baseline, setBaseline] = useState("");
   const [imagePreview, setImagePreview] = useState("");
@@ -1161,6 +1163,7 @@ function Pages({
     setImagePreview("");
     setEditing(false);
     setStep(0);
+    setVisitedSteps([]);
   };
   const startNew = () => {
     const blank = withCreator(EMPTY_PAGE);
@@ -1169,6 +1172,7 @@ function Pages({
     setImagePreview("");
     setStep(0);
     setEditing(true);
+    setVisitedSteps([]);
     setMobileView("editor");
   };
   const dirty = editing && JSON.stringify(f) !== baseline;
@@ -1219,6 +1223,7 @@ function Pages({
     setBaseline(JSON.stringify(form));
     setEditing(true);
     setStep(0);
+    setVisitedSteps([]);
     setMobileView("editor");
     setImagePreview("");
     formTop.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -1376,9 +1381,9 @@ function Pages({
                     size="sm"
                     className="shrink-0 gap-2"
                     aria-current={step === index ? "step" : undefined}
-                    onClick={() => setStep(index)}
+                    onClick={() => goToStep(index)}
                   >
-                    <span>{index + 1}</span>
+                    {visitedSteps.includes(index) && step !== index ? <Check className="size-4" aria-label="Visited section" /> : <span>{index + 1}</span>}
                     {label}
                   </Button>
                 ))}
@@ -1823,7 +1828,7 @@ function Pages({
                     <Button
                       variant="outline"
                       disabled={step === 0}
-                      onClick={() => setStep((value) => value - 1)}
+                      onClick={() => goToStep(step - 1)}
                     >
                       <ArrowLeft className="size-4" />
                       Back
@@ -1839,7 +1844,7 @@ function Pages({
                             toast.error("Complete your lead fields");
                             return;
                           }
-                          setStep((value) => value + 1);
+                          goToStep(step + 1);
                         }}
                       >
                         Next
@@ -1986,8 +1991,11 @@ function Pages({
                           setBaseline(JSON.stringify(form));
                           setEditing(true);
                           setStep(0);
+                          setVisitedSteps([]);
+                          setMobileView("editor");
+                          setImagePreview("");
                           if (p.image_path)
-                            void previewDeliveryImage(p.image_path).then(setImagePreview);
+                            void previewDeliveryImage(p.image_path).then(setImagePreview).catch(() => toast.error("Image preview unavailable"));
                         }}
                       >
                         <Copy className="size-4" />

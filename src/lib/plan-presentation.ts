@@ -29,6 +29,8 @@ export const PLAN_DEPENDENT_QUERIES = [
   "platform-config",
   "public-plans",
   "plan-usage",
+  "automation-usage",
+  "automation-settings",
   "billing-state",
   "organizations",
   "workspace-features",

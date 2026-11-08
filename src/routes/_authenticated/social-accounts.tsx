@@ -280,7 +280,7 @@ function SocialAccountsPage() {
                 {meta.capabilities.map((cap) => (
                   <li
                     key={cap}
-                    className="flex items-center gap-2 text-xs text-muted-foreground"
+                    className="flex items-center gap-2 text-sm text-muted-foreground"
                   >
                     <CheckCircle2 className="size-3.5 text-success" />
                     {cap}

@@ -126,7 +126,7 @@ function Journeys({ orgId, post }: { orgId: string; post: SidebarPost }) {
         </div>
         <p className="text-xs text-muted-foreground">{lanes.length} journeys</p>
       </div>
-      <div className="flex flex-wrap gap-2 text-[11px] text-muted-foreground">
+      <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
         {(Object.keys(STYLE) as Node["kind"][]).map((k) => <span key={k} className={`flex items-center gap-1 rounded-full border-2 px-2 py-0.5 ${STYLE[k].cls}`}>{STYLE[k].icon}{STYLE[k].label}</span>)}
       </div>
       {(journey.isError || rules.isError) && <div role="alert" className="space-y-2 text-sm text-destructive"><p>Some journey details could not be refreshed. Loaded results may be incomplete.</p><Button variant="outline" size="sm" onClick={() => { void journey.refetch(); void rules.refetch(); }}>Try again</Button></div>}
@@ -148,10 +148,10 @@ function Journeys({ orgId, post }: { orgId: string; post: SidebarPost }) {
                     {i > 0 && <ChevronRight className="-ml-2 size-3 text-muted-foreground" />}
                     <button type="button" onClick={() => setOpen(n)}
                       className={`w-48 rounded-lg border-2 bg-card p-2 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${STYLE[n.kind].cls} ${open?.id === n.id ? "ring-2 ring-primary" : ""}`}>
-                      <p className="flex items-center gap-1 text-[10px] font-semibold uppercase text-muted-foreground">{STYLE[n.kind].icon}{STYLE[n.kind].label}</p>
-                      <p className="truncate text-xs font-semibold">{n.title}</p>
-                      <p className="line-clamp-2 text-xs">{n.text}</p>
-                      <p className="mt-1 text-[10px] text-muted-foreground">{new Date(n.at).toLocaleString()}</p>
+                      <p className="flex items-center gap-1 text-xs font-semibold uppercase text-muted-foreground">{STYLE[n.kind].icon}{STYLE[n.kind].label}</p>
+                      <p className="truncate text-sm font-semibold">{n.title}</p>
+                      <p className="line-clamp-2 text-sm">{n.text}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">{new Date(n.at).toLocaleString()}</p>
                     </button>
                   </div>
                 ))}

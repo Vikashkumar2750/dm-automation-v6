@@ -35,7 +35,7 @@ No Razorpay? Add your own payment link (UPI / Instamojo / any https link) on eac
 **How it works:** a professionally formatted offer or delivery page with a headline, benefits, proof, FAQ and repeated action button. You can show a product image, set one real fixed deadline, and choose whether an expired button is hidden or disabled. Flow offer pages bind the Pay now button to that buyer’s personal payment link instead of exposing payment details in the page address. Views, form completion and clicks are counted.
 
 **How to use:**
-1. Start from a ready-made design or write with `#` headline, `##` sections, bullets, notes and FAQs.
+1. Choose **Create new page**. The editor keeps Page basics, Visuals & media, Product & offer, Lead capture, Checkout & delivery, Trust & brand and Deliverables & policies in separate sections. Start from an optional ready-made design or write with `#` headline, `##` sections, bullets, notes and FAQs.
 2. Optionally upload a product image and switch **Show product image** on or off.
 3. Optionally choose a real end date/time and expiry behaviour. The timer never resets per visitor.
 4. Choose no form for fast purchases, optional form for normal lead capture, or required form only when fulfilment genuinely needs the detail.
@@ -60,4 +60,4 @@ No Razorpay? Add your own payment link (UPI / Instamojo / any https link) on eac
 **How to use:**
 1. Revenue → Delivery pages → switch on **Price & offer**, type the original and offer price, optionally a coupon code.
 2. Pick **Lead form** → Email only or Full lead form, switch fields on/off and mark them required.
-3. Check the **Live preview**, then Save. Use the pencil icon on any saved page to edit it — keep the address the same so old DM links keep working.
+3. Check **Page preview** alongside the editor on desktop, or switch between **Editor** and **Preview** on your phone. Computer and mobile views use your actual page content. This is not a published page until saved. Select **Save page** in the final section. Unsaved changes trigger a confirmation when leaving the editor. Use the pencil icon on any saved page to edit it — keep the address the same so old DM links keep working. Saved pages also offer preview, duplicate, copy link, leads and confirmed deletion.
