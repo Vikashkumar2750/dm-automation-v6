@@ -21,3 +21,4 @@
 - Public informational leaf routes use publicPageSchema with escaped JSON-LD; personal buyer/offer routes stay noindex — search metadata must never reveal private tokens or identities.
 - Growth read failures log only fixed source labels and bounded error codes; browser errors stay generic — diagnosis must not expose rows, query URLs or workspace identities.
 - Database recovery retains the Railway full-dump download and super-admin-gated SQL runner; legacy partial exports/schedules are retired, and SQL requires an audit record containing metadata only before execution — incomplete backups and query secrets must not be mistaken for safe recovery.
+- Encryption backfill checks both secret columns and compare-and-sets both original values, counts returned rows only and rejects source/write failures; scheduler requests are bounded and heartbeat failures stay non-success — failed verification must never look complete or overwrite refreshed credentials.
