@@ -22,7 +22,7 @@ export const getDriveBackup = createServerFn({ method: "GET" }).middleware([requ
   const { settings } = await read(admin);
   return {
     connected: Boolean(process.env['GOOGLE_DRIVE_API_KEY'] && process.env['LOVABLE_API_KEY']),
-    hostReady: process.env['NITRO_PRESET'] === "node-server" || Boolean(process.env['RAILWAY_ENVIRONMENT_ID']),
+    hostReady: Boolean(process.env['DRIVE_BACKUP_DATABASE_URL']) && (process.env['NITRO_PRESET'] === "node-server" || Boolean(process.env['RAILWAY_ENVIRONMENT_ID'])),
     enabled: settings['enabled'] === true,
     intervalHours: [6, 12, 24].includes(Number(settings['intervalHours'])) ? Number(settings['intervalHours']) : 24,
     status: typeof settings['status'] === "string" ? settings['status'] : "not_started",
@@ -42,6 +42,7 @@ export const updateDriveBackup = createServerFn({ method: "POST" }).middleware([
     const admin = await authorized(context);
     if (!process.env['GOOGLE_DRIVE_API_KEY'] || !process.env['LOVABLE_API_KEY']) throw new Error("Connect Google Drive on this host first.");
     if (!process.env['RAILWAY_ENVIRONMENT_ID'] && process.env['NITRO_PRESET'] !== "node-server") throw new Error("Full Drive backups run on Railway, not the Cloud preview.");
+    if (!process.env['DRIVE_BACKUP_DATABASE_URL']) throw new Error("Configure the independent Railway backup database first.");
     const { flags, settings } = await read(admin);
     if (settings['status'] === "running") throw new Error("A backup is running. Wait for it to finish.");
     const next = { ...settings, requestedBy: context.userId, ...(data.action === "run"
