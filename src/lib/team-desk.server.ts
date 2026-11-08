@@ -30,12 +30,12 @@ export async function authenticateApiKey(request: Request): Promise<{ organizati
   if (!isApiKeyFormat(raw)) return null;
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const hash = await sha256Hex(raw);
-  const { data } = await supabaseAdmin
+  const { data, error } = await supabaseAdmin
     .from("api_keys")
     .select("id, organization_id, revoked_at")
     .eq("key_hash", hash)
     .maybeSingle();
-  if (!data || data.revoked_at) return null;
+  if (error || !data || data.revoked_at) return null;
   await supabaseAdmin.from("api_keys").update({ last_used_at: new Date().toISOString() }).eq("id", data.id);
   return { organizationId: data.organization_id, keyId: data.id };
 }

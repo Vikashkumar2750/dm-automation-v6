@@ -15,32 +15,35 @@ export const Route = createFileRoute("/api/public/v1/$resource")({
         const org = auth.organizationId;
 
         if (params.resource === "conversations") {
-          const { data } = await supabaseAdmin
+          const { data, error } = await supabaseAdmin
             .from("conversations")
             .select("id, platform, channel, status, external_user_id, external_user_name, last_message_at, last_message_preview, unread_count")
             .eq("organization_id", org)
             .order("last_message_at", { ascending: false })
             .limit(limit);
+          if (error) return Response.json({ error: "data_unavailable" }, { status: 503 });
           return Response.json({ data: data ?? [] });
         }
         if (params.resource === "messages") {
           const conv = url.searchParams.get("conversation_id") ?? "";
           if (!/^[0-9a-f-]{36}$/i.test(conv)) return Response.json({ error: "conversation_id required" }, { status: 400 });
-          const { data } = await supabaseAdmin
+          const { data, error } = await supabaseAdmin
             .from("messages")
             .select("id, direction, body, sender_name, sent_at, conversations!inner(organization_id)")
             .eq("conversation_id", conv)
             .eq("conversations.organization_id", org)
             .order("sent_at", { ascending: false })
             .limit(limit);
+          if (error) return Response.json({ error: "data_unavailable" }, { status: 503 });
           return Response.json({ data: (data ?? []).map(({ conversations: _c, ...m }) => m) });
         }
         if (params.resource === "contacts") {
-          const { data } = await supabaseAdmin
+          const { data, error } = await supabaseAdmin
             .from("contact_profiles")
             .select("*")
             .eq("organization_id", org)
             .limit(limit);
+          if (error) return Response.json({ error: "data_unavailable" }, { status: 503 });
           return Response.json({ data: data ?? [] });
         }
         return Response.json({ error: "not_found" }, { status: 404 });
