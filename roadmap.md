@@ -1,8 +1,9 @@
 # DM FB-IG-YT by Techaasvik — Build Roadmap
 
 ## Current dashboard request — Nov 8
-- [ ] Move Automation templates above Workspace performance and move attention items to the shared notification bell without changing delivery/security logic.
-- [ ] Run regressions and verify dashboard order, notification links and phone layout; live actions remain blocked by the test targets, payment approval and hosting access listed below.
+- [x] Move Automation templates above Workspace performance; remove standalone attention/banner from dashboard and show account, unread-message and failed-post items in the shared notification bell with scoped read controls. Delivery/security logic unchanged.
+- [x] Regression suite: 415 tests across 66 files pass; latest preview build OK. New tests verify 12 unread messages route to Inbox, confirmed-empty versus unavailable sources, publishing visibility and affected-record read identities.
+- [ ] Signed-in dashboard order, notification clicks and phone layout verification: preview session mint failed because no account matches the requesting user; browser reached /auth without page errors. Requires preview sign-in or deployed-release verification. Other live actions still need test targets, payment approval and hosting access listed below.
 
 ## Remix setup (Nov 5)
 - [x] Add independent Super Admin Enabled / Hidden / Coming soon controls for Create Post and Calendar, including direct page visits (4 availability tests and 26 checkout/form tests passed).
