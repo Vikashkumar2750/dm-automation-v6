@@ -1,5 +1,10 @@
 # DM FB-IG-YT by Techaasvik — Build Roadmap
 
+## Current request — implementation first
+- [ ] Close remaining actionable code gaps in one batch, including outbound webhook private-network protection.
+- [ ] Consolidate the remaining list into deferred acceptance and external owner/provider/recovery prerequisites; no new live tests requested.
+- Live acceptance is deferred by owner; it must not be reported as completed.
+
 ## Current remaining work — Nov 8, 12:03 UTC (supersedes historical blockers below)
 - [x] Owner confirms Railway deployment complete. Connected managed backend schedule list is empty; this is not the separate live database/Railway scheduler inventory. Existing scheduler excludes db-backup; retired authenticated endpoint returns 410 and cannot create partial backups. Credential/password rotation explicitly deferred by owner.
 - [x] Strengthened Team Desk membership, conversation and assignee guards after isolated handlers accepted unauthorized writes. API key read errors deny authorization; all three API resource read errors return 503 rather than successful data. Same reproductions pass; full regression suite 450 tests across 77 files passes. Live acceptance remains separate from isolated checks.
