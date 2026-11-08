@@ -1,11 +1,15 @@
 import { beforeEach, expect, it, vi } from "vitest";
-
-vi.mock("@tanstack/react-start", () => ({ createServerFn: () => {
+import { readFileSync } from "node:fs";
+import ts from "typescript";
+import { z } from "zod";
+const source = readFileSync(new URL("./team-desk.functions.ts", import.meta.url), "utf8")
+  .replace(/^import .*;\s*$/gm, "").replace(/export const /g, "const ");
+const js = ts.transpileModule(source + "\nreturn {assignConversation, getTeamDesk, requestApproval};", { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.None } }).outputText;
+const createServerFn = () => {
   const builder = { middleware: () => builder, inputValidator: () => builder, handler: (fn: unknown) => fn };
   return builder;
-} }));
-vi.mock("@/integrations/supabase/auth-middleware", () => ({ requireSupabaseAuth: {} }));
-import { assignConversation, getTeamDesk, requestApproval } from "./team-desk.functions";
+};
+const { assignConversation, getTeamDesk, requestApproval } = new Function("createServerFn", "z", "requireSupabaseAuth", "WEBHOOK_EVENTS", js)(createServerFn, z, {}, ["message.received", "message.sent"]);
 
 let role: string | null;
 let conversationExists: boolean;
