@@ -71,7 +71,13 @@ function BillingPage() {
   const [cycles, setCycles] = useState<Record<string, BillingCycle>>({ pro: "monthly" });
 
   const fetchPlans = useServerFn(getPublicPlans);
-  const plansQuery = useQuery({ queryKey: ["public-plans"], queryFn: () => fetchPlans(), retry: false, staleTime: 0, refetchInterval: 60_000 });
+  const plansQuery = useQuery({
+    queryKey: ["public-plans"],
+    queryFn: () => fetchPlans(),
+    retry: false,
+    staleTime: 0,
+    refetchInterval: 60_000,
+  });
   const PLANS = plansQuery.data ?? [];
   const fetchUsage = useServerFn(getAutomationUsage);
   const fetchAccounts = useServerFn(listSocialAccounts);
@@ -82,17 +88,26 @@ function BillingPage() {
   const usage = useQuery({
     queryKey: ["automation-usage", orgId],
     enabled: !!orgId,
-    queryFn: () => { if (!orgId) throw new Error("Workspace unavailable"); return fetchUsage({ data: { organizationId: orgId } }); },
+    queryFn: () => {
+      if (!orgId) throw new Error("Workspace unavailable");
+      return fetchUsage({ data: { organizationId: orgId } });
+    },
   });
   const accounts = useQuery({
     queryKey: ["social-accounts", orgId],
     enabled: !!orgId,
-    queryFn: () => { if (!orgId) throw new Error("Workspace unavailable"); return fetchAccounts({ data: { organizationId: orgId } }); },
+    queryFn: () => {
+      if (!orgId) throw new Error("Workspace unavailable");
+      return fetchAccounts({ data: { organizationId: orgId } });
+    },
   });
   const billing = useQuery({
     queryKey: ["billing-state", orgId],
     enabled: !!orgId,
-    queryFn: () => { if (!orgId) throw new Error("Workspace unavailable"); return fetchBilling({ data: { organizationId: orgId } }); },
+    queryFn: () => {
+      if (!orgId) throw new Error("Workspace unavailable");
+      return fetchBilling({ data: { organizationId: orgId } });
+    },
   });
 
   const currentPlan = billing.data?.plan ?? "starter";
@@ -111,7 +126,9 @@ function BillingPage() {
     if (!orgId) return;
     setBusy(`${plan}-${cycle}`);
     try {
-      const order = await startOrder({ data: { organizationId: orgId, plan: plan as "starter" | "pro", cycle } });
+      const order = await startOrder({
+        data: { organizationId: orgId, plan: plan as "starter" | "pro", cycle },
+      });
 
       if (order.mode === "demo" || !order.providerOrderId) {
         await finish(order.orderId);
@@ -131,13 +148,12 @@ function BillingPage() {
         name: "Techaasvik",
         description: `${plan} plan`,
         order_id: order.providerOrderId,
-        handler: (response: {
-          razorpay_payment_id: string;
-          razorpay_signature: string;
-        }) => {
-          void finish(order.orderId, response.razorpay_payment_id, response.razorpay_signature).catch(
-            () => toast.error("Payment could not be verified. Please contact support."),
-          );
+        handler: (response: { razorpay_payment_id: string; razorpay_signature: string }) => {
+          void finish(
+            order.orderId,
+            response.razorpay_payment_id,
+            response.razorpay_signature,
+          ).catch(() => toast.error("Payment could not be verified. Please contact support."));
         },
         theme: { color: "#4f46e5" },
       });
@@ -155,32 +171,76 @@ function BillingPage() {
         title="Billing"
         description="Your plan, what it includes and how much of it you are using."
         actions={
-          <div className="flex flex-wrap gap-2"><Button variant="outline" disabled={!orgId || billing.isFetching || usage.isFetching || accounts.isFetching || plansQuery.isFetching} onClick={() => { void billing.refetch(); void usage.refetch(); void accounts.refetch(); void plansQuery.refetch(); }}><RefreshCw className="size-4" />Refresh</Button><Button asChild variant="outline">
-            <Link to="/usage">See usage</Link>
-          </Button></div>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="outline"
+              disabled={
+                !orgId ||
+                billing.isFetching ||
+                usage.isFetching ||
+                accounts.isFetching ||
+                plansQuery.isFetching
+              }
+              onClick={() => {
+                void billing.refetch();
+                void usage.refetch();
+                void accounts.refetch();
+                void plansQuery.refetch();
+              }}
+            >
+              <RefreshCw className="size-4" />
+              Refresh
+            </Button>
+            <Button asChild variant="outline">
+              <Link to="/usage">See usage</Link>
+            </Button>
+          </div>
         }
       />
 
       <div className="space-y-6">
-        {(billing.isError || usage.isError || accounts.isError || plansQuery.isError) && <p role="alert" className="text-sm text-destructive">Some billing information could not be refreshed. Previously loaded values may be out of date; refresh to retry.</p>}
+        {(billing.isError || usage.isError || accounts.isError || plansQuery.isError) && (
+          <p role="alert" className="text-sm text-destructive">
+            Some billing information could not be refreshed. Previously loaded values may be out of
+            date; refresh to retry.
+          </p>
+        )}
         <div className="grid gap-4 sm:grid-cols-3">
           <StatCard
             icon={CreditCard}
             label="Current plan"
             value={billing.data ? currentPlan : "—"}
-            sub={billing.data ? planExpiryLabel(billing.data.planExpiresAt, billing.data.planSource) : billing.isError ? "Unavailable" : "Loading…"}
+            sub={
+              billing.data
+                ? planExpiryLabel(billing.data.planExpiresAt, billing.data.planSource)
+                : billing.isError
+                  ? "Unavailable"
+                  : "Loading…"
+            }
           />
           <StatCard
             icon={Check}
             label="Connected accounts"
             value={accounts.data ? String(accounts.data.length) : "—"}
-            sub={accounts.data ? "Instagram, Facebook and YouTube" : accounts.isError ? "Unavailable" : "Loading…"}
+            sub={
+              accounts.data
+                ? "Instagram, Facebook and YouTube"
+                : accounts.isError
+                  ? "Unavailable"
+                  : "Loading…"
+            }
           />
           <StatCard
             icon={Check}
             label="Sent steps · last 24 hours"
             value={usage.data ? String(usage.data.sentLastDay) : "—"}
-            sub={usage.data ? "Workspace activity, not monthly billable runs" : usage.isError ? "Unavailable" : "Loading…"}
+            sub={
+              usage.data
+                ? "Workspace activity, not monthly billable runs"
+                : usage.isError
+                  ? "Unavailable"
+                  : "Loading…"
+            }
           />
         </div>
 
@@ -188,13 +248,13 @@ function BillingPage() {
           <ul className="list-disc space-y-1.5 pl-5 text-sm text-muted-foreground">
             <li>
               <span className="font-medium text-foreground">Free trial (3 days):</span> new
-              automations stop starting. Conversations already in progress still finish. Your
-              rules, contacts and data stay saved — upgrade any time to continue.
+              automations stop starting. Conversations already in progress still finish. Your rules,
+              contacts and data stay saved — upgrade any time to continue.
             </li>
             <li>
               <span className="font-medium text-foreground">Starter / Pro:</span> when the paid
-              period ends, the workspace moves to the free Starter limits. Existing rules stay
-              saved but new ones beyond the Starter limit cannot be switched on.
+              period ends, the workspace moves to the free Starter limits. Existing rules stay saved
+              but new ones beyond the Starter limit cannot be switched on.
             </li>
             <li>
               <span className="font-medium text-foreground">Agency:</span> client workspaces can no
@@ -207,116 +267,147 @@ function BillingPage() {
         {billing.data?.demoMode && (
           <Panel title="Test mode">
             <p className="text-sm text-muted-foreground">
-              Payments are running with demo keys, so nothing is charged and plans activate instantly
-              for testing. Add live payment keys to take real payments.
+              Payments are running with demo keys, so nothing is charged and plans activate
+              instantly for testing. Add live payment keys to take real payments.
             </p>
           </Panel>
         )}
 
-        {!billing.data || !plansQuery.data ? <p role="status" className="text-sm text-muted-foreground">{billing.isError || plansQuery.isError ? "Plan options unavailable. Refresh to retry." : "Loading plan options…"}</p> : <div className="grid gap-4 lg:grid-cols-3">
-          {PLANS.map((p) => {
-            const selected = cycles[p.key] ?? p.options[0]?.cycle;
-            const option = p.options.find((o) => o.cycle === selected) ?? p.options[0];
-            const isCurrent = p.key === currentPlan;
-            const state = planButtonState(p.key, currentPlan, billing.data?.planExpiresAt ?? null);
-            return (
-              <Panel
-                key={p.key}
-                className={state === "locked" ? "opacity-50" : ""}
-                title={
-                  <span className="flex items-center gap-2">
-                    {p.name}
-                    {isCurrent && <StatusBadge tone="success">Current</StatusBadge>}
-                  </span>
-                }
-              >
-                <p className="num text-2xl font-semibold">{p.contactOnly || !option ? planPrice(p) : optionPrice(option)}</p>
-                <ul className="mt-4 space-y-2 text-sm text-muted-foreground">
-                  {p.perks.map((perk) => (
-                    <li key={perk} className="flex items-start gap-2">
-                      <Check className="mt-0.5 size-4 shrink-0 text-success" />
-                      {perk}
-                    </li>
-                  ))}
-                </ul>
-
-                {p.options.length > 1 && (
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    {p.options.map((o) => (
-                      <Button
-                        key={o.cycle}
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        aria-pressed={o.cycle === selected}
-                        onClick={() => setCycles((c) => ({ ...c, [p.key]: o.cycle }))}
-                        className={`rounded-md border px-2.5 py-1 text-xs ${
-                          o.cycle === selected ? "border-primary text-primary" : "text-muted-foreground"
-                        }`}
-                      >
-                        {optionPrice(o)}
-                      </Button>
+        {!billing.data || !plansQuery.data ? (
+          <p role="status" className="text-sm text-muted-foreground">
+            {billing.isError || plansQuery.isError
+              ? "Plan options unavailable. Refresh to retry."
+              : "Loading plan options…"}
+          </p>
+        ) : (
+          <div className="grid gap-4 lg:grid-cols-3">
+            {PLANS.map((p) => {
+              const selected = cycles[p.key] ?? p.options[0]?.cycle;
+              const option = p.options.find((o) => o.cycle === selected) ?? p.options[0];
+              const isCurrent = p.key === currentPlan;
+              const state = planButtonState(
+                p.key,
+                currentPlan,
+                billing.data?.planExpiresAt ?? null,
+              );
+              return (
+                <Panel
+                  key={p.key}
+                  className={state === "locked" ? "opacity-50" : ""}
+                  title={
+                    <span className="flex items-center gap-2">
+                      {p.name}
+                      {isCurrent && <StatusBadge tone="success">Current</StatusBadge>}
+                    </span>
+                  }
+                >
+                  <p className="num text-2xl font-semibold">
+                    {p.contactOnly || !option ? planPrice(p) : optionPrice(option)}
+                  </p>
+                  <ul className="mt-4 space-y-2 text-sm text-muted-foreground">
+                    {p.perks.map((perk) => (
+                      <li key={perk} className="flex items-start gap-2">
+                        <Check className="mt-0.5 size-4 shrink-0 text-success" />
+                        {perk}
+                      </li>
                     ))}
-                  </div>
-                )}
+                  </ul>
 
-                {p.contactOnly ? (
-                  <Button className="mt-5 w-full" variant="outline" asChild>
-                    <a href="mailto:contact@techaavik.com?subject=Agency%20plan">Talk to us</a>
-                  </Button>
-                ) : (
-                  <Button
-                    className="mt-5 w-full"
-                    variant={state === "buy" ? "default" : "outline"}
-                    disabled={
-                      !canPay ||
-                      busy !== null ||
-                      !option ||
-                      state === "active" ||
-                      state === "locked" ||
-                      busy === `${p.key}-${selected}`
-                    }
-                    onClick={() => option && buy(p.key, option.cycle)}
-                  >
-                    {busy === `${p.key}-${selected}`
-                      ? "Opening payment…"
-                      : state === "active"
-                        ? "Active plan"
-                        : state === "locked"
-                          ? "Available after your plan ends"
-                          : state === "renew"
-                            ? `Renew for ${formatPaise(option?.amountPaise ?? 0)}`
-                            : `Pay ${formatPaise(option?.amountPaise ?? 0)}`}
-                  </Button>
-                )}
-                {state === "active" && !p.contactOnly && (
-                  <p className="mt-2 text-xs text-muted-foreground">
-                    Renew button appears 7 days before your plan ends.
-                  </p>
-                )}
-                {!billing.data?.canPay && !p.contactOnly && (
-                  <p className="mt-2 text-xs text-muted-foreground">
-                    {billing.data?.planSource === "agency_parent"
-                      ? "This client workspace is covered by the main Agency account — only the Agency owner pays."
-                      : "Only the workspace owner or an admin can pay."}
-                  </p>
-                )}
-              </Panel>
-            );
-          })}
-        </div>}
+                  {p.options.length > 1 && (
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {p.options.map((o) => (
+                        <Button
+                          key={o.cycle}
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          aria-pressed={o.cycle === selected}
+                          onClick={() => setCycles((c) => ({ ...c, [p.key]: o.cycle }))}
+                          className={`rounded-md border px-2.5 py-1 text-xs ${
+                            o.cycle === selected
+                              ? "border-primary text-primary"
+                              : "text-muted-foreground"
+                          }`}
+                        >
+                          {optionPrice(o)}
+                        </Button>
+                      ))}
+                    </div>
+                  )}
+
+                  {p.contactOnly ? (
+                    <Button className="mt-5 w-full" variant="outline" asChild>
+                      <a href="mailto:contact@techaavik.com?subject=Agency%20plan">Talk to us</a>
+                    </Button>
+                  ) : (
+                    <Button
+                      className="mt-5 w-full"
+                      variant={state === "buy" ? "default" : "outline"}
+                      disabled={
+                        !canPay ||
+                        busy !== null ||
+                        !option ||
+                        state === "active" ||
+                        state === "locked" ||
+                        busy === `${p.key}-${selected}`
+                      }
+                      onClick={() => option && buy(p.key, option.cycle)}
+                    >
+                      {busy === `${p.key}-${selected}`
+                        ? "Opening payment…"
+                        : state === "active"
+                          ? "Active plan"
+                          : state === "locked"
+                            ? "Available after your plan ends"
+                            : state === "renew"
+                              ? `Renew for ${formatPaise(option?.amountPaise ?? 0)}`
+                              : `Pay ${formatPaise(option?.amountPaise ?? 0)}`}
+                    </Button>
+                  )}
+                  {state === "active" && !p.contactOnly && (
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      Renew button appears 7 days before your plan ends.
+                    </p>
+                  )}
+                  {!billing.data?.canPay && !p.contactOnly && (
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      {billing.data?.planSource === "agency_parent"
+                        ? "This client workspace is covered by the main Agency account — only the Agency owner pays."
+                        : "Only the workspace owner or an admin can pay."}
+                    </p>
+                  )}
+                </Panel>
+              );
+            })}
+          </div>
+        )}
 
         <Panel title="Payment history · latest 10 orders">
-          <p className="mb-3 text-xs text-muted-foreground">Workspace order records, including pending, failed and assigned plans—not a complete payment statement.</p>
-          {!billing.data ? <p role="status" className="text-sm text-muted-foreground">{billing.isError ? "Payment history unavailable. Refresh to retry." : "Loading payment history…"}</p> : billing.data.orders.length === 0 ? (
+          <p className="mb-3 text-xs text-muted-foreground">
+            Workspace order records, including pending, failed and assigned plans—not a complete
+            payment statement.
+          </p>
+          {!billing.data ? (
+            <p role="status" className="text-sm text-muted-foreground">
+              {billing.isError
+                ? "Payment history unavailable. Refresh to retry."
+                : "Loading payment history…"}
+            </p>
+          ) : billing.data.orders.length === 0 ? (
             <p className="text-sm text-muted-foreground">No payments yet.</p>
           ) : (
             <ul className="space-y-2 text-sm">
               {billing.data.orders.map((o) => (
-                <li key={o.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border px-3 py-2">
+                <li
+                  key={o.id}
+                  className="flex flex-wrap items-center justify-between gap-3 rounded-lg border px-3 py-2"
+                >
                   <span className="min-w-0 break-words capitalize">
                     {o.plan} · {String(o.billing_cycle).replace(/_/g, " ")}
-                    <span className="mt-1 block text-xs text-muted-foreground normal-case">{o.paid_at ? "Paid" : "Created"} · {new Date(o.paid_at ?? o.created_at).toLocaleDateString("en-IN")}</span>
+                    <span className="mt-1 block text-xs text-muted-foreground normal-case">
+                      {o.paid_at ? "Paid" : "Created"} ·{" "}
+                      {new Date(o.paid_at ?? o.created_at).toLocaleDateString("en-IN")}
+                    </span>
                   </span>
                   <span className="flex flex-wrap items-center gap-3">
                     <span className="num">{formatPaise(o.amount_paise)}</span>

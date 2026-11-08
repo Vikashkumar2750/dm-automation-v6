@@ -65,7 +65,10 @@ export const savePlatformConfig = createServerFn({ method: "POST" })
       .eq("id", true)
       .maybeSingle();
     if (readError) throw new Error("Configuration could not be loaded. No changes were saved.");
-    const flags = { ...((row?.feature_flags ?? {}) as Record<string, unknown>), [CONFIG_KEY]: data };
+    const flags = {
+      ...((row?.feature_flags ?? {}) as Record<string, unknown>),
+      [CONFIG_KEY]: data,
+    };
     const { error } = await supabaseAdmin
       .from("platform_settings")
       .upsert({ id: true, feature_flags: flags, updated_at: new Date().toISOString() } as never, {
@@ -91,7 +94,9 @@ export const getPublicPlans = createServerFn({ method: "GET" }).handler(async ()
 /** Public, rate-limited forgot-password request. Always answers the same way. */
 export const requestPasswordReset = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
-    z.object({ email: z.string().trim().toLowerCase().email().max(200), origin: z.string().url() }).parse(d),
+    z
+      .object({ email: z.string().trim().toLowerCase().email().max(200), origin: z.string().url() })
+      .parse(d),
   )
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -107,7 +112,9 @@ export const requestPasswordReset = createServerFn({ method: "POST" })
       .gte("created_at", dayAgo)
       .limit(500);
     const hourAgo = Date.now() - 3_600_000;
-    const lastHour = (recent ?? []).filter((r) => new Date(r.created_at).getTime() > hourAgo).length;
+    const lastHour = (recent ?? []).filter(
+      (r) => new Date(r.created_at).getTime() > hourAgo,
+    ).length;
     const lastDay = (recent ?? []).length;
     if (lastHour >= passwordReset.perHour || lastDay >= passwordReset.perDay) {
       return { ok: false as const, reason: "rate_limited" as const };

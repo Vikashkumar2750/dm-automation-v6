@@ -27,7 +27,10 @@ export const Route = createFileRoute("/_authenticated/admin/plans")({
   head: () => ({
     meta: [
       { title: "Plans & Billing — Techaasvik Operations" },
-      { name: "description", content: "Plan mix, entitlements and revenue-relevant workspace data." },
+      {
+        name: "description",
+        content: "Plan mix, entitlements and revenue-relevant workspace data.",
+      },
       { property: "og:title", content: "Plans & Billing — Techaasvik Operations" },
       { property: "og:description", content: "Plan management across the platform." },
       { property: "og:type", content: "website" },
@@ -41,8 +44,17 @@ function PlansPage() {
   const fetchOverview = useServerFn(getPlatformOverview);
   const fetchOrders = useServerFn(listPlanOrders);
   const fetchConfig = useServerFn(getPlatformConfig);
-  const config = useQuery({ queryKey: ["platform-config"], queryFn: () => fetchConfig(), retry: false });
-  const pricing = Object.fromEntries((config.data?.plans ?? []).map((plan) => [plan.key, { price: planPrice(plan), entitlements: plan.perks.join(" · ") }]));
+  const config = useQuery({
+    queryKey: ["platform-config"],
+    queryFn: () => fetchConfig(),
+    retry: false,
+  });
+  const pricing = Object.fromEntries(
+    (config.data?.plans ?? []).map((plan) => [
+      plan.key,
+      { price: planPrice(plan), entitlements: plan.perks.join(" · ") },
+    ]),
+  );
   const grantPlan = useServerFn(grantOrganizationPlan);
   const queryClient = useQueryClient();
 
@@ -90,10 +102,35 @@ function PlansPage() {
       <PageHeader
         title="Plans & Billing"
         description="Plan mix, entitlements, payments and free plan grants."
-        actions={<Button variant="outline" size="icon" aria-label="Refresh billing" title="Refresh billing" disabled={overview.isFetching || orders.isFetching || config.isFetching} onClick={() => { void overview.refetch(); void orders.refetch(); void config.refetch(); }}><RefreshCw className={overview.isFetching || orders.isFetching || config.isFetching ? "size-4 animate-spin" : "size-4"} /></Button>}
+        actions={
+          <Button
+            variant="outline"
+            size="icon"
+            aria-label="Refresh billing"
+            title="Refresh billing"
+            disabled={overview.isFetching || orders.isFetching || config.isFetching}
+            onClick={() => {
+              void overview.refetch();
+              void orders.refetch();
+              void config.refetch();
+            }}
+          >
+            <RefreshCw
+              className={
+                overview.isFetching || orders.isFetching || config.isFetching
+                  ? "size-4 animate-spin"
+                  : "size-4"
+              }
+            />
+          </Button>
+        }
       />
 
-      {(overview.isError || orders.isError || config.isError) && <div role="alert" className="border-l-2 border-warning bg-warning-soft px-4 py-3 text-sm">Some billing data could not be refreshed. Previously loaded records may be out of date.</div>}
+      {(overview.isError || orders.isError || config.isError) && (
+        <div role="alert" className="border-l-2 border-warning bg-warning-soft px-4 py-3 text-sm">
+          Some billing data could not be refreshed. Previously loaded records may be out of date.
+        </div>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
@@ -115,7 +152,11 @@ function PlansPage() {
 
       <Panel title="Plan entitlements">
         <div className="space-y-3">
-          {!config.data && <p className="text-sm text-muted-foreground">{config.isError ? "Plan configuration unavailable." : "Loading configured plans…"}</p>}
+          {!config.data && (
+            <p className="text-sm text-muted-foreground">
+              {config.isError ? "Plan configuration unavailable." : "Loading configured plans…"}
+            </p>
+          )}
           {Object.entries(pricing).map(([plan, info]) => (
             <div key={plan} className="rounded-lg border px-3 py-2 text-sm">
               <div className="flex items-center justify-between">
@@ -166,7 +207,11 @@ function PlansPage() {
           </div>
           <div>
             <p className="mb-1 text-xs text-muted-foreground">Reason (optional)</p>
-            <Input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Partner deal" />
+            <Input
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder="Partner deal"
+            />
           </div>
         </div>
         <Button className="mt-4" disabled={!orgId || saving || !data} onClick={onGrant}>
@@ -175,7 +220,13 @@ function PlansPage() {
       </Panel>
 
       <Panel title="Recent payments and grants">
-        <p className="mb-4 text-sm text-muted-foreground">{orders.isError ? "Payment records could not be refreshed." : !orders.data ? "Loading payment records…" : `${billing.payments} paid orders · ${billing.grants} grants in the latest ${orders.data.length} records (maximum 50). Grants are excluded from the paid amount; recurring revenue is not calculated from plan assignments.`}</p>
+        <p className="mb-4 text-sm text-muted-foreground">
+          {orders.isError
+            ? "Payment records could not be refreshed."
+            : !orders.data
+              ? "Loading payment records…"
+              : `${billing.payments} paid orders · ${billing.grants} grants in the latest ${orders.data.length} records (maximum 50). Grants are excluded from the paid amount; recurring revenue is not calculated from plan assignments.`}
+        </p>
         <AdminTable
           rows={orders.data ?? []}
           minWidth={720}
@@ -185,7 +236,10 @@ function PlansPage() {
               header: "Cycle",
               cell: (o) => <span>{String(o.billing_cycle).replace(/_/g, " ")}</span>,
             },
-            { header: "Amount", cell: (o) => <span className="num">{formatPaise(o.amount_paise)}</span> },
+            {
+              header: "Amount",
+              cell: (o) => <span className="num">{formatPaise(o.amount_paise)}</span>,
+            },
             {
               header: "Source",
               cell: (o) => <StatusBadge tone="info">{o.mode}</StatusBadge>,
@@ -193,7 +247,9 @@ function PlansPage() {
             {
               header: "Status",
               cell: (o) => (
-                <StatusBadge tone={o.status === "paid" ? "success" : "warning"}>{o.status}</StatusBadge>
+                <StatusBadge tone={o.status === "paid" ? "success" : "warning"}>
+                  {o.status}
+                </StatusBadge>
               ),
             },
             {
@@ -208,8 +264,6 @@ function PlansPage() {
         />
       </Panel>
 
-
-
       <Panel
         title="Workspaces by plan"
         action={
@@ -223,15 +277,28 @@ function PlansPage() {
           minWidth={720}
           columns={[
             { header: "Workspace", cell: (o) => <span className="font-medium">{o.name}</span> },
-            { header: "Assigned plan", cell: (o) => <StatusBadge tone="info">{o.plan}</StatusBadge> },
-            { header: "Effective access", cell: (o) => <div><StatusBadge tone="info">{o.effectivePlan ?? o.plan}</StatusBadge>{o.inherited && <p className="mt-1 text-xs text-muted-foreground">Inherited from {o.parentName ?? "Agency"}</p>}</div> },
+            {
+              header: "Assigned plan",
+              cell: (o) => <StatusBadge tone="info">{o.plan}</StatusBadge>,
+            },
+            {
+              header: "Effective access",
+              cell: (o) => (
+                <div>
+                  <StatusBadge tone="info">{o.effectivePlan ?? o.plan}</StatusBadge>
+                  {o.inherited && (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Inherited from {o.parentName ?? "Agency"}
+                    </p>
+                  )}
+                </div>
+              ),
+            },
             { header: "Accounts", cell: (o) => <span className="num">{o.accounts}</span> },
             { header: "Members", cell: (o) => <span className="num">{o.members}</span> },
             {
               header: "Assigned plan catalogue price",
-              cell: (o) => (
-                <span className="num">{pricing[o.plan]?.price ?? "—"}</span>
-              ),
+              cell: (o) => <span className="num">{pricing[o.plan]?.price ?? "—"}</span>,
             },
           ]}
         />

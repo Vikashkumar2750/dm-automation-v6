@@ -4,7 +4,18 @@ import { PLANS } from "./plans";
 import { planPrice } from "./plan-presentation";
 
 function client(plans: typeof PLANS) {
-  return { from: () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: { feature_flags: { __config: { plans } } }, error: null }) }) }) }) } as never;
+  return {
+    from: () => ({
+      select: () => ({
+        eq: () => ({
+          maybeSingle: async () => ({
+            data: { feature_flags: { __config: { plans } } },
+            error: null,
+          }),
+        }),
+      }),
+    }),
+  } as never;
 }
 describe("Saved plan pricing", () => {
   it("uses the saved amount on public price and configured checkout", async () => {
