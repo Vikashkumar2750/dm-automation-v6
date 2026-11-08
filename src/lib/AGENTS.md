@@ -30,3 +30,4 @@
 - Team Desk reports and integrations mount independently of shared-inbox reads — a missing assignment/approval source must not hide unrelated billing or integration tools.
 - SQL runner removes only leading whitespace/comments after auditing the original input and calls the existing RPC once — commented diagnostics return rows without database changes, query-body rewriting or repeated mutations.
 - Outgoing webhook dispatch rejects failed source/progress reads, forbids redirects, and stores generic network failures; failed deliveries retain their cursor — scheduler success must not hide unavailable data or leak receiver details.
+- Team Desk verifies membership before reads and non-viewer membership, workspace conversation and assignee membership before writes; public API key/read errors fail closed — explicit tenant checks supplement RLS without delivery changes.

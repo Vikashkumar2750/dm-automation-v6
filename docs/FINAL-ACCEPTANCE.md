@@ -12,10 +12,10 @@
 
 ## 1. Owner hosting/security batch
 
-1. Deploy the latest changes through the existing Railway deployment. Do not create another scheduler.
+1. Owner confirms the previous Railway deployment is complete. New Team Desk/API safeguards from this batch still need deployment. Do not create another scheduler.
 2. Confirm RESEND_FROM_EMAIL belongs to the verified domain; no secret values need sharing.
-3. Review any external schedules you created (database schedules, Railway scheduled services or another scheduling service). Remove only callers of `/api/public/cron/db-backup`; preserve the eight current jobs. Report “no legacy caller found” if none exists. Do not send schedule request headers or raw command text: they may contain credentials.
-4. Change passwords shared in chat, and rotate exposed Google/Meta/Razorpay/database credentials in the issuing service and corresponding live hosting settings. Use provider overlap/rotation procedures where available, then test connections. Preserve TOKEN_ENCRYPTION_KEY; replacing it makes existing encrypted credentials unreadable. A configured secret is not evidence that exposed credentials were rotated.
+3. Connected managed backend schedule inventory is empty; this does not inspect the separate live database or Railway services. Existing app scheduler excludes db-backup, and its retired authenticated endpoint returns 410 without exporting data. Optional cleanup: Railway project → each service → Settings → Cron Schedule; remove only a dedicated old backup caller, never the main app/current scheduler. If unsure, provide a redacted service-list/settings screenshot, not raw commands or headers. Live database cron inventory can be checked with the read-only metadata query in `docs/sql/railway-legacy-backup-check.sql`.
+4. Password/provider credential rotation is deferred by the owner, not completed. When resumed, rotate in issuing services and corresponding live settings, then verify connections. Preserve TOKEN_ENCRYPTION_KEY; replacing it makes existing encrypted credentials unreadable.
 5. Existing Revenue/Team Desk repairs are confirmed. Do not apply more schema repairs without a specific missing-table/column error. If another feature fails, supply only its error, not stored tokens or customer records.
 
 ## 2. Live app checks — one disposable workspace
@@ -53,12 +53,14 @@ Use a receiver you control, not a public request-logging service: webhook payloa
 
 ## 5. Recovery prerequisites
 
+The owner does not currently know whether a receiver or disposable restore database exists. Neither is assumed available. Do not add a public request logger or create a paid database without explicit approval.
+
 - Provide a separate empty, disposable database through secure hosting controls, never in chat. Restore the private full dump there, check tables/data/policies/functions and a separate test sign-in. Never point production at it during rehearsal.
 - Export private uploaded file bytes separately through the live storage provider's authorized controls. Keep object paths/manifests private and test one restored object alongside its database reference. A SQL dump alone cannot recover files.
 - No safe supported copied-migration reset is available. Do not delete journals or production data to force one.
 
 ## Deferred by owner
 
-Payment-popup handoff screenshot/payment, publishing until approval, YouTube/unlinked chat, Google Drive backups and invitation acceptance. These are not counted as completed or repeatedly requested now.
+Password/provider credential rotation, payment-popup handoff screenshot/payment, publishing until approval, YouTube/unlinked chat, Google Drive backups and invitation acceptance. These are not counted as completed or repeatedly requested now.
 
 Send one batch of redacted pass/fail outcomes for sections 1–4 and confirm whether the recovery prerequisites are available. No passwords, keys, raw API responses or customer exports are needed.
