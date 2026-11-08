@@ -84,6 +84,7 @@ import { Route as ApiPublicCronTeamWebhooksRouteImport } from './routes/api/publ
 import { Route as ApiPublicCronTrustGuardRouteImport } from './routes/api/public/cron.trust-guard'
 import { Route as ApiPublicCronYoutubeCommentsRouteImport } from './routes/api/public/cron.youtube-comments'
 import { Route as ApiPublicDeliveryImageSplatRouteImport } from './routes/api/public/delivery-image.$'
+import { Route as ApiPublicDriveOauthCallbackRouteImport } from './routes/api/public/drive-oauth.callback'
 import { Route as ApiPublicOfferTokenRouteImport } from './routes/api/public/offer.$token'
 import { Route as ApiPublicPaidSlugRouteImport } from './routes/api/public/paid.$slug'
 import { Route as ApiPublicPaySlugRouteImport } from './routes/api/public/pay.$slug'
@@ -495,6 +496,12 @@ const ApiPublicDeliveryImageSplatRoute =
     path: '/api/public/delivery-image/$',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicDriveOauthCallbackRoute =
+  ApiPublicDriveOauthCallbackRouteImport.update({
+    id: '/api/public/drive-oauth/callback',
+    path: '/api/public/drive-oauth/callback',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicOfferTokenRoute = ApiPublicOfferTokenRouteImport.update({
   id: '/api/public/offer/$token',
   path: '/api/public/offer/$token',
@@ -618,6 +625,7 @@ export interface FileRoutesByFullPath {
   '/api/public/cron/trust-guard': typeof ApiPublicCronTrustGuardRoute
   '/api/public/cron/youtube-comments': typeof ApiPublicCronYoutubeCommentsRoute
   '/api/public/delivery-image/$': typeof ApiPublicDeliveryImageSplatRoute
+  '/api/public/drive-oauth/callback': typeof ApiPublicDriveOauthCallbackRoute
   '/api/public/offer/$token': typeof ApiPublicOfferTokenRoute
   '/api/public/paid/$slug': typeof ApiPublicPaidSlugRoute
   '/api/public/pay/$slug': typeof ApiPublicPaySlugRoute
@@ -702,6 +710,7 @@ export interface FileRoutesByTo {
   '/api/public/cron/trust-guard': typeof ApiPublicCronTrustGuardRoute
   '/api/public/cron/youtube-comments': typeof ApiPublicCronYoutubeCommentsRoute
   '/api/public/delivery-image/$': typeof ApiPublicDeliveryImageSplatRoute
+  '/api/public/drive-oauth/callback': typeof ApiPublicDriveOauthCallbackRoute
   '/api/public/offer/$token': typeof ApiPublicOfferTokenRoute
   '/api/public/paid/$slug': typeof ApiPublicPaidSlugRoute
   '/api/public/pay/$slug': typeof ApiPublicPaySlugRoute
@@ -789,6 +798,7 @@ export interface FileRoutesById {
   '/api/public/cron/trust-guard': typeof ApiPublicCronTrustGuardRoute
   '/api/public/cron/youtube-comments': typeof ApiPublicCronYoutubeCommentsRoute
   '/api/public/delivery-image/$': typeof ApiPublicDeliveryImageSplatRoute
+  '/api/public/drive-oauth/callback': typeof ApiPublicDriveOauthCallbackRoute
   '/api/public/offer/$token': typeof ApiPublicOfferTokenRoute
   '/api/public/paid/$slug': typeof ApiPublicPaidSlugRoute
   '/api/public/pay/$slug': typeof ApiPublicPaySlugRoute
@@ -876,6 +886,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/trust-guard'
     | '/api/public/cron/youtube-comments'
     | '/api/public/delivery-image/$'
+    | '/api/public/drive-oauth/callback'
     | '/api/public/offer/$token'
     | '/api/public/paid/$slug'
     | '/api/public/pay/$slug'
@@ -960,6 +971,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/trust-guard'
     | '/api/public/cron/youtube-comments'
     | '/api/public/delivery-image/$'
+    | '/api/public/drive-oauth/callback'
     | '/api/public/offer/$token'
     | '/api/public/paid/$slug'
     | '/api/public/pay/$slug'
@@ -1046,6 +1058,7 @@ export interface FileRouteTypes {
     | '/api/public/cron/trust-guard'
     | '/api/public/cron/youtube-comments'
     | '/api/public/delivery-image/$'
+    | '/api/public/drive-oauth/callback'
     | '/api/public/offer/$token'
     | '/api/public/paid/$slug'
     | '/api/public/pay/$slug'
@@ -1087,6 +1100,7 @@ export interface RootRouteChildren {
   ApiPublicCronTrustGuardRoute: typeof ApiPublicCronTrustGuardRoute
   ApiPublicCronYoutubeCommentsRoute: typeof ApiPublicCronYoutubeCommentsRoute
   ApiPublicDeliveryImageSplatRoute: typeof ApiPublicDeliveryImageSplatRoute
+  ApiPublicDriveOauthCallbackRoute: typeof ApiPublicDriveOauthCallbackRoute
   ApiPublicOfferTokenRoute: typeof ApiPublicOfferTokenRoute
   ApiPublicPaidSlugRoute: typeof ApiPublicPaidSlugRoute
   ApiPublicPaySlugRoute: typeof ApiPublicPaySlugRoute
@@ -1625,6 +1639,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicDeliveryImageSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/drive-oauth/callback': {
+      id: '/api/public/drive-oauth/callback'
+      path: '/api/public/drive-oauth/callback'
+      fullPath: '/api/public/drive-oauth/callback'
+      preLoaderRoute: typeof ApiPublicDriveOauthCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/offer/$token': {
       id: '/api/public/offer/$token'
       path: '/api/public/offer/$token'
@@ -1833,6 +1854,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicCronTrustGuardRoute: ApiPublicCronTrustGuardRoute,
   ApiPublicCronYoutubeCommentsRoute: ApiPublicCronYoutubeCommentsRoute,
   ApiPublicDeliveryImageSplatRoute: ApiPublicDeliveryImageSplatRoute,
+  ApiPublicDriveOauthCallbackRoute: ApiPublicDriveOauthCallbackRoute,
   ApiPublicOfferTokenRoute: ApiPublicOfferTokenRoute,
   ApiPublicPaidSlugRoute: ApiPublicPaidSlugRoute,
   ApiPublicPaySlugRoute: ApiPublicPaySlugRoute,
