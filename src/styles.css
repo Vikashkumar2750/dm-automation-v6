@@ -197,7 +197,9 @@
 .app-content { line-height: 1.6; letter-spacing: 0; }
 .app-content :where(h1, h2, h3, .tracking-tight) { letter-spacing: 0; }
 .app-content :where(label, [data-slot="label"]) { font-size: 0.875rem; line-height: 1.5; }
-.app-content .dashboard-panel > div > .space-y-2 { gap: 0; }
+.app-content .dashboard-panel > div > .space-y-2 > :not(:last-child) { margin-bottom: 1rem; }
+.app-content :where(.text-subtle-foreground) { color: var(--muted-foreground); }
+.app-content > .space-y-4 > :not(:last-child) { margin-bottom: 1.5rem; }
 .app-content [role="tablist"] { scrollbar-width: thin; overscroll-behavior-x: contain; }
 .revenue-workspace :where(.space-y-2) > :not(:last-child) { margin-bottom: 1rem; }
 .revenue-workspace :where(.space-y-1, .space-y-1\.5) > :not(:last-child) { margin-bottom: 0.5rem; }

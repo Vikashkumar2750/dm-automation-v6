@@ -2,7 +2,7 @@ import { WorkspaceFeatureGate } from "@/components/app/WorkspaceFeatureGate";
 import { SocialIcon } from "@/components/app/SocialIcon";
 import { SOCIAL_LABELS, SOCIAL_PLATFORMS, cleanSocials, connectedAccountUrl, normalizeSocialUrl, type SocialLink } from "@/lib/social-links";
 import { AccountSelect } from "@/components/app/AccountSelect";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useBlocker } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Copy, IndianRupee, Info, Loader2, Pencil, Plus, Trash2, Upload, Users, RefreshCw, ArrowLeft, ArrowRight, Eye, Monitor, Smartphone, Check, Package, TicketPercent, FileText, CreditCard, Save } from "lucide-react";
@@ -10,6 +10,7 @@ import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { ConfirmAction } from "@/components/app/ConfirmAction";
+import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
 import { AppShell } from "@/components/app/AppShell";
 import { GuideButton } from "@/components/app/GuideButton";
 import { ContentFileField } from "@/components/app/ContentFileField";
@@ -335,7 +336,7 @@ function Pages({ orgId, items, leads, products, campaigns, whatsappOtp, connecte
   const reset = () => { const blank = withCreator(EMPTY_PAGE); setF(blank); setBaseline(JSON.stringify(blank)); setImagePreview(""); setEditing(false); setStep(0); };
   const startNew = () => { const blank = withCreator(EMPTY_PAGE); setF(blank); setBaseline(JSON.stringify(blank)); setImagePreview(""); setStep(0); setEditing(true); setMobileView("editor"); };
   const dirty = editing && JSON.stringify(f) !== baseline;
-  useEffect(() => { if (!dirty) return; const leave = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ""; }; window.addEventListener("beforeunload", leave); return () => window.removeEventListener("beforeunload", leave); }, [dirty]);
+  const blocker = useBlocker({ shouldBlockFn: () => dirty, enableBeforeUnload: dirty, withResolver: true });
   const pickProduct = (id: string) => {
     const pr = products.find((x) => x.id === id);
     if (!pr) { setF({ ...f, productId: "" }); return; }
@@ -377,7 +378,7 @@ function Pages({ orgId, items, leads, products, campaigns, whatsappOtp, connecte
   };
   const pageLeads = leadsFor ? leads.filter((l) => l.delivery_page_id === leadsFor) : [];
   return (
-    <div className="space-y-6"><SectionHeader title={editing ? f.id ? "Edit delivery page" : "Create delivery page" : "Delivery pages"} description={editing ? "Your changes appear in the preview. Save when the page is ready." : "Manage offers, page links and captured leads."} action={editing ? <ConfirmAction title="Leave this editor?" description={dirty ? "Unsaved changes will be discarded." : "Return to your delivery pages."} onConfirm={reset}><Button variant="outline"><ArrowLeft className="size-4" />All pages</Button></ConfirmAction> : <Button onClick={startNew}><Plus className="size-4" />Create new page</Button>} />
+    <div className="space-y-6"><AlertDialog open={blocker.status === "blocked"}><AlertDialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-lg"><AlertDialogHeader><AlertDialogTitle>Leave without saving?</AlertDialogTitle><AlertDialogDescription>Your delivery page has unsaved changes.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel onClick={() => blocker.reset?.()}>Keep editing</AlertDialogCancel><AlertDialogAction onClick={() => blocker.proceed?.()}>Leave page</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog><SectionHeader title={editing ? f.id ? "Edit delivery page" : "Create delivery page" : "Delivery pages"} description={editing ? "Your changes appear in the preview. Save when the page is ready." : "Manage offers, page links and captured leads."} action={editing ? <ConfirmAction title="Leave this editor?" description={dirty ? "Unsaved changes will be discarded." : "Return to your delivery pages."} onConfirm={reset}><Button variant="outline"><ArrowLeft className="size-4" />All pages</Button></ConfirmAction> : <Button onClick={startNew}><Plus className="size-4" />Create new page</Button>} />
     {editing && <><div className="flex gap-2 lg:hidden"><Button variant={mobileView === "editor" ? "default" : "outline"} onClick={() => setMobileView("editor")}><Pencil className="size-4" />Editor</Button><Button variant={mobileView === "preview" ? "default" : "outline"} onClick={() => setMobileView("preview")}><Eye className="size-4" />Preview</Button></div>
     <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
       <div ref={formTop} className={mobileView === "preview" ? "hidden lg:block" : ""}>
