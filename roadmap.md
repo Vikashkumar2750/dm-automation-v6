@@ -1,11 +1,22 @@
 # DM FB-IG-YT by Techaasvik — Build Roadmap
 
-## Current remaining work — Nov 8, 12:03 UTC (supersedes historical blockers below)
+## Current request — implementation first
+- [x] Closed identified actionable webhook gap in both Team Desk and CRM: public-only address/DNS validation at save and delivery, pinned-IP TLS/Host transport, redirects forbidden, no unsafe fallback. Reproduced stored private-address dispatch before the fix; same check now passes.
+- [x] Consolidated remaining work in FINAL-ACCEPTANCE; 485 tests across 79 files pass, preview build OK, content-route metadata scan has no gaps. No live customer actions or provider settings changed.
+- Live acceptance is deferred by owner; it must not be reported as completed.
+- [ ] External deployment: new shared webhook transport must reach Railway; real TLS delivery remains unverified until deferred acceptance resumes.
+- [ ] External maintenance: optional retired backup schedule inspection/removal and sender-address configuration confirmation require owner hosting access. Current app scheduler and retired endpoint are already safe.
+- [ ] Recovery: separate empty database and authorized private storage-file export needed; no paid resources or production restore created.
+- [ ] Provider actions: Meta/Google reviews require owner/provider approval; password/credential rotation deferred.
+- Deferred acceptance (not implementation blockers): Team assignments/approvals; valid/revoked scoped API keys; webhook receipt/retry with controlled receiver; admin drafts/CSV/publishing controls; Agency benefits/connections; signed-in unpaid private-file denial; Meta follower taps/moderation/fresh notifications/account caps.
+- Other deferred scope: payment popup, permission-blocked publishing, YouTube/unlinked chat, Drive and invitation acceptance. Migration reset is unavailable safely; no production/journal deletion.
+
+## Historical snapshot — Nov 8, 12:03 UTC (superseded by implementation-first status above)
 - [x] Owner confirms Railway deployment complete. Connected managed backend schedule list is empty; this is not the separate live database/Railway scheduler inventory. Existing scheduler excludes db-backup; retired authenticated endpoint returns 410 and cannot create partial backups. Credential/password rotation explicitly deferred by owner.
 - [x] Strengthened Team Desk membership, conversation and assignee guards after isolated handlers accepted unauthorized writes. API key read errors deny authorization; all three API resource read errors return 503 rather than successful data. Same reproductions pass; full regression suite 450 tests across 77 files passes. Live acceptance remains separate from isolated checks.
 - [x] Owner confirms both live hosting secrets configured. Screenshot shows primary/secondary plaintext counts zero for social tokens and payment credentials; no further encryption backfill requested. Screenshot verifies autodm.techaasvik.com sending domain; earlier receipt Delivered evidence retained. Scheduler eight-job success, Revenue and SQL results already confirmed.
 - [x] Complete regression batch: 431 tests passed before webhook changes; all 436 tests across 75 files pass afterward and latest preview build is OK. Same five failing reproductions now pass: source errors reject, redirects forbidden, network diagnostics sanitized, status-write failures reject. No provider actions or live secrets changed; mocked delivery checks are not live receiver acceptance.
-- [ ] Deploy this batch's Team Desk/API safeguards; previous webhook reliability deployment confirmed by owner. Validate webhook receipt/retry with an owner-controlled HTTPS receiver. Direct-host DNS/private-address protection remains a separate security limitation; redirect blocking does not establish complete SSRF prevention.
+- [x] Implementation gap subsequently closed for Team Desk and CRM with shared pinned public-IP transport. Deployment/receiver acceptance is deferred, not counted as delivered.
 - [ ] External-only operations: inspect/remove confirmed legacy live db-backup schedules (safe metadata SQL prepared); verify older schema against actual failing features only. Need owner hosting/provider control; connected schedule list is empty, not live Railway evidence. Credential/password rotation deferred.
 - [ ] Live acceptance: Team assignment/rejection persistence, API valid/revoked/tenant scope and webhook receipt/retry, admin draft retention/CSV/publishing selectors, Agency inherited benefits/account connect, signed-in unpaid private-file denial. Need live authorized sessions/test receiver/accounts; automated checks are not live acceptance.
 - [ ] Meta follower/non-follower taps, fresh notification, disposable moderation and account-specific safety behavior. Need owner-controlled test identities/posts and bounded sends; never flood contacts to test caps.

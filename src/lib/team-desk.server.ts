@@ -1,4 +1,5 @@
 import { API_KEY_PREFIX, isApiKeyFormat } from "./team-desk";
+import { postWebhook } from "./webhook-destination.server";
 
 const ALPHA = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 
@@ -86,15 +87,10 @@ export async function dispatchOutgoingWebhooks() {
     let status = 0;
     let error: string | null = null;
     try {
-      const res = await fetch(hook.url, {
-        method: "POST",
-        redirect: "error",
-        headers: { "content-type": "application/json", "x-autodm-timestamp": ts, "x-autodm-signature": await hmacHex(hook.secret, `${ts}.${payload}`) },
-        body: payload,
-        signal: AbortSignal.timeout(10000),
+      status = await postWebhook(hook.url, payload, {
+        "x-autodm-timestamp": ts, "x-autodm-signature": await hmacHex(hook.secret, `${ts}.${payload}`),
       });
-      status = res.status;
-      if (!res.ok) error = `HTTP ${res.status}`;
+      if (status < 200 || status >= 300) error = `HTTP ${status}`;
     } catch {
       error = "Webhook request failed.";
     }

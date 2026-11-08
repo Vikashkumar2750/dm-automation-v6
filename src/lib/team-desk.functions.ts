@@ -224,14 +224,6 @@ export const revokeApiKey = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-function assertPublicHttps(raw: string) {
-  const u = new URL(raw);
-  if (u.protocol !== "https:") throw new Error("Webhook address must start with https://");
-  const h = u.hostname.toLowerCase();
-  if (h === "localhost" || h.endsWith(".local") || h.endsWith(".internal") || /^(127\.|10\.|192\.168\.|169\.254\.|172\.(1[6-9]|2\d|3[01])\.|0\.)/.test(h) || h.includes(":"))
-    throw new Error("Webhook address must be a public website.");
-}
-
 export const createWebhook = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
@@ -239,7 +231,9 @@ export const createWebhook = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     await requireReviewer(context, data.organizationId);
-    assertPublicHttps(data.url);
+    const { webhookDestination, resolveWebhookAddress } = await import("./webhook-destination.server");
+    const destination = webhookDestination(data.url);
+    await resolveWebhookAddress(destination.hostname.replace(/^\[|\]$/g, ""), AbortSignal.timeout(5000));
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { randomToken } = await import("./team-desk.server");
     const secret = "whsec_" + randomToken(32);

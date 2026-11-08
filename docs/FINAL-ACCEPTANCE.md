@@ -1,5 +1,11 @@
 # AutoDM: one remaining acceptance batch
 
+## Implementation-first status
+
+Owner has deferred all live acceptance. No new screenshots, payments, keys, messages or receiver setup are requested now. Team Desk/API authorization and shared Team Desk/CRM webhook destination protection are implemented. Webhooks resolve through Cloudflare's public HTTPS DNS resolver (hostname queries only, no contact payload), reject non-global/mixed addresses, and connect directly to the approved IP with original TLS identity/Host. Redirects are never followed. DNS/transport failures fail closed; no unpinned fallback. This new transport still needs deployed receipt/retry acceptance when testing resumes.
+
+**Remaining, not code defects:** latest deployment; deferred acceptance below; optional external legacy-schedule inspection; verified-domain sender-address configuration confirmation; owner/provider reviews; disposable restore database and private storage-file export. Do not restore production or create paid resources. Password/provider rotation and other previously deferred areas remain deferred.
+
 ## Confirmed — do not repeat
 
 - Hosting: owner confirms CRON_SECRET and TOKEN_ENCRYPTION_KEY configured.
@@ -12,7 +18,7 @@
 
 ## 1. Owner hosting/security batch
 
-1. Owner confirms the previous Railway deployment is complete. New Team Desk/API safeguards from this batch still need deployment. Do not create another scheduler.
+1. Owner confirms the previous Railway deployment is complete. New shared webhook destination safeguards from this batch still need deployment. Do not create another scheduler.
 2. Confirm RESEND_FROM_EMAIL belongs to the verified domain; no secret values need sharing.
 3. Connected managed backend schedule inventory is empty; this does not inspect the separate live database or Railway services. Existing app scheduler excludes db-backup, and its retired authenticated endpoint returns 410 without exporting data. Optional cleanup: Railway project → each service → Settings → Cron Schedule; remove only a dedicated old backup caller, never the main app/current scheduler. If unsure, provide a redacted service-list/settings screenshot, not raw commands or headers. Live database cron inventory can be checked with the read-only metadata query in `docs/sql/railway-legacy-backup-check.sql`.
 4. Password/provider credential rotation is deferred by the owner, not completed. When resumed, rotate in issuing services and corresponding live settings, then verify connections. Preserve TOKEN_ENCRYPTION_KEY; replacing it makes existing encrypted credentials unreadable.
@@ -41,7 +47,7 @@ Use a receiver you control, not a public request-logging service: webhook payloa
 - Register an owner-controlled HTTPS receiver and select the test message event. Keep its signing secret private.
 - With one authorized new test message, verify receiver body, timestamp and HMAC signature. A receiver returning 500 should retain the batch for retry; returning 2xx should advance it. Duplicate delivery can occur when the receiver accepts but status persistence fails: deduplicate by message ID.
 - Disable/remove the test webhook afterward. Never test retry by creating a permanent failure loop.
-- Latest dispatch fix blocks redirects, rejects unavailable source/progress data and stores generic network failures. DNS/private-address validation is not fully established; use only trusted receiver hostnames until outbound destination controls are hardened.
+- Shared destination protection now covers Team Desk and CRM webhooks at save and delivery, rejects private/reserved/mixed DNS results, pins the HTTPS connection and never follows redirects. Verify deployed TLS delivery and retry when live acceptance resumes; use only a receiver you control.
 
 ## 4. Meta checks requiring owner interaction
 
@@ -63,4 +69,4 @@ The owner does not currently know whether a receiver or disposable restore datab
 
 Password/provider credential rotation, payment-popup handoff screenshot/payment, publishing until approval, YouTube/unlinked chat, Google Drive backups and invitation acceptance. These are not counted as completed or repeatedly requested now.
 
-Send one batch of redacted pass/fail outcomes for sections 1–4 and confirm whether the recovery prerequisites are available. No passwords, keys, raw API responses or customer exports are needed.
+When the owner resumes testing, collect one batch of redacted pass/fail outcomes for sections 1–4 and confirm recovery prerequisites. Until then, live acceptance is deferred, not complete. No passwords, keys, raw API responses or customer exports are needed.

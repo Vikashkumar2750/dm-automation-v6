@@ -158,6 +158,12 @@ export const saveSyncSettings = createServerFn({ method: "POST" })
     }).parse(d),
   )
   .handler(async ({ data, context }) => {
+    if (data.enabled && !data.webhookUrl) throw new Error("Webhook address required.");
+    if (data.webhookUrl) {
+      const { webhookDestination, resolveWebhookAddress } = await import("./webhook-destination.server");
+      const destination = webhookDestination(data.webhookUrl);
+      await resolveWebhookAddress(destination.hostname.replace(/^\[|\]$/g, ""), AbortSignal.timeout(5000));
+    }
     const { error } = await (context as Ctx).supabase.from("crm_sync_settings").upsert({
       organization_id: data.organizationId, enabled: data.enabled, webhook_url: data.webhookUrl || null,
       updated_at: new Date().toISOString(),
