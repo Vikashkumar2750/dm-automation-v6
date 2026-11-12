@@ -35,3 +35,4 @@
 - Public pricing, billing and admin summaries use plan-presentation over the saved catalogue; removed/contact-only options cannot create orders — prevents independently displayed prices and checkout drift.
 - Platform Drive archive controls write Super Admin settings only; a Railway companion requires an explicit independent database URL, takes an advisory lock and verifies private-folder permissions and archive/upload integrity — keeps subprocesses outside Cloud and never treats saving as restore acceptance.
 - Super Admin connects Drive directly via drive-oauth.server (hashed one-time state, sealed refresh token in server-only platform_drive_oauth created by scripts/migrate.mjs); the worker prefers it over the linked gateway connection — backups work on the owner's host without Lovable connectors.
+- Drive and YouTube OAuth requests disable incremental grant merging — Google rejects combining drive.file with YouTube scopes on the shared client.
