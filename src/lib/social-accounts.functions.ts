@@ -116,7 +116,9 @@ export const startSocialConnect = createServerFn({ method: "POST" })
             state,
             response_type: "code",
             access_type: "offline",
-            include_granted_scopes: "true",
+            // Drive backups share this OAuth client, but Google forbids combining
+            // drive.file with YouTube scopes. Never merge prior product grants.
+            include_granted_scopes: "false",
             prompt: "consent",
             scope: googleScopes.join(" "),
           }).toString()}`;
