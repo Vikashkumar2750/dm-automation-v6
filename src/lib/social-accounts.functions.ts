@@ -200,7 +200,14 @@ export const checkWebhookDelivery = createServerFn({ method: "POST" })
           : ({ fields: [] } as import("@/lib/meta-webhooks.server").ReadResult);
       // Facebook-Login apps cannot manage per-account Instagram subscriptions;
       // Page subscription + app-level Instagram webhook object covers delivery.
-      const igUnsupported = Boolean(instagramRead.unsupported);
+      // Facebook-Login apps often read back an empty IG list without an error;
+      // when the linked Page carries messages, delivery is already covered.
+      const igUnsupported =
+        Boolean(instagramRead.unsupported) ||
+        (account.platform === "instagram" &&
+          !instagramRead.error &&
+          instagramRead.fields.length === 0 &&
+          pageRead.fields.includes("messages"));
       const missingPage = PAGE_SUBSCRIBED_FIELDS.filter((field) => !pageRead.fields.includes(field));
       const missingInstagram =
         account.platform === "instagram" && !igUnsupported

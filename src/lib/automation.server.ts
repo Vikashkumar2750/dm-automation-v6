@@ -1281,13 +1281,31 @@ export async function handleFollowGateReply(
     await log(admin, ctx, typedRule.id, "failed", "no_token");
     return true;
   }
-  const metadata = account.metadata as { page_id?: unknown } | null;
+  const metadata = account.metadata as { page_id?: unknown; ig_user_id?: unknown } | null;
   const linkedPageId = typeof metadata?.page_id === "string" ? metadata.page_id : null;
-  if (
-    args.receivingExternalId &&
-    args.receivingExternalId !== account.external_id &&
-    args.receivingExternalId !== linkedPageId
-  ) {
+  const linkedIgId = typeof metadata?.ig_user_id === "string" ? metadata.ig_user_id : null;
+  let receivingMatches =
+    !args.receivingExternalId ||
+    args.receivingExternalId === account.external_id ||
+    args.receivingExternalId === linkedPageId ||
+    args.receivingExternalId === linkedIgId;
+  if (!receivingMatches && args.receivingExternalId) {
+    // After reconnects Meta may deliver the tap under a sibling ID of the same
+    // Page (Page row vs Instagram row). Accept only when that receiving account
+    // is in the gate's own workspace and is linked to the same Page.
+    const { data: siblings } = await admin
+      .from("social_accounts")
+      .select("external_id, metadata")
+      .eq("organization_id", gateOrganizationId)
+      .in("platform", ["instagram", "facebook"]);
+    receivingMatches = (siblings ?? []).some((row) => {
+      const m = (row.metadata ?? {}) as { page_id?: unknown; ig_user_id?: unknown };
+      const ids = [row.external_id, m.page_id, m.ig_user_id].filter((v) => typeof v === "string");
+      return ids.includes(args.receivingExternalId as string) &&
+        ((linkedPageId && m.page_id === linkedPageId) || ids.includes(account.external_id as string));
+    });
+  }
+  if (!receivingMatches) {
     await log(admin, ctx, typedRule.id, "failed", "gate_account_mismatch");
     return true;
   }
