@@ -206,8 +206,8 @@ export const checkWebhookDelivery = createServerFn({ method: "POST" })
         Boolean(instagramRead.unsupported) ||
         (account.platform === "instagram" &&
           !instagramRead.error &&
-          instagramRead.fields.length === 0 &&
-          pageRead.fields.includes("messages"));
+          pageRead.fields.includes("messages") &&
+          pageRead.fields.includes("feed"));
       const missingPage = PAGE_SUBSCRIBED_FIELDS.filter((field) => !pageRead.fields.includes(field));
       const missingInstagram =
         account.platform === "instagram" && !igUnsupported
@@ -239,10 +239,17 @@ export const checkWebhookDelivery = createServerFn({ method: "POST" })
         );
       }
 
+      // Page-linked Instagram accounts receive comments/DMs through the Page
+      // subscription; Meta never lists them on the IG endpoint for these tokens.
+      const pageCovers =
+        account.platform === "instagram" &&
+        pageRead.fields.includes("messages") &&
+        pageRead.fields.includes("feed");
+      const igOptional = igUnsupported || pageCovers;
       const fields = [...new Set([...pageRead.fields, ...instagramRead.fields])];
       const missingFields = [
         ...PAGE_SUBSCRIBED_FIELDS.filter((field) => !pageRead.fields.includes(field)),
-        ...(account.platform === "instagram" && !igUnsupported
+        ...(account.platform === "instagram" && !igOptional
           ? INSTAGRAM_SUBSCRIBED_FIELDS.filter(
               (field) => !instagramRead.fields.includes(field),
             )
@@ -261,11 +268,11 @@ export const checkWebhookDelivery = createServerFn({ method: "POST" })
         subscribed,
         fields,
         missingFields,
-        ...(repairErrors.length > 0
+        ...(repairErrors.length > 0 && !subscribed
           ? { error: repairErrors.join("; ") }
           : pageRead.error
             ? { error: pageRead.error }
-            : instagramRead.error
+            : instagramRead.error && !subscribed
               ? { error: instagramRead.error }
               : {}),
       });
