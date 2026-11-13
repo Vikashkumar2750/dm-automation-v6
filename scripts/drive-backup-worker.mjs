@@ -1,7 +1,7 @@
 // Railway-only companion. No imports from the app or Worker runtime.
 import postgres from "postgres";
 import { spawn } from "node:child_process";
-import { mkdtemp, stat, rm } from "node:fs/promises";
+import { mkdtemp, stat, rm, readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { backupDue, privateFolder, DRIVE_BACKUP_KEY, openSealed, driveTarget } from "./drive-backup-core.mjs";
@@ -86,10 +86,13 @@ async function tick() {
       if (!size || size > 536870912) throw new Error("Backup is empty or exceeds the 512 MB upload limit.");
       const name = `autodm-full-${new Date().toISOString().replace(/[:.]/g, "-")}.dump`;
       const boundary = `autodm-${crypto.randomUUID()}`;
+      // Read concrete bytes: lazy file handles inside Blob uploaded as 0 bytes.
+      const bytes = await readFile(file);
+      if (bytes.byteLength !== size) throw new Error("Backup file could not be read completely.");
       const body = new Blob([
         `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify({ name, parents: [folderId], mimeType: "application/octet-stream" })}\r\n`,
         `--${boundary}\r\nContent-Type: application/octet-stream\r\n\r\n`,
-        Bun.file(file), `\r\n--${boundary}--\r\n`,
+        bytes, `\r\n--${boundary}--\r\n`,
       ]);
       const saved = await drive("/upload/drive/v3/files?uploadType=multipart&fields=id,size", {
         method: "POST", headers: { "Content-Type": `multipart/related; boundary=${boundary}` }, body,
