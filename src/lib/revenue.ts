@@ -99,9 +99,9 @@ export function parseDiscount(label: string | null | undefined): CouponDiscount 
   return null;
 }
 
-/** Coupons are taken off the maximum price (MRP); without an MRP the selling price is the base. Never below ₹1. */
-export function couponPrice(mrpPaise: number | null, sellingPaise: number, d: CouponDiscount): { basePaise: number; discountPaise: number; pricePaise: number } {
-  const base = mrpPaise && mrpPaise > sellingPaise ? mrpPaise : sellingPaise;
+/** Industry standard: coupons apply to the current selling price (after any MRP markdown), never to the MRP. Never below ₹1. */
+export function couponPrice(_mrpPaise: number | null, sellingPaise: number, d: CouponDiscount): { basePaise: number; discountPaise: number; pricePaise: number } {
+  const base = sellingPaise;
   const raw = d.type === "percent" ? Math.round((base * d.value) / 100) : d.paise;
   const pricePaise = Math.max(100, base - raw);
   return { basePaise: base, discountPaise: base - pricePaise, pricePaise };

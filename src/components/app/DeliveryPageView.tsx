@@ -12,10 +12,14 @@ import { inlineParts, parseBody, priceDisplay, type Block } from "@/lib/delivery
 
 export type PagePrice = { originalPaise: number | null; offerPaise: number | null; label?: string | null; couponCode?: string | null; couponNote?: string | null; charges?: { basePaise: number; gstPaise: number; feePaise: number; totalPaise: number } | null };
 
-function ChargeLines({ c }: { c: NonNullable<PagePrice["charges"]> }) {
-  const r = (p: number) => `₹${(p / 100).toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
+function ChargeLines({ c, mrp }: { c: NonNullable<PagePrice["charges"]>; mrp?: number | null }) {
+  const r = (p: number) => `₹${(p / 100).toLocaleString("en-IN", p % 100 ? { minimumFractionDigits: 2, maximumFractionDigits: 2 } : { maximumFractionDigits: 0 })}`;
   return (
     <dl className="mt-3 space-y-1 border-t border-border pt-3 text-xs text-muted-foreground">
+      {mrp && mrp > c.basePaise ? <>
+        <div className="flex justify-between"><dt>MRP</dt><dd className="line-through">{r(mrp)}</dd></div>
+        <div className="flex justify-between"><dt>Offer discount</dt><dd>− {r(mrp - c.basePaise)}</dd></div>
+      </> : null}
       <div className="flex justify-between"><dt>Price</dt><dd>{r(c.basePaise)}</dd></div>
       {c.gstPaise > 0 && <div className="flex justify-between"><dt>GST</dt><dd>+ {r(c.gstPaise)}</dd></div>}
       {c.feePaise > 0 && <div className="flex justify-between"><dt>Payment processing fee</dt><dd>+ {r(c.feePaise)}</dd></div>}
@@ -31,7 +35,7 @@ function PriceBox({ price, slug, applied, onApplied }: { price: PagePrice; slug?
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const d = priceDisplay(price.originalPaise, price.offerPaise, price.label);
-  const r = (p: number) => `₹${(p / 100).toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
+  const r = (p: number) => `₹${(p / 100).toLocaleString("en-IN", p % 100 ? { minimumFractionDigits: 2, maximumFractionDigits: 2 } : { maximumFractionDigits: 0 })}`;
   const apply = async (raw: string, silent = false) => {
     const c = raw.trim().toUpperCase();
     if (!c) return;
@@ -59,7 +63,8 @@ function PriceBox({ price, slug, applied, onApplied }: { price: PagePrice; slug?
       {applied ? (
         <div className="flex flex-wrap items-baseline justify-center gap-3">
           <span className="text-4xl font-bold tracking-tight text-foreground">{r(applied.pricePaise)}</span>
-          <span className="text-lg text-muted-foreground line-through">{r(applied.basePaise)}</span>
+          <span className="text-lg text-muted-foreground line-through">{r(price.originalPaise && price.originalPaise > applied.basePaise ? price.originalPaise : applied.basePaise)}</span>
+          <span className="rounded-full bg-primary px-2.5 py-0.5 text-xs font-semibold text-primary-foreground">{Math.round(((Math.max(price.originalPaise ?? 0, applied.basePaise) - applied.pricePaise) / Math.max(price.originalPaise ?? 0, applied.basePaise)) * 100)}% OFF</span>
         </div>
       ) : d.offer && <div className="flex flex-wrap items-baseline justify-center gap-3">
         <span className="text-4xl font-bold tracking-tight text-foreground">{d.offer}</span>
@@ -68,13 +73,18 @@ function PriceBox({ price, slug, applied, onApplied }: { price: PagePrice; slug?
       </div>}
       {applied ? (
         <dl className="mt-3 space-y-1 border-t border-border pt-3 text-xs text-muted-foreground">
-          <div className="flex justify-between"><dt>Maximum price (MRP)</dt><dd>{r(applied.basePaise)}</dd></div>
+          {price.originalPaise && price.originalPaise > applied.basePaise ? <>
+            <div className="flex justify-between"><dt>MRP</dt><dd className="line-through">{r(price.originalPaise)}</dd></div>
+            <div className="flex justify-between"><dt>Offer discount</dt><dd>− {r(price.originalPaise - applied.basePaise)}</dd></div>
+          </> : null}
+          <div className="flex justify-between"><dt>Price</dt><dd>{r(applied.basePaise)}</dd></div>
           <div className="flex justify-between text-primary"><dt>Coupon {applied.code}</dt><dd>− {r(applied.discountPaise)}</dd></div>
+          <div className="flex justify-between"><dt>Subtotal</dt><dd>{r(applied.pricePaise)}</dd></div>
           {applied.charges.gstPaise > 0 && <div className="flex justify-between"><dt>GST</dt><dd>+ {r(applied.charges.gstPaise)}</dd></div>}
           {applied.charges.feePaise > 0 && <div className="flex justify-between"><dt>Payment processing fee</dt><dd>+ {r(applied.charges.feePaise)}</dd></div>}
           <div className="flex justify-between font-semibold text-foreground"><dt>Total payable</dt><dd>{r(applied.charges.totalPaise)}</dd></div>
         </dl>
-      ) : price.charges && <ChargeLines c={price.charges} />}
+      ) : price.charges && <ChargeLines c={price.charges} mrp={price.originalPaise} />}
       <div className="mt-4 border-t border-border pt-3">
         {applied ? (
           <div className="flex items-center justify-between gap-2 rounded-lg border border-primary/40 bg-primary/10 px-3 py-2 text-sm">

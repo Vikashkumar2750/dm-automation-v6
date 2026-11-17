@@ -274,7 +274,7 @@ Pay the booking deposit and share a few details — we'll reach out within 24 ho
 
 /** Price box values for a delivery page (display only; charging uses the product price). */
 export function priceDisplay(originalPaise: number | null | undefined, offerPaise: number | null | undefined, label?: string | null) {
-  const fmt = (p: number) => `₹${(p / 100).toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
+  const fmt = (p: number) => `₹${(p / 100).toLocaleString("en-IN", p % 100 ? { minimumFractionDigits: 2, maximumFractionDigits: 2 } : { maximumFractionDigits: 0 })}`;
   const offer = offerPaise && offerPaise > 0 ? offerPaise : null;
   const original = originalPaise && originalPaise > 0 ? originalPaise : null;
   const hasCut = !!(offer && original && offer < original);
