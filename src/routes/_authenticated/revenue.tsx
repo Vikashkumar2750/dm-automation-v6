@@ -70,7 +70,6 @@ import { useWorkspaceAccountFilter } from "@/hooks/useWorkspaceAccountFilter";
 import { buildFunnel, formatInr, rupeesToPaise, slugify, withCharges } from "@/lib/revenue";
 import { DeliveryPageView } from "@/components/app/DeliveryPageView";
 import {
-  DELIVERY_TEMPLATES,
   SAMPLE_BODY,
   EMAIL_ONLY_FIELDS,
   STANDARD_LEAD_FIELDS,
@@ -81,6 +80,7 @@ import {
   type LeadField,
   type PageExtras,
 } from "@/lib/delivery-page";
+import { INDUSTRIES, industryByKey, type Industry } from "@/lib/industry-templates";
 import { previewDeliveryImage, uploadDeliveryImage } from "@/lib/delivery-media";
 import {
   deleteRevenueItem,
@@ -139,6 +139,16 @@ function RevenuePage() {
       }),
   });
   const d = q.data;
+  const [industryKey, setIndustryKey] = useState("general");
+  useEffect(() => {
+    if (!orgId) return;
+    setIndustryKey(localStorage.getItem(`autodm:industry:${orgId}`) ?? "general");
+  }, [orgId]);
+  const pickIndustry = (k: string) => {
+    setIndustryKey(k);
+    if (orgId) localStorage.setItem(`autodm:industry:${orgId}`, k);
+  };
+  const industry = industryByKey(industryKey);
   return (
     <AppShell>
       <PageHeader
@@ -193,6 +203,23 @@ function RevenuePage() {
             : "Loading Sales and Revenue…"}
         </p>
       ) : (
+        <>
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          <Label htmlFor="industry-select" className="text-sm">Your industry</Label>
+          <select
+            id="industry-select"
+            className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+            value={industry.key}
+            onChange={(e) => pickIndustry(e.target.value)}
+          >
+            {INDUSTRIES.map((i) => (
+              <option key={i.key} value={i.key}>{i.label}</option>
+            ))}
+          </select>
+          <span className="text-xs text-muted-foreground">
+            Shows ready-made product, coupon and page templates for this industry.
+          </span>
+        </div>
         <Tabs className="revenue-workspace" key={orgId} defaultValue="report">
           <TabsList className="h-auto max-w-full flex-wrap">
             <TabsTrigger value="report" className="gap-2">
@@ -220,13 +247,14 @@ function RevenuePage() {
             <Report d={d} />
           </TabsContent>
           <TabsContent forceMount className="data-[state=inactive]:hidden" value="products">
-            <Products orgId={orgId ?? ""} items={d.products} connected={!!d.razorpay} />
+            <Products orgId={orgId ?? ""} items={d.products} connected={!!d.razorpay} industry={industry} />
           </TabsContent>
           <TabsContent forceMount className="data-[state=inactive]:hidden" value="coupons">
-            <Coupons orgId={orgId ?? ""} items={d.campaigns} />
+            <Coupons orgId={orgId ?? ""} items={d.campaigns} industry={industry} />
           </TabsContent>
           <TabsContent forceMount className="data-[state=inactive]:hidden" value="pages">
             <Pages
+              industry={industry}
               orgId={orgId ?? ""}
               items={d.pages}
               leads={d.leads}
@@ -241,6 +269,7 @@ function RevenuePage() {
             <Payments orgId={orgId ?? ""} d={d} />
           </TabsContent>
         </Tabs>
+        </>
       )}
     </AppShell>
   );
@@ -342,10 +371,12 @@ function Products({
   orgId,
   items,
   connected,
+  industry,
 }: {
   orgId: string;
   items: any[];
   connected: boolean;
+  industry: Industry;
 }) {
   const save = useSave(useServerFn(saveProduct), "Product saved");
   const del = useSave(useServerFn(deleteRevenueItem), "Deleted");
@@ -401,10 +432,10 @@ function Products({
         <Panel title={f.id ? `Edit product: ${f.name}` : "Add product"}>
           <div className="space-y-2">
             <Chips
-              label="Quick fill"
-              items={PRODUCT_PRESETS.map((p) => p.name)}
+              label={`${industry.label} templates`}
+              items={industry.products.map((p) => p.name)}
               onPick={(v) => {
-                const p = PRODUCT_PRESETS.find((x) => x.name === v);
+                const p = industry.products.find((x) => x.name === v);
                 if (!p) return;
                 setF({
                   ...f,
@@ -578,7 +609,7 @@ function Products({
   );
 }
 
-function Coupons({ orgId, items }: { orgId: string; items: any[] }) {
+function Coupons({ orgId, items, industry }: { orgId: string; items: any[]; industry: Industry }) {
   const save = useSave(useServerFn(saveCampaign), "Coupon campaign saved");
   const del = useSave(useServerFn(deleteRevenueItem), "Deleted");
   const blankC = {
@@ -650,15 +681,18 @@ function Coupons({ orgId, items }: { orgId: string; items: any[] }) {
             </div>
             <Chips
               label="Quick fill"
-              items={["Diwali sale", "New Year sale", "Launch week", "Followers special"]}
+              label={`${industry.label} templates`}
+              items={industry.coupons.map((c) => c.name)}
               onPick={(v) => {
-                const p = (v.split(" ")[0] ?? "SALE").toUpperCase().slice(0, 12);
+                const c = industry.coupons.find((x) => x.name === v);
+                if (!c) return;
+                const p = c.prefix;
                 setF({
                   ...f,
-                  name: v,
+                  name: c.name,
                   prefix: p,
-                  storeCode: f.kind === "store_code" ? `${p}20` : f.storeCode,
-                  discount: f.discount || "20% off",
+                  storeCode: f.kind === "store_code" ? p : f.storeCode,
+                  discount: c.discount,
                 });
               }}
             />
@@ -1089,6 +1123,7 @@ const STAGE_BADGE: Record<string, { label: string; cls: string }> = {
 };
 
 function Pages({
+  industry,
   orgId,
   items,
   leads,
@@ -1098,6 +1133,7 @@ function Pages({
   connected,
   accounts,
 }: {
+  industry: Industry;
   accounts: Data["accounts"];
   connected: boolean;
   orgId: string;
@@ -1399,9 +1435,9 @@ function Pages({
                 <div className="space-y-6">
                   <div hidden={step !== 0} className="space-y-4">
                     <div>
-                      <Label className="text-xs">Start from a ready-made design</Label>
+                      <Label className="text-xs">Start from a ready-made {industry.label} design</Label>
                       <div className="mt-1 flex flex-wrap gap-1.5">
-                        {DELIVERY_TEMPLATES.map((t) => (
+                        {industry.pages.map((t) => (
                           <Button
                             key={t.key}
                             type="button"
@@ -2672,13 +2708,6 @@ const DELIVERABLE_PRESETS: [string, string, string, string][] = [
   ["Prompts pack", "100+ prompts", "PDF / Notion", "5 MB"],
 ];
 
-const PRODUCT_PRESETS = [
-  { name: "E-book / PDF guide", price: "199", mrp: "499", desc: "Instant PDF download" },
-  { name: "Online course", price: "999", mrp: "2999", desc: "Lifetime access to all lessons" },
-  { name: "1:1 Consultation (30 min)", price: "1499", mrp: "2499", desc: "Personal video call" },
-  { name: "Presets bundle", price: "499", mrp: "1499", desc: "Ready-to-use presets pack" },
-  { name: "Community access", price: "499", mrp: "999", desc: "Private group membership" },
-];
 
 function Chips({
   items,
