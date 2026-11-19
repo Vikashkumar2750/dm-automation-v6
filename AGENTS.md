@@ -49,3 +49,4 @@
 - Admin health measures finalized verified events only; absent reads are unavailable, and alerts label mixed capped sources — avoids false health claims and probe-skewed delivery rates.
 - AdminTable stacks labelled cells on phones and keeps desktop tables; render each cell once to preserve controls and drafts across resizing.
 - Key Contacts outreach by workspace; await settings before edits to prevent stale drafts and unconfirmed saves.
+- Revenue industry starter templates live in src/lib/industry-templates.ts as pure prefill data; the chosen industry is a per-workspace browser preference — templates only fill forms and never change saved pricing or checkout rules.

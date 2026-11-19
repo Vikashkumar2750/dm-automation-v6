@@ -680,7 +680,6 @@ function Coupons({ orgId, items, industry }: { orgId: string; items: any[]; indu
               </div>
             </div>
             <Chips
-              label="Quick fill"
               label={`${industry.label} templates`}
               items={industry.coupons.map((c) => c.name)}
               onPick={(v) => {
