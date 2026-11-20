@@ -1,6 +1,8 @@
 # DM FB-IG-YT by Techaasvik — Build Roadmap
 
 ## Current request — implementation first
+- [ ] Nov 20: isolate story reply/mention targeting and matching, support flow-only story triggers, and reorganize New Automation into clear sections with retained preview; preserve active comment/DM rules.
+- [ ] Nov 20 acceptance: regression tests and desktop/phone editor checks; real Meta story reply/mention delivery needs the deployed release and a fresh Instagram event.
 - [x] Nov 12 Google authorization screenshot: reproduced YouTube consent merging previously granted Drive scopes. Disabled incremental grant merging; regression tests cover separate YouTube/Drive permission requests. Google consent and first archive upload require deployment and owner consent; API graphs do not prove upload or identify individual YouTube API errors.
 - [x] Nov 8 13:28 request: confirmed existing Google credential names; connected platform-owner Drive and verified read-only app access (200). Added Super Admin manual/6/12/24-hour backup controls and isolated Railway archive worker, private-folder check, advisory lock, archive readability and upload size confirmation. No actual database archive uploaded; Cloud exports remain on supported Cloud path.
 - [x] Current verification: 509 tests across 84 files pass; latest preview build OK. Protected backup role/audit rules and independent-host guard tested. No signed-in backup UI, external first upload or live Team Desk/pricing/buyer acceptance claimed.
